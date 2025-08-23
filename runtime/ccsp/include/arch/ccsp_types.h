@@ -5,4 +5,8 @@
 #include <i386/ccsp_types.h>
 #endif
 
+#ifdef TARGET_CPU_AARCH64
+#include <aarch64/ccsp_types.h>
+#endif
+
 #endif /* !_ARCH_CCSP_TYPES_H */

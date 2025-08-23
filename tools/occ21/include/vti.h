@@ -889,6 +889,7 @@ BOOL isscalartype_tree (treenode *tptr);
 BOOL isdynamicmobiletype           (treenode *tptr);
 BOOL isdynamicmobilearraytype      (treenode *tptr);
 BOOL isdynamicmobilechantype       (treenode *tptr);
+BOOL issamedynamicmobilechantype   (treenode *const t1, treenode *const t2);
 BOOL issamemobilechantype          (treenode *t1, treenode *t2);
 /*int littag (int t);*/
 BOOL istypetag(int tag);

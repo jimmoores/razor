@@ -22,6 +22,7 @@
 	#include <config.h>
 #endif
 #include <stdio.h>
+#include <stdint.h>
 #include "feinc.h"
 #include "useerror.h"
 #include "usehdr.h"
@@ -1094,25 +1095,25 @@ PRIVATE void fmt_dumpnode (fmnode_t *fmn, int indent, FILE *stream)
 			fprintf (stream, "ATOM (%s)\n", fmn->u.fmatom.id);
 			break;
 		case FM_TREEREF:
-			fprintf (stream, "TREEREF (0x%8.8x,%s,%s,", (unsigned int)fmn->u.fmtree.node, tagstring (TagOf (fmn->u.fmtree.node)),
+			fprintf (stream, "TREEREF (0x%8.8lx,%s,%s,", (uintptr_t)fmn->u.fmtree.node, tagstring (TagOf (fmn->u.fmtree.node)),
 					fmn->u.fmtree.name ?: "(no-name)");
-			fprintf (stream, "0x%8.8x,%s,%s)\n", (unsigned int)fmn->u.fmtree.nodetype, fmn->u.fmtree.nodetype ? tagstring (TagOf (fmn->u.fmtree.nodetype)) : "(no-type)",
+			fprintf (stream, "0x%8.8lx,%s,%s)\n", (uintptr_t)fmn->u.fmtree.nodetype, fmn->u.fmtree.nodetype ? tagstring (TagOf (fmn->u.fmtree.nodetype)) : "(no-type)",
 					fmn->u.fmtree.typename ?: "(no-type-name)");
 			break;
 		case FM_NODEREF:
-			fprintf (stream, "NODEREF (0x%8.8x)\n", (unsigned int)fmn->u.fmnode.node);
+			fprintf (stream, "NODEREF (0x%8.8lx)\n", (uintptr_t)fmn->u.fmnode.node);
 			break;
 		case FM_EVENT:
-			fprintf (stream, "EVENT (0x%8.8x,%s,%s,", (unsigned int)fmn->u.fmevent.node, fmn->u.fmevent.node ? tagstring (TagOf (fmn->u.fmevent.node)) : "(no-node)",
+			fprintf (stream, "EVENT (0x%8.8lx,%s,%s,", (uintptr_t)fmn->u.fmevent.node, fmn->u.fmevent.node ? tagstring (TagOf (fmn->u.fmevent.node)) : "(no-node)",
 					fmn->u.fmevent.name ?: "(no-name)");
-			fprintf (stream, "0x%8.8x,%s,%s)\n", (unsigned int)fmn->u.fmevent.nodetype, fmn->u.fmevent.nodetype ? tagstring (TagOf (fmn->u.fmevent.nodetype)) : "(no-type)",
+			fprintf (stream, "0x%8.8lx,%s,%s)\n", (uintptr_t)fmn->u.fmevent.nodetype, fmn->u.fmevent.nodetype ? tagstring (TagOf (fmn->u.fmevent.nodetype)) : "(no-type)",
 					fmn->u.fmevent.typename ?: "(no-type-name)");
 			break;
 		case FM_EVENTSET:
-			fprintf (stream, "EVENTSET (0x%8.8x,%s,%s,", (unsigned int)fmn->u.fmevset.node,
+			fprintf (stream, "EVENTSET (0x%8.8lx,%s,%s,", (uintptr_t)fmn->u.fmevset.node,
 					fmn->u.fmevset.node ? tagstring (TagOf (fmn->u.fmevset.node)) : "(no-node)",
 					fmn->u.fmevset.name ?: "(no-name)");
-			fprintf (stream, "0x%8.8x,%s,%s,%d)\n", (unsigned int)fmn->u.fmevset.nodetype,
+			fprintf (stream, "0x%8.8lx,%s,%s,%d)\n", (uintptr_t)fmn->u.fmevset.nodetype,
 					fmn->u.fmevset.nodetype ? tagstring (TagOf (fmn->u.fmevset.nodetype)) : "(no-type)",
 					fmn->u.fmevset.typename ?: "(no-type-name)", fmn->u.fmevset.isanonct);
 			break;
@@ -1824,7 +1825,6 @@ printtreenl (stderr, 1, vtype);
 #endif
 			if (TagOf (vtype) == N_TYPEDECL) {
 				/* should be a mobile channel-type */
-				treenode *orgtype = vtype;
 				fmnode_t *ref = fmt_getfmcheck (vtype);
 
 				is_shared = NTypeAttrOf (vtype) & TypeAttr_shared;
@@ -1848,7 +1848,6 @@ fprintf (stderr, "fmt_createeventfromvar(): is_shared on TYPEDECL = %d\n", is_sh
 							}
 							if (TagOf (chan) == S_CHAN) {
 								treenode *proto = ProtocolOf (chan);
-								unsigned int tattr = TypeAttrOf (chan);
 								
 								ref = fmt_getfmcheck (proto);
 								anonct = 1;
@@ -2955,7 +2954,6 @@ PRIVATEPARAM int fmt_dohoisthiddenevents (fmnode_t **nodep, void *voidptr)
 PRIVATE int fmt_hoisthiddenevents (fmnode_t *node, fmmset_t *fmm)
 {
 	fmnode_t *eset = fmt_newnode (FM_GLOBALEVENTS, NULL);
-	int i;
 
 	if (node->type != FM_NAMEDPROC) {
 		fmt_error_internal (NOPOSN, "fmt_hoisthiddenevents(): not NAMEDPROC!");
@@ -3485,28 +3483,28 @@ PRIVATE void fmt_writeoutnode_str (fmnode_t *node, FILE *fp)
 		if (node->u.fmevent.name) {
 			fprintf (fp, "%s", node->u.fmevent.name);
 		} else {
-			fprintf (fp, "addr0x%8.8x", (unsigned int)node->u.fmevent.node);
+			fprintf (fp, "addr0x%8.8lx", (uintptr_t)node->u.fmevent.node);
 		}
 		break;
 	case FM_EVENTSET:
 		if (node->u.fmevset.name) {
 			fprintf (fp, "%s", node->u.fmevset.name);
 		} else {
-			fprintf (fp, "addr0x%8.8x", (unsigned int)node->u.fmevset.node);
+			fprintf (fp, "addr0x%8.8lx", (uintptr_t)node->u.fmevset.node);
 		}
 		break;
 	case FM_TREEREF:
 		if (node->u.fmtree.name) {
 			fprintf (fp, "%s", node->u.fmtree.name);
 		} else {
-			fprintf (fp, "addr0x%8.8x", (unsigned int)node->u.fmtree.node);
+			fprintf (fp, "addr0x%8.8lx", (uintptr_t)node->u.fmtree.node);
 		}
 		break;
 	case FM_NAMEDPROC:
 		if (node->u.fmproc.name) {
 			fprintf (fp, "%s", node->u.fmproc.name);
 		} else {
-			fprintf (fp, "addr0x%8.8x", (unsigned int)node->u.fmproc.name);
+			fprintf (fp, "addr0x%8.8lx", (uintptr_t)node->u.fmproc.name);
 		}
 		break;
 	case FM_ATOM:
@@ -3537,21 +3535,21 @@ PRIVATE void fmt_writeoutnode_typestr (fmnode_t *node, FILE *fp)
 		if (node->u.fmevent.typename) {
 			fprintf (fp, "%s", node->u.fmevent.typename);
 		} else {
-			fprintf (fp, "addr0x%8.8x", (unsigned int)node->u.fmevent.nodetype);
+			fprintf (fp, "addr0x%8.8lx", (uintptr_t)node->u.fmevent.nodetype);
 		}
 		break;
 	case FM_EVENTSET:
 		if (node->u.fmevset.typename) {
 			fprintf (fp, "%s", node->u.fmevset.typename);
 		} else {
-			fprintf (fp, "addr0x%8.8x", (unsigned int)node->u.fmevset.nodetype);
+			fprintf (fp, "addr0x%8.8lx", (uintptr_t)node->u.fmevset.nodetype);
 		}
 		break;
 	case FM_TREEREF:
 		if (node->u.fmtree.typename) {
 			fprintf (fp, "%s", node->u.fmtree.typename);
 		} else {
-			fprintf (fp, "addr0x%8.8x", (unsigned int)node->u.fmtree.nodetype);
+			fprintf (fp, "addr0x%8.8lx", (uintptr_t)node->u.fmtree.nodetype);
 		}
 		break;
 	default:
@@ -4322,7 +4320,7 @@ PRIVATE void formalmodel_writeoutset (fmmset_t *fmm, FILE *fp, const char *filen
  */
 PRIVATEPARAM int do_formalmodelgen_iodata (treenode *n, void *const voidptr)
 {
-	fmstate_t *fmstate = (fmstate_t *)voidptr;
+	(void)voidptr; /* unused */
 
 	if (!n) {
 		return STOP_WALK;
@@ -4451,10 +4449,8 @@ PRIVATEPARAM int do_formalmodelgen (treenode *n, void *const voidptr)
 	case S_PROCDEF:
 	case S_MPROCDECL:
 		if (!separatelycompiled (DNameOf (n))) {
-			char *pname = (char *)WNameOf (NNameOf (DNameOf (n)));
 			fmstate_t *nfms = fmt_newstate ();
 			fmnode_t *fmnproc = NULL;
-			int hoisted;
 
 			/* this is a nested PROC definition */
 			nfms->setref = fmm;
@@ -4473,7 +4469,7 @@ PRIVATEPARAM int do_formalmodelgen (treenode *n, void *const voidptr)
 				fmt_modprewalk (&fmnproc, fmt_lsimplifynode, NULL);
 				fmt_hoistfixpoints (fmnproc, fmm);
 				fmt_alphabetisepar (fmnproc);
-				hoisted = fmt_hoisthiddenevents (fmnproc, fmm);
+				fmt_hoisthiddenevents (fmnproc, fmm);
 				fmt_modprewalk (&fmnproc, fmt_simplifynode, NULL);
 
 				SetNFMCheck (DNameOf (n), fmnproc);
@@ -5494,7 +5490,6 @@ fprintf (stderr, "do_formalmodelcheck_tree(): formal-model PRAGMA! str=[%s]\n", 
 	case S_PROCDEF:
 	case S_MPROCDECL:
 		if (!separatelycompiled (DNameOf (n))) {
-			char *pname = (char *)WNameOf (NNameOf (DNameOf (n)));
 			fmstate_t *fmstate = fmt_newstate ();
 			fmnode_t *fmnproc = NULL;
 			fmnode_t *sys_fv = NULL;

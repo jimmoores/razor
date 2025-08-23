@@ -5,4 +5,8 @@
 #include <i386/deadlock.h>
 #endif
 
+#ifdef TARGET_CPU_AARCH64
+#include <aarch64/deadlock.h>
+#endif
+
 #endif /* !_ARCH_DEADLOCK_H */

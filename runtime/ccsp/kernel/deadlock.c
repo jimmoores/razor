@@ -212,7 +212,7 @@ static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)
 			if (!setjmp (segenv)) {
 				/* Try dereferencing it... */
 				ins_1 = *codeptr;
-#if defined(TARGET_CPU_SPARC) || defined(TARGET_CPU_PPC64)
+#if defined(TARGET_CPU_SPARC) || defined(TARGET_CPU_PPC64) || defined(TARGET_CPU_AARCH64)
 				ins_2 = *(codeptr + 4);		/* next word please */
 #else
 				ins_2 = *(codeptr + 1);
@@ -230,6 +230,8 @@ static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)
 			if (ins_1 != INS_SPARC_JMPIMMS) {
 #elif defined(TARGET_CPU_PPC64)
 			if (ins_1 != INS_PPC_JMPIMMS) {
+#elif defined(TARGET_CPU_AARCH64)
+			if (ins_1 != AARCH64_BRANCH_INS) {
 #else
 			if ((ins_1 != INS_X86_JMPIMMS8) && (ins_1 != INS_X86_JMPIMMS32)) {
 #endif
@@ -242,6 +244,8 @@ static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)
 			if (ins_2 != 0x11) {
 #elif defined(TARGET_CPU_PPC64)
 			if (ins_2 != 0x60) {
+#elif defined(TARGET_CPU_AARCH64)
+			if (ins_2 != 0x11) {
 #else
 			if (ins_2 != 0x11) {
 #endif
@@ -252,7 +256,7 @@ static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)
 			}
 			if (!setjmp (segenv)) {
 				/* Could be likely.. */
-#if defined(TARGET_CPU_SPARC) || defined(TARGET_CPU_PPC64)
+#if defined(TARGET_CPU_SPARC) || defined(TARGET_CPU_PPC64) || defined(TARGET_CPU_AARCH64)
 				codeptr += 8;
 #else
 				if (ins_1 == INS_X86_JMPIMMS32) {
@@ -334,6 +338,8 @@ static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)
 				if (ins_1 != SPARC_JUMP_INS) {
 #elif defined(TARGET_CPU_PPC64)
 				if (ins_1 != PPC_JUMP_INS) {
+#elif defined(TARGET_CPU_AARCH64)
+				if (ins_1 != AARCH64_BRANCH_INS) {
 #else
 				if (ins_1 != I386_JUMP_INS) {
 #endif

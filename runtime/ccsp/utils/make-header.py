@@ -77,19 +77,21 @@ class HeaderWriter:
 		self.asm = False
 
 def warn(*s):
-	print >>sys.stderr, prog_name + ": " + "".join(map(str, s))
+	print(prog_name + ": " + "".join(map(str, s)), file=sys.stderr)
 
 def die(*s):
 	warn(*s)
 	sys.exit(1)
 
-def safe_sorted(list, cmp):
-	try:
-		return sorted(list, cmp)
-	except NameError:
-		list = list[:]
-		list.sort(cmp)
-		return list
+def safe_sorted(list, cmp=None, key=None):
+	if key is not None:
+		return sorted(list, key=key)
+	elif cmp is not None:
+		# Convert cmp function to key function for Python 3
+		from functools import cmp_to_key
+		return sorted(list, key=cmp_to_key(cmp))
+	else:
+		return sorted(list)
 
 def load_defines(defines, fn):
 	define_re = re.compile(r'^#define\s+(\S+)')
@@ -148,12 +150,12 @@ def test_symbol_requirements(defines, calls, symbols):
 	for name, symbol in symbols.items():
 		unsupported = False
 
-		if symbol.has_key("DEPEND"):
+		if "DEPEND" in symbol:
 			for define in symbol["DEPEND"]:
-				unsupported = unsupported or (not defines.has_key(define))
-		if symbol.has_key("INCOMPATIBLE"):
+				unsupported = unsupported or (define not in defines)
+		if "INCOMPATIBLE" in symbol:
 			for define in symbol["INCOMPATIBLE"]:
-				unsupported = unsupported or defines.has_key(define)
+				unsupported = unsupported or (define in defines)
 		if unsupported:
 			for call in symbol["handles"]:
 				calls[call] = symbols["Y_unsupported"]
@@ -164,17 +166,17 @@ def enumerate_symbols(symbols):
 		prio_a = int(symbols[a].get("PRIO", 0))
 		prio_b = int(symbols[b].get("PRIO", 0))
 		if prio_a == prio_b:
-			return cmp(a, b)
+			return (a > b) - (a < b)
 		else:
-			return cmp(prio_b, prio_a)
+			return (prio_b > prio_a) - (prio_b < prio_a)
 
 	i = 0
-	for symbol in safe_sorted(symbols.keys(), compare_symbols):
+	for symbol in safe_sorted(symbols.keys(), cmp=compare_symbols):
 		symbols[symbol]["offset"] = i
 		i = i + 1
 
 def short_fn(fn):
-	match = re.match(".*\/(.*)", fn)
+	match = re.match(r".*/(.*)$", fn)
 	if match is None:
 		return fn
 	else:
@@ -526,22 +528,32 @@ def gen_sparc_header(f):
 def gen_sparc_cif_stub(f, symbol, inputs, outputs):
 	f.line("/* sparc unsupported */")
 
+def gen_aarch64_header(f):
+	f.line("/* aarch64 unsupported */")
+
+def gen_aarch64_cif_stub(f, symbol, inputs, outputs):
+	f.line("/* aarch64 unsupported */")
+
 def output_cif(defines, symbol_list, symbols, fn):
-	if defines.has_key("TARGET_CPU_386"):
+	if "TARGET_CPU_386" in defines:
 		arch_header = gen_i386_header
 		arch_generator = gen_i386_cif_stub
-	elif defines.has_key("TARGET_CPU_MIPS"):
+	elif "TARGET_CPU_MIPS" in defines:
 		warn("generating CIF stubs for unsupported architecture...")
 		arch_header = gen_mips_header
 		arch_generator = gen_mips_cif_stub
-	elif defines.has_key("TARGET_CPU_PPC64"):
+	elif "TARGET_CPU_PPC64" in defines:
 		warn("generating CIF stubs for unsupported architecture...")
 		arch_header = gen_ppc_header
 		arch_generator = gen_ppc64_cif_stub
-	elif defines.has_key("TARGET_CPU_SPARC"):
+	elif "TARGET_CPU_SPARC" in defines:
 		warn("generating CIF stubs for unsupported architecture...")
 		arch_header = gen_sparc_header
 		arch_generator = gen_sparc_cif_stub
+	elif "TARGET_CPU_AARCH64" in defines:
+		warn("generating CIF stubs for unsupported architecture...")
+		arch_header = gen_aarch64_header
+		arch_generator = gen_aarch64_cif_stub
 	else:
 		die("unable to generate CIF stubs for unknown architecture.")
 
@@ -578,7 +590,7 @@ def main(args):
 
 	symbol_list = safe_sorted(
 		symbols.keys(), 
-		lambda a, b: cmp(symbols[a]["offset"], symbols[b]["offset"])
+		key=lambda x: symbols[x]["offset"]
 	)
 
 	if type == "--kitable":

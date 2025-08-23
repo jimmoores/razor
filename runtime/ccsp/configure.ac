@@ -118,34 +118,58 @@ fi
 #{{{  check for rdtsc instruction
 dnl Do checks to make sure CPU timers can be supported (has rdtsc instruction)
 
-AC_TRY_RUN([
-int main (void)
-{
- unsigned int hi, lo;
- __asm__ __volatile__ ("rdtsc\n\t" : "=a" (hi), "=d" (lo));
- return 0;
-}], [cpu_timers_supported=yes], [cpu_timers_supported=no], [cpu_timers_supported=no])
+case "$host_cpu" in
+i386 | i486 | i586 | i686 | x86_64)
+  AC_TRY_RUN([
+  int main (void)
+  {
+   unsigned int hi, lo;
+   __asm__ __volatile__ ("rdtsc\n\t" : "=a" (hi), "=d" (lo));
+   return 0;
+  }], [cpu_timers_supported=yes], [cpu_timers_supported=no], [cpu_timers_supported=no])
+  ;;
+aarch64 | arm64)
+  AC_TRY_RUN([
+  int main (void)
+  {
+   unsigned long long counter;
+   __asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (counter));
+   return 0;
+  }], [cpu_timers_supported=yes], [cpu_timers_supported=no], [cpu_timers_supported=no])
+  ;;
+*)
+  cpu_timers_supported=no
+  ;;
+esac
 
 #}}}
 #{{{  check for SSE2 instructions
 
 AC_MSG_CHECKING([for SSE2 support])
-AC_TRY_RUN([
-int main (void)
-{
- __asm__ __volatile__ ("mfence\nlfence\nsfence\n" : : : "memory" );
- return 0;
-}], [have_ia32_sse2=yes], [have_ia32_sse2=no], [have_ia32_sse2=no])
-if test "$have_ia32_sse2" = yes; then
- if test "$KROC_CCSP_ENABLE_SSE2" = yes; then
-  AC_DEFINE([HAVE_IA32_SSE2], 1, [CPU supports SSE2 instructions])
-  AC_MSG_RESULT(yes)
- else
-  AC_MSG_RESULT([yes, but disabled])
- fi
-else
- AC_MSG_RESULT([no; this may break multiprocessor support])
-fi
+case "$host_cpu" in
+i386 | i486 | i586 | i686 | x86_64)
+  AC_TRY_RUN([
+  int main (void)
+  {
+   __asm__ __volatile__ ("mfence\nlfence\nsfence\n" : : : "memory" );
+   return 0;
+  }], [have_ia32_sse2=yes], [have_ia32_sse2=no], [have_ia32_sse2=no])
+  if test "$have_ia32_sse2" = yes; then
+   if test "$KROC_CCSP_ENABLE_SSE2" = yes; then
+    AC_DEFINE([HAVE_IA32_SSE2], 1, [CPU supports SSE2 instructions])
+    AC_MSG_RESULT(yes)
+   else
+    AC_MSG_RESULT([yes, but disabled])
+   fi
+  else
+   AC_MSG_RESULT([no; this may break multiprocessor support])
+  fi
+  ;;
+*)
+  have_ia32_sse2=no
+  AC_MSG_RESULT([not applicable for this architecture])
+  ;;
+esac
 
 #}}}
 #{{{  tests for anonymous memory-mapping
@@ -562,6 +586,12 @@ i386 | i486 | i586 | i686 | x86_64)
   AC_DEFINE([TARGET_CPU_386],1,[define if i386 or greater target])
   bigendian=no
   ;;
+aarch64 | arm64)
+  ARCH_DIR=aarch64
+  AC_SUBST(ARCH_DIR)
+  AC_DEFINE([TARGET_CPU_AARCH64],1,[define if aarch64 target])
+  bigendian=no
+  ;;
 # XXX: If you're resurrecting any of the entries below, some of this will need
 # to go into kroc.m4 rather than here.
 #sparc)
@@ -641,5 +671,5 @@ AC_SUBST(EXTRA_DEFS)
 AC_SUBST(EXTRA_LDFLAGS)
 
 AC_CONFIG_HEADERS([include/ccsp_config.h])
-AC_OUTPUT([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile kernel/Makefile utils/Makefile])
+AC_OUTPUT([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile include/aarch64/Makefile kernel/Makefile utils/Makefile])
 
