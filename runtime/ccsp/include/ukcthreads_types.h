@@ -22,7 +22,11 @@
 #ifndef UKCTHREADS_TYPES_H
 #define UKCTHREADS_TYPES_H
 
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
+typedef unsigned long 	word;
+#else
 typedef unsigned int 	word;
+#endif
 typedef unsigned char 	byte;
 
 #if !((defined __cplusplus) || (defined __bool_true_false_are_defined))

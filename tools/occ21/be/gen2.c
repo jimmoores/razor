@@ -50,6 +50,16 @@ PRIVATE BOOL real32isaword;
 #define BYTE_CHECK_MASK      0x0100
 #define INT16_CHECK_MASK     0x8000
 #define INT32_CHECK_MASK 0x80000000
+#define INT64_CHECK_MASK 0x8000000000000000ULL
+
+/* 64-bit target support */
+#ifdef TARGET_64BIT
+#define POINTER_SIZE 8
+#define WORD_SIZE 8
+#else
+#define POINTER_SIZE 4
+#define WORD_SIZE 4
+#endif
 
 /*{{{  tables for routines libcallstring and libconvertstring*/
 #define N_LIBOPS 16		/* number of different operations */
@@ -60,6 +70,13 @@ PRIVATE const int libops[N_LIBOPS] = { S_ADD, S_MULT, S_PLUS, S_BITAND, S_BITOR,
 };
 PRIVATE const int libtypes[N_LIBTYPES] =
 	{ S_INT16, S_INT32, S_INT64, S_REAL32, S_REAL64 };
+
+/* 64-bit pointer type support */
+#ifdef TARGET_64BIT
+PRIVATE const int pointer_type = S_INT64;
+#else
+PRIVATE const int pointer_type = S_INT32;
+#endif
 
 PRIVATE const char *const libstrings[N_LIBOPS][N_LIBTYPES] = {
 	/* "bug" 1065 - these are all changed to add %CHK on the end,

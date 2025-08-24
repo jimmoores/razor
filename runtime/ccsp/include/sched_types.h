@@ -338,15 +338,15 @@ typedef struct _ccsp_barrier_t {
 /*}}}*/
 
 /*{{{  bar_t (full barrier) */
-#define BAR_SYNCING_BIT 	((sizeof (word) * 8) - 1)
-#define BAR_SYNCING		(1 << BAR_SYNCING_BIT)
-#define BAR_TAG_SHIFT		((sizeof (word) * 8) - 3)
-#define BAR_TAG_MASK		(0x3 << BAR_TAG_SHIFT)
+#define BAR_SYNCING_BIT 	31
+#define BAR_SYNCING		(1UL << BAR_SYNCING_BIT)
+#define BAR_TAG_SHIFT		29
+#define BAR_TAG_MASK		(0x3UL << BAR_TAG_SHIFT)
 #define BAR_TAG(S)		(((S) >> BAR_TAG_SHIFT) & 0x3)
 #define BAR_NEXT_TAG(T)		(((T) + 1) & 0x3)
 #define BAR_COUNT_MASK		(~(BAR_SYNCING | BAR_TAG_MASK))
 #define BAR_COUNT(S)		((S) & BAR_COUNT_MASK)
-#define BAR_STATE(C,T,F)	((C) | (T << BAR_TAG_SHIFT) | (F))
+#define BAR_STATE(C,T,F)	((C) | ((word)(T) << BAR_TAG_SHIFT) | (F))
 #define BAR_HEAD_PTR(X)		((bar_head_t *) ((X) & (~0x3)))
 #define BAR_HEAD_TAG(X)		((X) & 0x3)
 typedef struct _bar_t {
@@ -357,8 +357,8 @@ typedef struct _bar_t {
 /*}}}*/
 
 /*{{{  mproc_bar_t (mobile process barrier) */
-#define MPROC_BAR_PHASE_BIT	((sizeof (word) * 8) - 1)
-#define MPROC_BAR_PHASE		(1 << MPROC_BAR_PHASE_BIT)
+#define MPROC_BAR_PHASE_BIT	31
+#define MPROC_BAR_PHASE		(1UL << MPROC_BAR_PHASE_BIT)
 #define MPROC_BAR_COUNT		(~MPROC_BAR_PHASE)
 typedef struct _mproc_bar_t {
 	word enrolled;

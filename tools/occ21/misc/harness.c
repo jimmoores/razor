@@ -813,6 +813,8 @@ PRIVATEPARAM void setprocessorattr(void)
 	}
 	if ((processorattr & ATTRIB_WORD_64) != 0) {
 		needs_quadalign = TRUE;
+		targetintsize = S_INT64;
+		wordshift = 3;
 	}
 }
 /*}}}*/
@@ -995,7 +997,8 @@ PRIVATE arg_control finish_command_line_args(const char *opt, const char *arg, v
 PRIVATE arg_control optprocessor ( const char *opt, const char *arg, void *data )
 {
 	const BIT32 old = processortype;
-	const BIT32 new = setprocessor(upper(opt));
+	const char *opt_upper = upper(opt);
+	const BIT32 new = setprocessor(opt_upper);
 
 	if ((old != UNKNOWN_PROCESSOR_TYPE) && (old != new)) {
 		harnesserror("Duplicate processor types on command line");
@@ -1003,6 +1006,13 @@ PRIVATE arg_control optprocessor ( const char *opt, const char *arg, void *data 
 	if (new == UNKNOWN_PROCESSOR_TYPE) {
 		harnesserror_s("Unknown processor type ", opt);
 	}
+	
+	/* Automatically enable ETC output for 64-bit targets */
+	if (new != UNKNOWN_PROCESSOR_TYPE && 
+	    (strcmp(opt_upper, "AARCH64") == 0 || strcmp(opt_upper, "X64") == 0 || strcmp(opt_upper, "AXP") == 0)) {
+		etc_output = TRUE;
+	}
+	
 	return (new != UNKNOWN_PROCESSOR_TYPE);
 }
 /*}}}*/
@@ -1945,6 +1955,8 @@ const arg2_descriptor cloptions[] = {
 	/*{{{  a - e*/
 	#if !(defined(CONFIG2) || defined(CONFIG3))
 	{"AXP",       arg2_single,    NULL,           optprocessor,       HELP_FUL, "target to DEC Alpha AXP"},
+	{"X64",       arg2_single,    NULL,           optprocessor,       HELP_FUL, "target to x86-64"},
+	{"AARCH64",   arg2_single,    NULL,           optprocessor,       HELP_FUL, "target to ARM64"},
 	{"ALPHA",     arg2_single,    &alpha,         set_flag,           HELP_FUL, "alpha revision of chip"},
 	{"A",         arg2_single,    NULL,           optnoalias,         HELP_FUL, "disable alias checking"},
 	#endif

@@ -27,7 +27,7 @@ tranx86_SOURCES = main.c structs.h tceread.c tceread.h netcread.c netcread.h mac
 	asm386.c optimise.c optimise.h elf.h elf.c cpuid.h cpuid.c tstate.h tstate.c etcops.h \
 	etcops.c stubtable.h stubtable.c archdef.h arch386.h arch386.c mips.h archmips.h archmips.c \
 	asmmips.h asmmips.c mips.h tcedump.c tcedump.h sparc.h archsparc.h archsparc.c asmsparc.h asmsparc.c \
-	ppc.h archppc.h archppc.c asmppc.h asmppc.c kif.c kif.h
+	ppc.h archppc.h archppc.c asmppc.h asmppc.c archx64.h archx64.c archaarch64.h archaarch64.c kif.c kif.h
 tranx86_LDFLAGS = $(EXTRALDFLAGS)
 
 include_HEADERS = 

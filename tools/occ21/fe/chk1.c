@@ -135,7 +135,7 @@ PUBLIC void chkinit (void)
 	mobilenodeptr = newtypenode (S_MOBILE, NOPOSN, NULL, newleafnode (S_ANY, NOPOSN));
 #endif
 
-	if (current_fe_data->fe_txlib->bpw != 2 && current_fe_data->fe_txlib->bpw != 4)
+	if (current_fe_data->fe_txlib->bpw != 2 && current_fe_data->fe_txlib->bpw != 4 && current_fe_data->fe_txlib->bpw != 8)
 		err_abort ("chkinit");
 
 	chklocn = NOPOSN;

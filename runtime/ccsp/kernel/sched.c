@@ -4663,9 +4663,11 @@ static INLINE void kernel_chan_io_static (word flags, byte *src, byte *dst, unsi
 		case (sizeof(word)):
 			*((word *)dst) = *((word *)src);
 			break;
+#if !defined(TARGET_CPU_AARCH64) && !defined(TARGET_CPU_X64)
 		case (sizeof(long long)):
 			*((long long *)dst) = *((long long *)src);
 			break;
+#endif
 		default:
 			if (count)
 				xmemcpy (src, dst, count);

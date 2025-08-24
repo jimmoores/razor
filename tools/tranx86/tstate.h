@@ -20,6 +20,8 @@
 #ifndef __TSTATE_H
 #define __TSTATE_H
 
+#include "tstack.h"
+
 struct TAG_procinf;	/* forward */
 struct TAG_csinfo;	/* forward */
 struct TAG_ins_chain;

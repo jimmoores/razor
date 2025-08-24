@@ -62,6 +62,8 @@
 #include "etcrtl.h"
 #include "archsparc.h"
 #include "archppc.h"
+#include "archx64.h"
+#include "archaarch64.h"
 /*}}}*/
 
 #define PARANOID 0
@@ -469,6 +471,12 @@ int main (int argc, char **argv)
 			} else if (!strcmp (*walk +2, "ppc64")) {
 				options.machine_target = TARGET_POWERPC;
 				options.machine_class = CLASS_POWERPC;
+			} else if (!strcmp (*walk + 2, "x64")) {
+				options.machine_target = TARGET_X64;
+				options.machine_class = CLASS_X64;
+			} else if (!strcmp (*walk + 2, "aarch64")) {
+				options.machine_target = TARGET_AARCH64;
+				options.machine_class = CLASS_AARCH64;
 			} else {
 				goto unknown_option;
 			}
@@ -830,7 +838,7 @@ int main (int argc, char **argv)
  */
 static void tranx86_banner (FILE *stream)
 {
-	fprintf (stream, "tranx86 " VERSION " -- occam ETC to Intel/i386 and MIPS code converter\n");
+	fprintf (stream, "tranx86 " VERSION " -- occam ETC to multi-architecture code converter (x86, x64, MIPS, SPARC, PowerPC, AArch64)\n");
 	fprintf (stream, "Copyright (C) 2000-2008 Fred Barnes <frmb@kent.ac.uk>\n");
 	fprintf (stream, "This software is released under the GNU General Public License\n");
 	return;
@@ -852,6 +860,10 @@ static int tranx86 (char *infile, char *outfile, arch_t *arch)
 		etc_code = read_netc_chain ();
 	} else {
 		etc_code = read_etc_chain ();
+		/* validate TCE file architecture compatibility after reading */
+		if (!tce_validate_architecture (options.machine_class)) {
+			return -1;
+		}
 	}
 	if (!etc_code) {
 		return -1;
@@ -1228,6 +1240,8 @@ static void dump_supported_things (FILE *stream)
 	fprintf (stream, "\t-mr5k      select MIPS R5000 target\n");
 	fprintf (stream, "\t-msparcv8  select SPARC V8 target\n");
 	fprintf (stream, "\t-mppc      select Power-PC target\n");
+	fprintf (stream, "\t-mx64      select x86-64 target\n");
+	fprintf (stream, "\t-maarch64  select ARM64/AArch64 target\n");
 #ifdef HOST_CPU_IS_I486
 	fprintf (stream, "The -u (CPUID) flag will automatically determine which of -mMMX and -mcmovc these are possible\n");
 #endif
@@ -1275,7 +1289,7 @@ static void dump_version (FILE *stream)
  */
 char *machine_class_str (int mclass)
 {
-	static char *mtable[] = {"<unknown>", "386", "486", "586", "686", "R3000", "R6000", "R4300", "R4600", "R5000", "Nevada", "R8000", "R10000", "sparcv8", "powerpc"};
+	static char *mtable[] = {"<unknown>", "386", "486", "586", "686", "R3000", "R6000", "R4300", "R4600", "R5000", "Nevada", "R8000", "R10000", "sparcv8", "powerpc", "x64", "aarch64"};
 
 	switch (mclass) {
 	default:
@@ -1308,6 +1322,10 @@ char *machine_class_str (int mclass)
 		return mtable[13];
 	case CLASS_POWERPC:
 		return mtable[14];
+	case CLASS_X64:
+		return mtable[15];
+	case CLASS_AARCH64:
+		return mtable[16];
 	}
 }
 /*}}}*/
@@ -1360,6 +1378,10 @@ static arch_t *init_architecture (int mclass)
 		options.internal_options |= INTERNAL_ALIGNEDCODE;
 
 		return init_arch_ppc (mclass);
+	case CLASS_X64:
+		return init_arch_x64 (mclass);
+	case CLASS_AARCH64:
+		return init_arch_aarch64 (mclass);
 	}
 }
 /*}}}*/

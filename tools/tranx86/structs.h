@@ -20,6 +20,8 @@
 #ifndef __STRUCTS_H
 #define __STRUCTS_H
 
+#include <stdint.h>
+
 	/* used in tracing errors -- very memory hungry */
 	/* #define INSTRUCTION_HISTORY */
 
@@ -275,7 +277,7 @@ typedef struct TAG_ins_sib_arg {
 } ins_sib_arg;
 
 typedef struct TAG_ins_arg {
-	int regconst;
+	intptr_t regconst;
 	int disp;
 	unsigned int flags;
 	unsigned char padding[4];
@@ -330,7 +332,7 @@ typedef struct TAG_ins_chain {
 #define InsType(X)		(X)->type
 
 #define ArgInsLab(X)		(ins_chain *)((X)->regconst)
-#define SetArgInsLab(X,V)	((X)->regconst = (int)(V))
+#define SetArgInsLab(X,V)	((X)->regconst = (intptr_t)(V))
 
 typedef struct TAG_ins_labrefs {
 	int ref_cur, ref_max;
@@ -338,7 +340,7 @@ typedef struct TAG_ins_labrefs {
 } ins_labrefs;
 
 #define ArgLabRefs(X)		(ins_labrefs *)((X)->regconst)
-#define SetArgLabRefs(X,V)	((X)->regconst = (int)(V))
+#define SetArgLabRefs(X,V)	((X)->regconst = (intptr_t)(V))
 
 /* condition codes */
 #define CC_NONE -1

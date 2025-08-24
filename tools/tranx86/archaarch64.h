@@ -1,6 +1,6 @@
 /*
- *	tceread.h - interface to the TCE reader
- *	Copyright (C) 2000 Fred Barnes <frmb@kent.ac.uk>
+ *	archaarch64.h -- aarch64 architecture support
+ *	Copyright (C) 2024 Amazon Q
  *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -17,15 +17,9 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef __ARCHAARCH64_H
+#define __ARCHAARCH64_H
 
-#ifndef __TCEREAD_H
-#define __TCEREAD_H
+extern arch_t *init_arch_aarch64 (int mclass);
 
-extern int open_tce_file (char *);
-extern void close_tce_file (void);
-extern etc_chain *read_etc_chain (void);
-extern int tce_get_processor_info (int *proc_type, int *proc_attr);
-extern int tce_validate_architecture (int target_class);
-
-#endif	/* !__TCEREAD_H */
-
+#endif	/* !__ARCHAARCH64_H */

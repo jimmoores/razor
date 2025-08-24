@@ -44,6 +44,7 @@
 #include "main.h"
 #include "support.h"
 #include "structs.h"
+#include "machine.h"
 #define WANT_TCOFF_TAGNAMES
 #include "tcoff.h"
 #undef WANT_TCOFF_TAGNAMES
@@ -60,6 +61,10 @@ static char *tcefile_bytes;
 static int tcefile_fd;
 static size_t tcefile_length, tcefile_ptr;
 
+/* TCE file processor information */
+static int tce_processor_type = 0;
+static int tce_processor_attr = 0;
+static int tce_has_processor_info = 0;
 
 static int tceread_number (void);
 static void tceread_nextblocks (etc_chain **head, etc_chain **tail);
@@ -324,6 +329,36 @@ fprintf (stderr, "%s: tceread_nextblocks(): scooped up embedded ETC string of %d
 		tblk = tmp;
 
 		break;
+	case START_MODULE_TAG:
+		/* extract processor type and attributes using TCOFF number format */
+		{
+			size_t saved_ptr = tcefile_ptr;
+			/* skip length field, already read */
+			tce_processor_type = tceread_number();
+			tce_processor_attr = tceread_number();
+			tce_has_processor_info = 1;
+			if (options.diagnostics) {
+				fprintf (stderr, "TCOFF START_MODULE_TAG: processor type=0x%x, attr=0x%x\n", tce_processor_type, tce_processor_attr);
+			}
+			/* reset pointer and read all data for pass-through */
+			tcefile_ptr = saved_ptr;
+			unsigned char *tcoff_data = (unsigned char *)tceread_barray (rlen);
+			/* pass through as ETCL6 operation */
+			tmp = new_etc_chain ();
+			tmp->fn = I_OPR;
+			tmp->opd = ETCL6;
+			tmp->o_len = rlen + sizeof (int);
+			tmp->o_bytes = smalloc (tmp->o_len);
+			memcpy (tmp->o_bytes, (char *)&tcoff_tag, sizeof (int));
+			memcpy (tmp->o_bytes + sizeof (int), tcoff_data, rlen);
+			if (!hblk) {
+				hblk = tblk = tmp;
+			} else {
+				tblk->next = tmp;
+				tblk = tmp;
+			}
+		}
+		break;
 	case END_MODULE_TAG:
 		/* soak up tcoff */
 		tceread_barray (rlen);
@@ -444,7 +479,69 @@ void close_tce_file (void)
 {
 	free (tcefile_bytes);
 	close (tcefile_fd);
+	/* reset processor info */
+	tce_processor_type = 0;
+	tce_processor_attr = 0;
+	tce_has_processor_info = 0;
 	return;
+}
+/*}}}*/
+
+/*{{{  int tce_get_processor_info (int *proc_type, int *proc_attr)*/
+/*
+ *	returns processor information from TCE file
+ */
+int tce_get_processor_info (int *proc_type, int *proc_attr)
+{
+	if (!tce_has_processor_info) {
+		return 0;
+	}
+	if (proc_type) {
+		*proc_type = tce_processor_type;
+	}
+	if (proc_attr) {
+		*proc_attr = tce_processor_attr;
+	}
+	return 1;
+}
+/*}}}*/
+
+/*{{{  int tce_validate_architecture (int target_class)*/
+/*
+ *	validates TCE file architecture against target architecture
+ */
+int tce_validate_architecture (int target_class)
+{
+	if (!tce_has_processor_info) {
+		if (options.verbose) {
+			fprintf (stderr, "%s: warning: no processor information in TCE file\n", progname);
+		}
+		return 1; /* allow if no info available */
+	}
+
+	/* check if TCE file is 64-bit */
+	int tce_is_64bit = (tce_processor_attr & 0x4) != 0; /* ATTRIB_WORD_64 */
+	
+	/* check if target is 64-bit */
+	int target_is_64bit = (target_class == CLASS_X64 || target_class == CLASS_AARCH64);
+
+	if (tce_is_64bit && !target_is_64bit) {
+		fprintf (stderr, "%s: error: TCE file compiled for 64-bit target but translator configured for 32-bit\n", progname);
+		return 0;
+	}
+	
+	if (!tce_is_64bit && target_is_64bit) {
+		fprintf (stderr, "%s: error: TCE file compiled for 32-bit target but translator configured for 64-bit\n", progname);
+		return 0;
+	}
+
+	if (options.verbose) {
+		fprintf (stderr, "%s: TCE file architecture: %s, target: %s\n", progname,
+			tce_is_64bit ? "64-bit" : "32-bit",
+			target_is_64bit ? "64-bit" : "32-bit");
+	}
+
+	return 1;
 }
 /*}}}*/
 

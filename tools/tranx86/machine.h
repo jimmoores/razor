@@ -25,6 +25,8 @@
 #define TARGET_MIPS		0x2
 #define TARGET_SPARC		0x3
 #define TARGET_POWERPC		0x4
+#define TARGET_X64		0x5
+#define TARGET_AARCH64		0x6
 
 #define CLASS_UNKNOWN		0x0
 
@@ -45,6 +47,9 @@
 #define CLASS_SPARCV8		0xbeef
 
 #define CLASS_POWERPC		0xbeef0
+
+#define CLASS_X64		0x64
+#define CLASS_AARCH64		0xa64
 
 #define OPTION_MMX		0x01
 #define OPTION_CMOVC		0x02

@@ -580,10 +580,16 @@ EXTRA_CFLAGS="$EXTRA_CFLAGS -fno-strict-aliasing -Wpointer-arith -DTIME_WITH_SYS
 bigendian=
 
 case "$host_cpu" in
-i386 | i486 | i586 | i686 | x86_64)
+i386 | i486 | i586 | i686)
   ARCH_DIR=i386
   AC_SUBST(ARCH_DIR)
   AC_DEFINE([TARGET_CPU_386],1,[define if i386 or greater target])
+  bigendian=no
+  ;;
+x86_64)
+  ARCH_DIR=x64
+  AC_SUBST(ARCH_DIR)
+  AC_DEFINE([TARGET_CPU_X64],1,[define if x64 target])
   bigendian=no
   ;;
 aarch64 | arm64)
@@ -671,5 +677,5 @@ AC_SUBST(EXTRA_DEFS)
 AC_SUBST(EXTRA_LDFLAGS)
 
 AC_CONFIG_HEADERS([include/ccsp_config.h])
-AC_OUTPUT([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile include/aarch64/Makefile kernel/Makefile utils/Makefile])
+AC_OUTPUT([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile include/aarch64/Makefile include/x64/Makefile kernel/Makefile utils/Makefile])
 

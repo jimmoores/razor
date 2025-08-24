@@ -139,6 +139,10 @@ ptable[] =
 		/*{ "ZH1L",       T805_INSTR,       T805_ATTRIB,       4, CFB_PROCESSOR_TYPE_T805,          F, T, 16384, 9000, FALSE, FALSE } */
 	{
 	"AXP", AXP_INSTR, T800_ATTRIB | ATTRIB_WORD_64, 4, CFB_PROCESSOR_TYPE_T800, F, F, 4096, 'D', F, F}
+	, {
+	"X64", AXP_INSTR, T800_ATTRIB | ATTRIB_WORD_64, 4, CFB_PROCESSOR_TYPE_T800, F, F, 4096, 'X', F, F}
+	, {
+	"AARCH64", AXP_INSTR, T800_ATTRIB | ATTRIB_WORD_64, 4, CFB_PROCESSOR_TYPE_T800, F, F, 4096, 'A', F, F}
 };
 
 /*}}}  */
@@ -253,7 +257,11 @@ tx_setprocessor (txlib_t * const tx, const char *const s)
 		tx->hasrmccore = ((instr & RMC_CORE_BITS) == RMC_CORE_BITS);
 		/*}}}  */
 		/*{{{  Set word length etc */
-		if ((((instr & ARCH_T) != 0) && ((attr & ATTRIB_WORD_16) == 0)) || ((instr & ARCH_H) != 0)) {
+		if ((attr & ATTRIB_WORD_64) != 0) {
+			tx->bpw = 8;
+			/* Note: mint is INT32, so for 64-bit targets we use the 32-bit min value */
+			tx->mint = 0x80000000;
+		} else if ((((instr & ARCH_T) != 0) && ((attr & ATTRIB_WORD_16) == 0)) || ((instr & ARCH_H) != 0)) {
 			tx->bpw = 4;
 			tx->mint = 0x80000000;
 		} else if (((instr & ARCH_T) != 0) && ((attr & ATTRIB_WORD_16) != 0)) {

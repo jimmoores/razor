@@ -323,6 +323,9 @@ char *string_ndup (char *str, int length)
  */
 char *string_dup (char *str)
 {
+	if (!str) {
+		return string_ndup ("<null>", 6);
+	}
 	return string_ndup (str, strlen (str));
 }
 /*}}}*/

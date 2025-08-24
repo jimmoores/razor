@@ -88,10 +88,25 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
 
   case "$target_cpu" in
     x86_64)
-      # Compile in 32-bit mode.
-      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -m32"
-      KROC_CCSP_ASFLAGS="$KROC_CCSP_ASFLAGS --32"
-      KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -m32 -Wl,-melf_i386"
+      # Support both 32-bit and 64-bit modes based on target
+      AC_ARG_ENABLE([64bit],
+                    AS_HELP_STRING([--enable-64bit],
+                                   [enable 64-bit compilation (default disabled for compatibility)]),
+                    enable_64bit=$enableval,
+                    enable_64bit=no)
+      if test "$enable_64bit" = "no"; then
+        # Compile in 32-bit mode for compatibility
+        KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -m32"
+        KROC_CCSP_ASFLAGS="$KROC_CCSP_ASFLAGS --32"
+        KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -m32 -Wl,-melf_i386"
+      else
+        # Native 64-bit compilation
+        KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DTARGET_64BIT"
+      fi
+      ;;
+    aarch64)
+      # Native 64-bit compilation for aarch64
+      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DTARGET_64BIT"
       ;;
   esac
 

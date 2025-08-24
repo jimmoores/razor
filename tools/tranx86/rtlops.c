@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdint.h>
 
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
@@ -831,7 +832,10 @@ int rtl_remove_deadnamelabels (rtl_chain *rtl_code)
 					for (i=0; itmp->in_args[i]; i++) {
 						if ((itmp->in_args[i]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 							tmp_str = (char *)itmp->in_args[i]->regconst;
-							for (j=0; (j<str_max) && (strdef[j]) && strcmp(tmp_str, strdef[j]); j++);
+							if (!tmp_str || (uintptr_t)tmp_str < 0x1000) {
+								continue; /* Skip NULL or invalid named labels */
+							}
+							for (j=0; (j<str_max) && strdef[j] && tmp_str && strcmp(tmp_str, strdef[j]) != 0; j++);
 							if (j == str_max) {
 								new_max = str_max + 10;
 								strdef = (char **)srealloc ((void *)strdef, str_max * sizeof(char *), new_max * sizeof(char *));
@@ -849,7 +853,10 @@ int rtl_remove_deadnamelabels (rtl_chain *rtl_code)
 				for (i=0; itmp->out_args[i]; i++) {
 					if ((itmp->out_args[i]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 						tmp_str = (char *)itmp->out_args[i]->regconst;
-						for (j=0; (j<str_max) && (strdef[j]) && strcmp(tmp_str, strdef[j]); j++);
+						if (!tmp_str || (uintptr_t)tmp_str < 0x1000) {
+							continue; /* Skip NULL or invalid named labels */
+						}
+						for (j=0; (j<str_max) && strdef[j] && tmp_str && strcmp(tmp_str, strdef[j]) != 0; j++);
 						if (j == str_max) {
 							new_max = str_max + 10;
 							strdef = (char **)srealloc ((void *)strdef, str_max * sizeof(char *), new_max * sizeof(char *));
@@ -867,7 +874,10 @@ int rtl_remove_deadnamelabels (rtl_chain *rtl_code)
 			break;
 		case RTL_SETNAMEDLABEL:
 			tmp_str = tmp->u.label_name;
-			for (j=0; (j<str_max) && (strdef[j]) && strcmp(tmp_str, strdef[j]); j++);
+			if (!tmp_str || (uintptr_t)tmp_str < 0x1000) {
+				break; /* Skip NULL or invalid label names */
+			}
+			for (j=0; (j<str_max) && strdef[j] && tmp_str && strcmp(tmp_str, strdef[j]) != 0; j++);
 			if (j == str_max) {
 				new_max = str_max + 10;
 				strdef = (char **)srealloc ((void *)strdef, str_max * sizeof(char *), new_max * sizeof(char *));
@@ -888,8 +898,11 @@ int rtl_remove_deadnamelabels (rtl_chain *rtl_code)
 	for (tmp=rtl_code; tmp; tmp=tmp->next) {
 		if (tmp->type == RTL_SETNAMEDLABEL) {
 			tmp_str = tmp->u.label_name;
+			if (!tmp_str || (uintptr_t)tmp_str < 0x1000) {
+				continue; /* Skip NULL or invalid label names */
+			}
 			for (i=0; (i < str_max) && strdef[i]; i++) {
-				if (!strcmp (strdef[i], tmp_str)) {
+				if (strdef[i] && tmp_str && !strcmp (strdef[i], tmp_str)) {
 					break;
 				}
 			}
@@ -1689,14 +1702,14 @@ ins_chain *compose_ins_ex (int etc_ins, int ins, int ops_in, int ops_out, ...)
 				break;
 			case ARG_NAMEDLABEL:
 			case ARG_TEXT:
-				tmp_ins->in_args[i_in]->regconst = (int)va_arg (ap, char *);
+				tmp_ins->in_args[i_in]->regconst = (intptr_t)va_arg (ap, char *);
 				break;
 			case ARG_REGINDSIB:
 				t_sib = (ins_sib_arg *)smalloc (sizeof (ins_sib_arg));
 				t_sib->scale = va_arg (ap, int);
 				t_sib->index = va_arg (ap, int);
 				t_sib->base = va_arg (ap, int);
-				tmp_ins->in_args[i_in]->regconst = (int)t_sib;
+				tmp_ins->in_args[i_in]->regconst = (intptr_t)t_sib;
 				break;
 			default:
 				fprintf (stderr, "%s: warning: input operand not reg/const/regind/cond/label\n", progname);
@@ -1728,7 +1741,7 @@ ins_chain *compose_ins_ex (int etc_ins, int ins, int ops_in, int ops_out, ...)
 				break;
 			case ARG_NAMEDLABEL:
 				/* allowed usually -- destination is whatever label points at */
-				tmp_ins->out_args[i_out]->regconst = (int)va_arg (ap, char *);
+				tmp_ins->out_args[i_out]->regconst = (intptr_t)va_arg (ap, char *);
 				break;
 			default:
 				fprintf (stderr, "%s: warning: output operand not reg/regind\n", progname);
@@ -1797,7 +1810,7 @@ ins_arg *compose_ins_arg (int argtype, ...)
 			break;
 		case ARG_NAMEDLABEL:
 		case ARG_TEXT:
-			tmp_arg->regconst = (int)va_arg (ap, char *);
+			tmp_arg->regconst = (intptr_t)va_arg (ap, char *);
 			break;
 		case ARG_REGINDSIB:
 			{
@@ -1807,7 +1820,7 @@ ins_arg *compose_ins_arg (int argtype, ...)
 				t_sib->scale = va_arg (ap, int);
 				t_sib->index = va_arg (ap, int);
 				t_sib->base = va_arg (ap, int);
-				tmp_arg->regconst = (int)t_sib;
+				tmp_arg->regconst = (intptr_t)t_sib;
 			}
 			break;
 		default:
@@ -3042,14 +3055,14 @@ int rtl_link_jumps (rtl_chain *rtl_code)
 					/* setup references for it */
 					tmp_ins->out_args[0] = new_ins_arg ();
 					tmp_ins->out_args[0]->flags = ARG_LABREFS;
-					tmp_ins->out_args[0]->regconst = (int)NULL;
+					tmp_ins->out_args[0]->regconst = (intptr_t)NULL;
 					/* resolve any references */
 					if (label_references[the_lab[0]]) {
 						j = *(int *)(label_references[the_lab[0]]);
 						for (i=0; i<j; i++) {
 							lab_refarg = label_references[the_lab[0]][i+2];
 							lab_refarg->flags = ARG_INSLABEL | (lab_refarg->flags & ~ARG_MODEMASK);
-							lab_refarg->regconst = (int)tmp_ins;
+							lab_refarg->regconst = (intptr_t)tmp_ins;
 							lab_refins = label_refins[the_lab[0]][i];
 							SetArgLabRefs(tmp_ins->out_args[0], rtl_add_labref (ArgLabRefs(tmp_ins->out_args[0]), lab_refins));
 						}
@@ -3092,7 +3105,7 @@ int rtl_link_jumps (rtl_chain *rtl_code)
 							/* have seen label, add this target to label references, etc. */
 							label_refcounts[the_lab[n_jref_arg]]++;
 							jref_arg[n_jref_arg]->flags = ARG_INSLABEL | (jref_arg[n_jref_arg]->flags & ~ARG_MODEMASK);
-							jref_arg[n_jref_arg]->regconst = (int)label_links[the_lab[n_jref_arg]];
+							jref_arg[n_jref_arg]->regconst = (intptr_t)label_links[the_lab[n_jref_arg]];
 							lab_refins = label_links[the_lab[n_jref_arg]];
 							SetArgLabRefs(lab_refins->out_args[0], rtl_add_labref (ArgLabRefs(lab_refins->out_args[0]), tmp_ins));
 						}
@@ -3546,15 +3559,15 @@ ins_arg *rtl_copy_arg (ins_arg *arg, ins_chain *addins)
 		break;
 	case ARG_NAMEDLABEL:
 	case ARG_TEXT:
-		tmp->regconst = (int)string_dup ((char *)arg->regconst);
+		tmp->regconst = (intptr_t)string_dup ((char *)arg->regconst);
 		break;
 	case ARG_REGINDSIB:
-		tmp->regconst = (int)rtl_copy_sib_arg ((ins_sib_arg *)arg->regconst);
+		tmp->regconst = (intptr_t)rtl_copy_sib_arg ((ins_sib_arg *)arg->regconst);
 		break;
 	case ARG_INSLABEL:
 		tmp->regconst = arg->regconst;
 		/* update pointers on other side */
-		tmp->regconst = (int)rtl_add_labref ((ins_labrefs *)tmp->regconst, addins);
+		tmp->regconst = (intptr_t)rtl_add_labref ((ins_labrefs *)tmp->regconst, addins);
 		break;
 	default:
 	case ARG_LABREFS:

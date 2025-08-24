@@ -1,6 +1,7 @@
 /*
- *	tceread.h - interface to the TCE reader
- *	Copyright (C) 2000 Fred Barnes <frmb@kent.ac.uk>
+ *	Architecture dependent types (aarch64 version)
+ *	Copyright (C) 2007-2008 Carl Ritson <cgr@kent.ac.uk>
+ *	Copyright (C) 2024 Amazon Q Developer (aarch64 adaptation)
  *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -17,15 +18,27 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#ifndef AARCH64_CCSP_TYPES_H
+#define AARCH64_CCSP_TYPES_H
 
-#ifndef __TCEREAD_H
-#define __TCEREAD_H
+#if defined(HAVE_CONFIG_H)
+#include <config.h>
+#endif
 
-extern int open_tce_file (char *);
-extern void close_tce_file (void);
-extern etc_chain *read_etc_chain (void);
-extern int tce_get_processor_info (int *proc_type, int *proc_attr);
-extern int tce_validate_architecture (int target_class);
+/* aarch64 doesn't have regparm attribute */
+#define REGPARM
 
-#endif	/* !__TCEREAD_H */
+#ifdef __GNUC__
+#define _PACK_STRUCT __attribute__ ((packed))
+#else
+#define _PACK_STRUCT
+#endif
 
+typedef int Time;
+typedef struct _cputime_t { 
+	unsigned long long counter; 
+} _PACK_STRUCT cputime_t;
+
+#undef _PACK_STRUCT
+
+#endif /* !AARCH64_CCSP_TYPES_H */

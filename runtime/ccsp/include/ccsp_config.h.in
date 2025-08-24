@@ -39,6 +39,12 @@
 /* define if i386 or greater target */
 #undef TARGET_CPU_386
 
+/* define if aarch64 target */
+#undef TARGET_CPU_AARCH64
+
+/* define if x64 target */
+#undef TARGET_CPU_X64
+
 /* define if MIPS target */
 #undef TARGET_CPU_MIPS
 

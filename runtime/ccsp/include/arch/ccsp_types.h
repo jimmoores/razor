@@ -9,4 +9,8 @@
 #include <aarch64/ccsp_types.h>
 #endif
 
+#ifdef TARGET_CPU_X64
+#include <x64/ccsp_types.h>
+#endif
+
 #endif /* !_ARCH_CCSP_TYPES_H */
