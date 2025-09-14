@@ -86,6 +86,15 @@ ocrtslibs="-lm @KROC_CCSP_LIBS@"
 extcflags="@KROC_CCSP_CFLAGS@"
 dtraces=0
 
+case "$target_cpu" in
+	aarch64)
+		octranopts="$octranopts -maarch64"
+		;;
+	x86_64)
+		octranopts="$octranopts -mx64"
+		;;
+esac
+
 case "$target_os" in
 	cygwin*)
 		octranopts="$octranopts -nsymops --cnpfx _"
@@ -139,20 +148,28 @@ tsuffix='tce'
 
 # Default: medium warnings
 occwopts=
-occopts="-etc -w -y -znd -znec -udo -zncc -init -xin -mobiles -mpt -zrpe @KROC_CCSP_OCCFLAGS@"
+occopts="-w -y -znd -znec -udo -zncc -init -xin -mobiles -mpt -zrpe @KROC_CCSP_OCCFLAGS@"
 
 case "$target_cpu" in
-	i386 | i486 | i586 | i686 | x86_64)
-		occopts="$occopts -zcxdiv -zcxrem -zzs"
+	i386 | i486 | i586 | i686)
+		occopts="$occopts -etc -zcxdiv -zcxrem -zzs"
+		;;
+	x86_64)
+		occopts="$occopts -X64 -zcxdiv -zcxrem -zzs"
+		proc_class=""
+		;;
+	aarch64)
+		occopts="$occopts -AARCH64"
+		proc_class=""
 		;;
 	sparc*)
-		occopts="$occopts -tbe"
+		occopts="$occopts -etc -tbe"
 		;;
 	powerpc64)
-		occopts="$occopts"
+		occopts="$occopts -etc"
 		;;
 	mips|mipsbe|mipsle)
-		occopts="$occopts"
+		occopts="$occopts -etc"
 		;;
 esac
 
@@ -164,7 +181,17 @@ esac
 
 case "$target_os" in
 	darwin*)
-		extraccopts=${EXTRACCOPTS:--read_only_relocs suppress -arch i386}
+		case "$target_cpu" in
+			aarch64)
+				extraccopts=${EXTRACCOPTS:--read_only_relocs suppress -arch arm64}
+				;;
+			x86_64)
+				extraccopts=${EXTRACCOPTS:--read_only_relocs suppress -arch x86_64}
+				;;
+			*)
+				extraccopts=${EXTRACCOPTS:--read_only_relocs suppress -arch i386}
+				;;
+		esac
 		;;
 	solaris*)
 		extraccopts=${EXTRACCOPTS:-}
@@ -864,8 +891,10 @@ fi
 oclibpath="-L. $oclibpath"
 ocsearch=".:$ocsearch"
 cincludepath="-I. $cincludepath"
-procopts="-$proc_class"
-occopts="$procopts $occopts"
+if [ "$proc_class" != "" ]; then
+	procopts="-$proc_class"
+	occopts="$procopts $occopts"
+fi
 
 #}}}
 #{{{  add flags for user-defined channels if enabled
@@ -1090,11 +1119,24 @@ fi
 #{{{ parse_pragmas
 # Search an ETC file for #PRAGMA COMMENT ..." directives.
 parse_pragmas () {
-	local tcefile="$1" libs lib opt add opts
+	local tcefile="$1" libs lib opt add opts arch_flag
+
+	# Determine architecture flag for tranx86
+	case "$target_cpu" in
+		aarch64)
+			arch_flag="-maarch64"
+			;;
+		x86_64)
+			arch_flag="-mx64"
+			;;
+		*)
+			arch_flag=""
+			;;
+	esac
 
 	# For .USELIB directives, add the library to the list if it's not
 	# already been used.
-	libs=$($octran -C "$tcefile" | awk '/^\.USELIB / { ORS=" "; print $2 }')
+	libs=$($octran $arch_flag -C "$tcefile" | awk '/^\.USELIB / { ORS=" "; print $2 }')
 	for lib in $libs; do
 		opt="-loccam_$lib"
 
@@ -1113,7 +1155,7 @@ parse_pragmas () {
 	done
 
 	# For .LDFLAGS directives, add the flags to the CC options.
-	opts=$($octran -C "$tcefile" | awk '/^\.LDFLAGS / { ORS=" "; for (i = 2; i <= NF; i++) { print $i } }')
+	opts=$($octran $arch_flag -C "$tcefile" | awk '/^\.LDFLAGS / { ORS=" "; for (i = 2; i <= NF; i++) { print $i } }')
 	if [ "$verbose" -a "$opts" != "" ] ; then
 		printf '%s: Using extra linker options %s\n' "$progname" "$opts" 1>&2
 	fi

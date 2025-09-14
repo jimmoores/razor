@@ -23,8 +23,11 @@
 #define __CCSP_TIMER_H
 
 #ifdef CCSP_CIF
-
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
+typedef unsigned int Time;
+#else
 typedef word Time;
+#endif
 #ifndef INLINE
 #define INLINE inline
 #endif

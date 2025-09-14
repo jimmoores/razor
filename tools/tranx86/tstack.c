@@ -459,11 +459,11 @@ void constmap_clearall (void)
 	return;
 }
 /*}}}*/
-/*{{{  void constmap_new (int reg, int consttype, int constval, ins_chain *ins)*/
+/*{{{  void constmap_new (int reg, int consttype, intptr_t constval, ins_chain *ins)*/
 /*
  *	adds `reg' with constant value `constval' (loaded at instruction `ins') to constant table
  */
-void constmap_new (int reg, int consttype, int constval, ins_chain *ins)
+void constmap_new (int reg, int consttype, intptr_t constval, ins_chain *ins)
 {
 	constmap *tmp;
 	int i, j;
@@ -486,7 +486,7 @@ void constmap_new (int reg, int consttype, int constval, ins_chain *ins)
 		tmp->c_val = labs[0];
 		tmp->c_val2 = labs[1];
 	} else {
-		tmp->c_val = constval;
+		tmp->c_val = (int)constval;
 		tmp->c_val2 = 0;
 	}
 	tmp->load_ins = ins;

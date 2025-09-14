@@ -2289,7 +2289,17 @@ printtreenl (stderr, 4, list[i].fld_nptr);
 			if (current_fe_data->fe_align_records) {
 				/*padding = ((offset + (bpw - 1)) & (-bpw)) - offset; */
 				/* other version, not relying on twos-complement */
-				padding = (((offset + (bpw - 1)) / bpw) * bpw) - offset;
+				/* For PACKED records, use INT size alignment for compatibility */
+				/* For non-PACKED records on 64-bit targets, use natural word alignment */
+				int align_size = bpw;
+				if (packed) {
+					/* PACKED records use INT size alignment (4 bytes) for compatibility */
+					align_size = 4;
+				} else if (current_fe_data->fe_txlib->pattr & 0x4) {
+					/* Non-PACKED record on 64-bit target: use 8-byte alignment */
+					align_size = 8;
+				}
+				padding = (((offset + (align_size - 1)) / align_size) * align_size) - offset;
 			} else {
 				padding = 0;
 			}

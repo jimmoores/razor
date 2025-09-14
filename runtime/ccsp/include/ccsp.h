@@ -40,7 +40,11 @@
 #include "ccsp_stats.h"
 
 typedef struct _ccsp_sched_t {
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
+	word			stack;
+#else
 	unsigned int    stack;
+#endif
 	word		cparam[5];
 	void		*calltable[K_MAX_SUPPORTED];
 	word		mdparam[32];

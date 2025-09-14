@@ -29,6 +29,13 @@ case "$host_cpu" in
     ;;
   esac
   ;;
+ aarch64)
+  case "$target" in
+   *Darwin* | *darwin*)
+    GNUASFLAGS='-arch", "arm64'
+    ;;
+  esac
+  ;;
 esac
 
 AC_SUBST(ARCH_DEFS)

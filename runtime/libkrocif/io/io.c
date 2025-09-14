@@ -76,9 +76,15 @@ static word **err_chan;
 static word *kbd_termchan;
 
 /* defined in generate code */
+#if 0
+extern void _O_kroc_screen_process (void);
+extern void _O_kroc_error_process (void);
+extern void _O_kroc_keyboard_process (void);
+#else
 extern void O_kroc_screen_process (void);
 extern void O_kroc_error_process (void);
 extern void O_kroc_keyboard_process (void);
+#endif
 /*}}}*/
 
 /*{{{  static word **setup_chan (word init_state) */
@@ -135,7 +141,11 @@ int init_occam_io (int tlpiface)
 	kbd_ws = &(kbd_workspace_bottom[KBD_WORKSPACE_WORDS - 4]);
 	kbd_ws[-3] = 0;
 	kbd_ws[-2] = (word) NotProcess_p;
+#if 0
+	kbd_ws[-1] = (word) _O_kroc_keyboard_process;
+#else
 	kbd_ws[-1] = (word) O_kroc_keyboard_process;
+#endif
 	kbd_ws[0] = 0;
 	kbd_ws[1] = (word) kbd_chan;
 	kbd_ws[2] = (word) &kbd_termchan;
@@ -144,7 +154,11 @@ int init_occam_io (int tlpiface)
 	scr_ws = &(scr_workspace_bottom[SCR_WORKSPACE_WORDS - 4]);
 	scr_ws[-3] = 0;
 	scr_ws[-2] = (word) NotProcess_p;
+#if 0
+	scr_ws[-1] = (word) _O_kroc_screen_process;
+#else
 	scr_ws[-1] = (word) O_kroc_screen_process;
+#endif
 	scr_ws[0] = 0;
 	scr_ws[1] = (word) scr_chan;
 	scr_ws[2] = 0;
@@ -152,7 +166,11 @@ int init_occam_io (int tlpiface)
 	err_ws = &(err_workspace_bottom[ERR_WORKSPACE_WORDS - 4]);
 	err_ws[-3] = 0;
 	err_ws[-2] = (word) NotProcess_p;
+#if 0
+	err_ws[-1] = (word) _O_kroc_error_process;
+#else
 	err_ws[-1] = (word) O_kroc_error_process;
+#endif
 	err_ws[0] = 0;
 	err_ws[1] = (word) err_chan;
 	err_ws[2] = 0;

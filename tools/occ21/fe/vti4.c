@@ -31,7 +31,7 @@
 #include "vtierror.h"
 
 #include "chkdef.h"		/* current_fe_data */
-#include "harndef.h"		/* for mobile_size_field */
+#include "harndef.h"		/* for mobile_size_field and targetintsize */
 #include "trandef.h"		/* for isdynmobilechantypetype */
 #include "genkroc.h"		/* for WSH */
 /*}}}*/
@@ -395,6 +395,13 @@ PUBLIC int bytesinscalar (const int tag)
 #endif
 	case S_INT:
 	case S_UINT:
+		/* INT should be 32-bit even on 64-bit targets */
+		switch (targetintsize) {
+		case S_INT16: return 2;
+		case S_INT32: return 4;
+		case S_INT64: return 8;
+		default: return current_fe_data->fe_txlib->bpw;
+		}
 	case S_CHAN:
 		return current_fe_data->fe_txlib->bpw;
 		/*case S_PORT:   chkreport_i(CHK_UNKNOWN_TYPE, chklocn, t); return(-1); */

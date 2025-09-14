@@ -113,6 +113,45 @@ static ins_chain **ptr_add_to_ins_chain (void);
 #define TLC_SIZEDMEM 7
 /*}}}*/
 
+static char *convert_occam_symbol(char *fixed_name) {
+	// /* Already O_*? return a copy unchanged */
+	// if (strncmp(fixed_name, "O_", 2) == 0) {
+	// 	char *cpy = (char *)smalloc(strlen(fixed_name) + 1);
+	// 	strcpy(cpy, fixed_name);
+	// 	return cpy;
+	// }
+
+	/* Make a working copy we can normalize */
+	char *tmp = (char *)smalloc(strlen(fixed_name) + 1);
+	strcpy(tmp, fixed_name);
+
+	/* Strip leading underscores if present */
+	while (tmp[0] == '_') {
+		memmove(tmp, tmp + 1, strlen(tmp)); /* shift left */
+	}
+
+	/* Replace dots with underscores */
+	for (char *p = tmp; *p; ++p) {
+		if (*p == '.') *p = '_';
+	}
+
+	// /* Collapse repeated underscores in the payload (e.g., "do__stuff" -> "do_stuff") */
+	// char *in = tmp, *out = tmp;
+	// char last = '\0';
+	// while (*in) {
+	// 	if (!(*in == '_' && last == '_')) {
+	// 		*out++ = *in;
+	// 	}
+	// 	last = *in++;
+	// }
+	// *out = '\0';
+	//
+	/* Prepend O_ (and a prefix if necessary) */
+	char *new_name = (char *)smalloc(strlen(tmp) + 4);
+	sprintf(new_name, "%sO_%s", options.extref_prefix, tmp);
+	sfree(tmp);
+	return new_name;
+}
 /*{{{  static void generate_call (tstate *ts, etc_chain *etc_code, arch_t *arch, int stub) */
 static void generate_call (tstate *ts, etc_chain *etc_code, arch_t *arch, int stub)
 {
@@ -150,11 +189,10 @@ static void generate_call (tstate *ts, etc_chain *etc_code, arch_t *arch, int st
 		}
 		break;
 	}
-
+	fprintf(stderr, "*** generate_call: i = %d, d_str = %s\n", i, d_str);
 	switch (i) {
 	case 0:
 		/* normal call */
-
 		if (stub || options.nocc_codegen) {
 			/* if using NOCC, remember to handle return-address (goes at WS offset 0 always, adjustment done) */
 			st_first = compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND, REG_WPTR);
@@ -1171,11 +1209,14 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					/*{{{  DEBUGLINE*/
 				case DEBUGLINE:
 					if (options.annotate_output) {
-						sprintf (sbuffer, ".DEBUGLINE [tsd=%d,%d]", ts->stack->old_ts_depth, ts->stack->old_fs_depth);
+						sprintf (sbuffer, ".DEBUGLINE %d [tsd=%d,%d]", y_opd, ts->stack->old_ts_depth, ts->stack->old_fs_depth);
 						add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
 					}
-					CONVMISSING ("DEBUGLINE");
-					/* **INCOMPLETE** */
+					set_line_pending (ts, y_opd);
+					add_to_ins_chain (compose_ins (INS_SOURCELINE, 1, 0, ARG_CONST, y_opd));
+					if (options.debug_options & DEBUG_INSERT) {
+						arch->compose_debug_insert (ts, 0);
+					}
 					break;
 					/*}}}*/
 					/*{{{  TSDEPTH*/
@@ -1186,7 +1227,7 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					}
 					if (y_opd >= 4) {
 						while (y_opd > 3) {
-							add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("*** register lost from stack ***")));
+							add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("# register lost from stack")));
 							fprintf (stderr, "%s: warning: register lost from stack.\n", progname);
 							y_opd--;
 						}
@@ -1903,7 +1944,7 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 						tmp_ins = compose_ins (INS_LOADLABDIFF, 2, 1, ARG_LABEL, y_opd, ARG_LABEL, etc_code->opd, ARG_REG, ts->stack->a_reg);
 						labs[0] = y_opd;
 						labs[1] = etc_code->opd;
-						constmap_new (ts->stack->a_reg, VALUE_LABDIFF, (int)labs, tmp_ins);
+						constmap_new (ts->stack->a_reg, VALUE_LABDIFF, (intptr_t)labs, tmp_ins);
 						add_to_ins_chain (tmp_ins);
 					}
 					break;
@@ -2806,6 +2847,11 @@ fprintf (stderr, "check: local = [%s]\n", local);
 		*fh = '\0';
 		fh++;
 		/* ch has type, fh has name */
+		if (n_params >= 3) {
+			/* too many parameters, abort */
+			sfree (local);
+			return TLP_INVALID;
+		}
 		name_list[n_params] = fh;
 		type_list[n_params] = ch;
 		n_params++;
@@ -5764,6 +5810,13 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		}
 		break;
 		/*}}}*/
+		/*{{{  I_TESTSTS, I_TESTSTE, I_TESTSTD -- test operations*/
+	case I_TESTSTS:
+	case I_TESTSTE:
+	case I_TESTSTD:
+		arch->compose_longop (ts, sec);
+		break;
+		/*}}}*/
 		/*{{{  default -- error*/
 	default:
 		fprintf (stderr, "%s: warning: not supported %d\n", progname, sec);
@@ -5809,22 +5862,80 @@ static void generate_constmapped_21instr (tstate *ts, int etc_instr, int instr, 
 /*{{{  static void make_c_name (char *src, int slen, char *dst)*/
 /*
  *	void make_c_name (char *src, int slen, char *dst)
- *	prepends '$' if `src' doesn't start with C., B. or BX. (drops the C, B, BX if it does)
+ *	prepends extref_prefix if `src' doesn't start with C., B. or BX. (drops the C, B, BX if it does)
  */
 static void make_c_name (char *src, int slen, char *dst)
 {
-	int i, j;
+	int i, j, k;
+	int prefix_len = options.extref_prefix ? strlen(options.extref_prefix) : 0;
 
-	if (!strncmp (src, "C.", 2) || !strncmp (src, "B.", 2)) {
+	/* Special handling for kroc process symbols that need O_ prefix */
+	if (slen >= 18 && !strncmp(src, "kroc.keyboard.process", 21)) {
+		strcpy(dst, "O_kroc_keyboard_process");
+		return;
+	} else if (slen >= 16 && !strncmp(src, "kroc.screen.process", 19)) {
+		strcpy(dst, "O_kroc_screen_process");
+		return;
+	} else if (slen >= 15 && !strncmp(src, "kroc.error.process", 18)) {
+		strcpy(dst, "O_kroc_error_process");
+		return;
+	}
+
+	/* Special handling for C. and BX. prefixed symbols */
+	if (!strncmp (src, "C.", 2)) {
+		/* C.function.name -> _function_name (strip C. and convert dots to underscores) */
+		if (options.extref_prefix && prefix_len > 0) {
+			memcpy (dst, options.extref_prefix, prefix_len);
+			i = prefix_len;
+		} else {
+			*dst = '_';
+			i = 1;
+		}
+		/* Copy rest of name, converting dots to underscores */
+		for (j = 2, k = i; j < slen; j++, k++) {
+			dst[k] = (src[j] == '.') ? '_' : src[j];
+		}
+		dst[k] = '\0';
+		return;
+	} else if (!strncmp (src, "BX.", 3)) {
+		/* BX.function.name -> _function_name (strip BX. and convert dots to underscores) */
+		if (options.extref_prefix && prefix_len > 0) {
+			memcpy (dst, options.extref_prefix, prefix_len);
+			i = prefix_len;
+		} else {
+			*dst = '_';
+			i = 1;
+		}
+		/* Copy rest of name, converting dots to underscores */
+		for (j = 3, k = i; j < slen; j++, k++) {
+			dst[k] = (src[j] == '.') ? '_' : src[j];
+		}
+		dst[k] = '\0';
+		return;
+	} else if (!strncmp (src, "B.", 2)) {
 		i = 0, j = 1;
-	} else if (!strncmp (src, "BX.", 3) || !strncmp (src, "KR.", 3)) {
+	} else if (!strncmp (src, "KR.", 3)) {
 		i = 0, j = 2;
 	} else {
-		*dst = '$';
-		i = 1, j = 0;
+		/* Use extref_prefix instead of hardcoded '$' */
+		if (options.extref_prefix && prefix_len > 0) {
+			memcpy (dst, options.extref_prefix, prefix_len);
+			i = prefix_len, j = 0;
+			/* For Darwin/macOS, add extra underscore for dot-separated symbols */
+			if (strchr(src, '.') != NULL) {
+				dst[i] = '_';
+				i++;
+			}
+		} else {
+			*dst = '$';
+			i = 1, j = 0;
+		}
 	}
-	memcpy (dst + i, src + j, slen - j);
-	dst[i + (slen - j)] = '\0';
+	/* Convert dots to underscores in the remaining cases */
+	for (k = i; j < slen; j++, k++) {
+		dst[k] = (src[j] == '.') ? '_' : src[j];
+	}
+	dst[k] = '\0';
 	return;
 }
 /*}}}*/

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #	Standard interface for compiling occam-pi libraries and programs
 #	Copyright (C) 2007 University of Kent
@@ -19,7 +19,6 @@
 #	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
 
-from __future__ import print_function
 import sys, os, getopt, re, shlex, platform
 
 #{{{  globals
@@ -51,7 +50,7 @@ build_shared = True
 
 #{{{  helper functions
 def warn(*s):
-	print ("occbuild: " + "".join(map(str, s)), file=sys.stderr)
+	print("occbuild: " + "".join(map(str, s)), file=sys.stderr)
 
 def die(*s):
 	warn(*s)
@@ -96,11 +95,8 @@ def adjust_for_windows(cmd):
 def run_command(cmd):
 	"""Run a program with arguments and return the exit code."""
 	cmd = adjust_for_windows(cmd)
-	try:
-		import subprocess
-		return subprocess.call(cmd)
-	except ImportError:
-		return os.spawnvp(os.P_WAIT, cmd[0], cmd)
+	import subprocess
+	return subprocess.call(cmd)
 
 def safe_sorted(l):
 	"""Like sorted(), but returns a mutable list."""
@@ -111,7 +107,7 @@ def safe_sorted(l):
 def tidy_spaces(string):
 	"""Remove leading and trailing whitespace, and collapse all interior
 	whitespace into single spaces."""
-	return re.sub('\s+', ' ', string.strip())
+	return re.sub(r'\s+', ' ', string.strip())
 
 def split_options(opts):
 	"""Split an argument we've been given into a list of arguments to pass
@@ -155,7 +151,7 @@ def make_relative_path(source, dest):
 	if output == []:
 		return "."
 	else:
-		return apply(os.path.join, output)
+		return os.path.join(*output)
 
 def run(cmd):
 	"""Run a command, and check that it succeeded."""
@@ -172,35 +168,15 @@ def capture(cmd):
 
 	cmd = adjust_for_windows(cmd)
 
-	try:
-		import subprocess
-		p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-		data = p.communicate()[0]
-		status = p.wait()
-	except ImportError:
-		(pr, pw) = os.pipe()
-		pid = os.fork()
-		if pid == 0:
-			os.close(pr)
-			os.dup2(pw, 1)
-			os.execvp(cmd[0], cmd)
-			os._exit(1)
-
-		os.close(pw)
-		data = ""
-		while 1:
-			s = os.read(pr, 4096)
-			if s == "":
-				break
-			data += s
-		os.close(pr)
-
-		(pid, status) = os.waitpid(pid, 0)
+	import subprocess
+	p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+	data = p.communicate()[0]
+	status = p.wait()
 
 	if status != 0:
 		die("Command failed: ", " ".join(cmd))
 
-	return data
+	return data.decode('utf-8')
 
 def find_in_path(file, path):
 	"""Search for file in all the directories listed in path."""
@@ -369,7 +345,13 @@ def get_install_dir(default, default_suffix):
 
 def get_uselibs(etc_file):
 	"""Extract all the USELIB comments from a .etc file."""
-	comments = capture(programs["tce-dump.pl"] + ["-C", etc_file])
+	# Need to pass architecture flag to tranx86 for comment extraction
+	arch_flag = "-maarch64" if target_cpu == "aarch64" else "-mx64" if target_cpu == "x86_64" else ""
+	cmd = programs["tce-dump.pl"][:]
+	if arch_flag:
+		cmd.append(arch_flag)
+	cmd.extend(["-C", etc_file])
+	comments = capture(cmd)
 	uselibs = re.findall(r"\.USELIB\s+(.*?)\s*\n", comments)
 	return uselibs
 
@@ -393,7 +375,7 @@ def resolve_libraries(libs):
 		path = resolve_library(lib)
 		if path is None:
 			die("Unable to resolve library: ", lib)
-		if not paths.has_key(path):
+		if path not in paths:
 			result.append(path)
 			paths[path] = True
 	return result
@@ -1181,8 +1163,15 @@ def main(args):
 	elif target_os.startswith("darwin"):
 		patterns["so"] = "liboccam_%s.dylib"
 		build_shared = (toolchain.__class__ == toolchains["tvm"])
-		linker_opts.extend(["-arch", "i386", 
-			"-mmacosx-version-min=10.4"])
+		if target_cpu == "aarch64":
+			linker_opts.extend(["-arch", "arm64", 
+				"-mmacosx-version-min=11.0"])
+		elif target_cpu == "x86_64":
+			linker_opts.extend(["-arch", "x86_64", 
+				"-mmacosx-version-min=10.9"])
+		else:
+			linker_opts.extend(["-arch", "i386", 
+				"-mmacosx-version-min=10.4"])
 	elif target_cpu.startswith("avr"):
 		build_shared = False
 

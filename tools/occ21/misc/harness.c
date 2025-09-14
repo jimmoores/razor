@@ -695,11 +695,16 @@ PRIVATE void rm_asmfile(void)
 /* It is assumed elsewhere that the default is a 32-bit processor (I think!) */
 /* (Eg. in the configurer) */
 #undef DEFAULT_PROCESSOR_TYPE
-#if defined(CONFIG2)                             /* we no longer have a default processor */
+#if defined(__aarch64__) || defined(__arm64__)
+	#define DEFAULT_PROCESSOR_TYPE "AARCH64"  /* 64-bit ARM processor */
+#elif defined(__x86_64__) || defined(__amd64__)
+	#define DEFAULT_PROCESSOR_TYPE "X64"      /* 64-bit x86 processor */
+#elif defined(CONFIG2)                             /* we no longer have a default processor */
 	#define DEFAULT_PROCESSOR_TYPE "T414"    /* but we'll pretend to have one for the configurer */
-#endif
-#if defined(CONFIG3)
+#elif defined(CONFIG3)
 	#define DEFAULT_PROCESSOR_TYPE "T9000"
+#else
+	#define DEFAULT_PROCESSOR_TYPE "T414"    /* fallback to 32-bit */
 #endif
 
 /*{{{  PRIVATE void seterrormode*/
@@ -813,7 +818,8 @@ PRIVATEPARAM void setprocessorattr(void)
 	}
 	if ((processorattr & ATTRIB_WORD_64) != 0) {
 		needs_quadalign = TRUE;
-		targetintsize = S_INT64;
+		/* INT remains 32-bit even on 64-bit targets */
+		/* targetintsize = S_INT64; */
 		wordshift = 3;
 	}
 }

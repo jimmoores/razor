@@ -133,17 +133,34 @@ int dump_elf (rtl_chain *rtl_code, char *sourcefile, char *filename, arch_t *arc
 		if (!as_env) {
 			as_env = as_command;
 		}
+		/* Check if we need '-' for stdin (clang/gcc-like assemblers or macOS 'as') */
+		int need_stdin_arg = (strstr(as_env, "clang") != NULL || strstr(as_env, "gcc") != NULL);
+		#ifdef TARGET_CANONICAL
+		if (!need_stdin_arg && (strstr(TARGET_CANONICAL, "darwin") || strstr(TARGET_CANONICAL, "apple"))) {
+			/* On macOS, 'as' is actually clang and needs '-' for stdin */
+			need_stdin_arg = 1;
+		}
+		#endif
+		
 		if (options.gstabs) {
 			if (sourcefile) {
 				execlp (as_env, as_env, (options.gstabs == 2) ? "--gstabs+" : "--gstabs", GNUASFLAGSADD "-o", filename, sourcefile, NULL);
 			} else {
-				execlp (as_env, as_env, (options.gstabs == 2) ? "--gstabs+" : "--gstabs", GNUASFLAGSADD "-o", filename, NULL);
+				if (need_stdin_arg) {
+					execlp (as_env, as_env, (options.gstabs == 2) ? "--gstabs+" : "--gstabs", GNUASFLAGSADD "-o", filename, "-", NULL);
+				} else {
+					execlp (as_env, as_env, (options.gstabs == 2) ? "--gstabs+" : "--gstabs", GNUASFLAGSADD "-o", filename, NULL);
+				}
 			}
 		} else {
 			if (sourcefile) {
 				execlp (as_env, as_env, GNUASFLAGSADD "-o", filename, sourcefile, NULL);
 			} else {
-				execlp (as_env, as_env, GNUASFLAGSADD "-o", filename, NULL);
+				if (need_stdin_arg) {
+					execlp (as_env, as_env, GNUASFLAGSADD "-o", filename, "-", NULL);
+				} else {
+					execlp (as_env, as_env, GNUASFLAGSADD "-o", filename, NULL);
+				}
 			}
 		}
 		exit (EXIT_FAILURE);

@@ -45,3 +45,31 @@ BOOL FUNCTION NOTFINITE (VAL REAL32 X)
 --}}}
 
 #ENDIF
+
+#IF (TARGET.BITS.PER.WORD = 32) OR DEFINED(TARGET.HAS.FPU)
+
+--{{{  #options and #comments
+#OPTION "E V"  -- no compiler libs, no vector space
+#COMMENT "TA compiler library, V1.1 21/02/89"
+#COMMENT "(c) Copyright INMOS Limited 1988"
+--}}}
+
+#PRAGMA TRANSLATE NOTFINITE "NOTFINITE%O"
+
+#INCLUDE "realvals.inc"
+
+--{{{  
+BOOL FUNCTION NOTFINITE (VAL REAL32 X)
+
+  -- Function version (10 Jun 87)
+  -- 32-bit version added for 64-bit target support
+
+  VAL INT X RETYPES X:
+  INT exp, frac :
+  VALOF
+    exp, frac := SHIFTLEFT (0, X << 1, RealShift)
+    RESULT (exp = RealExp)
+:
+--}}}
+
+#ENDIF

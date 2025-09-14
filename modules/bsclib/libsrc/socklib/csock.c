@@ -1,20 +1,20 @@
 /*
- *	csock.c - C functions for occam socket library
- *	Copyright (C) 2000 Fred Barnes (frmb2@ukc.ac.uk)
- *
- *	This program is free software; you can redistribute it and/or modify
- *	it under the terms of the GNU General Public License as published by
- *	the Free Software Foundation; either version 2 of the License, or
- *	(at your option) any later version.
- *
- *	This program is distributed in the hope that it will be useful,
- *	but WITHOUT ANY WARRANTY; without even the implied warranty of
- *	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *	GNU General Public License for more details.
- *
- *	You should have received a copy of the GNU General Public License
- *	along with this program; if not, write to the Free Software
- *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *\tcsock.c - C functions for occam socket library
+ *\tCopyright (C) 2000 Fred Barnes (frmb2@ukc.ac.uk)
+ *\
+ *\tThis program is free software; you can redistribute it and/or modify
+ *\tit under the terms of the GNU General Public License as published by
+ *\tthe Free Software Foundation; either version 2 of the License, or
+ *\t(at your option) any later version.
+ *\
+ *\tThis program is distributed in the hope that it will be useful,
+ *\tbut WITHOUT ANY WARRANTY; without even the implied warranty of
+ *\tMERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *\tGNU General Public License for more details.
+ *\
+ *\tYou should have received a copy of the GNU General Public License
+ *\talong with this program; if not, write to the Free Software
+ *\tFoundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <stdio.h>
@@ -28,6 +28,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
+#include <stdint.h>
 
 #include <netinet/tcp.h>
 
@@ -387,13 +388,13 @@ static int r_encode_msg_flags (int flags)
 /*}}}*/
 
 /*
- *	Basic socket stuff
+ *\tBasic socket stuff
  */
 
 /*{{{  static __inline__ void r_socket (occ_socket *sock)*/
 /*
- *	void r_socket (occ_socket *sock)
- *	creates a new socket
+ *\tvoid r_socket (occ_socket *sock)
+ *\tcreates a new socket
  */
 static __inline__ void r_socket (occ_socket *sock)
 {
@@ -403,8 +404,8 @@ static __inline__ void r_socket (occ_socket *sock)
 /*}}}*/
 /*{{{  static __inline__ void r_close (occ_socket *sock)*/
 /*
- *	void r_close (occ_socket *sock)
- *	closes a socket (or any file descriptor)
+ *\tvoid r_close (occ_socket *sock)
+ *\tcloses a socket (or any file descriptor)
  */
 static __inline__ void r_close (occ_socket *sock)
 {
@@ -419,8 +420,8 @@ static __inline__ void r_close (occ_socket *sock)
 /*}}}*/
 /*{{{  static __inline__ void r_read (occ_socket *sock, char *buffer, int buf_size, int count, int *result)*/
 /*
- *	void r_read (occ_socket *sock, char *buffer, int buf_size, int count, int *result)
- *	performs a read
+ *\tvoid r_read (occ_socket *sock, char *buffer, int buf_size, int count, int *result)
+ *\tperforms a read
  */
 static __inline__ void r_read (occ_socket *sock, char *buffer, int buf_size, int count, int *result)
 {
@@ -439,7 +440,7 @@ static __inline__ void r_read (occ_socket *sock, char *buffer, int buf_size, int
 /*{{{  static __inline__ void r_fullread (occ_socket *sock, char *buffer, int buf_size, int count, int *result)*/
 /*
  a	void r_fullread (occ_socket *sock, char *buffer, int buf_size, int count, int *result)
- *	performs a read, but makes sure as much as requested has been read
+ *\tperforms a read, but makes sure as much as requested has been read
  */
 static __inline__ void r_fullread (occ_socket *sock, char *buffer, int buf_size, int count, int *result)
 {
@@ -467,8 +468,8 @@ static __inline__ void r_fullread (occ_socket *sock, char *buffer, int buf_size,
 /*}}}*/
 /*{{{  static __inline__ void r_write (occ_socket *sock, char *buffer, int buf_size, int *result)*/
 /*
- *	void r_write (occ_socket *sock, char *buffer, int buf_size, int *result)
- *	performs a write
+ *\tvoid r_write (occ_socket *sock, char *buffer, int buf_size, int *result)
+ *\tperforms a write
  */
 static __inline__ void r_write (occ_socket *sock, char *buffer, int buf_size, int *result)
 {
@@ -481,12 +482,12 @@ static __inline__ void r_write (occ_socket *sock, char *buffer, int buf_size, in
 	}
 }
 /*}}}*/
-/*{{{  static __inline__ void r_write_addr (occ_socket *sock, int addr, int size, int *result)*/
+/*{{{  static __inline__ void r_write_addr (occ_socket *sock, intptr_t addr, int size, int *result)*/
 /*
- *	void r_write_addr (occ_socket *sock, int addr, int size, int *result)
- *	does a write (takes address)
+ *\tvoid r_write_addr (occ_socket *sock, intptr_t addr, int size, int *result)
+ *\tdoes a write (takes address)
  */
-static __inline__ void r_write_addr (occ_socket *sock, int addr, int size, int *result)
+static __inline__ void r_write_addr (occ_socket *sock, intptr_t addr, int size, int *result)
 {
 	if (sock->fd < 0) {
 		*result = -1;
@@ -499,8 +500,8 @@ static __inline__ void r_write_addr (occ_socket *sock, int addr, int size, int *
 /*}}}*/
 /*{{{  static __inline__ void r_fullwrite (occ_socket *sock, char *buffer, int buf_size, int *result)*/
 /*
- *	void r_fullwrite (occ_socket *sock, char *buffer, int buf_size, int *result)
- *	performs a write, but makes sure it's all gone out unless there's an error
+ *\tvoid r_fullwrite (occ_socket *sock, char *buffer, int buf_size, int *result)
+ *\tperforms a write, but makes sure it's all gone out unless there's an error
  */
 static __inline__ void r_fullwrite (occ_socket *sock, char *buffer, int buf_size, int *result)
 {
@@ -526,12 +527,12 @@ static __inline__ void r_fullwrite (occ_socket *sock, char *buffer, int buf_size
 	}
 }
 /*}}}*/
-/*{{{  static __inline__ void r_fullwrite_addr (occ_socket *sock, int addr, int size, int *result)*/
+/*{{{  static __inline__ void r_fullwrite_addr (occ_socket *sock, intptr_t addr, int size, int *result)*/
 /*
- *	void r_fullwrite_addr (occ_socket *sock, int addr, int size, int *result)
- *	performs a write (from address), makes sure it's all gone unless error
+ *\tvoid r_fullwrite_addr (occ_socket *sock, intptr_t addr, int size, int *result)
+ *\tperforms a write (from address), makes sure it's all gone unless error
  */
-static __inline__ void r_fullwrite_addr (occ_socket *sock, int addr, int size, int *result)
+static __inline__ void r_fullwrite_addr (occ_socket *sock, intptr_t addr, int size, int *result)
 {
 	int x, r, out;
 
@@ -557,8 +558,8 @@ static __inline__ void r_fullwrite_addr (occ_socket *sock, int addr, int size, i
 /*}}}*/
 /*{{{  static __inline__ void r_connect (occ_socket *sock, int *result)*/
 /*
- *	void r_connect (occ_socket *sock, int *result)
- *	attempts a connection
+ *\tvoid r_connect (occ_socket *sock, int *result)
+ *\tattempts a connection
  */
 static __inline__ void r_connect (occ_socket *sock, int *result)
 {
@@ -578,8 +579,8 @@ static __inline__ void r_connect (occ_socket *sock, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_listen (occ_socket *sock, int backlog, int *result)*/
 /*
- *	void r_listen (occ_socket *sock, int backlog, int *result)
- *	listens on a socket
+ *\tvoid r_listen (occ_socket *sock, int backlog, int *result)
+ *\tlistens on a socket
  */
 static __inline__ void r_listen (occ_socket *sock, int backlog, int *result)
 {
@@ -589,8 +590,8 @@ static __inline__ void r_listen (occ_socket *sock, int backlog, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_bind (occ_socket *sock, int *result)*/
 /*
- *	void r_bind (occ_socket *sock, int *result)
- *	binds a socket to the specified sock->local_port
+ *\tvoid r_bind (occ_socket *sock, int *result)
+ *\tbinds a socket to the specified sock->local_port
  */
 static __inline__ void r_bind (occ_socket *sock, int *result)
 {
@@ -605,8 +606,8 @@ static __inline__ void r_bind (occ_socket *sock, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_accept (occ_socket *sock, occ_socket *client, int *result)*/
 /*
- *	void r_accept (occ_socket *sock, occ_socket *client, int *result)
- *	accepts a connection
+ *\tvoid r_accept (occ_socket *sock, occ_socket *client, int *result)
+ *\taccepts a connection
  */
 static __inline__ void r_accept (occ_socket *sock, occ_socket *client, int *result)
 {
@@ -632,8 +633,8 @@ static __inline__ void r_accept (occ_socket *sock, occ_socket *client, int *resu
 /*}}}*/
 /*{{{  static __inline__ void r_sendto (occ_socket *sock, char *message, int msg_len, int flags, int *result)*/
 /*
- *	void r_sendto (occ_socket *sock, char *message, int msg_len, int flags, int *result)
- *	sends a packet (for UDP sockets mostly)
+ *\tvoid r_sendto (occ_socket *sock, char *message, int msg_len, int flags, int *result)
+ *\tsends a packet (for UDP sockets mostly)
  */
 static __inline__ void r_sendto (occ_socket *sock, char *message, int msg_len, int flags, int *result)
 {
@@ -654,8 +655,8 @@ static __inline__ void r_sendto (occ_socket *sock, char *message, int msg_len, i
 /*}}}*/
 /*{{{  static __inline__ void r_recvfrom (occ_socket *sock, char *buf, int buf_len, int flags, int *result)*/
 /*
- *	void r_recvfrom (occ_socket *sock, char *buf, int buf_len, int flags, int *result)
- *	receives a datagram from a socket
+ *\tvoid r_recvfrom (occ_socket *sock, char *buf, int buf_len, int flags, int *result)
+ *\treceives a datagram from a socket
  */
 static __inline__ void r_recvfrom (occ_socket *sock, char *buf, int buf_len, int flags, int *result)
 {
@@ -676,8 +677,8 @@ static __inline__ void r_recvfrom (occ_socket *sock, char *buf, int buf_len, int
 
 /*{{{  static __inline__ void r_setsockopt (occ_socket *sock, int level, int option, int value, int *result)*/
 /*
- *	void r_setsockopt (occ_socket *sock, int level, int option, int value, int *result)
- *	sets a socket option (only integer options can be set through this!)
+ *\tvoid r_setsockopt (occ_socket *sock, int level, int option, int value, int *result)
+ *\tsets a socket option (only integer options can be set through this!)
  */
 static __inline__ void r_setsockopt (occ_socket *sock, int level, int option, int value, int *result)
 {
@@ -692,8 +693,8 @@ static __inline__ void r_setsockopt (occ_socket *sock, int level, int option, in
 /*}}}*/
 /*{{{  static __inline__ void r_getsockopt (occ_socket *sock, int level, int option, int *value, int *result)*/
 /*
- *	void r_getsockopt (occ_socket *sock, int level, int option, int *value, int *result)
- *	gets a socket option (only integer options though!)
+ *\tvoid r_getsockopt (occ_socket *sock, int level, int option, int *value, int *result)
+ *\tgets a socket option (only integer options though!)
  */
 static __inline__ void r_getsockopt (occ_socket *sock, int level, int option, int *value, int *result)
 {
@@ -713,13 +714,13 @@ static __inline__ void r_getsockopt (occ_socket *sock, int level, int option, in
 /*}}}*/
 
 /*
- *	resolution stuff
+ *\tresolution stuff
  */
 
 /*{{{  static __inline__ void r_addr_of_host (char *hostname, int h_len, int *addr, int *result)*/
 /*
- *	void r_addr_of_host (char *hostname, int h_len, int *addr, int *result)
- *	gets the address of a host, from the hostname
+ *\tvoid r_addr_of_host (char *hostname, int h_len, int *addr, int *result)
+ *\tgets the address of a host, from the hostname
  */
 static __inline__ void r_addr_of_host (char *hostname, int h_len, int *addr, int *result)
 {
@@ -746,8 +747,8 @@ static __inline__ void r_addr_of_host (char *hostname, int h_len, int *addr, int
 /*}}}*/
 /*{{{  static __inline__ void r_addrs_of_host (char *hostname, int h_len, int *addrs, int addrslen, int *result)*/
 /*
- *	void r_addrs_of_host (char *hostname, int h_len, int *addrs, int addrslen, int *result)
- *	gets all addresses of a host, from the hostname
+ *\tvoid r_addrs_of_host (char *hostname, int h_len, int *addrs, int addrslen, int *result)
+ *\tgets all addresses of a host, from the hostname
  */
 static __inline__ void r_addrs_of_host (char *hostname, int h_len, int *addrs, int addrslen, int *result)
 {
@@ -772,8 +773,8 @@ static __inline__ void r_addrs_of_host (char *hostname, int h_len, int *addrs, i
 /*}}}*/
 /*{{{  static __inline__ void r_naddrs_of_host (char *hostname, int h_len, int *result)*/
 /*
- *	void r_naddrs_of_host (char *hostname, int h_len, int *result)
- *	gets the number of addresses associated with a particular host
+ *\tvoid r_naddrs_of_host (char *hostname, int h_len, int *result)
+ *\tgets the number of addresses associated with a particular host
  */
 static __inline__ void r_naddrs_of_host (char *hostname, int h_len, int *result)
 {
@@ -796,8 +797,8 @@ static __inline__ void r_naddrs_of_host (char *hostname, int h_len, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_host_of_addr (int addr, char *hostname, int h_len, int *a_len, int *result)*/
 /*
- *	void r_host_of_addr (int addr, char *hostname, int h_len, int *a_len, int *result)
- *	gets the hostname of an address
+ *\tvoid r_host_of_addr (int addr, char *hostname, int h_len, int *a_len, int *result)
+ *\tgets the hostname of an address
  */
 static __inline__ void r_host_of_addr (int addr, char *hostname, int h_len, int *a_len, int *result)
 {
@@ -823,8 +824,8 @@ static __inline__ void r_host_of_addr (int addr, char *hostname, int h_len, int 
 /*}}}*/
 /*{{{  static __inline__ void r_ip_of_addr (int addr, char *ipaddr, int h_len, int *a_len, int *result)*/
 /*
- *	void r_ip_of_addr (int addr, char *ipaddr, int h_len, int *a_len, int *result)
- *	gets the IP address of an address
+ *\tvoid r_ip_of_addr (int addr, char *ipaddr, int h_len, int *a_len, int *result)
+ *\tgets the IP address of an address
  */
 static __inline__ void r_ip_of_addr (int addr, char *ipaddr, int h_len, int *a_len, int *result)
 {
@@ -845,8 +846,8 @@ static __inline__ void r_ip_of_addr (int addr, char *ipaddr, int h_len, int *a_l
 /*}}}*/
 /*{{{  static __inline__ void r_error (occ_socket *sock, char *buffer, int buf_size, int *length)*/
 /*
- *	void r_error (occ_socket *sock, char *buffer, int buf_size, int *length)
- *	puts the error string associated with sock->error in `buffer'
+ *\tvoid r_error (occ_socket *sock, char *buffer, int buf_size, int *length)
+ *\tputs the error string associated with sock->error in `buffer'
  */
 static __inline__ void r_error (occ_socket *sock, char *buffer, int buf_size, int *length)
 {
@@ -864,8 +865,8 @@ static __inline__ void r_error (occ_socket *sock, char *buffer, int buf_size, in
 /*}}}*/
 /*{{{  static __inline__ void r_shutdown (occ_socket *sock, int how, int *result)*/
 /*
- *	void r_shutdown (occ_socket *sock, int how, int *result)
- *	shuts down part of a socket connection (0 = no more input, 1 = no more output, 2 = both)
+ *\tvoid r_shutdown (occ_socket *sock, int how, int *result)
+ *\tshuts down part of a socket connection (0 = no more input, 1 = no more output, 2 = both)
  */
 static __inline__ void r_shutdown (occ_socket *sock, int how, int *result)
 {
@@ -878,8 +879,8 @@ static __inline__ void r_shutdown (occ_socket *sock, int how, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_getsockname (occ_socket *sock, int *result)*/
 /*
- *	void r_getsockname (occ_socket *sock, int *result)
- *	gets the local name of a socket
+ *\tvoid r_getsockname (occ_socket *sock, int *result)
+ *\tgets the local name of a socket
  */
 static __inline__ void r_getsockname (occ_socket *sock, int *result)
 {
@@ -899,8 +900,8 @@ static __inline__ void r_getsockname (occ_socket *sock, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_getpeername (occ_socket *sock, int *result)*/
 /*
- *	void r_getpeername (occ_socket *sock, int *result)
- *	gets the remote name of a socket
+ *\tvoid r_getpeername (occ_socket *sock, int *result)
+ *\tgets the remote name of a socket
  */
 static __inline__ void r_getpeername (occ_socket *sock, int *result)
 {
@@ -923,7 +924,7 @@ static __inline__ void r_getpeername (occ_socket *sock, int *result)
 
 /*{{{  static __inline__ void r_gethostname (char *name, int namelen, int *result)*/
 /*
- *	gets the current hostname (win32 api)
+ *\tgets the current hostname (win32 api)
  */
 static __inline__ void r_gethostname (char *name, int namelen, int *result)
 {
@@ -945,7 +946,7 @@ static __inline__ void r_gethostname (char *name, int namelen, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_sethostname (char *name, int namelen, int *result)*/
 /*
- *	sets the current hostname (win32 api)
+ *\tsets the current hostname (win32 api)
  */
 static __inline__ void r_sethostname (char *name, int namelen, int *result)
 {
@@ -969,7 +970,7 @@ static __inline__ void r_sethostname (char *name, int namelen, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_getdomainname (char *name, int namelen, int *result) */
 /*
- *	gets the current domainname (win32 api)
+ *\tgets the current domainname (win32 api)
  */
 static __inline__ void r_getdomainname (char *name, int namelen, int *result) 
 {
@@ -978,7 +979,7 @@ static __inline__ void r_getdomainname (char *name, int namelen, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_setdomainname (char *name, int namelen, int *result)*/
 /*
- * 	sets the current domainname (...)
+ * \tsets the current domainname (...)
  */
 static __inline__ void r_setdomainname (char *name, int namelen, int *result)
 {
@@ -990,7 +991,7 @@ static __inline__ void r_setdomainname (char *name, int namelen, int *result)
 
 /*{{{  static __inline__ void r_gethostname (char *name, int namelen, int *result)*/
 /*
- *	gets the current hostname
+ *\tgets the current hostname
  */
 static __inline__ void r_gethostname (char *name, int namelen, int *result)
 {
@@ -1013,8 +1014,8 @@ static __inline__ void r_gethostname (char *name, int namelen, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_sethostname (char *name, int namelen, int *result)*/
 /*
- *	void r_sethostname (char *name, int namelen, int *result)
- *	sets the current hostname (requires root priv.)
+ *\tvoid r_sethostname (char *name, int namelen, int *result)
+ *\tsets the current hostname (requires root priv.)
  */
 static __inline__ void r_sethostname (char *name, int namelen, int *result)
 {
@@ -1033,8 +1034,8 @@ static __inline__ void r_sethostname (char *name, int namelen, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_getdomainname (char *name, int namelen, int *result) */
 /*
- *	void r_getdomainname (char *name, int namelen, int *result)
- *	gets the current domainname (often not set..)
+ *\tvoid r_getdomainname (char *name, int namelen, int *result)
+ *\tgets the current domainname (often not set..)
  */
 static __inline__ void r_getdomainname (char *name, int namelen, int *result) 
 {
@@ -1057,8 +1058,8 @@ static __inline__ void r_getdomainname (char *name, int namelen, int *result)
 /*}}}*/
 /*{{{  static __inline__ void r_setdomainname (char *name, int namelen, int *result)*/
 /*
- *	void r_setdomainname (char *name, int namelen, int *result)
- * 	sets the current domainname (...)
+ *\tvoid r_setdomainname (char *name, int namelen, int *result)
+ * \tsets the current domainname (...)
  */
 static __inline__ void r_setdomainname (char *name, int namelen, int *result)
 {
@@ -1080,41 +1081,47 @@ static __inline__ void r_setdomainname (char *name, int namelen, int *result)
 
 /*{{{  interface functions*/
 /*
- *	This may not be entirely pleasant, but it makes things easier to read..
+ *\tThis may not be entirely pleasant, but it makes things easier to read..
  */
 /*{{{  regular socket stuff*/
-void _sl_socket (int *w)		{ r_socket ((occ_socket *)(w[0])); }
-void _sl_close (int *w)			{ r_close ((occ_socket *)(w[0])); }
-void _sl_read (int *w)			{ r_read ((occ_socket *)(w[0]), (char *)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
-void _sl_fullread (int *w)		{ r_fullread ((occ_socket *)(w[0]), (char *)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
-void _sl_write (int *w)			{ r_write ((occ_socket *)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _sl_write_addr (int *w)		{ r_write_addr ((occ_socket *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _sl_fullwrite_addr (int *w)	{ r_fullwrite_addr ((occ_socket *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _sl_fullwrite (int *w)		{ r_fullwrite ((occ_socket *)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _sl_connect (int *w)		{ r_connect ((occ_socket *)(w[0]), (int *)(w[1])); }
-void _sl_listen (int *w)		{ r_listen ((occ_socket *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _sl_bind (int *w)			{ r_bind ((occ_socket *)(w[0]), (int *)(w[1])); }
-void _sl_accept (int *w)		{ r_accept ((occ_socket *)(w[0]), (occ_socket *)(w[1]), (int *)(w[2])); }
-void _sl_sendto (int *w)		{ r_sendto ((occ_socket *)(w[0]), (char *)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
-void _sl_recvfrom (int *w)		{ r_recvfrom ((occ_socket *)(w[0]), (char *)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
-void _sl_error (int *w)			{ r_error ((occ_socket *)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _sl_shutdown (int *w)		{ r_shutdown ((occ_socket *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _sl_socket (intptr_t *w)		{ r_socket ((occ_socket *)w[0]); }
+void _sl_close (intptr_t *w)			{ r_close ((occ_socket *)w[0]); }
+void _sl_read (intptr_t *w)			{ r_read ((occ_socket *)w[0], (char *)w[1], (int)w[2], (int)w[3], (int *)w[4]); }
+void _sl_fullread (intptr_t *w)		{ r_fullread ((occ_socket *)w[0], (char *)w[1], (int)w[2], (int)w[3], (int *)w[4]); }
+void _sl_write (intptr_t *w)			{ r_write ((occ_socket *)w[0], (char *)w[1], (int)w[2], (int *)w[3]); }
+void _sl_write_addr (intptr_t *w)		{ r_write_addr ((occ_socket *)w[0], (intptr_t)w[1], (int)w[2], (int *)w[3]); }
+void _sl_fullwrite_addr (intptr_t *w)	{ r_fullwrite_addr ((occ_socket *)w[0], (intptr_t)w[1], (int)w[2], (int *)w[3]); }
+void _sl_fullwrite (intptr_t *w)		{ r_fullwrite ((occ_socket *)w[0], (char *)w[1], (int)w[2], (int *)w[3]); }
+void _sl_connect (intptr_t *w)		{ r_connect ((occ_socket *)w[0], (int *)w[1]); }
+void _sl_listen (intptr_t *w)		{ r_listen ((occ_socket *)w[0], (int)w[1], (int *)w[2]); }
+void _sl_bind (intptr_t *w)			{ r_bind ((occ_socket *)w[0], (int *)w[1]); }
+void _sl_accept (intptr_t *w)		{ r_accept ((occ_socket *)w[0], (occ_socket *)w[1], (int *)w[2]); }
+void _sl_sendto (intptr_t *w)		{ r_sendto ((occ_socket *)w[0], (char *)w[1], (int)w[2], (int)w[3], (int *)w[4]); }
+void _sl_recvfrom (intptr_t *w)		{ r_recvfrom ((occ_socket *)w[0], (char *)w[1], (int)w[2], (int)w[3], (int *)w[4]); }
+void _sl_error (intptr_t *w)			{ r_error ((occ_socket *)w[0], (char *)w[1], (int)w[2], (int *)w[3]); }
+void _sl_shutdown (intptr_t *w)		{ r_shutdown ((occ_socket *)w[0], (int)w[1], (int *)w[2]); }
 /*}}}*/
 /*{{{  resolution/identity stuff*/
-void _sl_setsockopt (int *w)		{ r_setsockopt ((occ_socket *)(w[0]), (int)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
-void _sl_getsockopt (int *w)		{ r_getsockopt ((occ_socket *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3]), (int *)(w[4])); }
-void _sl_addr_of_host (int *w)		{ r_addr_of_host ((char *)(w[0]), (int)(w[1]), (int *)(w[2]), (int *)(w[3])); }
-void _sl_addrs_of_host (int *w)		{ r_addrs_of_host ((char *)(w[0]), (int)(w[1]), (int *)(w[2]), (int)(w[3]), (int *)(w[4])); }
-void _sl_naddrs_of_host (int *w)	{ r_naddrs_of_host ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _sl_host_of_addr (int *w)		{ r_host_of_addr ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3]), (int *)(w[4])); }
-void _sl_ip_of_addr (int *w)		{ r_ip_of_addr ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3]), (int *)(w[4])); }
+void _sl_setsockopt (intptr_t *w)		{ r_setsockopt ((occ_socket *)w[0], (int)w[1], (int)w[2], (int)w[3], (int *)w[4]); }
+void _sl_getsockopt (intptr_t *w)		{ r_getsockopt ((occ_socket *)w[0], (int)w[1], (int)w[2], (int *)w[3], (int *)w[4]); }
+void _sl_addr_of_host (intptr_t *w)		{ r_addr_of_host ((char *)w[0], (int)w[1], (int *)w[2], (int *)w[3]); }
+void _sl_addrs_of_host (intptr_t *w)		{ r_addrs_of_host ((char *)w[0], (int)w[1], (int *)w[2], (int)w[3], (int *)w[4]); }
+void _sl_naddrs_of_host (intptr_t *w)	{ r_naddrs_of_host ((char *)w[0], (int)w[1], (int *)w[2]); }
+void _sl_host_of_addr (intptr_t *w)		{ r_host_of_addr ((int)w[0], (char *)w[1], (int)w[2], (int *)w[3], (int *)w[4]); }
+void _sl_ip_of_addr (intptr_t *w)		{ r_ip_of_addr ((int)w[0], (char *)w[1], (int)w[2], (int *)w[3], (int *)w[4]); }
 
-void _sl_getsockname (int *w)		{ r_getsockname ((occ_socket *)(w[0]), (int *)(w[1])); }
-void _sl_getpeername (int *w)		{ r_getpeername ((occ_socket *)(w[0]), (int *)(w[1])); }
-void _sl_gethostname (int *w)		{ r_gethostname ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _sl_sethostname (int *w)		{ r_sethostname ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _sl_getdomainname (int *w)		{ r_getdomainname ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _sl_setdomainname (int *w)		{ r_setdomainname ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _sl_getsockname (intptr_t *w)		{ r_getsockname ((occ_socket *)w[0], (int *)w[1]); }
+void _sl_getpeername (intptr_t *w)		{ r_getpeername ((occ_socket *)w[0], (int *)w[1]); }
+void _sl_gethostname (intptr_t *w)		{ r_gethostname ((char *)w[0], (int)w[1], (int *)w[2]); }
+void _sl_sethostname (intptr_t *w)		{ r_sethostname ((char *)w[0], (int)w[1], (int *)w[2]); }
+void _sl_getdomainname (intptr_t *w)		{ r_getdomainname ((char *)w[0], (int)w[1], (int *)w[2]); }
+void _sl_setdomainname (intptr_t *w)		{ r_setdomainname ((char *)w[0], (int)w[1], (int *)w[2]); }
 /*}}}*/
 /*}}}*/
 
+/* Symbol wrappers for occam compiler compatibility */
+void __socket_accept(intptr_t *w) { _sl_accept(w); }
+void __socket_close(intptr_t *w) { _sl_close(w); }
+void __socket_fullread(intptr_t *w) { _sl_fullread(w); }
+void __socket_fullwrite(intptr_t *w) { _sl_fullwrite(w); }
+void __socket_getpeername(intptr_t *w) { _sl_getpeername(w); }

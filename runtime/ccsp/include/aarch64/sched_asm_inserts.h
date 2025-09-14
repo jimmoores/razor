@@ -33,9 +33,9 @@
 /*{{{  architecture dependent kernel call declarations */
 /* AArch64 doesn't have regparm, use standard calling convention */
 #define _K_CALL_DEFINE(X) \
-	static void kernel_##X (word param0, sched_t *sched, word *Wptr)
+	void kernel_##X (word param0, sched_t *sched, word *Wptr)
 #define _K_CALL_DEFINE_O(X) \
-	static word kernel_##X (word param0, sched_t *sched, word *Wptr)
+	word kernel_##X (word param0, sched_t *sched, word *Wptr)
 #define K_CALL_DEFINE_0_0(X) _K_CALL_DEFINE(X)
 #define K_CALL_DEFINE_1_0(X) _K_CALL_DEFINE(X)
 #define K_CALL_DEFINE_2_0(X) _K_CALL_DEFINE(X)
@@ -89,25 +89,38 @@
 #ifndef NO_ASM_TYPE_DIRECTIVE
 #define LABEL_TYPE(P,X) ".type "#P""#X", %function \n"
 #else
-#define LABEL_TYPE(P,X) 
+#define LABEL_TYPE(P,X)
 #endif
 
+#if defined(TARGET_OS_DARWIN)
+/* Darwin/Mach-O: use single leading underscore for global symbols */
 #define _K_SETGLABEL(X) \
-	LABEL_ALIGN \
-	LABEL_TYPE(_,X) \
-	".globl _"#X"\t\n" \
-	"\t_"#X":\t\n" \
-	"\t"#X":\t\n"
+LABEL_ALIGN \
+LABEL_TYPE(_,X) \
+".globl _"#X"\t\n" \
+"\t_"#X":\t\n"
 
 #define _K_SETGGLABEL(X) \
-	LABEL_ALIGN \
-	LABEL_TYPE(_,X) \
-	".globl _"#X"\t\n" \
-	"\t_"#X":\t\n" \
-	LABEL_TYPE( ,X) \
-	".globl "#X"\t\n" \
-	"\t"#X":\t\n"
+LABEL_ALIGN \
+LABEL_TYPE(_,X) \
+".globl _"#X"\t\n" \
+"\t_"#X":\t\n"
+#else /* !defined(TARGET_OS_DARWIN) */
+/* ELF: no leading underscore */
+#define _K_SETGLABEL(X) \
+LABEL_ALIGN \
+LABEL_TYPE( ,X) \
+".globl "#X"\t\n" \
+"\t"#X":\t\n"
+
+#define _K_SETGGLABEL(X) \
+LABEL_ALIGN \
+LABEL_TYPE( ,X) \
+".globl "#X"\t\n" \
+"\t"#X":\t\n"
+#endif /* defined(TARGET_OS_DARWIN) */
 /*}}}*/
+
 
 /*{{{  outgoing entry-point macros*/
 #define _SET_RETURN_ADDRESS(R) \

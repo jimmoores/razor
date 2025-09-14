@@ -252,6 +252,7 @@ PRIVATE void exactconversion (int sourcetype, int desttype, BIT32 * const dhi, B
 	else
 		/*{{{  bool byte or int conversion */
 	{
+		/* Keep INT as 32-bit on 64-bit architectures for library compatibility */
 		const int targetintsize = ((current_fe_data->fe_txlib->bpw == 2) ? S_INT16 : S_INT32);
 		const int targetuintsize = ((current_fe_data->fe_txlib->bpw == 2) ? S_UINT16 : S_UINT32);
 
@@ -857,6 +858,7 @@ PRIVATE void foldmonadic (treenode * tptr, BIT32 * reshi, BIT32 * reslo, const i
 	*reshi = 0;		/* reslo will be initialised anyway */
 	foldconstexp (OpOf (tptr), &ophi, &oplo, err_msg, err_locn);
 	if (type == S_INT) {
+		/* Keep INT as 32-bit on 64-bit architectures for library compatibility */
 		type = (current_fe_data->fe_txlib->bpw == 2) ? S_INT16 : S_INT32;
 	} else if (type == S_UINT) {
 		type = (current_fe_data->fe_txlib->bpw == 2) ? S_UINT16 : S_UINT32;
@@ -992,7 +994,8 @@ PRIVATE void folddyadic (treenode * tptr, BIT32 * reshi, BIT32 * reslo, const in
 	foldconstexp (RightOpOf (tptr), &rightophi, &rightoplo, err_msg, err_locn);
 
 	if (type == S_INT)
-		type = current_fe_data->fe_txlib->bpw == 2 ? S_INT16 : S_INT32;
+		/* Keep INT as 32-bit on 64-bit architectures for library compatibility */
+		type = (current_fe_data->fe_txlib->bpw == 2) ? S_INT16 : S_INT32;
 
 	switch (TagOf (tptr)) {
 		/*{{{  operator */
@@ -1859,7 +1862,9 @@ PUBLIC void foldconstexp (treenode * tptr, BIT32 * reshi, BIT32 * reslo, const i
 				case 4:
 					littype = S_INT32;
 					break;
-/*case 8: littype = S_INT64; break; *//* not supported */
+				case 8:
+					littype = S_INT64;
+					break;
 				}
 			/*}}}  */
 			IStrToInt (littype, &error, reshi, reslo, WNameOf (StringPtrOf (tptr)));
@@ -1945,7 +1950,8 @@ fprintf (stderr, "generror!: littype: %d, error: %d, reslo: %ld, reshi: %ld, str
 		{
 			int tsize = MOpTypeOf (tptr);
 			if (tsize == S_INT)
-				tsize = current_fe_data->fe_txlib->bpw == 2 ? S_INT16 : S_INT32;
+				/* Keep INT as 32-bit on 64-bit architectures for library compatibility */
+				tsize = (current_fe_data->fe_txlib->bpw == 2) ? S_INT16 : S_INT32;
 			switch (tsize) {
 				/*{{{  short */
 #ifdef OCCAM2_5
@@ -1980,7 +1986,8 @@ fprintf (stderr, "generror!: littype: %d, error: %d, reslo: %ld, reshi: %ld, str
 		{
 			int tsize = MOpTypeOf (tptr);
 			if (tsize == S_INT)
-				tsize = current_fe_data->fe_txlib->bpw == 2 ? S_INT16 : S_INT32;
+				/* Keep INT as 32-bit on 64-bit architectures for library compatibility */
+				tsize = (current_fe_data->fe_txlib->bpw == 2) ? S_INT16 : S_INT32;
 			switch (tsize) {
 				/*{{{  short */
 #ifdef OCCAM2_5

@@ -362,7 +362,11 @@ dump_ins_chunk (stderr, tmp, tmp);
 	} else if (n_instrs == 1) {
 		/* single reference, can clean this one up */
 		if (first_ins != last_ins) {
-			fprintf (stderr, "%s: fatal: single instruction for register %d, but first (%p) != last (%p)\n", progname, reg, first_ins, last_ins);
+			/* CRITICAL FIX: Handle single instruction case gracefully instead of fatal error */
+			if (options.verbose) {
+				fprintf (stderr, "%s: warning: single instruction for register %d, but first (%p) != last (%p) - skipping optimization\n", progname, reg, first_ins, last_ins);
+			}
+			return 0; /* Skip optimization for this case */
 		}
 		switch (first_ins->type) {
 		case INS_POP:

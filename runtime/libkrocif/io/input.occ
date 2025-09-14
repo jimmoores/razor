@@ -21,8 +21,9 @@
 #PRAGMA EXTERNAL "PROC BX.read.keyboard (CHAN OF INT c, INT ch) = 3"
 
 PROC kroc.keyboard.process (CHAN OF BYTE out, CHAN OF INT kill.chan)
+  BOOL had.eof:
   SEQ
-    INITIAL BOOL had.eof IS FALSE:
+    had.eof := FALSE
     WHILE TRUE
       BYTE ch:
       INT c.in:

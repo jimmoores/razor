@@ -20,6 +20,12 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if defined(OCCBUILD_KROC) && (defined(KROC_NATIVE_WINDOWS) || defined(HOSTOS_DARWIN))
+#pragma KROC SCREEN.PROCESS "kroc.screen.process"
+#pragma KROC KEYBOARD.PROCESS "kroc.keyboard.process"
+#pragma KROC ERROR.PROCESS "kroc.error.process"
+#endif
+
 /*{{{  Predefined routines defns. */
 
 /********************

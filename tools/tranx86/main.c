@@ -137,6 +137,8 @@ int main (int argc, char **argv)
 	options.machine_class = CLASS_SPARCV8;
 #elif defined(HOST_CPU_IS_PPC64)
 	options.machine_class = CLASS_POWERPC;
+#elif defined(HOST_CPU_IS_AARCH64)
+	options.machine_class = CLASS_AARCH64;
 #else
 	options.machine_class = CLASS_UNKNOWN;
 #endif
@@ -685,7 +687,17 @@ int main (int argc, char **argv)
 		options.annotate_output = 1;
 	}
 	if (!options.extref_prefix) {
-		options.extref_prefix = string_dup ("");
+		/* Auto-detect platform-specific prefix requirements */
+		#ifdef TARGET_CANONICAL
+			if (strstr(TARGET_CANONICAL, "darwin") || strstr(TARGET_CANONICAL, "apple")) {
+				/* macOS requires underscore prefix for main symbol compatibility */
+				options.extref_prefix = string_dup ("_");
+			} else {
+				options.extref_prefix = string_dup ("");
+			}
+		#else
+			options.extref_prefix = string_dup ("");
+		#endif
 	} else {
 		options.extref_prefix = string_dup (options.extref_prefix);
 	}

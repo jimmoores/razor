@@ -86,7 +86,7 @@ extern int constmap_otherlab (int reg);
 extern void constmap_remove (int reg);
 extern void constmap_removelocal (int slot);
 extern void constmap_clearall (void);
-extern void constmap_new (int reg, int consttype, int constval, ins_chain *ins);
+extern void constmap_new (int reg, int consttype, intptr_t constval, ins_chain *ins);
 extern void constmap_regcopy (int old_reg, int new_reg, ins_chain *ins);
 extern void constmap_modregconst (int reg, int val);
 

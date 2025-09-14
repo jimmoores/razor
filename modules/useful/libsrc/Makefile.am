@@ -16,6 +16,7 @@ EXTRA_DIST = \
 	string.occ \
 	useful.inc \
 	useful-c.c \
+	symbol-aliases.c \
 	vector.occ
 
 useful_lib_objs = \
@@ -29,6 +30,9 @@ useful_lib_objs = \
 	vector.tce
 if TRACE_VIA_FFI
 useful_lib_objs += useful-c.o
+endif
+if !HOSTOS_DARWIN
+useful_lib_objs += symbol-aliases.o
 endif
 
 useful_needs = \

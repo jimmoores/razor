@@ -87,7 +87,7 @@ if test "x$KROC_RMOX" = "x"; then
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/button/examples)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/cdx/examples)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/cif/examples)
-  OCCAM_CONFIG_TARGET_SUBDIRS(modules/course/answers)
+  # OCCAM_CONFIG_TARGET_SUBDIRS(modules/course/answers)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/course/examples)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/course/exercises)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/dynproc/examples)

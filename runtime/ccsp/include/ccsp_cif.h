@@ -211,7 +211,7 @@ static inline void _SetErrW(Workspace wptr, char *file, word line)
 	do { word ws[CIF_PROCESS_WORDS + 1]; SetErrW (&(ws[CIF_PROCESS_WORDS])); } while (0)
 /*}}}*/
 /*}}}*/
-
+#if !defined(RMOX_BUILD) && defined(BLOCKING_SYSCALLS)
 /*{{{  External Calls */
 /*{{{  word BlockingCall0 (Workspace wptr, void *func)*/
 static inline word BlockingCall0 (Workspace wptr, void *func)
@@ -261,6 +261,7 @@ static word BlockingCallN (Workspace wptr, void *func, word argc, ...)
 	return args[0];
 }
 /*}}}*/
+#endif
 /*{{{  word ExternalCall0 (void *func) */
 static inline word ExternalCall0 (void *func)
 {
@@ -314,6 +315,7 @@ static word ExternalCallN (void *func, word argc, ...)
 	return result;
 }
 /*}}}*/
+#if !defined(RMOX_BUILD) && defined(BLOCKING_SYSCALLS)
 /*{{{  word KillableBlockingCallN (Workspace wptr, void *func, word argc, ...)*/
 #if defined(__GNUC__)
 __attribute__ ((unused)) /* make GCC ignore when unused */
@@ -351,6 +353,7 @@ static int KillBlockingCall (Workspace wptr, Channel *killchan)
 	return result;
 }
 /*}}}*/
+#endif
 /*{{{  void OccamCall (void *func, word stack, word argc, ...) */
 #if defined(__GNUC__)
 __attribute__ ((unused)) /* make GCC ignore when unused */

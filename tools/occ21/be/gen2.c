@@ -346,7 +346,8 @@ PUBLIC wordnode *processlibname (const char *const str, const int suffix_len, co
 /*{{{  PUBLIC BOOL pdinline*/
 PUBLIC BOOL pdinline (const int pdno)
 {
-	real32isaword = bytesperword == 4;
+	/* For 64-bit targets, REAL32 is still 4 bytes even though word is 8 bytes */
+	real32isaword = (bytesinscalar(S_REAL32) == bytesperword) || (bytesinscalar(S_REAL32) == 4);
 
 	/*{{{  T9000_alpha bugs and workarounds */
 	switch (pdno) {
@@ -1305,6 +1306,9 @@ PUBLIC BIT32 checkmask (int type)
 		return (INT16_CHECK_MASK);
 	case S_INT32:
 		return (INT32_CHECK_MASK);
+	case S_INT64:
+		/* For INT64 on 64-bit targets, use 32-bit check mask since operations are word-sized */
+		return (INT32_CHECK_MASK);
 	default:
 		badtag (genlocn, type, "checkmask");
 		return 0;
@@ -1321,9 +1325,20 @@ PUBLIC BIT32 checkmask (int type)
  *****************************************************************************/
 PUBLIC BIT32 typemask (int type)
 {
-	if (type != S_INT16)
+	if (type == S_INT)
+		type = targetintsize;
+	switch (type) {
+	case S_INT16:
+		return (0xffff);
+	case S_INT32:
+		return (0xffffffff);
+	case S_INT64:
+		/* For INT64 on 64-bit targets, return full 32-bit mask since operations are word-sized */
+		return (0xffffffff);
+	default:
 		badtag (genlocn, type, "typemask");
-	return (0xffff);
+		return 0;
+	}
 }
 
 /*}}}*/

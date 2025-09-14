@@ -19,7 +19,7 @@
 
 --** @module maths
 
-#IF NOT DEFINED(OCCBUILD.KROC)
+#IF TRUE
 
 #OPTION "V"  -- no vector space
 #COMMENT "Floating point maths library, V1.1 27/03/90"

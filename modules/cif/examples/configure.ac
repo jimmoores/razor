@@ -15,6 +15,13 @@ OCCAM_INCLUDE([cif.module course.module], ,
 
 if test $build_cif_examples = yes; then
   KROC_CCSP_FLAGS
+  
+  # Ensure BLOCKING_SYSCALLS is defined for aarch64 and other 64-bit targets
+  case "$target_cpu" in
+    aarch64 | x86_64)
+      CFLAGS="$CFLAGS -DBLOCKING_SYSCALLS"
+      ;;
+  esac
 fi
 
 AC_MSG_CHECKING([whether to build cif examples])

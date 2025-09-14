@@ -55,6 +55,7 @@ AC_DEFUN([OCCAM_OCCBUILD],
 [dnl
 AC_REQUIRE([OCCAM_IN_TREE])
 AC_REQUIRE([OCCAM_TOOLCHAIN])
+AC_REQUIRE([OCCAM_HOST_OS])
 
 AC_ARG_VAR(OCCBUILD, [Path to occbuild])
 if test "x$KROC_BUILD_ROOT" != "x"; then
@@ -288,4 +289,15 @@ esac
 
 KROC_TARGET_PREFIX=`echo "" | sed "$program_transform_name"`
 AC_SUBST(KROC_TARGET_PREFIX)
+])dnl
+
+AC_DEFUN([OCCAM_HOST_OS],
+[dnl
+AC_CANONICAL_HOST
+AC_MSG_CHECKING([for host OS])
+AC_MSG_RESULT([$host_os])
+AM_CONDITIONAL(HOSTOS_DARWIN, [echo "$host_os" | grep -q darwin])
+if echo "$host_os" | grep -q darwin; then
+  AC_DEFINE(HOSTOS_DARWIN, 1, [Define if host OS is Darwin])
+fi
 ])dnl

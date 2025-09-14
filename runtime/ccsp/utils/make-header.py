@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #	Script to various CCSP headers using special comments in sched.c
 #	Copyright (C) 2007, 2008 Carl Ritson <cgr@kent.ac.uk>
@@ -96,55 +96,49 @@ def safe_sorted(list, cmp=None, key=None):
 def load_defines(defines, fn):
 	define_re = re.compile(r'^#define\s+(\S+)')
 	
-	f = open(fn)
+	with open(fn) as f:
+		while 1:
+			l = f.readline()
+			if l == "":
+				break
 
-	while 1:
-		l = f.readline()
-		if l == "":
-			break
-
-		l = l.strip()
-		m = define_re.match(l)
-		if m is not None:
-			define = m.group(1)
-			defines[define] = True
-	
-	f.close()
+			l = l.strip()
+			m = define_re.match(l)
+			if m is not None:
+				define = m.group(1)
+				defines[define] = True
 
 def load_symbols(calls, symbols, fn):
 	markup_re = re.compile(r'^\s*\*\s*@(\S+)\s*:\s*(.*)')
 	params_re = re.compile(r'(\d+)')
 
-	f = open(fn)
+	with open(fn) as f:
+		while 1:
+			l = f.readline()
+			if l == "":
+				break
 
-	while 1:
-		l = f.readline()
-		if l == "":
-			break
-
-		l = l.strip()
-		m = markup_re.match(l)
-		if m is not None:
-			type, data = m.group(1, 2)
-			if type == "SYMBOL":
-				current = { "name" : data, "INPUT" : 0, "OUTPUT" : 0 }
-				symbols[data] = current
-			elif type == "CALL":
-				calls[data] = current
-				current["handles"] = [ data ]
-			elif type == "HANDLE":
-				handles = re.split(r",\s*", data)
-				for handle in handles:
-					calls[handle] = current
-				current["handles"].extend(handles)
-			elif type in ("INPUT", "OUTPUT"):
-				current[type] = int(data)
-			elif type in ("DEPEND", "INCOMPATIBLE"):
-				current[type] = re.split(r',\s*', data)
-			else:
-				current[type] = data
-	
-	f.close()
+			l = l.strip()
+			m = markup_re.match(l)
+			if m is not None:
+				type, data = m.group(1, 2)
+				if type == "SYMBOL":
+					current = { "name" : data, "INPUT" : 0, "OUTPUT" : 0 }
+					symbols[data] = current
+				elif type == "CALL":
+					calls[data] = current
+					current["handles"] = [ data ]
+				elif type == "HANDLE":
+					handles = re.split(r",\s*", data)
+					for handle in handles:
+						calls[handle] = current
+					current["handles"].extend(handles)
+				elif type in ("INPUT", "OUTPUT"):
+					current[type] = int(data)
+				elif type in ("DEPEND", "INCOMPATIBLE"):
+					current[type] = re.split(r',\s*', data)
+				else:
+					current[type] = data
 
 def test_symbol_requirements(defines, calls, symbols):
 	for name, symbol in symbols.items():
@@ -528,11 +522,214 @@ def gen_sparc_header(f):
 def gen_sparc_cif_stub(f, symbol, inputs, outputs):
 	f.line("/* sparc unsupported */")
 
-def gen_aarch64_header(f):
-	f.line("/* aarch64 unsupported */")
-
 def gen_aarch64_cif_stub(f, symbol, inputs, outputs):
-	f.line("/* aarch64 unsupported */")
+	resched = (symbol["name"][0] == 'Y')
+	regs	= [ "0", "1", "2" ]  # x0, x1, x2 for aarch64
+	cregs	= [ "x0", "x1", "x2" ]
+	in_regs = 0
+	out_regs= 0
+	offset  = (6 * 8) + (8 * symbol["offset"])  # 64-bit offsets
+
+	in_regs = len(inputs)
+	out_regs = len(outputs)
+
+	if in_regs > 1:
+		in_regs = 1
+	if out_regs > 1:
+		out_regs = 1
+	
+	dummies = []
+	if not resched:
+		dummies.append("sched_dummy")
+		dummies.append("wptr_dummy")
+	if in_regs > out_regs:
+		dummies = ["dummy0"] + dummies
+
+	if len(dummies) > 0:
+		f.line("{")
+		f.indent()
+		for dummy in dummies:
+			f.line("word %s;" % dummy)
+
+	if len(inputs) > 1:
+		for (n, i) in enumerate(inputs):
+			if n >= 1:
+				f.line("__sched->cparam[%d] = (word) (%s);" % ((n - 1), i))
+	
+	f.line("__asm__ __volatile__ (\"\\n\"")
+	f.indent()
+
+	f.begin_asm()
+	if resched:
+		f.line("\tstp x19, x20, [sp, #-16]!")
+		f.line("\tstp x29, x30, [sp, #-16]!")
+		f.line("\tstr x1, [x28, #-224]")  # 64-bit offset (-28*8)
+		f.line("\tmov x1, x2")
+		f.line("\tmov x2, x28")
+		f.line("\tmov x3, x28")
+		f.line("\tldr x4, [x2, #%d]" % offset)
+		f.line("\tblr x4")
+		f.line("\tldr x1, [x3, #-224]")
+		f.line("\tmov x28, x3")
+		f.line("\tldp x29, x30, [sp], #16")
+		f.line("\tldp x19, x20, [sp], #16")
+	else:
+		f.line("\tmov x2, x1")
+		f.line("\tmov x19, x1")
+		f.line("\tmov x1, sp")
+		f.line("\tmov sp, x2")
+		f.line("\tldr x3, [x2, #%d]" % offset)
+		f.line("\tblr x3")
+		f.line("\tmov sp, x1")
+	f.end_asm()
+
+	f.begin_line()
+	if resched:
+		f.add(": \"=r\" (__wptr), \"=r\" (__sched)")
+	else:
+		f.add(": \"=r\" (wptr_dummy), \"=r\" (sched_dummy)")
+	if (in_regs + out_regs) > 0:
+		f.add(", \"=r\" (%s)" % ((outputs + dummies)[0]))
+	f.end_line()
+
+	f.begin_line()
+	f.add(": \"0\" (__wptr), \"1\" (__sched)")
+	for (idx, name) in enumerate(inputs):
+		if idx < in_regs:
+			f.add(", \"%d\" (%s)" % (idx + 2, name))
+	f.end_line()
+
+	f.begin_line()
+	f.add(": \"cc\", \"memory\", \"x0\", \"x1\"")
+	if (in_regs + out_regs) == 0:
+		f.add(", \"x0\"")
+	if resched:
+		f.add(", \"x2\", \"x3\", \"x4\", \"x19\", \"x20\"")
+	else:
+		f.add(", \"x2\", \"x3\", \"x19\"")
+	f.end_line()
+
+	f.outdent()
+	f.line(");")
+
+	if resched:
+		f.line("(__wptr)[SchedPtr] = (word) __sched;")
+
+	if len(outputs) > 1:
+		for (n, i) in enumerate(outputs):
+			if n >= 1:
+				f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
+
+	if len(dummies) > 0:
+		f.outdent()
+		f.line("}")
+
+def gen_aarch64_header(f):
+	# ccsp_cif_external_call
+	f.begin_macro()
+
+	f.begin_line()
+	f.line("#define ccsp_cif_external_call(func, stack, result)")
+
+	f.indent()
+	f.line("do {")
+	
+	f.indent()
+	f.line("__asm__ __volatile__ (\"\\n\"")
+	f.indent()
+
+	f.begin_asm()
+	f.line("\tmov x19, sp")
+	f.line("\tmov sp, %2")
+	f.line("\tblr %1")
+	f.line("\tmov sp, x19")
+	f.end_asm()
+	f.line(": \"=r\" (result)")
+	f.line(": \"r\" (func), \"r\" (stack)")
+	f.line(": \"cc\", \"memory\", \"x0\", \"x1\", \"x2\", \"x3\", \"x4\", \"x5\", \"x6\", \"x7\", \"x8\", \"x9\", \"x10\", \"x11\", \"x12\", \"x13\", \"x14\", \"x15\", \"x16\", \"x17\", \"x18\", \"x19\"")
+
+	f.outdent()
+	f.line(");")
+	f.outdent()
+	
+	f.begin_line()
+	f.add ("} while (0)")
+	f.end_line(end_macro = True)
+	f.outdent()
+
+	# ccsp_cif_jump
+	f.begin_macro()
+
+	f.begin_line()
+	f.line("#define ccsp_cif_jump(wptr, addr)")
+
+	f.indent()
+	f.line("do {")
+	
+	f.indent()
+	f.line("__asm__ __volatile__ (\"\\n\"")
+	f.indent()
+
+	f.begin_asm()
+	f.line("\tmov x28, %0")
+	f.line("\tbr %1")
+	f.end_asm()
+	f.line(": /* no outputs */")
+	f.line(": \"r\" (wptr), \"r\" (addr)")
+	f.line(": \"memory\"")
+
+	f.outdent()
+	f.line(");")
+	f.outdent()
+	
+	f.begin_line()
+	f.add ("} while (0)")
+	f.end_line(end_macro = True)
+	f.outdent()
+	
+	# ccsp_cif_occam_call
+	f.begin_macro()
+
+	f.begin_line()
+	f.line("#define ccsp_cif_occam_call(sched, stack, ws, func, top)")
+
+	f.indent()
+	f.line("do {")
+	
+	f.indent()
+	f.line("word d0, d1, d2;")
+	f.line("__asm__ __volatile__ (\"\\n\"")
+	f.indent()
+
+	f.begin_asm()
+	f.line("\tstp x29, x30, [sp, #-16]!")
+	f.line("\tmov x28, %0")
+	f.line("\tadd x28, x28, %4")
+	f.line("\tstr x1, [x28]")
+	f.line("\tsub x28, x28, %4")
+	f.line("\tmov x1, x2")
+	f.line("\tadr x3, 0f")
+	f.line("\tstr x3, [x28]")
+	f.line("\tbr x0")
+	f.line("0:")
+	f.line("\tadd x28, x28, %5")
+	f.line("\tldr x1, [x28]")
+	f.line("\tldp x29, x30, [sp], #16")
+	f.end_asm()
+	f.line(": \"=r\" (d0), \"=r\" (sched), \"=r\" (d1), \"=r\" (d2)")
+	f.line(": \"i\" (top * sizeof(word)),")
+	f.line("  \"i\" ((top - 4) * sizeof(word)),")
+	f.line("  \"0\" (ws), \"1\" (sched), \"2\" (stack), \"3\" (func)")
+	f.line(": \"cc\", \"memory\", \"x0\", \"x1\", \"x2\", \"x3\"")
+
+	f.outdent()
+	f.line(");")
+	f.outdent()
+	
+	f.begin_line()
+	f.add ("} while (0)")
+	f.end_line(end_macro = True)
+	f.outdent()
 
 def output_cif(defines, symbol_list, symbols, fn):
 	if "TARGET_CPU_386" in defines:
@@ -544,7 +741,7 @@ def output_cif(defines, symbol_list, symbols, fn):
 		arch_generator = gen_mips_cif_stub
 	elif "TARGET_CPU_PPC64" in defines:
 		warn("generating CIF stubs for unsupported architecture...")
-		arch_header = gen_ppc_header
+		arch_header = gen_ppc64_header
 		arch_generator = gen_ppc64_cif_stub
 	elif "TARGET_CPU_SPARC" in defines:
 		warn("generating CIF stubs for unsupported architecture...")
@@ -589,7 +786,7 @@ def main(args):
 	enumerate_symbols(symbols)
 
 	symbol_list = safe_sorted(
-		symbols.keys(), 
+		symbols.keys(),
 		key=lambda x: symbols[x]["offset"]
 	)
 

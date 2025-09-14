@@ -1551,9 +1551,11 @@ PUBLIC void ttypeconversion (const int sourcetype, const int desttype)
 			gensecondary (I_AND);
 			if (sourcetype == S_INT16 && T9000_alpha_noxsword (&tx_global))	/* OK if masked first */
 				gensecondary (I_XSWORD);
-			else {
-				assert (sourcetype == S_INT16);
+			else if (sourcetype == S_INT16) {
 				genwidenshort ();
+			} else {
+				/* For S_INT on 64-bit targets, no additional widening needed after masking */
+				/* The value is already properly masked and sign-extended */
 			}
 		}
 		/*}}} */

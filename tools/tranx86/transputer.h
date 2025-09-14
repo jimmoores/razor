@@ -392,6 +392,14 @@
 #define I_IOR8		0x226
 #define I_IOW8		0x227
 #define I_IOR16		0x228
+
+/* Trigonometric intrinsics for aarch64 */
+#define I_COS		0x229
+#define I_SIN		0x22a
+#define I_TAN		0x22b
+#define I_ACOS		0x22c
+#define I_ASIN		0x22d
+#define I_ATAN		0x22e28
 #define I_IOW16		0x229
 #define I_IOR32		0x22a
 #define I_IOW32		0x22b

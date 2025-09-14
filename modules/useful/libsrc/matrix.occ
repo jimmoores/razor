@@ -67,9 +67,14 @@ PROC matrix.add (VAL [][]REAL32 a, b, [][]REAL32 result)
 VECTOR2 FUNCTION "**" (VAL VECTOR2 v, VAL [2][2]REAL32 m)
   VECTOR2 r:
   VALOF
-    VAL [2][1]REAL32 v.r RETYPES v:
-    [2][1]REAL32 r.r RETYPES r:
-    matrix.multiply (v.r, m, r.r)
+    [2][1]REAL32 v.r:
+    [2][1]REAL32 r.r:
+    SEQ
+      v.r[0][0] := v[x]
+      v.r[1][0] := v[y]
+      matrix.multiply (v.r, m, r.r)
+      r[x] := r.r[0][0]
+      r[y] := r.r[1][0]
     RESULT r
 :
 
@@ -77,9 +82,16 @@ VECTOR2 FUNCTION "**" (VAL VECTOR2 v, VAL [2][2]REAL32 m)
 VECTOR3 FUNCTION "**" (VAL VECTOR3 v, VAL [3][3]REAL32 m)
   VECTOR3 r:
   VALOF
-    VAL [3][1]REAL32 v.r RETYPES v:
-    [3][1]REAL32 r.r RETYPES r:
-    matrix.multiply (v.r, m, r.r)
+    [3][1]REAL32 v.r:
+    [3][1]REAL32 r.r:
+    SEQ
+      v.r[0][0] := v[x]
+      v.r[1][0] := v[y]
+      v.r[2][0] := v[z]
+      matrix.multiply (v.r, m, r.r)
+      r[x] := r.r[0][0]
+      r[y] := r.r[1][0]
+      r[z] := r.r[2][0]
     RESULT r
 :
 --}}}

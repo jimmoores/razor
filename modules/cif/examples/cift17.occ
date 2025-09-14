@@ -5,6 +5,7 @@
 #INCLUDE "course.module"
 
 #PRAGMA EXTERNAL "PROC CIF.my.process (CHAN BYTE out!) = 4096"
+#PRAGMA EXTERNAL "PROC do.stuff (VAL INT n, CHAN BYTE out!) = 0"
 
 PROC do.stuff (VAL INT n, CHAN BYTE out!)
   SEQ i = 0 FOR 3

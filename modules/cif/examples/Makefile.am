@@ -6,6 +6,9 @@ ACLOCAL_AMFLAGS = -I ../../../m4
 OCCBUILD = @OCCBUILD@
 CFLAGS = @CFLAGS@ @DEFS@ @OCCBUILD_CFLAGS@
 
+# Ensure BLOCKING_SYSCALLS is defined for supported architectures
+CFLAGS += -DBLOCKING_SYSCALLS
+
 EXTRA_DIST = \
 	README \
 	cif-commstime-c.c cif-commstime.occ \

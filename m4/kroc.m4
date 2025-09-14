@@ -105,8 +105,16 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
       fi
       ;;
     aarch64)
-      # Native 64-bit compilation for aarch64
-      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DTARGET_64BIT"
+      # Support 64-bit mode (default enabled on aarch64)
+      AC_ARG_ENABLE([64bit],
+                    AS_HELP_STRING([--enable-64bit],
+                                   [enable 64-bit compilation (default enabled on aarch64)]),
+                    enable_64bit=$enableval,
+                    enable_64bit=yes)
+      if test "$enable_64bit" = "yes"; then
+        # Native 64-bit compilation for aarch64
+        KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DTARGET_64BIT"
+      fi
       ;;
   esac
 
@@ -269,4 +277,15 @@ fi
 
 AC_SUBST(KROC_RMOX)
 
+])dnl
+
+AC_DEFUN([OCCAM_HOST_OS],
+[dnl
+AC_CANONICAL_HOST
+AC_MSG_CHECKING([for host OS])
+AC_MSG_RESULT([$host_os])
+AM_CONDITIONAL(HOSTOS_DARWIN, [echo "$host_os" | grep -q darwin])
+if echo "$host_os" | grep -q darwin; then
+  AC_DEFINE(HOSTOS_DARWIN, 1, [Define if host OS is Darwin])
+fi
 ])dnl

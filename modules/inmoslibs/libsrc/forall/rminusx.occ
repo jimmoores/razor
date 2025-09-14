@@ -47,3 +47,31 @@ REAL32 FUNCTION MINUSX (VAL REAL32 Y)
 --}}}
 
 #ENDIF
+
+#IF (TARGET.BITS.PER.WORD = 32)
+
+--{{{  #options and #comments
+#OPTION "E V"  -- no compiler libs, no vector space
+#COMMENT "T4/T8/aarch64 compiler library, V1.2 2024"
+#COMMENT "(c) Copyright INMOS Limited 1988"
+--}}}
+
+#PRAGMA TRANSLATE MINUSX "MINUSX%O"
+
+--{{{  
+REAL32 FUNCTION MINUSX (VAL REAL32 Y)
+
+  -- Function version for 32-bit targets (including aarch64)
+  -- V1.2, 2024 - Added support for 32-bit and 64-bit targets
+
+  REAL32 X :
+  VALOF
+    INT32 X RETYPES X:
+    VAL INT32 Y RETYPES Y:
+    SEQ
+      X := Y >< (MOSTNEG INT32)
+    RESULT X
+:
+--}}}
+
+#ENDIF
