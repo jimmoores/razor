@@ -212,102 +212,6 @@ static void compose_iospace_storeword_aarch64 (tstate *ts, int portreg, int sour
 static void compose_iospace_read_aarch64 (tstate *ts, int portreg, int addrreg, int width);
 static void compose_iospace_write_aarch64 (tstate *ts, int portreg, int addrreg, int width);
 
-static char *aarch64_convert_occam_symbol(char *fixed_name) {
-	/* Strip leading underscores if present */
-	char *name = strdup(fixed_name);
-	char *prefixes = smalloc(4);
-	sprintf(prefixes, "%s%s%s", options.extref_prefix, options.extref_prefix, options.extref_prefix);
-	// if (name[0] == '_') {
-	// 	return name;
-	// }
-	int underscores = 0;
-	while (name[0] == '_') {
-		underscores++;
-		memmove(name, name+1, strlen(name)); /* shift left */
-	}
-	if (underscores == 0) {
-		underscores = 1;
-	}
-	/* Already O_*? return a copy unchanged */
-	if (strncmp(name, "O_", 2) == 0) {
-		char *cpy = (char *)smalloc(strlen(name) + strlen(options.extref_prefix) + 1);
-		sprintf(cpy, "%.*s%s", underscores, prefixes, name);
-		fprintf(stderr, "tranx86: mapping %s to %s (already O_ path)\n", name, cpy);
-		return cpy;
-	}
-
-	int skip = 0;
-	switch (name[0]) {
-		case 'C':
-			if (name[1] == '.') {
-				skip = 1;
-			} else if (strncmp(name, "CIF.", 4) == 0) {
-				skip = 4;
-			}
-			break;
-		case 'B':
-			if (name[1] == '.') {
-				skip = 2;
-			} else if (strncmp(name, "BX.", 3) == 0) {
-				skip = 3;
-			}
-			break;
-		case 'K':
-			if (strncmp(name, "KR.", 3) == 0) {
-				skip = 3;
-			}
-			break;
-	}
-	char *result;
-	if (skip > 0) {
-		// length of orig + space for NULL, minus the bit we're removing, plus the previx length
-		result = (char *)smalloc(strlen(name) + 1 - skip + strlen(options.extref_prefix) + 2);
-		if (skip == 4) { // CIF
-			sprintf(result, "%.*s%s", underscores, prefixes, name + skip);
-		} else {
-		    sprintf(result, "%.*s%s", underscores, prefixes, name + skip);
-		}
-		/* Replace dots with underscores */
-		for (char *p = result; *p; ++p) {
-			if (*p == '.') *p = '_';
-		}
-	} else {
-		result = (char *)smalloc(strlen(name) + 1 + 2 + strlen(options.extref_prefix));
-		sprintf(result, "%.*s%s", underscores, prefixes, name);
-		/* Replace dots with underscores */
-		for (char *p = result; *p; ++p) {
-			if (*p == '.') *p = '_';
-		}
-	}
-	fprintf(stderr, "tranx86: mapping %s to %s (undersscores=%d, %.*s)\n", fixed_name, result, underscores, underscores, prefixes);
-	sfree(prefixes);
-	return result;
-	//
-	// // /* Collapse repeated underscores in the payload (e.g., "do__stuff" -> "do_stuff") */
-	// // char *in = tmp, *out = tmp;
-	// // char last = '\0';
-	// // while (*in) {
-	// // 	if (!(*in == '_' && last == '_')) {
-	// // 		*out++ = *in;
-	// // 	}
-	// // 	last = *in++;
-	// // }
-	// // *out = '\0';
-}
-static void dots_to_underscores(char *buf) {
-	char *p = buf;
-	while (*p) {
-		if (*p == '.') {
-			*p = '_';
-		}
-		p++;
-	}
-}
-static char *internal_symbol(char *name) {
-	char *result = (char *)smalloc(strlen(name) + 1 + strlen(options.extref_prefix));
-	sprintf(result, "%s%s", options.extref_prefix, name);
-	return result;
-}
 /* Stub functions for missing architecture functions */
 static void aarch64_compose_reset_fregs (tstate *ts) {
 	/* Initialize aarch64 floating point unit */
@@ -316,7 +220,7 @@ static void aarch64_compose_reset_fregs (tstate *ts) {
 
 /*{{{  static void compose_pre_enbc_aarch64 (tstate *ts)*/
 /*
- *\tareg has process address/label, breg has the guard, creg has the channel
+ * areg has process address/label, breg has the guard, creg has the channel
  */
 static void compose_pre_enbc_aarch64 (tstate *ts)
 {
@@ -354,7 +258,7 @@ static void compose_pre_enbc_aarch64 (tstate *ts)
 
 /*{{{  static void compose_pre_enbt_aarch64 (tstate *ts)*/
 /*
- *\tareg has process address/label, breg has the guard, creg has the timeout expression
+ * areg has process address/label, breg has the guard, creg has the timeout expression
  */
 static void compose_pre_enbt_aarch64 (tstate *ts)
 {
@@ -395,7 +299,7 @@ static void compose_pre_enbt_aarch64 (tstate *ts)
 
 /*{{{  static void compose_inline_min_aarch64 (tstate *ts, int wide)*/
 /*
- *\tgenerates an in-line version of MIN (mobile channel input)
+ * generates an in-line version of MIN (mobile channel input)
  */
 static void compose_inline_min_aarch64 (tstate *ts, int wide)
 {
@@ -446,7 +350,7 @@ static void compose_inline_min_aarch64 (tstate *ts, int wide)
 
 /*{{{  static void compose_inline_mout_aarch64 (tstate *ts, int wide)*/
 /*
- *\tgenerates an in-line version of MOUT (mobile channel output)
+ * generates an in-line version of MOUT (mobile channel output)
  */
 static void compose_inline_mout_aarch64 (tstate *ts, int wide)
 {
@@ -517,7 +421,7 @@ static void compose_inline_mout_aarch64 (tstate *ts, int wide)
 
 /*{{{  static void compose_inline_enbc_aarch64 (tstate *ts, int instr)*/
 /*
- *\tgenerates an in-line version of ENBC/ENBC3
+ * generates an in-line version of ENBC/ENBC3
  */
 static void compose_inline_enbc_aarch64 (tstate *ts, int instr)
 {
@@ -568,7 +472,7 @@ static void compose_inline_enbc_aarch64 (tstate *ts, int instr)
 
 /*{{{  static void compose_inline_disc_aarch64 (tstate *ts, int instr)*/
 /*
- *\tgenerates an in-line version of DISC/NDISC
+ * generates an in-line version of DISC/NDISC
  */
 static void compose_inline_disc_aarch64 (tstate *ts, int instr)
 {
@@ -625,7 +529,7 @@ static void compose_inline_disc_aarch64 (tstate *ts, int instr)
 
 /*{{{  static void compose_inline_altwt_aarch64 (tstate *ts)*/
 /*
- *\tgenerates an inline ALTWT (ALT wait operations)
+ * generates an inline ALTWT (ALT wait operations)
  */
 static void compose_inline_altwt_aarch64 (tstate *ts)
 {
@@ -644,7 +548,7 @@ static void compose_inline_altwt_aarch64 (tstate *ts)
 
 /*{{{  static void compose_inline_stlx_aarch64 (tstate *ts, int ins)*/
 /*
- *\tused to inline STLF and STLB
+ * used to inline STLF and STLB
  */
 static void compose_inline_stlx_aarch64 (tstate *ts, int ins)
 {
@@ -669,7 +573,7 @@ static void compose_inline_stlx_aarch64 (tstate *ts, int ins)
 
 /*{{{  static void compose_inline_malloc_aarch64 (tstate *ts)*/
 /*
- *\tallocates memory from the dmem_ allocator directly
+ * allocates memory from the dmem_ allocator directly
  */
 static void compose_inline_malloc_aarch64 (tstate *ts)
 {
@@ -686,8 +590,8 @@ static void compose_inline_malloc_aarch64 (tstate *ts)
 
 /*{{{  static void compose_inline_startp_aarch64 (tstate *ts)*/
 /*
- *\tinlined STARTP (start process) call
- *\tareg has "other workspace", breg has "start offset"
+ * inlined STARTP (start process) call
+ * areg has "other workspace", breg has "start offset"
  */
 static void compose_inline_startp_aarch64 (tstate *ts)
 {
@@ -732,7 +636,7 @@ static void compose_inline_startp_aarch64 (tstate *ts)
 
 /*{{{  static void compose_inline_endp_aarch64 (tstate *ts)*/
 /*
- *\tinlined ENDP (end process) call
+ * inlined ENDP (end process) call
  */
 static void compose_inline_endp_aarch64 (tstate *ts)
 {
@@ -748,7 +652,7 @@ static void compose_inline_endp_aarch64 (tstate *ts)
 
 /*{{{  static void compose_inline_stopp_aarch64 (tstate *ts)*/
 /*
- *\tinlined STOPP (stop process) call
+ * inlined STOPP (stop process) call
  */
 static void compose_inline_stopp_aarch64 (tstate *ts)
 {
@@ -984,7 +888,7 @@ static void compose_divcheck_zero_simple_aarch64 (tstate *ts, int reg)
 
 /*{{{  static void compose_move_loadptrs_aarch64 (tstate *ts)*/
 /*
- *\tLoads pointers for memory move operations
+ * Loads pointers for memory move operations
  */
 static void compose_move_loadptrs_aarch64 (tstate *ts)
 {
@@ -1033,56 +937,12 @@ static void compose_move_loadptrs_aarch64 (tstate *ts)
 
 /*{{{  static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int unused, char *name, ins_chain **pst_first, ins_chain **pst_last)*/
 /*
- *\tGenerates code for blocking system calls
+ * Generates code for blocking system calls
  */
 static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int unused, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
 	int arg_reg = tstack_newreg (ts->stack);
 
-	// char sbuf[128];
-	// /* Prepare function name */
-	// if (!name) {
-	// 	call_name = string_dup ("unknown_bcall");
-	// } else {
-	// 	if (*name == '&') {
-	// 		if (strncmp(name, "&B.", 3) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 3);
-	// 		} else if (strncmp(name, "&BX.", 4) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 4);
-	// 		} else if (strncmp(name, "&KR.", 4) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 4);
-	// 		} else {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 1);
-	// 		}
-	// 		dots_to_underscores(sbuf);
-	// 		call_name = string_dup (sbuf);
-	// 	} else if (*name == '_') {
-	// 		if (strncmp(name, "_B.", 3) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 3);
-	// 		} else if (strncmp(name, "_BX.",4) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 4);
-	// 		} else if (strncmp(name, "_KR.", 4) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 4);
-	// 		} else {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 1);
-	// 		}
-	// 		dots_to_underscores(sbuf);
-	// 		call_name = string_dup (sbuf);
-	// 	} else {
-	// 		if (strncmp(name, "B.", 2) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 2);
-	// 		} else if (strncmp(name, "BX.", 3) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 3);
-	// 		} else if (strncmp(name, "KR.", 3) == 0) {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name + 3);
-	// 		} else {
-	// 			sprintf (sbuf, "%s%s", options.extref_prefix, name);
-	// 		}
-	// 		dots_to_underscores(sbuf);
-	// 		call_name = string_dup (sbuf);
-	// 	}
-	// }
-	fprintf (stderr, "generating call for %s\n", name);
 	/* Set up workspace pointer in x0 */
 	*pst_first = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0);
 	add_to_ins_chain (*pst_first);
@@ -1107,19 +967,6 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
 	int tmp_reg = tstack_newreg (ts->stack);
-	// char sbuf[128];
-	// /* Prepare function name */
-	// if (!name) {
-	// 	call_name = string_dup ("unknown_cif_call");
-	// } else if (strncmp(name, "CIF.", 4) == 0) {
-	// 	sprintf (sbuf, "%s%s", options.extref_prefix, name + 4);
-	// 	dots_to_underscores(sbuf);
-	// 	call_name = string_dup (sbuf);
-	// } else {
-	// 	sprintf (sbuf, "%s%s", options.extref_prefix, name);
-	// 	dots_to_underscores(sbuf);
-	// 	call_name = string_dup (name);
-	// }
 
 	/* Set up CIF call frame */
 	*pst_first = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, tmp_reg);
@@ -1143,7 +990,7 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 
 /*{{{  static void compose_fp_set_fround_aarch64 (tstate *ts, int mode)*/
 /*
- *\tSets floating point rounding mode
+ * Sets floating point rounding mode
  */
 static void compose_fp_set_fround_aarch64 (tstate *ts, int mode)
 {
@@ -1154,7 +1001,7 @@ static void compose_fp_set_fround_aarch64 (tstate *ts, int mode)
 
 /*{{{  static void compose_fp_init_aarch64 (tstate *ts)*/
 /*
- *\tInitializes floating point unit
+ * Initializes floating point unit
  */
 static void compose_fp_init_aarch64 (tstate *ts)
 {
@@ -1165,7 +1012,7 @@ static void compose_fp_init_aarch64 (tstate *ts)
 
 /*{{{  static void compose_refcountop_aarch64 (tstate *ts, int op, int reg)*/
 /*
- *\tPerforms reference counting operations
+ * Performs reference counting operations
  */
 static void compose_refcountop_aarch64 (tstate *ts, int op, int reg)
 {
@@ -1199,7 +1046,7 @@ static void compose_refcountop_aarch64 (tstate *ts, int op, int reg)
 
 /*{{{  static void compose_memory_barrier_aarch64 (tstate *ts, int sec)*/
 /*
- *\tGenerates memory barrier instructions
+ * Generates memory barrier instructions
  */
 static void compose_memory_barrier_aarch64 (tstate *ts, int sec)
 {
@@ -1229,7 +1076,7 @@ static void compose_memory_barrier_aarch64 (tstate *ts, int sec)
 
 /*{{{  static void compose_nreturn_aarch64 (tstate *ts, int adjust)*/
 /*
- *\tGenerates non-standard return (for NOCC)
+ * Generates non-standard return (for NOCC)
  */
 static void compose_nreturn_aarch64 (tstate *ts, int adjust)
 {
@@ -1342,25 +1189,7 @@ static int compose_aarch64_remainder (tstate *ts, int dividend, int divisor) {
 
 static void compose_aarch64_external_ccall (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last) {
 	/* Basic external C call */
-	char *call_name = aarch64_convert_occam_symbol(name);
-	fprintf (stderr, "tranx86: external ccall %s -> %s (inlined=%d)\n", name, call_name, inlined);
-	// char sbuf[128];
-	// if (!name) {
-	// 	call_name = string_dup ("unknown_function");
-	// } else if (*name == '&') {
-	// 	sprintf (sbuf, "%s%s", options.extref_prefix, name + 1 + 2); // 2 for C.
-	// 	dots_to_underscores(sbuf);
-	// 	call_name = string_dup (sbuf);
-	// } else if (*name == '_') {
-	// 	sprintf (sbuf, "%s%s%s", options.extref_prefix, "_", name + 2); // 2 for C.
-	// 	dots_to_underscores(sbuf);
-	// 	call_name = string_dup (sbuf);
-	// } else {
-	// 	sprintf (sbuf, "%s_%s", options.extref_prefix, name + 2); // 2 for C.
-	// 	dots_to_underscores(sbuf);
-	// 	call_name = string_dup (sbuf);
-	// }
-	*pst_first = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, call_name);
+	*pst_first = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, name);
 	add_to_ins_chain (*pst_first);
 	*pst_last = *pst_first;
 }
@@ -1370,13 +1199,13 @@ static int aarch64_stub_fp_regs (int *regs) { return 0; }
 
 /*{{{  I/O space operations for aarch64*/
 /*
- *\tI/O space operations for aarch64 - these provide hardware interface functionality
- *\tfor accessing I/O ports and memory-mapped I/O regions
+ * I/O space operations for aarch64 - these provide hardware interface functionality
+ * for accessing I/O ports and memory-mapped I/O regions
  */
 
 /*{{{  static int compose_iospace_loadbyte_aarch64 (tstate *ts, int portreg, int targetreg)*/
 /*
- *\tLoads a byte from I/O space port into target register
+ * Loads a byte from I/O space port into target register
  */
 static int compose_iospace_loadbyte_aarch64 (tstate *ts, int portreg, int targetreg)
 {
@@ -1745,10 +1574,7 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	}
 	
 	/* Get scheduler pointer and store in x1 */
-	char *local_scheduler_str = smalloc(strlen(options.extref_prefix) + strlen("local_scheduler") + 1);
-	strcpy(local_scheduler_str, "KR.local_scheduler"); // do underscores in named label handling.
-	//sprintf(local_scheduler_str, "%s%s", options.extref_prefix, "local_scheduler");
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 1, ARG_NAMEDLABEL, local_scheduler_str, ARG_REG, REG_X1));
+	add_to_ins_chain (compose_ins (INS_CALL, 1, 1, ARG_NAMEDLABEL, strdup("local_scheduler"), ARG_REG, REG_X1));
 	
 	/* Workspace pointer goes to x2 */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X2));
@@ -1783,12 +1609,7 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 		}
 	}
 
-	/* Generate call instruction with proper CCSP calling convention */
-	/* Function signature: kernel_func(param0, sched, Wptr) */
-	/* Add kernel_ prefix to the entrypoint name */
-	char *kernel_name = (char *)smalloc(strlen(entrypoint_name) + 12);
-	sprintf(kernel_name, "KR.kernel_%s", entrypoint_name);
-	call_ins = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, kernel_name);
+	call_ins = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, entrypoint_name);
 	add_to_ins_chain (call_ins);
 
 	/* Handle output registers */
@@ -1817,21 +1638,17 @@ static ins_chain *compose_aarch64_kjump (tstate *ts, const int instr, const int 
 	} else {
 		entrypoint_name = string_dup (kif_entry->entrypoint);
 	}
-
-	/* Add kernel_ prefix to the entrypoint name */
-	char *kernel_name = (char *)smalloc(strlen(entrypoint_name) + 12);
-	sprintf(kernel_name, "KR.kernel_%s", entrypoint_name);
 	
 	/* Generate appropriate jump instruction */
 	if (instr == INS_CJUMP) {
 		/* Conditional jump */
-		jump_ins = compose_ins (INS_CJUMP, 2, 0, ARG_COND, cc, ARG_NAMEDLABEL, kernel_name);
+		jump_ins = compose_ins (INS_CJUMP, 2, 0, ARG_COND, cc, ARG_NAMEDLABEL, entrypoint_name);
 	} else if (instr == INS_CALL) {
 		/* Call instruction */
-		jump_ins = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, kernel_name);
+		jump_ins = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, entrypoint_name);
 	} else {
 		/* Unconditional jump */
-		jump_ins = compose_ins (INS_JUMP, 1, 0, ARG_NAMEDLABEL, kernel_name);
+		jump_ins = compose_ins (INS_JUMP, 1, 0, ARG_NAMEDLABEL, entrypoint_name);
 	}
 
 	return jump_ins;
@@ -2944,60 +2761,14 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 			break;
 		case RTL_SETNAMEDLABEL:
 			if (tmp->u.label_name) {
-				/* CRITICAL FIX: Convert occam symbols to expected C naming convention */
-				char *fixed_name = tmp->u.label_name;
-				
-				// /* Handle occam process symbols that need O_ prefix */
-				// if (strchr(fixed_name, '.') || (strstr(fixed_name, "_do_") && !strstr(fixed_name, "O_"))) {
-				// 	/* Convert occam symbols with dots to O_ prefixed C symbols */
-				// 	char *new_name = aarch64_convert_occam_symbol(fixed_name);
-				// 	/* Make it global so C code can find it */
-				// 	fprintf (stream, ".global %s\n%s:\n", new_name, new_name);
-				// 	sfree(new_name);
-				// } else if (strlen(fixed_name) > 0 && islower(fixed_name[0]) && strcmp(fixed_name, "main") != 0) {
-				// 	/* Lowercase symbols (except main) are occam library functions that need double underscore */
-				// 	fprintf (stream, "__%s:\n", fixed_name);
-				// } else {
-					/* Handle other symbols normally */
-					//char *new_name = aarch64_cleanup_symbol_name(fixed_name);
-				char *converted_name = aarch64_convert_occam_symbol(fixed_name);
-				fprintf (stream, "_%s:\n", fixed_name);
-					//sfree(new_name);
-				//}
+				char *name = tmp->u.label_name;
+				fprintf(stream, "%s:\n", name);
 			}
 			break;
 		case RTL_PUBLICSETNAMEDLABEL:
 			if (tmp->u.label_name) {
-				/* CRITICAL FIX: Convert occam symbols to expected C naming convention */
-				char *fixed_name = tmp->u.label_name;
-				
-				/* Handle $ prefix */
-				if (fixed_name[0] == '$') {
-					fixed_name = tmp->u.label_name + 1; /* Skip the $ */
-				}
-				
-				/* Handle occam process symbols that need O_ prefix */
-				// if (strchr(fixed_name, '.') || (strstr(fixed_name, "_do_") && !strstr(fixed_name, "O_"))) {
-				// 	/* Convert occam symbols with dots to O_ prefixed C symbols */
-				// 	char *new_name = aarch64_convert_occam_symbol(fixed_name);
-				// 	fprintf (stream, ".global %s\n%s:\n", new_name, new_name);
-				// 	sfree(new_name);
-				// } else if (strlen(fixed_name) > 0 && islower(fixed_name[0]) && strcmp(fixed_name, "main") != 0) {
-				// 	/* Lowercase symbols (except main) are occam library functions that need double underscore */
-				// 	fprintf (stream, ".global __%s\n__%s:\n", fixed_name, fixed_name);
-				// } else {
-					/* Handle other symbols normally */
-					//char *new_name = aarch64_cleanup_symbol_name(fixed_name);
-					
-					/* CRITICAL FIX: Make symbols unique to prevent duplicate definitions */
-					// if (strstr(new_name, "MPBARSYNC") || strstr(new_name, "MPBARRESIGN")) {
-					// 	fprintf (stream, ".global _%s_%d\n_%s_%d:\n", new_name, ++symbol_counter, new_name, symbol_counter);
-					// } else {
-					char *converted_name = aarch64_convert_occam_symbol(fixed_name);
-					fprintf (stream, ".global %s\n%s:\n", converted_name, converted_name);
-					// }
-					// sfree(new_name);
-				//}
+				char *name = tmp->u.label_name;
+				fprintf(stream, ".global %s\n%s:\n", name, name);
 			}
 			break;
 		default:
@@ -3019,171 +2790,24 @@ static int aarch64_validate_register(int reg)
 	return (reg != (int)0x80000000 && reg != REG_UNDEFINED);
 }
 
-/*
- *  Converts a raw symbol into a normalized "stem" independent of ABI spelling.
- *  - Cleans up special characters (% and ^).
- *  - Library-style names (C.* and BX.*) are mapped to library stems without O_.
- *  - Dotted occam processes map to O_* once.
- */
-static char *aarch64_convert_symbol_name(const char *symbol)
-{
-	char *proc = aarch64_convert_process_symbol(symbol);
-	return proc;
-	// 		fprintf(stderr, "aarch64_convert_symbol_name proc: %s\n", proc);
-	// 		return proc;
-	//return strdup(symbol);
-	// fprintf(stderr, "aarch64_convert_symbol_name raw: %s\n", symbol);
-	// char *clean = aarch64_cleanup_symbol_name(symbol);
-	// fprintf(stderr, "aarch64_convert_symbol_name clean: %s\n", clean);
-
-	// int c_dot = strncmp(clean, "C.", 2);
-	// int bx_dot = strncmp(clean, "BX.", 3);
-	// int b_dot = strncmp(clean, "B.", 2);
-	// /* Library-style prefixes: C.* and BX.* -> convert dots, no O_ prefix */
-	// if (!c_dot || !bx_dot || !b_dot) {
-	// 	int prefix_len;
-	// 	if (!bx_dot) prefix_len = 3; else prefix_len = 2;
-	// 	char *lib = (char *)smalloc(strlen(clean) + 1 - prefix_len);
-	// 	strcpy(lib, clean + prefix_len);
-	// 	for (char *p = lib; *p; ++p) {
-	// 		if (*p == '.') *p = '_';
-	// 	}
-	// 	sfree(clean);
-	// 	fprintf(stderr, "aarch64_convert_symbol_name lib: %s\n", lib);
-	// 	return lib;
-	// }
-	//
-	/* Dotted names (occam processes) -> O_* */
-// O_*	if (strchr(clean, '.') != NULL) {
-// 		char *proc = aarch64_convert_process_symbol(clean);
-// 		sfree(clean);
-// 		fprintf(stderr, "aarch64_convert_symbol_name proc: %s\n", proc);
-// 		return proc;
-// 	}
-//
-// 	/* Already underscored proc-like names ("__do_stuff", "_do_stuff") -> normalize to O_do_stuff */
-// 	if ((clean[0] == '_' && clean[1] != '\0') ||
-// 		(clean[0] == '_' && clean[1] == '_' && clean[2] != '\0')) {
-// 		char *proc = aarch64_convert_process_symbol(clean);
-// 		sfree(clean);
-// 		return proc;
-// 	}
-//
-// 	/* Otherwise leave as-is (stem only) */
-// 	return clean;
-}
 
 
 
 /*
- *  Emit a reference to an external/global symbol with consistent ABI spelling:
- *  - Darwin/Mach-O: single leading underscore is required (_name).
- *  - ELF platforms: no leading underscore (name).
- *  This function assumes the input 'symbol' is the logical stem, and
- *  only applies the platform prefix at the final emission point.
+ *  Emit a reference to an external/global symbol
  */
 static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, const char *instruction)
 {
-	char *stem = aarch64_convert_occam_symbol(symbol);
-
-	/* Final ABI spelling decision happens here. */
-// #if defined(TARGET_OS_DARWIN)
-//  	/* Only add one underscore if the stem doesn't already start with '_' */
-//  	if (stem[0] == '_') {
-//  		fprintf(stream, "\t%s\t%s\n", instruction, stem);
-//  	} else {
-//  		fprintf(stream, "\t%s\t_%s\n", instruction, stem);
-//  	}
-// #else
-	/* ELF: never add underscore */
-	fprintf(stream, "\t%s\t%s\n", instruction, stem);
-// #endif
-
-	sfree(stem);
-}
-
-
-/*
- *  Converts occam process names to O_* C-visible symbols:
- *   - "do.stuff"   -> "O_do_stuff"
- *   - "__do_stuff" -> "O_do_stuff"
- *   - "_do_stuff"  -> "O_do_stuff"
- *   - Already "O_*" remains unchanged.
- *  Also collapses multiple underscores into singles in the payload.
- */
-static char *aarch64_convert_process_symbol(const char *fixed_name)
-{
-	return strdup(fixed_name);
-	// char *cpy = (char *)smalloc(strlen(fixed_name) + 1);
-	// strcpy(cpy, fixed_name);
-	//
-	// return cpy;
-	// /* Already O_*? return a copy unchanged */
-	// if (strncmp(fixed_name, "O_", 2) == 0) {
-	// 	char *cpy = (char *)smalloc(strlen(fixed_name) + 1);
-	// 	strcpy(cpy, fixed_name);
-	// 	return cpy;
-	// }
-
-	// /* Make a working copy we can normalize */
-	// char *tmp = (char *)smalloc(strlen(fixed_name) + 1);
-	// strcpy(tmp, fixed_name);
-	//
-	/* Strip leading underscores if present */
-	// while (tmp[0] == '_') {
-	// 	memmove(tmp, tmp + 1, strlen(tmp)); /* shift left */
-	// }
-	//
-	// /* Replace dots with underscores */
-	// for (char *p = tmp; *p; ++p) {
-	// 	if (*p == '.') *p = '_';
-	// }
-	//
-	// // /* Collapse repeated underscores in the payload (e.g., "do__stuff" -> "do_stuff") */
-	// // char *in = tmp, *out = tmp;
-	// // char last = '\0';
-	// // while (*in) {
-	// // 	if (!(*in == '_' && last == '_')) {
-	// // 		*out++ = *in;
-	// // 	}
-	// // 	last = *in++;
-	// // }
-	// // *out = '\0';
-	//
-	/* Prepend O_ (and a prefix if necessary) */
-	// char *new_name = (char *)smalloc(strlen(tmp) + 4);
-	// sprintf(new_name, "%sO_%s", options.extref_prefix, tmp);
-	// sfree(tmp);
-	// return new_name;
-}
-
-
-/*
- *  Cleanup pass for special characters used in intermediate names:
- *  - Replace '^' with '_'
- *  - Replace '%' with '_' (e.g., %O, %CHK)
- *  Keep dots as-is so library.function names survive to link.
- */
-static char *aarch64_cleanup_symbol_name(const char *fixed_name)
-{
-	char *new_name = (char *)smalloc(strlen(fixed_name) + 1);
-	strcpy(new_name, fixed_name);
-
-	for (char *p = new_name; *p; ++p) {
-		if (*p == '^' || *p == '%') {
-			*p = '_';
-		}
-	}
-	return new_name;
+	fprintf(stream, "\t%s\t%s\n", instruction, symbol);
 }
 
 /*}}}*/
 
 /*{{{  static void aarch64_emit_large_immediate (FILE *stream, long value, const char *temp_reg)*/
 /*
- *\tEmits ARM64 instructions to load a large immediate value into a temporary register
- *\tARM64 instructions only support 12-bit immediates (0-4095), so larger values
- *\tneed to be loaded using movz/movk sequence
+ * Emits ARM64 instructions to load a large immediate value into a temporary register
+ * ARM64 instructions only support 12-bit immediates (0-4095), so larger values
+ * need to be loaded using movz/movk sequence
  */
 static void aarch64_emit_large_immediate (FILE *stream, long value, const char *temp_reg)
 {
@@ -3203,7 +2827,7 @@ static void aarch64_emit_large_immediate (FILE *stream, long value, const char *
 
 /*{{{  static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg)*/
 /*
- *\tEmits ARM64 arithmetic instruction with immediate, handling large values automatically
+ * Emits ARM64 arithmetic instruction with immediate, handling large values automatically
  */
 static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg)
 {
@@ -3220,7 +2844,8 @@ static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op
 static char *aarch64_get_register_name (int reg)
 {
 	static char regname[16];
-	
+
+	// TODO: investigate this 'fix'
 	/* CRITICAL FIX: Handle invalid register numbers that cause crashes */
 	if (reg == (int)0x80000000 || reg == -2147483648) {
 		/* This is REG_UNDEFINED from tstack.h - return safe fallback */
