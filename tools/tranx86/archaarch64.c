@@ -941,7 +941,7 @@ static void compose_move_loadptrs_aarch64 (tstate *ts)
  */
 static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int unused, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
-	int arg_reg = tstack_newreg (ts->stack);
+	char *sbuf = aarch64_convert_symbol_name(name);
 
 	/* Set up workspace pointer in x0 */
 	*pst_first = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0);
@@ -949,7 +949,9 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 
 	/* Set up function address in x1 if not kernel run */
 	if (kernel_call != K_KERNEL_RUN) {
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, strdup(name), ARG_REG, REG_X1));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, sbuf, ARG_REG, REG_X1));
+	} else {
+		sfree(sbuf);
 	}
 
 	/* Call kernel function */
@@ -966,6 +968,7 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
  */
 static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
+	char *sbuf = aarch64_convert_symbol_name(name);
 	int tmp_reg = tstack_newreg (ts->stack);
 
 	/* Set up CIF call frame */
@@ -979,7 +982,7 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, -16));
 
 	/* Call CIF function */
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, strdup(name)));
+	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, sbuf));
 
 	/* Restore workspace */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
@@ -1188,8 +1191,8 @@ static int compose_aarch64_remainder (tstate *ts, int dividend, int divisor) {
 }
 
 static void compose_aarch64_external_ccall (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last) {
-	/* Basic external C call */
-	*pst_first = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, name);
+	char *sbuf = aarch64_convert_symbol_name(name);
+	*pst_first = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, sbuf);
 	add_to_ins_chain (*pst_first);
 	*pst_last = *pst_first;
 }
@@ -1542,7 +1545,7 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	if (!entry || !entry->entrypoint) {
 		entrypoint_name = string_dup ("unknown_kernel_call");
 	} else {
-		entrypoint_name = string_dup (entry->entrypoint);
+		entrypoint_name = aarch64_convert_symbol_name(entry->entrypoint);
 	}
 
 	/* Map stack registers to aarch64 registers */
@@ -1636,7 +1639,7 @@ static ins_chain *compose_aarch64_kjump (tstate *ts, const int instr, const int 
 	if (!kif_entry || !kif_entry->entrypoint) {
 		entrypoint_name = string_dup ("unknown_kernel_jump");
 	} else {
-		entrypoint_name = string_dup (kif_entry->entrypoint);
+		entrypoint_name = aarch64_convert_symbol_name(kif_entry->entrypoint);
 	}
 	
 	/* Generate appropriate jump instruction */
@@ -1814,14 +1817,13 @@ static void compose_aarch64_inline_out (tstate *ts, int width)
 static void compose_aarch64_entry_prolog (tstate *ts)
 {
 	rtl_chain *trtl;
-	char sbuffer[128];
+	char *sbuffer = aarch64_convert_symbol_name("KR.occam_start");
 	int tmp_reg;
 
 	/* Generate the _occam_start symbol like i386 version */
 	trtl = new_rtl ();
 	trtl->type = RTL_PUBLICSETNAMEDLABEL;
-	sprintf (sbuffer, "KR.occam_start");
-	trtl->u.label_name = string_dup (sbuffer);
+	trtl->u.label_name = sbuffer;
 	add_to_rtl_chain (trtl);
 
 	/* Initialize aarch64 FPU and workspace inline */
@@ -1834,8 +1836,7 @@ static void compose_aarch64_entry_prolog (tstate *ts)
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, 8));
 	
 	/* Jump to main function to execute occam code */
-	char *main_name = smalloc(strlen("CIF.main") + 1);
-	sprintf(main_name, "CIF.main");
+	char *main_name = aarch64_convert_symbol_name("CIF.main");
 	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_NAMEDLABEL, main_name));
 }
 /*}}}*/
@@ -1860,13 +1861,11 @@ static void compose_aarch64_return (tstate *ts)
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64: direct kernel exit (terminal)")));
 		
 		/* Call Y_shutdown directly */
-		char *shutdown_name = smalloc(strlen("KR.kernel_Y_shutdown") + 1);
-		sprintf(shutdown_name, "KR.kernel_Y_shutdown");
+		char *shutdown_name = aarch64_convert_symbol_name("KR.kernel_Y_shutdown");
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, shutdown_name));
 		
 		/* Call Y_BNSeterr directly */
-		char *bnseterr_name = smalloc(strlen("KR.kernel_Y_BNSeterr") + 1);
-		sprintf(bnseterr_name, "KR.kernel_Y_BNSeterr");
+		char *bnseterr_name = aarch64_convert_symbol_name("KR.kernel_Y_BNSeterr");
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, bnseterr_name));
 		
 		/* Mark cleanup as handled to prevent the original flushscreenpoint code */
@@ -2423,26 +2422,15 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 						char *symbol = (char *)ins->in_args[0]->regconst;
-						char *fixed_symbol = aarch64_convert_occam_symbol(symbol);
+						char *fixed_symbol = aarch64_convert_symbol_name(symbol);
 						
-						if (fixed_symbol && strncmp(fixed_symbol, "Y_", 2) == 0) {
-							fprintf (stream, "\tadrp\t%s, %skernel_%s@PAGE\n",
+						fprintf (stream, "\tadrp\t%s, %s@PAGE\n",
 									aarch64_get_register_name (ins->out_args[0]->regconst),
-									options.extref_prefix, fixed_symbol);
-							fprintf (stream, "\tadd\t%s, %s, %skernel_%s@PAGEOFF\n",
+									fixed_symbol);
+						fprintf (stream, "\tadd\t%s, %s, %s@PAGEOFF\n",
 									aarch64_get_register_name (ins->out_args[0]->regconst),
 									aarch64_get_register_name (ins->out_args[0]->regconst),
-									options.extref_prefix,fixed_symbol);
-						} else {
-							/* Use single underscore for Darwin 64-bit external symbols */
-							fprintf(stream, "\tadrp\t%s, %s%s@PAGE\n",
-									aarch64_get_register_name(ins->out_args[0]->regconst),
-									options.extref_prefix, fixed_symbol);
-							fprintf(stream, "\tadd\t%s, %s, %s%s@PAGEOFF\n",
-									aarch64_get_register_name(ins->out_args[0]->regconst),
-									aarch64_get_register_name(ins->out_args[0]->regconst),
-									options.extref_prefix, fixed_symbol);
-						}
+									fixed_symbol);
 						sfree(fixed_symbol);
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
 						fprintf (stream, "\tldr\t%s, [%s]\n",
@@ -2761,14 +2749,16 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 			break;
 		case RTL_SETNAMEDLABEL:
 			if (tmp->u.label_name) {
-				char *name = tmp->u.label_name;
+				char *name = aarch64_convert_symbol_name(tmp->u.label_name);
 				fprintf(stream, "%s:\n", name);
+				sfree(name);
 			}
 			break;
 		case RTL_PUBLICSETNAMEDLABEL:
 			if (tmp->u.label_name) {
-				char *name = tmp->u.label_name;
+				char *name = aarch64_convert_symbol_name(tmp->u.label_name);
 				fprintf(stream, ".global %s\n%s:\n", name, name);
+				sfree(name);
 			}
 			break;
 		default:
@@ -2791,6 +2781,50 @@ static int aarch64_validate_register(int reg)
 }
 
 
+/*
+ * Converts an occam symbol to a valid assembly symbol.
+ * This function is responsible for applying all the necessary transformations
+ * to a symbol to make it valid for the aarch64 assembler and linker.
+ * The caller is responsible for freeing the returned string.
+ */
+static char *aarch64_convert_symbol_name(const char *symbol) {
+    char sbuf[256];
+    char *p;
+
+    if (symbol == NULL) {
+        return NULL;
+    }
+
+    if (strncmp(symbol, "C.", 2) == 0) {
+        sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 2);
+    } else if (strncmp(symbol, "CIF.", 4) == 0) {
+        sprintf(sbuf, "@%s%s", options.extref_prefix, symbol + 4);
+    } else if (strncmp(symbol, "B.", 2) == 0) {
+        sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 2);
+    } else if (strncmp(symbol, "BX.", 3) == 0) {
+        sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 3);
+    } else if (strncmp(symbol, "KR.", 3) == 0) {
+        if (strncmp(symbol + 3, "kernel_Y_", 9) == 0) {
+            sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 3);
+        } else {
+            sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 3);
+        }
+    } else if (strncmp(symbol, "Y_", 2) == 0) {
+        sprintf(sbuf, "%skernel_%s", options.extref_prefix, symbol);
+    } else if (strncmp(symbol, "X_", 2) == 0) {
+        sprintf(sbuf, "%s%s", options.extref_prefix, symbol);
+    } else {
+        sprintf(sbuf, "%s%s", options.extref_prefix, symbol);
+    }
+
+    for (p = sbuf; *p; p++) {
+        if (*p == '.') {
+            *p = '_';
+        }
+    }
+
+    return strdup(sbuf);
+}
 
 
 /*
@@ -2798,7 +2832,9 @@ static int aarch64_validate_register(int reg)
  */
 static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, const char *instruction)
 {
-	fprintf(stream, "\t%s\t%s\n", instruction, symbol);
+    char *fixed_symbol = aarch64_convert_symbol_name(symbol);
+	fprintf(stream, "\t%s\t%s\n", instruction, fixed_symbol);
+    sfree(fixed_symbol);
 }
 
 /*}}}*/
