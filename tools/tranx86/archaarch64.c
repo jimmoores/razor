@@ -193,6 +193,7 @@ static int compose_aarch64_widenshort (tstate *ts);
 static int compose_aarch64_widenword (tstate *ts);
 static void compose_aarch64_longop (tstate *ts, int secondary_opcode);
 static void compose_aarch64_fpop (tstate *ts, int secondary_opcode);
+static void compose_aarch64_occam_call (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last);
 static int aarch64_regcolour_special_to_real (int reg);
 static int aarch64_regcolour_get_regs (int *regs);
 static int aarch64_code_to_asm (rtl_chain *rtl_code, char *filename);
@@ -442,7 +443,7 @@ static void compose_inline_enbc_aarch64 (tstate *ts, int instr)
 		}
 		/* constant 1 means omit-test */
 	} else {
-		/* don\'t know guard value -- do test */
+		/* don't know guard value -- do test */
 		add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REG, guard_reg, ARG_REG | ARG_IMP, REG_CC));
 		add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_LABEL, out_lab));
 	}
@@ -493,7 +494,7 @@ static void compose_inline_disc_aarch64 (tstate *ts, int instr)
 			return;
 		}
 	} else {
-		/* don\'t know guard -- do check */
+		/* don't know guard -- do check */
 		add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 		add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_LABEL, out_flab));
 	}
@@ -941,18 +942,36 @@ static void compose_move_loadptrs_aarch64 (tstate *ts)
  */
 static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int unused, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
-	char *sbuf = aarch64_convert_symbol_name(name);
+	char sbuf[256];
+	char *fixed_name;
+	int offset = 0;
+
+	/* Transform symbol name like i386 version - strip prefixes (B., BX., KR.) */
+	if (strncmp(name, "B.", 2) == 0) {
+		offset = 2;
+	} else if (strncmp(name, "BX.", 3) == 0) {
+		offset = 3;
+	} else if (strncmp(name, "KR.", 3) == 0) {
+		offset = 3;
+	}
+
+	sprintf(sbuf, "%s%s", options.extref_prefix, name + offset);
+
+	/* Apply character transformations (dots to underscores, etc) */
+	for (char *p = sbuf; *p; p++) {
+		if (*p == '.') {
+			*p = '_';
+		}
+	}
+
+	fixed_name = strdup(sbuf);
 
 	/* Set up workspace pointer in x0 */
 	*pst_first = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0);
 	add_to_ins_chain (*pst_first);
 
-	/* Set up function address in x1 if not kernel run */
-	if (kernel_call != K_KERNEL_RUN) {
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, sbuf, ARG_REG, REG_X1));
-	} else {
-		sfree(sbuf);
-	}
+	/* Set up function address in x1 */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, fixed_name, ARG_REG, REG_X1));
 
 	/* Call kernel function */
 	compose_aarch64_kcall (ts, kernel_call, 2, 0);
@@ -968,25 +987,33 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
  */
 static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
-	char *sbuf = aarch64_convert_symbol_name(name);
-	int tmp_reg = tstack_newreg (ts->stack);
+	char sbuf[256];
+	char *fixed_name;
+
+	/* Transform symbol name like i386 version - strip CIF. prefix and add @ prefix */
+	if (strncmp(name, "CIF.", 4) == 0) {
+		sprintf(sbuf, "@%s%s", options.extref_prefix, name + 4);
+	} else {
+		sprintf(sbuf, "@%s%s", options.extref_prefix, name);
+	}
+
+	/* Apply character transformations (dots to underscores, etc) */
+	for (char *p = sbuf; *p; p++) {
+		if (*p == '.') {
+			*p = '_';
+		}
+	}
+
+	fixed_name = strdup(sbuf);
 
 	/* Set up CIF call frame */
-	*pst_first = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, tmp_reg);
+	*pst_first = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0);
 	add_to_ins_chain (*pst_first);
 
-	/* Adjust workspace for CIF call */
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, 16, ARG_REG, REG_WPTR));
+	/* Call CIF function directly */
+	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, fixed_name));
 
-	/* Store return address */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, -16));
-
-	/* Call CIF function */
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, sbuf));
-
-	/* Restore workspace */
-	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
-	*pst_last = compose_ins (INS_SUB, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, 16, ARG_REG, REG_WPTR);
+	*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// CIF call complete"));
 	add_to_ins_chain (*pst_last);
 }
 /*}}}*/
@@ -1190,15 +1217,19 @@ static int compose_aarch64_remainder (tstate *ts, int dividend, int divisor) {
 	return result_reg;
 }
 
-static void compose_aarch64_external_ccall (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last) {
+static void compose_aarch64_occam_call (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
+{
 	char *sbuf = aarch64_convert_symbol_name(name);
 	*pst_first = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, sbuf);
 	add_to_ins_chain (*pst_first);
 	*pst_last = *pst_first;
 }
-static int aarch64_stub_validate (ins_chain *ins) { return 1; }
-static int aarch64_stub_fp_regs (int *regs) { return 0; }
 
+static void compose_aarch64_external_ccall (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last) {
+	/* For aarch64, occam-to-occam calls are handled by compose_aarch64_occam_call.
+	 * This function is now only for C calls, which are handled by compose_cif_call. */
+	compose_cif_call_aarch64(ts, inlined, name, pst_first, pst_last);
+}
 
 /*{{{  I/O space operations for aarch64*/
 /*
@@ -1497,7 +1528,7 @@ static arch_t aarch64_arch = {
 	.compose_widenword = compose_aarch64_widenword,
 	.compose_longop = compose_aarch64_longop,
 	.compose_fpop = compose_aarch64_fpop,
-	.compose_external_ccall = compose_aarch64_external_ccall,
+	.compose_external_ccall = compose_aarch64_occam_call,
 	.compose_bcall = compose_bcall_aarch64,
 	.compose_cif_call = compose_cif_call_aarch64,
 	.compose_entry_prolog = compose_aarch64_entry_prolog,
@@ -1817,7 +1848,7 @@ static void compose_aarch64_inline_out (tstate *ts, int width)
 static void compose_aarch64_entry_prolog (tstate *ts)
 {
 	rtl_chain *trtl;
-	char *sbuffer = aarch64_convert_symbol_name("KR.occam_start");
+	char *sbuffer = aarch64_convert_symbol_name("occam_start");
 	int tmp_reg;
 
 	/* Generate the _occam_start symbol like i386 version */
@@ -1836,7 +1867,7 @@ static void compose_aarch64_entry_prolog (tstate *ts)
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, 8));
 	
 	/* Jump to main function to execute occam code */
-	char *main_name = aarch64_convert_symbol_name("CIF.main");
+	char *main_name = aarch64_convert_symbol_name("main");
 	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_NAMEDLABEL, main_name));
 }
 /*}}}*/
@@ -2373,7 +2404,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					
 					/* Handle store operations first */
 					if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
-						/* CRITICAL FIX: ARM64 doesn\'t allow sp as source register in str */
+						/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
 						if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
 							fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
 							fprintf (stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name (ins->out_args[0]->regconst));
@@ -2383,7 +2414,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 									aarch64_get_register_name (ins->out_args[0]->regconst));
 						}
 					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == (ARG_REGIND | ARG_DISP)) {
-						/* CRITICAL FIX: ARM64 doesn\'t allow sp as source register in str */
+						/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
 						if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
 							fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
 							fprintf (stream, "\tstr\tx16, [%s, #%ld]\n",
@@ -2422,16 +2453,14 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 						char *symbol = (char *)ins->in_args[0]->regconst;
-						char *fixed_symbol = aarch64_convert_symbol_name(symbol);
 						
 						fprintf (stream, "\tadrp\t%s, %s@PAGE\n",
-									aarch64_get_register_name (ins->out_args[0]->regconst),
-									fixed_symbol);
+								aarch64_get_register_name (ins->out_args[0]->regconst),
+								symbol);
 						fprintf (stream, "\tadd\t%s, %s, %s@PAGEOFF\n",
-									aarch64_get_register_name (ins->out_args[0]->regconst),
-									aarch64_get_register_name (ins->out_args[0]->regconst),
-									fixed_symbol);
-						sfree(fixed_symbol);
+								aarch64_get_register_name (ins->out_args[0]->regconst),
+								aarch64_get_register_name (ins->out_args[0]->regconst),
+								symbol);
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
 						fprintf (stream, "\tldr\t%s, [%s]\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
@@ -2513,7 +2542,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						fprintf (stream, "\t// SKIPPED MUL: invalid register\n");
 						break;
 					}
-					/* ARM64 mul doesn\'t support immediate operands, load to temp reg if needed */
+					/* ARM64 mul doesn't support immediate operands, load to temp reg if needed */
 					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
 						aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
 						fprintf (stream, "\tmul\t%s, x16, %s\n",
@@ -2536,7 +2565,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						fprintf (stream, "\t// INVALID DIV: missing arguments\n");
 						break;
 					}
-					/* ARM64 sdiv doesn\'t support immediate operands */
+					/* ARM64 sdiv doesn't support immediate operands */
 					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
 						aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
 						fprintf (stream, "\tsdiv\t%s, x16, %s\n",
@@ -2749,16 +2778,16 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 			break;
 		case RTL_SETNAMEDLABEL:
 			if (tmp->u.label_name) {
-				char *name = aarch64_convert_symbol_name(tmp->u.label_name);
-				fprintf(stream, "%s:\n", name);
-				sfree(name);
+				char *converted_name = aarch64_convert_symbol_name(tmp->u.label_name);
+				fprintf(stream, "%s:\n", converted_name);
+				sfree(converted_name);
 			}
 			break;
 		case RTL_PUBLICSETNAMEDLABEL:
 			if (tmp->u.label_name) {
-				char *name = aarch64_convert_symbol_name(tmp->u.label_name);
-				fprintf(stream, ".global %s\n%s:\n", name, name);
-				sfree(name);
+				char *converted_name = aarch64_convert_symbol_name(tmp->u.label_name);
+				fprintf(stream, ".global %s\n%s:\n", converted_name, converted_name);
+				sfree(converted_name);
 			}
 			break;
 		default:
@@ -2788,45 +2817,123 @@ static int aarch64_validate_register(int reg)
  * The caller is responsible for freeing the returned string.
  */
 static char *aarch64_convert_symbol_name(const char *symbol) {
-    char sbuf[256];
-    char *p;
+    char work_buf_initial[256]; // For initial prefix removal / kernel_Y_ / kernel_X_ transformation
+    char work_buf_cleaned[256]; // For character-level cleanup (dots to underscores, strip special chars)
+    char final_buf[256];        // For final assembly with all prefixes (O_, E_, M_, and extref_prefix)
+    const char *source_for_cleanup; // Pointer to the string to be cleaned in Step 2
+    const char *prepend_internal = NULL; // E_, M_, O_ prefix determined in Step 3
+    size_t len;
+    int i, j;
 
     if (symbol == NULL) {
         return NULL;
     }
 
-    if (strncmp(symbol, "C.", 2) == 0) {
-        sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 2);
+    work_buf_initial[0] = '\0'; // Ensure buffer is null-terminated for safety
+
+    // --- Step 1: Initial prefix stripping and special transformations ---
+    // This step modifies `symbol` if it matches specific prefixes.
+    // The result is either pointed to by `source_for_cleanup` (if original symbol or `symbol+offset`)
+    // or copied into `work_buf_initial` (for "kernel_" prefixes).
+    if (strncmp(symbol, "__", 2) == 0) {
+        source_for_cleanup = symbol + 2;
+    } else if (strncmp(symbol, "C.", 2) == 0) {
+        source_for_cleanup = symbol + 2;
     } else if (strncmp(symbol, "CIF.", 4) == 0) {
-        sprintf(sbuf, "@%s%s", options.extref_prefix, symbol + 4);
+        source_for_cleanup = symbol + 4;
     } else if (strncmp(symbol, "B.", 2) == 0) {
-        sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 2);
+        source_for_cleanup = symbol + 2;
     } else if (strncmp(symbol, "BX.", 3) == 0) {
-        sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 3);
+        source_for_cleanup = symbol + 3;
     } else if (strncmp(symbol, "KR.", 3) == 0) {
-        if (strncmp(symbol + 3, "kernel_Y_", 9) == 0) {
-            sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 3);
-        } else {
-            sprintf(sbuf, "%s%s", options.extref_prefix, symbol + 3);
-        }
+        source_for_cleanup = symbol + 3;
     } else if (strncmp(symbol, "Y_", 2) == 0) {
-        sprintf(sbuf, "%skernel_%s", options.extref_prefix, symbol);
+        // Specific aarch64 transformation: Y_ -> kernel_Y_
+        // Copy to `work_buf_initial` as source for next step
+        snprintf(work_buf_initial, sizeof(work_buf_initial), "kernel_%s", symbol + 2);
+        source_for_cleanup = work_buf_initial;
     } else if (strncmp(symbol, "X_", 2) == 0) {
-        sprintf(sbuf, "%s%s", options.extref_prefix, symbol);
+        // Specific aarch64 transformation: X_ -> kernel_X_
+        // Copy to `work_buf_initial` as source for next step
+        snprintf(work_buf_initial, sizeof(work_buf_initial), "kernel_%s", symbol + 2);
+        source_for_cleanup = work_buf_initial;
     } else {
-        sprintf(sbuf, "%s%s", options.extref_prefix, symbol);
+        source_for_cleanup = symbol; // No initial prefix stripping, use original symbol
     }
 
-    for (p = sbuf; *p; p++) {
-        if (*p == '.') {
-            *p = '_';
+    // --- Step 2: Character-level processing (strip/replace/truncate) onto `work_buf_cleaned` ---
+    // This logic replicates the first loop of `modify_name` in `asm386.c`.
+    // Source is `source_for_cleanup`, destination is `work_buf_cleaned`.
+    j = 0; // Index for `work_buf_cleaned`
+    len = strlen(source_for_cleanup);
+    for (i = 0; i < len && j < sizeof(work_buf_cleaned) - 1; i++) {
+        switch (source_for_cleanup[i]) {
+            case '.':
+                work_buf_cleaned[j++] = '_';
+                break;
+            case '$':
+            case '^': // Strip '^' from the name body (modify_name behavior)
+            case '*':
+            case '@':
+            case '&':
+                break; // Skip these characters
+            case '%':
+                i = len; // Truncate at '%' (modify_name behavior) by exiting loop
+                break;
+            default:
+                work_buf_cleaned[j++] = source_for_cleanup[i];
+                break;
         }
     }
+    work_buf_cleaned[j] = '\0'; // Null-terminate `work_buf_cleaned`
 
-    return strdup(sbuf);
+    // --- Step 3: Determine internal `E_`, `M_`, `O_` prefixes based on original `symbol` ---
+    // This replicates the `prepend` logic in `modify_name` from `asm386.c`.
+    // It's crucial this check is against the *original* `symbol` for consistency.
+    if ((work_buf_cleaned[0] == '_') || (!strncmp(work_buf_cleaned, "O_", 2)) || (!strncmp(work_buf_cleaned, "DCR_", 4))
+        || (symbol[0] == '&') || (symbol[0] == '@')) {
+        // Skip internal prepend if already starting with specific prefixes/chars
+        prepend_internal = NULL;
+    } else if (symbol[0] == '^') { // If original symbol started with '^'
+        prepend_internal = "E_";
+    } else if (symbol[0] == '*') { // If original symbol started with '*'
+        prepend_internal = "M_";
+    } else {
+        prepend_internal = "O_"; // Default occam internal symbol prefix
+    }
+
+    // --- Step 4: Construct the final symbol string with all prefixes ---
+    // Combines `prepend_internal`, `work_buf_cleaned`, and `options.extref_prefix`.
+    int current_final_len = 0;
+    final_buf[0] = '\0'; // Initialize final buffer to empty string
+
+    // Apply internal prepend (E_, M_, O_)
+    if (prepend_internal) {
+        current_final_len = snprintf(final_buf, sizeof(final_buf), "%s", prepend_internal);
+    }
+    
+    // Append the `work_buf_cleaned` content to `final_buf`.
+    // Ensure `strncat` does not overflow `final_buf`.
+    strncat(final_buf + current_final_len, work_buf_cleaned, sizeof(final_buf) - current_final_len - 1);
+    final_buf[sizeof(final_buf) - 1] = '\0'; // Explicitly null-terminate
+
+    // Apply external reference prefix (like '_' for Darwin) if `options.extref_prefix` is set and non-empty.
+    // The `symbol-naming-summary.md` implies this prefix is generally applied for external linkage.
+    // The previous code had a complex condition for this application. A simpler, more universal
+    // application for external symbols handled by this function seems appropriate for aarch64.
+    // This `options.extref_prefix` typically adds the leading '_' on Darwin.
+    if (options.extref_prefix && strlen(options.extref_prefix) > 0) {
+        char temp_prefix_application_buf[256];
+        // Prepend `options.extref_prefix` to the current `final_buf` content.
+        snprintf(temp_prefix_application_buf, sizeof(temp_prefix_application_buf), "%s%s", options.extref_prefix, final_buf);
+        // Copy the result back to `final_buf`, ensuring no overflow and null-termination.
+        strncpy(final_buf, temp_prefix_application_buf, sizeof(final_buf) - 1);
+        final_buf[sizeof(final_buf) - 1] = '\0';
+    }
+
+    // The function returns a newly allocated string, which the caller must free using `sfree`.
+    return strdup(final_buf);
 }
-
-
 /*
  *  Emit a reference to an external/global symbol
  */
