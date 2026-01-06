@@ -2,7 +2,7 @@
 
 @SET_MAKE@
 
-AUTOMAKE_OPTIONS=foreign no-dependencies
+AUTOMAKE_OPTIONS = foreign subdir-objects no-dependencies
 ACLOCAL_AMFLAGS = -I ../../m4
 
 KROC=@KROC@
@@ -51,4 +51,4 @@ CLEANFILES = libkrocif.a $(shared_libs) *~ io/*.o rts/*.o support/*.o
 SUFFIXES=.occ
 
 .occ.o:
-	$(KROC) $(KROCOPTS) -c -v -o $@ $(srcdir)/$<
+	$(KROC) $(KROCOPTS) -c -v -o $@ $<

@@ -194,6 +194,9 @@ static int compose_aarch64_widenword (tstate *ts);
 static void compose_aarch64_longop (tstate *ts, int secondary_opcode);
 static void compose_aarch64_fpop (tstate *ts, int secondary_opcode);
 static void compose_aarch64_occam_call (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last);
+static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last);
+static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last);
+static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int unused, char *name, ins_chain **pst_first, ins_chain **pst_last);
 static int aarch64_regcolour_special_to_real (int reg);
 static int aarch64_regcolour_get_regs (int *regs);
 static int aarch64_code_to_asm (rtl_chain *rtl_code, char *filename);
@@ -205,6 +208,7 @@ static char *aarch64_convert_symbol_name(const char *symbol);
 static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, const char *instruction);
 static char *aarch64_convert_process_symbol(const char *fixed_name);
 static char *aarch64_cleanup_symbol_name(const char *fixed_name);
+
 /* I/O space operations */
 static int compose_iospace_loadbyte_aarch64 (tstate *ts, int portreg, int targetreg);
 static void compose_iospace_storebyte_aarch64 (tstate *ts, int portreg, int sourcereg);
@@ -955,7 +959,7 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 		offset = 3;
 	}
 
-	sprintf(sbuf, "%s%s", options.extref_prefix, name + offset);
+	sprintf(sbuf, "%s%s", options.extref_prefix ? options.extref_prefix : "", name + offset);
 
 	/* Apply character transformations (dots to underscores, etc) */
 	for (char *p = sbuf; *p; p++) {
@@ -980,6 +984,47 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 	add_to_ins_chain (*pst_last);
 }
 /*}}}*/
+
+/*{{{  static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)*/
+/*
+ * Generates code to perform an external C call
+ */
+static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
+{
+	char sbuf[256];
+	char *fixed_name;
+
+	/* Transform symbol name like i386 version - strip "C." prefix */
+	sprintf(sbuf, "%s%s", options.extref_prefix ? options.extref_prefix : "", name + 1);
+
+	/* Apply character transformations (dots to underscores, etc) */
+	for (char *p = sbuf; *p; p++) {
+		if (*p == '.') {
+			*p = '_';
+		}
+	}
+
+	fixed_name = strdup(sbuf);
+
+	/* Set up stack frame */
+	*pst_first = compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, 16, ARG_REG, REG_SP, ARG_REG, REG_SP);
+	add_to_ins_chain (*pst_first);
+
+	/* Set up workspace pointer parameter */
+	int tmp_reg = tstack_newreg (ts->stack);
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, 4, ARG_REG, tmp_reg));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND, REG_SP));
+
+	/* Call external function */
+	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, fixed_name));
+
+	/* Clean up stack */
+	*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, 16, ARG_REG, REG_SP, ARG_REG, REG_SP);
+	add_to_ins_chain (*pst_last);
+}
+/*}}}*/
+
+
 
 /*{{{  static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)*/
 /*
@@ -2836,7 +2881,9 @@ static char *aarch64_convert_symbol_name(const char *symbol) {
     // The result is either pointed to by `source_for_cleanup` (if original symbol or `symbol+offset`)
     // or copied into `work_buf_initial` (for "kernel_" prefixes).
     if (strncmp(symbol, "__", 2) == 0) {
-        source_for_cleanup = symbol + 2;
+        // CRITICAL FIX: Don't strip __ prefix - it should be treated as a normal symbol
+        // that gets O_ prefix added, not stripped
+        source_for_cleanup = symbol;
     } else if (strncmp(symbol, "C.", 2) == 0) {
         source_for_cleanup = symbol + 2;
     } else if (strncmp(symbol, "CIF.", 4) == 0) {

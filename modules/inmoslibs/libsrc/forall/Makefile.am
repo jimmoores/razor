@@ -1,7 +1,7 @@
 @SET_MAKE@
 
 AUTOMAKE_OPTIONS = foreign no-dependencies
-OCCBUILD = @OCCBUILD@ --search ../maths --no-std-libs
+OCCBUILD = @OCCBUILD@ --search ../maths --no-std-libs --search $(srcdir)
 
 libs = \
 	forall.lib
@@ -295,15 +295,15 @@ forall_lib_objs = \
 all-local: forall-real $(libs)
 
 forall-phase1: $(forall_phase1_objs)
-	$(OCCBUILD) --library forall.lib $(forall_phase1_objs)
+	$(OCCBUILD) --library forall.lib $^
 	touch forall-phase1
 
 forall-phase2: $(forall_phase2_objs)
-	$(OCCBUILD) --library forall.lib $(forall_phase1_objs) $(forall_phase2_objs)
+	$(OCCBUILD) --library forall.lib $(forall_phase1_objs) $^
 	touch forall-phase2
 
 forall-real: $(forall_lib_objs)
-	$(OCCBUILD) --library forall.lib $(forall_lib_objs)
+	$(OCCBUILD) --library forall.lib $^
 	touch forall-real
 
 forall.lib: forall-real

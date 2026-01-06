@@ -159,9 +159,9 @@
 	__asm__ __volatile__ ("				\n" \
 		"	movl %0, %%esp			\n" \
 		"	call *%3			\n" \
-		: /* no outputs */ \
-		: "a" (stack), "c" (Wptr), "d" (Fptr), "r" (init) \
-		: "memory")
+		: "+a" (stack), "+c" (Wptr), "+d" (Fptr) \
+		: "r" (init) \
+		: "memory", "cc")
 /*}}}*/
 
 /*{{{  CIF helpers */

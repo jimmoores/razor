@@ -137,8 +137,8 @@ int init_occam_io (int tlpiface)
 	kbd_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
 #if defined(__aarch64__)
-	asm ("adrp %0, O_kroc_keyboard_process@PAGE\n\t" /* aarch64 */
-		 "add  %0, %0, O_kroc_keyboard_process@PAGEOFF" : "=r" (kbd_ws[-1]));
+	asm ("adrp %0, _O_kroc_keyboard_process@PAGE\n\t" /* aarch64 */
+		 "add  %0, %0, _O_kroc_keyboard_process@PAGEOFF" : "=r" (kbd_ws[-1]));
 #elif defined(__i386__)
 	asm ("movl $O_kroc_keyboard_process, %0" : "=r" (kbd_ws[-1]));
 #endif
@@ -152,8 +152,8 @@ int init_occam_io (int tlpiface)
 	scr_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
 #if defined(__aarch64__)
-	asm ("adrp %0, O_kroc_screen_process@PAGE\n\t"
-	     "add  %0, %0, O_kroc_screen_process@PAGEOFF" : "=r" (scr_ws[-1]));
+	asm ("adrp %0, _O_kroc_screen_process@PAGE\n\t"
+	     "add  %0, %0, _O_kroc_screen_process@PAGEOFF" : "=r" (scr_ws[-1]));
 #elif defined(__i386__)
     asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[-1]));
 #endif
@@ -166,8 +166,8 @@ int init_occam_io (int tlpiface)
 	err_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
 #if defined(__aarch64__)
-	asm ("adrp %0, O_kroc_error_process@PAGE\n\t"
-	     "add  %0, %0, O_kroc_error_process@PAGEOFF" : "=r" (err_ws[-1]));
+	asm ("adrp %0, _O_kroc_error_process@PAGE\n\t"
+	     "add  %0, %0, _O_kroc_error_process@PAGEOFF" : "=r" (err_ws[-1]));
 #elif defined(__i386__)
 	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[-1]));
 #endif

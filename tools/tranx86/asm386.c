@@ -1020,7 +1020,11 @@ int dump_asm386_stream (rtl_chain *rtl_code, FILE *stream)
 
 				fprintf (stream, ".globl %s\n", label);
 				if (!options.disable_symbol_ops) {
-					fprintf (stream, ".type %s, @function\n", label);
+					if (strstr(label, "_occam_tlp_iface") || strstr(label, "_occam_errormode")) {
+						fprintf (stream, ".type %s, @object\n", label);
+					} else {
+						fprintf (stream, ".type %s, @function\n", label);
+					}
 				}
 				fprintf (stream, "%s:\n", label);
 			}

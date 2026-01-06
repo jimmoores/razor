@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # occamdoc: extract OccamDoc documentation from occam-pi source files.
 #
 # Copyright (C) 2006, 2007 University of Kent, Canterbury, UK
@@ -19,7 +19,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 # MA 02110-1301, USA.
 
-import re, sys, xml.dom.minidom, codecs, StringIO, getopt, os
+import re, sys, xml.dom.minidom, codecs, io, getopt, os
 
 VERSION = "$Revision$"[11:-2]
 CONTACT = "kroc-bugs@kent.ac.uk"
@@ -477,11 +477,7 @@ def parse_comment(lines):
 				level -= 1
 		parts[-1] += l + "\n"
 
-	parts = map(lambda s: s.strip(), parts)
-
-	if parts[0] == "":
-		parts[0] = None
-	return parts[0], parts[1:]
+	return parts[0], list(map(lambda s: s.strip(), parts[1:]))
 
 def parse_file(f, include_private = False, include_undocumented = False):
 	"""Extract OccamDoc comments from an occam-pi source file."""
@@ -683,14 +679,14 @@ def free_text_to_xml(doc, descr, parent):
 	paras = []
 	para = []
 	paras.append(para)
-	f = StringIO.StringIO(descr)
+	f = io.StringIO(descr)
 	accum = [""]
 	def dump_accum():
 		if accum[0] != "":
 			s = re.sub(r'\s+', ' ', accum[0])
 			para.append(doc.createTextNode(s))
 		accum[0] = ""
-	while 1:
+	while True:
 		c = f.read(1)
 		if c == "":
 			break
@@ -702,7 +698,7 @@ def free_text_to_xml(doc, descr, parent):
 				dump_accum()
 				s = ""
 				level = 0
-				while 1:
+				while True:
 					c = f.read(1)
 					if c == "":
 						break
@@ -785,11 +781,11 @@ def xml_to_summary(descr):
 		else:
 			return " ".join([get_text(c) for c in el.childNodes])
 	paras = descr.getElementsByTagName("para")
-	if len(paras) == 0:
+	if not paras:
 		return ""
 	s = get_text(paras[0])
 	i = s.find(". ")
-	if i == -1 and s[-1:] == ".":
+	if i == -1 and s.endswith("."):
 		i = len(s) - 1
 	if i == -1:
 		return s
@@ -847,7 +843,7 @@ def decl_to_xml(doc, decl, errors):
 
 	el = doc.createElement("declaration")
 	el.setAttribute("name", decl.ident)
-	if type(decl.name) == list:
+	if isinstance(decl.name, list):
 		for name in decl.name:
 			add_text_node(doc, "name", name, el)
 	else:
@@ -855,13 +851,12 @@ def decl_to_xml(doc, decl, errors):
 	el.setAttribute("type", decl.type)
 	try:
 		decl_to_xml_body(doc, decl, el, errors)
-	except OccamDocException, e:
+	except OccamDocException as e:
 		errors.append("Error: In comment starting at " + decl.error_pos + ": " + str(e))
 		errors.append("  Skipping rest of " + decl.ident)
 	return el
 
 def decl_to_xml_body(doc, decl, el, errors):
-
 	near = decl.name
 	if decl.pos is not None:
 		fn = decl.pos[0]
@@ -987,7 +982,7 @@ def write_xml(decls, f, errors, encoding = "UTF-8"):
 	# minidom is rather simplistic, and won't maintain spacing
 	# around tags correctly if you give it spacing arguments; if you
 	# want nicer-to-read XML, pipe the output through xml_pp.
-	doc.writexml(codecs.getwriter(encoding)(f))
+	doc.writexml(f, encoding=encoding)
 	doc.unlink()
 
 def do_xslt(input, output, xslt, params = {}):
@@ -1018,7 +1013,7 @@ def copy_file(filename, output_dir):
 	fo.close()
 
 def usage():
-	print """occamdoc, version """ + VERSION + """
+	print("occamdoc, version " + VERSION + """
 Usage: occamdoc [OPTION]... FILE [FILE]...
 
 Read occam-pi source files and extract documentation.
@@ -1034,7 +1029,7 @@ Read occam-pi source files and extract documentation.
 -v                           Be verbose: say what's being done
 --help                       Display this help and exit
 
-Report bugs to <""" + CONTACT + """>."""
+Report bugs to <""" + CONTACT + """>.""")
 
 def main(args):
 	try:
@@ -1110,10 +1105,10 @@ def main(args):
 				else:
 					decls[ident] = decl
 			status("%d definitions\n" % len(decl.children))
-		except OccamDocException, e:
+		except OccamDocException as e:
 			status("failed\n")
-			print >>sys.stderr, "Error: At " + f.pos_str() + ": " + str(e)
-			print >>sys.stderr, "  Skipping rest of " + file
+			print("Error: At " + f.pos_str() + ": " + str(e), file=sys.stderr)
+			print("  Skipping rest of " + file, file=sys.stderr)
 			failed = True
 		f.close()
 
@@ -1134,24 +1129,25 @@ def main(args):
 	errors = []
 	try:
 		if output_dir is None:
-			f = sys.stdout
+			# For stdout, ensure it's written in UTF-8.
+			f = io.TextIOWrapper(sys.stdout.buffer, encoding=encoding)
 		else:
-			f = open(xml_file, "w")
-		write_xml(decls.values(), f, errors)
+			f = open(xml_file, "w", encoding=encoding)
+		write_xml(list(decls.values()), f, errors)
 		if output_dir is not None:
 			f.close()
 		status("done\n")
-	except OccamDocException, e:
+	except OccamDocException as e:
 		status("failed\n")
-		print >>sys.stderr, "Error: During output: " + str(e)
+		print("Error: During output: " + str(e), file=sys.stderr)
 		return 1
-	except IOError, e:
+	except IOError as e:
 		status("failed\n")
-		print >>sys.stderr, "Error writing XML file: " + str(e)
+		print("Error writing XML file: " + str(e), file=sys.stderr)
 		return 1
 	if errors != []:
 		for l in errors:
-			print >>sys.stderr, l
+			print(l, file=sys.stderr)
 		failed = True
 
 	try:
@@ -1175,11 +1171,11 @@ def main(args):
 			copy_file("occamdoc.css", output_dir)
 
 			status("done\n")
-	except OccamDocException, e:
+	except OccamDocException as e:
 		status("failed\n")
 		print >>sys.stderr, "Error: During conversion: " + str(e)
 		return 1
-	except IOError, e:
+	except IOError as e:
 		status("failed\n")
 		print >>sys.stderr, "Error: While writing output files: " + str(e)
 		return 1

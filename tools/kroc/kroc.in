@@ -1235,7 +1235,7 @@ for src in $srcs; do
 
 
 	# Using pre-compiled file?   FIXME: Handle this better
-	if [ $suffix = "etc" ] || [ $suffix = "kt2" ] || [ $suffix = "kt4" ] || [ $suffix = "kt8" ] || [ $suffix = "kt9" ]; then
+	if [ $suffix = "tce" ] || [ $suffix = "etc" ] || [ $suffix = "kt2" ] || [ $suffix = "kt4" ] || [ $suffix = "kt8" ] || [ $suffix = "kt9" ]; then
 		compile=
 		tfile="$dir$base.$suffix"
 		tcefile="$dir$base.tce"
@@ -1250,7 +1250,7 @@ for src in $srcs; do
 		fi
 	fi
 
-	if [ $suffix != "occ" ] && [ $suffix != "co" ] && [ $suffix != "mcsp" ] && [ "X$compile" != "X" ]; then
+	if [ $suffix != "occ" ] && [ $suffix != "co" ] && [ $suffix != "mcsp" ] && [ $suffix != "tce" ] && [ $suffix != "etc" ] && [ "X$compile" != "X" ]; then
 		objs="$objs $origsrc"
 
 		if [ "$suffix" = "o" ] ; then
@@ -1266,6 +1266,7 @@ for src in $srcs; do
 		continue
 	fi
 
+	if [ "$compile" ]; then
 	if [ $suffix = "co" ]; then
 		src="$dir$base.co"
 	elif [ $suffix = "mcsp" ]; then
@@ -1278,6 +1279,7 @@ for src in $srcs; do
 	if [ ! -r $src ]; then
 		printf '%s: Cannot find occam source file %s\n' "$progname" "$src" 1>&2
 		exit 1
+	fi
 	fi
 
 	if [ $link ]; then
@@ -1372,7 +1374,7 @@ for src in $srcs; do
 			rm -f $ofile
 		fi
 
-		cmd="$octran $octranopts $tfile" # $sfile"
+		cmd="$octran $octranopts -o $ofile $tfile" # $sfile"
 		if [ $verbose ]; then
 			printf '%s\n' "$cmd" 1>&2
 		fi

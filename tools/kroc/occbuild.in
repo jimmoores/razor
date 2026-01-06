@@ -100,7 +100,7 @@ def run_command(cmd):
 
 def safe_sorted(l):
 	"""Like sorted(), but returns a mutable list."""
-	l = l[:]
+	l = list(l)
 	l.sort()
 	return l
 
@@ -490,7 +490,14 @@ class KRoCToolchain(Toolchain):
 			lib_opts.append(patterns["rtlink"] % "krocif")
 		lib_opts.append(patterns["rtlink"] % "ccsp")
 
-		objs = [split_ext(o)[0] + ".o" for o in occam_objs] + native_objs
+		objs = []
+		for o in occam_objs:
+			root = split_ext(o)[0]
+			obj = root + ".o"
+			run(self.kroc_cmd() + ["-c", o, "-o", obj])
+			objs.append(obj)
+		objs += native_objs
+
 		if objs != []:
 			make_static(patterns["a"] % base, objs)
 

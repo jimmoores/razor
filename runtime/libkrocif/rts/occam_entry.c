@@ -52,13 +52,13 @@
 
 /* Things that will be defined by the program we're linked into. */
 
-__EXTERN_FUNCTION(void _occam_start (void))	/* occam entry point */
+extern void _occam_start (void);	/* occam entry point */
 
-__EXTERN_VARIABLE(word _wsbytes)		/* occam workspace size */
-__EXTERN_VARIABLE(word _vsbytes)		/* occam vectorspace size */
-__EXTERN_VARIABLE(word _msbytes)		/* occam mobilespace size */
-__EXTERN_VARIABLE(int _occam_tlp_iface)		/* translator added description of the top-level process */
-__EXTERN_VARIABLE(int _occam_errormode)		/* non-zero for STOP errormode */
+extern word _wsbytes;		/* occam workspace size */
+extern word _vsbytes;		/* occam vectorspace size */
+extern word _msbytes;		/* occam mobilespace size */
+extern int _occam_tlp_iface;		/* translator added description of the top-level process */
+extern int _occam_errormode;		/* non-zero for STOP errormode */
 
 static byte *ws, *vs, *ms;
 

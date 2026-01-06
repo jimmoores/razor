@@ -4,7 +4,8 @@ AC_INIT([kroc], [1.6.1-pre0], [kroc-bugs@kent.ac.uk])
 AC_PREREQ(2.59)
 AC_CANONICAL_SYSTEM
 
-AM_INIT_AUTOMAKE([-Wall foreign])
+AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
+AC_PROG_CC
 
 OCCAM_TOOLCHAIN
 KROC_BUILD_ROOT="`pwd`"
