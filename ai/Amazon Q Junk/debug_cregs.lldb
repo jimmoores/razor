@@ -1,0 +1,6 @@
+breakpoint set --name compose_aarch64_kcall
+run -maarch64 -sa h_working.tce
+print cregs[1]
+print constmap_typeof(cregs[1])
+continue
+quit

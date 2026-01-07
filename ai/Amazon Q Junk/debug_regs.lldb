@@ -1,0 +1,7 @@
+breakpoint set --name compose_aarch64_kcall
+run
+print cregs[0]
+print cregs[1]
+print constmap_typeof(cregs[1])
+continue
+quit

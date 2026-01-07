@@ -1,0 +1,6 @@
+breakpoint set --name kernel_Y_outbyte
+run
+print /x *(long*)(sched + 8)
+print /x *(long*)(sched + 16) 
+continue
+quit

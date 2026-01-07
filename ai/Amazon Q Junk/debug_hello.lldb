@@ -1,0 +1,9 @@
+target create ./hello_malloc
+breakpoint set --name _main
+run
+register read x0 x28 x8
+stepi
+register read x0 x28 x8
+stepi
+register read x0 x28 x8
+quit

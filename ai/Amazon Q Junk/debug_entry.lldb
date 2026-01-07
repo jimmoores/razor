@@ -1,0 +1,13 @@
+target create ./hello_malloc
+breakpoint set --name __occam_start
+run
+register read x0 x28 x8
+stepi
+register read x0 x28 x8
+stepi
+register read x0 x28 x8
+stepi
+register read x0 x28 x8
+stepi
+register read x0 x28 x8
+quit

@@ -1,0 +1,8 @@
+file h_working
+b _main
+run
+p/x $x28
+x/8gx $x28-32
+x/8gx $x28
+x/8gx $x28+32
+quit

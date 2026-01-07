@@ -1,0 +1,10 @@
+file h_working
+b kernel_Y_outbyte
+run
+p/x $x0
+p/x $x1
+p/x $x2
+x/8gx $x2
+x/8gx $x2+8
+x/8gx $x2+16
+quit

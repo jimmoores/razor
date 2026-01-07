@@ -1,0 +1,4 @@
+PROC main (CHAN BYTE keyboard?, screen!, error!)
+  SEQ
+    screen ! 'H'
+:

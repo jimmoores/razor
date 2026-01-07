@@ -1,0 +1,7 @@
+breakpoint set --name kernel_Y_outbyte
+run
+register read x0 x1 x2
+print sched->cparam[0]
+print sched->cparam[1]
+continue
+quit

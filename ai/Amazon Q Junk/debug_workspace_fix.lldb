@@ -1,0 +1,6 @@
+breakpoint set --name kernel_Y_outbyte
+run
+print (void*)Wptr[1]
+print (void*)sched->cparam[0]
+continue
+quit
