@@ -34,6 +34,8 @@
 #include "tstate.h"
 #include "machine.h"
 #include "archaarch64.h"
+
+
 #include "rtlops.h"
 #include "kif.h"
 #include "transputer.h"
@@ -177,7 +179,7 @@ extern kif_entrytype *kif_entry (int call);
 /*}}}*/
 /*{{{  forward declarations*/
 static void aarch64_emit_large_immediate (FILE *stream, long value, const char *temp_reg);
-static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg);
+static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg, int set_flags);
 static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in, const int regs_out);
 static ins_chain *compose_aarch64_kjump (tstate *ts, const int instr, const int cc, const kif_entrytype *kif_entry);
 static void compose_aarch64_deadlock_kcall (tstate *ts, const int call, const int regs_in, const int regs_out);
@@ -203,6 +205,8 @@ static int aarch64_code_to_asm (rtl_chain *rtl_code, char *filename);
 static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream);
 static char *aarch64_get_register_name (int reg);
 /* Helper function declarations */
+static const char *aarch64_get_label_prefix(int flags);
+static int aarch64_sets_flags (ins_chain *ins);
 static int aarch64_validate_register(int reg);
 static char *aarch64_convert_symbol_name(const char *symbol);
 static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, const char *instruction);
@@ -1653,37 +1657,32 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	}
 	
 	/* Get scheduler pointer and store in x1 */
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 1, ARG_NAMEDLABEL, strdup("local_scheduler"), ARG_REG, REG_X1));
-	
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, REG_X1));
+
 	/* Workspace pointer goes to x2 */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X2));
-	
+
 	/* Store additional parameters in scheduler cparam array for K_CALL_PARAM macro access */
 	if (regs_in > 1 && cregs[1] != REG_UNDEFINED) {
 		/* Second parameter (channel address) goes to sched->cparam[0] */
 		switch (constmap_typeof (cregs[1])) {
 		case VALUE_CONST:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[1]), ARG_REGIND | ARG_DISP, REG_X1, 0));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[1]), ARG_REGIND | ARG_DISP, REG_SCHED, 8));
 			break;
 		default:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, cregs[1], ARG_REGIND | ARG_DISP, REG_X1, 0));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, cregs[1], ARG_REGIND | ARG_DISP, REG_SCHED, 8));
 			break;
 		}
-	} else {
-		/* Load channel address from workspace and store in sched->cparam[0] */
-		/* For h.occ, the screen channel is passed as parameter 2 (Wptr[2]) */
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, 16, ARG_REG, REG_X16));
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X16, ARG_REGIND | ARG_DISP, REG_X1, 0));
 	}
-	
+
 	if (regs_in > 2 && cregs[2] != REG_UNDEFINED) {
 		/* Third parameter goes to sched->cparam[1] */
 		switch (constmap_typeof (cregs[2])) {
 		case VALUE_CONST:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[2]), ARG_REGIND | ARG_DISP, REG_X1, 8));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[2]), ARG_REGIND | ARG_DISP, REG_SCHED, 16));
 			break;
 		default:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, cregs[2], ARG_REGIND | ARG_DISP, REG_X1, 8));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, cregs[2], ARG_REGIND | ARG_DISP, REG_SCHED, 16));
 			break;
 		}
 	}
@@ -1902,20 +1901,12 @@ static void compose_aarch64_entry_prolog (tstate *ts)
 	trtl->u.label_name = sbuffer;
 	add_to_rtl_chain (trtl);
 
-	/* Initialize aarch64 FPU and workspace inline */
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64 FPU init (default IEEE 754)")));
+		/* Initialize aarch64 FPU and workspace inline */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64 FPU init (default IEEE 754)")));
 	
-	/* Initialize workspace pointer directly - no separate init function needed */
-	/* Set up workspace pointer in x28 */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0x1000000, ARG_REG, REG_WPTR));
-	/* Initialize x8 register to x28 to make workspace arithmetic no-ops */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, 8));
-	
-	/* Jump to main function to execute occam code */
-	char *main_name = aarch64_convert_symbol_name("main");
-	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_NAMEDLABEL, main_name));
-}
-/*}}}*/
+		/* Call kernel initialization */
+		compose_aarch64_kcall (ts, K_PAUSE, 0, 0);
+	}/*}}}*/
 
 /*{{{  static void compose_aarch64_return (tstate *ts)*/
 static void compose_aarch64_return (tstate *ts)
@@ -2401,6 +2392,61 @@ static int aarch64_code_to_asm (rtl_chain *rtl_code, char *filename)
 }
 /*}}}*/
 
+/*{{{  static int disassemble_data (unsigned char *bytes, int length, FILE *outstream)*/
+static int disassemble_data (unsigned char *bytes, int length, FILE *outstream)
+{
+	int i;
+	for (i=0; i<length; i++) {
+		if (!(i % 8)) {
+			if (i > 0) fprintf (outstream, "\n");
+			fprintf (outstream, "\t.byte\t");
+		}
+		fprintf (outstream, "0x%2.2x%s", bytes[i], (((i % 8) == 7) || (i==(length-1))) ? " " : ", ");
+	}
+	fprintf (outstream, "\n");
+	return 0;
+}
+/*}}}*/
+
+/*{{{  static int disassemble_xdata (unsigned char *bytes, int length, tdfixup_t *fixups, FILE *outstream)*/
+static int disassemble_xdata (unsigned char *bytes, int length, tdfixup_t *fixups, FILE *outstream)
+{
+	tdfixup_t *walk;
+	int i;
+	for (i=0, walk=fixups; i<length;) {
+		int count = 0;
+		if (walk && (i == walk->offset)) {
+			while (walk && (i == walk->offset)) {
+				fprintf (outstream, "\n\t.quad\tL%d", walk->otherlab);
+				walk = walk->next;
+				i += 8;
+			}
+			if (i >= length) continue;
+		}
+		fprintf (outstream, "\n\t.byte\t");
+		while ((i < length) && (!walk || (i < walk->offset))) {
+			if (count == 8) {
+				fprintf (outstream, "\n\t.byte\t");
+				count = 0;
+			}
+			fprintf (outstream, "0x%2.2x", bytes[i]);
+			if (((count & 0x07) == 0x07) || (i == (length -1)) || (walk && (walk->offset == (i+1)))) {
+			} else {
+				fprintf (outstream, ", ");
+			}
+			i++;
+			count++;
+		}
+		while ((i < length) && walk && (i > walk->offset)) {
+			fprintf (stderr, "aarch64: badly ordered fixup for L%d:%d -> L%d (ignoring)\n", walk->thislab, walk->offset, walk->otherlab);
+			walk = walk->next;
+		}
+	}
+	fprintf (outstream, "\n");
+	return 0;
+}
+/*}}}*/
+
 /*{{{  static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)*/
 static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 {
@@ -2415,6 +2461,35 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 
 	for (tmp = rtl_code; tmp; tmp = tmp->next) {
 		switch (tmp->type) {
+		case RTL_WSVS:
+			{
+				const char *pfx = options.extref_prefix ? options.extref_prefix : "";
+				if (options.rmoxmode == RM_NONE) {
+					fprintf (stream, ".data\n");
+					fprintf (stream, ".globl %s_wsbytes\n", pfx);
+					fprintf (stream, "%s_wsbytes: .quad %d\n", pfx, tmp->u.wsvs.ws_bytes);
+					fprintf (stream, ".globl %s_wsadjust\n", pfx);
+					fprintf (stream, "%s_wsadjust: .quad %d\n", pfx, tmp->u.wsvs.ws_adjust);
+					fprintf (stream, ".globl %s_vsbytes\n", pfx);
+					fprintf (stream, "%s_vsbytes: .quad %d\n", pfx, tmp->u.wsvs.vs_bytes);
+					fprintf (stream, ".globl %s_msbytes\n", pfx);
+					fprintf (stream, "%s_msbytes: .quad %d\n", pfx, tmp->u.wsvs.ms_bytes);
+					fprintf (stream, ".text\n");
+				}
+			}
+			break;
+		case RTL_DATA:
+			disassemble_data ((unsigned char *)tmp->u.data.bytes, tmp->u.data.length, stream);
+			break;
+		case RTL_RDATA:
+			disassemble_data ((unsigned char *)tmp->u.rdata.bytes, tmp->u.rdata.length, stream);
+			break;
+		case RTL_XDATA:
+			disassemble_xdata ((unsigned char *)tmp->u.xdata.bytes, tmp->u.xdata.length, tmp->u.xdata.fixups, stream);
+			break;
+		case RTL_ALIGN:
+			fprintf (stream, "\n.align %d\n", tmp->u.alignment);
+			break;
 		case RTL_CODE:
 			if (!tmp->u.code.head) break;
 			for (ins = tmp->u.code.head; ins; ins = ins->next) {
@@ -2448,7 +2523,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					}
 					
 					/* Handle store operations first */
-					if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+					if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->out_args[0]->flags & ARG_DISP)) {
 						/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
 						if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
 							fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
@@ -2458,18 +2533,18 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 									aarch64_get_register_name (ins->in_args[0]->regconst),
 									aarch64_get_register_name (ins->out_args[0]->regconst));
 						}
-					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == (ARG_REGIND | ARG_DISP)) {
+					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
 						/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
 						if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
 							fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
 							fprintf (stream, "\tstr\tx16, [%s, #%ld]\n",
 									aarch64_get_register_name (ins->out_args[0]->regconst),
-									ins->out_args[1] ? (long)ins->out_args[1]->regconst : 0L);
+									(long)ins->out_args[0]->disp);
 						} else {
-							fprintf (stream, "\tstr\t%s, [%s, #%ld]\n",
+							fprintf (stream, "\tstr\t%s, [%s, #%ld] // MY_STR_MARKER\n",
 									aarch64_get_register_name (ins->in_args[0]->regconst),
 									aarch64_get_register_name (ins->out_args[0]->regconst),
-									ins->out_args[1] ? (long)ins->out_args[1]->regconst : 0L);
+									(long)ins->out_args[0]->disp);
 						}
 						/* Handle load/move operations */
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
@@ -2506,15 +2581,15 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								symbol);
-					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {
 						fprintf (stream, "\tldr\t%s, [%s]\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst));
-					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == (ARG_REGIND | ARG_DISP)) {
-						fprintf (stream, "\tldr\t%s, [%s, #%ld]\n",
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->in_args[0]->flags & ARG_DISP)) {
+						fprintf (stream, "\tldr\t%s, [%s, #%ld] // MY_LDR_MARKER\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst),
-								ins->in_args[1] ? (long)ins->in_args[1]->regconst : 0L);
+								(long)ins->in_args[0]->disp);
 					} else {
 						/* CRITICAL FIX: Prevent stack corruption */
 						int src_reg = ins->in_args[0]->regconst;
@@ -2542,15 +2617,20 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						break;
 					}
 					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
-						aarch64_emit_arithmetic_with_immediate (stream, "add",
+						aarch64_emit_arithmetic_with_immediate (stream, "add", 
 							aarch64_get_register_name (ins->out_args[0]->regconst),
 							aarch64_get_register_name (ins->in_args[1]->regconst),
-							(long)ins->in_args[0]->regconst, "x16");
+							(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+					} else if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
+						aarch64_emit_arithmetic_with_immediate (stream, "add", 
+							aarch64_get_register_name (ins->out_args[0]->regconst),
+							aarch64_get_register_name (ins->in_args[0]->regconst),
+							(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
 					} else {
-						fprintf (stream, "\tadd\t%s, %s, %s\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
-								aarch64_get_register_name (ins->in_args[1]->regconst),
-								aarch64_get_register_name (ins->in_args[0]->regconst));
+						fprintf (stream, "\t%s\t%s, %s, %s\n", aarch64_sets_flags(ins) ? "adds" : "add",
+							aarch64_get_register_name (ins->out_args[0]->regconst),
+							aarch64_get_register_name (ins->in_args[1]->regconst),
+							aarch64_get_register_name (ins->in_args[0]->regconst));
 					}
 					break;
 				case INS_SUB:
@@ -2565,15 +2645,20 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						break;
 					}
 					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
-						aarch64_emit_arithmetic_with_immediate (stream, "sub",
+						aarch64_emit_arithmetic_with_immediate (stream, "sub", 
 							aarch64_get_register_name (ins->out_args[0]->regconst),
 							aarch64_get_register_name (ins->in_args[1]->regconst),
-							(long)ins->in_args[0]->regconst, "x17");
+							(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+					} else if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
+						aarch64_emit_arithmetic_with_immediate (stream, "sub", 
+							aarch64_get_register_name (ins->out_args[0]->regconst),
+							aarch64_get_register_name (ins->in_args[0]->regconst),
+							(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
 					} else {
-						fprintf (stream, "\tsub\t%s, %s, %s\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
-								aarch64_get_register_name (ins->in_args[1]->regconst),
-								aarch64_get_register_name (ins->in_args[0]->regconst));
+						fprintf (stream, "\t%s\t%s, %s, %s\n", aarch64_sets_flags(ins) ? "subs" : "sub",
+							aarch64_get_register_name (ins->out_args[0]->regconst),
+							aarch64_get_register_name (ins->in_args[1]->regconst),
+							aarch64_get_register_name (ins->in_args[0]->regconst));
 					}
 					break;
 				case INS_MUL:
@@ -2669,6 +2754,9 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 								aarch64_get_register_name (ins->in_args[1]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst));
 					}
+					if (aarch64_sets_flags(ins)) {
+						fprintf (stream, "\tcmp\t%s, #0\n", aarch64_get_register_name (ins->out_args[0]->regconst));
+					}
 					break;
 				case INS_SHL:
 					if (!ins->out_args[0] || !ins->in_args[0] || !ins->in_args[1]) break;
@@ -2721,17 +2809,27 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					}
 					break;
 				case INS_RET:
-					fprintf (stream, "\tret\n");
+					/* Occam processes return by jumping to the address stored in Wptr[Iptr] */
+					fprintf (stream, "\tldr\tx9, [x28, #-8]\n");
+					fprintf (stream, "\tbr\tx9\n");
 					/* Set flag to skip any subsequent instructions until next label */
-					skip_dead_code = 1;
+					/* skip_dead_code = 1; disabled */
 					break;
 				case INS_SETLABEL:
-					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_LABEL) {
-						fprintf (stream, "L%ld:\n", (long)ins->in_args[0]->regconst);
-						/* Reset dead code flag when we encounter a label */
+				case INS_SETFLABEL:
+				
+					if (ins->in_args[0]) {
+						long label_num = (long)ins->in_args[0]->regconst;
+						int mode = ins->in_args[0]->flags & ARG_MODEMASK;
+						if (mode == ARG_LABEL) {
+							fprintf (stream, "L%ld:\n", label_num);
+						} else {
+							fprintf (stream, "%ld:\n", label_num);
+						}
 						skip_dead_code = 0;
 					}
 					break;
+				
 				case INS_JUMP:
 					if (ins->in_args[0]) {
 						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
@@ -2739,11 +2837,14 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							aarch64_emit_symbol_reference(stream, symbol, "b");
 						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_LABEL) {
 							fprintf (stream, "\tb\tL%ld\n", (long)ins->in_args[0]->regconst);
+						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_INSLABEL) {
+							long label_num = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
+							fprintf (stream, "\tb\tL%ld\n", label_num);
 						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_FLABEL) {
-							/* Use AArch64 local label syntax */
-							long label_num = (long)ins->in_args[0]->regconst;
-							fprintf (stream, "\tb\t%ldf\n", label_num);
-						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+							fprintf (stream, "\tb\t%ldf\n", (long)ins->in_args[0]->regconst);
+						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_BLABEL) {
+							fprintf (stream, "\tb\t%ldb\n", (long)ins->in_args[0]->regconst);
+						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {
 							fprintf (stream, "\tbr\t%s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
 						}
 					}
@@ -2752,65 +2853,97 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					if (ins->in_args[0] && ins->in_args[1]) {
 						char *cond_str = "eq";
 						switch (ins->in_args[0]->regconst) {
-							case CC_E: cond_str = "eq"; break;
+							case CC_E:  cond_str = "eq"; break;
 							case CC_NE: cond_str = "ne"; break;
+							case CC_LT: cond_str = "lt"; break;
+							case CC_GT: cond_str = "gt"; break;
+							case CC_LE: cond_str = "le"; break;
 							case CC_GE: cond_str = "ge"; break;
-							default: cond_str = "eq"; break;
+							case CC_B:  cond_str = "lo"; break;
+							case CC_A:  cond_str = "hi"; break;
+							case CC_BE: cond_str = "ls"; break;
+							case CC_AE: cond_str = "hs"; break;
+							case CC_S:  cond_str = "mi"; break;
+							case CC_NS: cond_str = "pl"; break;
+							case CC_O:  cond_str = "vs"; break;
+							case CC_NO: cond_str = "vc"; break;
+							default:    cond_str = "eq"; break;
 						}
-						if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_LABEL) {
+						int mode = ins->in_args[1]->flags & ARG_MODEMASK;
+						long label_num;
+						if (mode == ARG_INSLABEL) {
+							label_num = (long)((ins_chain *)ins->in_args[1]->regconst)->in_args[0]->regconst;
+							fprintf (stream, "\tb.%s\tL%ld\n", cond_str, label_num);
+						} else if (mode == ARG_LABEL) {
 							fprintf (stream, "\tb.%s\tL%ld\n", cond_str, (long)ins->in_args[1]->regconst);
-						} else if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_FLABEL) {
-							/* Use AArch64 local label syntax */
-							long label_num = (long)ins->in_args[1]->regconst;
-							fprintf (stream, "\tb.%s\t%ldf\n", cond_str, label_num);
+						} else if (mode == ARG_FLABEL) {
+							fprintf (stream, "\tb.%s\t%ldf\n", cond_str, (long)ins->in_args[1]->regconst);
+						} else if (mode == ARG_BLABEL) {
+							fprintf (stream, "\tb.%s\t%ldb\n", cond_str, (long)ins->in_args[1]->regconst);
+						} else if (mode == ARG_NAMEDLABEL) {
+							char *symbol = (char *)ins->in_args[1]->regconst;
+							char *fixed_symbol = aarch64_convert_symbol_name(symbol);
+							fprintf (stream, "\tb.%s\t%s\n", cond_str, fixed_symbol);
+							sfree(fixed_symbol);
 						}
 					}
 					break;
 				case INS_CMP:
-					/* CRITICAL FIX: Validate CMP instruction arguments */
-					if (!ins->in_args[0] || !ins->in_args[1]) {
-						fprintf (stream, "\t// INVALID CMP: missing arguments\n");
-						break;
-					}
+					if (!ins->in_args[0] || !ins->in_args[1]) break;
+
+					int mode0 = ins->in_args[0]->flags & ARG_MODEMASK;
+					int mode1 = ins->in_args[1]->flags & ARG_MODEMASK;
+					int is_const0 = (ins->in_args[0]->flags & ARG_ISCONST) || (mode0 == ARG_CONST);
+					int is_const1 = (ins->in_args[1]->flags & ARG_ISCONST) || (mode1 == ARG_CONST);
 					
-					/* Check for invalid register constants */
-					if (!aarch64_validate_register(ins->in_args[0]->regconst) || 
-					    !aarch64_validate_register(ins->in_args[1]->regconst)) {
-						fprintf (stream, "\t// SKIPPED CMP: invalid register\n");
-						break;
-					}
-					
-					/* CRITICAL FIX: Handle sp register specially in CMP */
-					if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
-						fprintf (stream, "\tcmp\t%s, #%ld\n",
-								aarch64_get_register_name (ins->in_args[0]->regconst),
-								(long)ins->in_args[1]->regconst);
+					const char *op0_reg = NULL;
+					const char *op1_reg = NULL;
+
+					if (is_const0) {
+						aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
+						op0_reg = "x16";
+					} else if (mode0 == ARG_REGIND && (ins->in_args[0]->flags & ARG_DISP)) {
+						fprintf(stream, "\tldr\tx16, [%s, #%ld]\n", aarch64_get_register_name(ins->in_args[0]->regconst), (long)ins->in_args[0]->disp);
+						op0_reg = "x16";
+					} else if (mode0 == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {
+						fprintf(stream, "\tldr\tx16, [%s]\n", aarch64_get_register_name(ins->in_args[0]->regconst));
+						op0_reg = "x16";
 					} else {
-						/* Check if either operand is sp and use a different approach */
-						if (ins->in_args[0]->regconst == REG_SP || ins->in_args[1]->regconst == REG_SP ||
-						    ins->in_args[0]->regconst == 31 || ins->in_args[1]->regconst == 31) {
-							/* Use mov + cmp for sp comparisons */
-							fprintf (stream, "\tmov\tx16, %s\n",
-									aarch64_get_register_name (ins->in_args[1]->regconst));
-							fprintf (stream, "\tcmp\t%s, x16\n",
-									aarch64_get_register_name (ins->in_args[0]->regconst));
-						} else {
-							fprintf (stream, "\tcmp\t%s, %s\n",
-									aarch64_get_register_name (ins->in_args[0]->regconst),
-									aarch64_get_register_name (ins->in_args[1]->regconst));
+						op0_reg = aarch64_get_register_name(ins->in_args[0]->regconst);
+						if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
+							fprintf(stream, "\tmov\tx16, sp\n");
+							op0_reg = "x16";
 						}
 					}
-					break;
-				case INS_SETFLABEL:
-					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_FLABEL) {
-						/* Use AArch64 local label syntax */
-						long label_num = (long)ins->in_args[0]->regconst;
-						fprintf (stream, "%ld:\n", label_num);
-						/* Reset dead code flag when we encounter a label */
-						skip_dead_code = 0;
+
+					if (is_const1) {
+						long val = (long)ins->in_args[1]->regconst;
+						if (val >= 0 && val <= 4095 && strcmp(op0_reg, "x17") != 0) {
+							fprintf (stream, "\tcmp\t%s, #%ld\n", op0_reg, val);
+							break;
+						} else {
+							aarch64_emit_large_immediate (stream, val, "x17");
+							op1_reg = "x17";
+						}
+					} else if (mode1 == ARG_REGIND && (ins->in_args[1]->flags & ARG_DISP)) {
+						fprintf(stream, "\tldr\tx17, [%s, #%ld]\n", aarch64_get_register_name(ins->in_args[1]->regconst), (long)ins->in_args[1]->disp);
+						op1_reg = "x17";
+					} else if (mode1 == ARG_REGIND && !(ins->in_args[1]->flags & ARG_DISP)) {
+						fprintf(stream, "\tldr\tx17, [%s]\n", aarch64_get_register_name(ins->in_args[1]->regconst));
+						op1_reg = "x17";
+					} else {
+						op1_reg = aarch64_get_register_name(ins->in_args[1]->regconst);
+						if (ins->in_args[1]->regconst == REG_SP || ins->in_args[1]->regconst == 31) {
+							fprintf(stream, "\tmov\tx17, sp\n");
+							op1_reg = "x17";
+						}
 					}
+
+					fprintf (stream, "\tcmp\t%s, %s\n", op0_reg, op1_reg);
 					break;
-				case INS_ANNO:
+
+				
+								case INS_ANNO:
 					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_TEXT) {
 						fprintf (stream, "\t%s\n", (char *)ins->in_args[0]->regconst);
 					}
@@ -2822,6 +2955,8 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 			}
 			break;
 		case RTL_SETNAMEDLABEL:
+			skip_dead_code = 0;
+			skip_dead_code = 0;
 			if (tmp->u.label_name) {
 				char *converted_name = aarch64_convert_symbol_name(tmp->u.label_name);
 				fprintf(stream, "%s:\n", converted_name);
@@ -2829,6 +2964,8 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 			}
 			break;
 		case RTL_PUBLICSETNAMEDLABEL:
+			skip_dead_code = 0;
+			skip_dead_code = 0;
 			if (tmp->u.label_name) {
 				char *converted_name = aarch64_convert_symbol_name(tmp->u.label_name);
 				fprintf(stream, ".global %s\n%s:\n", converted_name, converted_name);
@@ -2849,6 +2986,30 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 /*
  *\tValidates register constants to prevent crashes from invalid values
  */
+
+/*{{{  static const char *aarch64_get_label_prefix(int flags)*/
+static const char *aarch64_get_label_prefix(int flags)
+{
+	int mode = flags & ARG_MODEMASK;
+	if (mode == ARG_FLABEL) return "f";
+	if (mode == ARG_BLABEL) return "b";
+	return "";
+}
+/*}}}*/
+
+/*{{{  static int aarch64_sets_flags (ins_chain *ins)*/
+static int aarch64_sets_flags (ins_chain *ins)
+{
+	int i;
+	for (i = 0; i < 4; i++) {
+		if (ins->out_args[i] && (ins->out_args[i]->flags & ARG_MODEMASK) == ARG_REG && ins->out_args[i]->regconst == REG_CC) {
+			return 1;
+		}
+	}
+	return 0;
+}
+/*}}}*/
+
 static int aarch64_validate_register(int reg)
 {
 	return (reg != (int)0x80000000 && reg != REG_UNDEFINED);
@@ -2862,128 +3023,97 @@ static int aarch64_validate_register(int reg)
  * The caller is responsible for freeing the returned string.
  */
 static char *aarch64_convert_symbol_name(const char *symbol) {
-    char work_buf_initial[256]; // For initial prefix removal / kernel_Y_ / kernel_X_ transformation
-    char work_buf_cleaned[256]; // For character-level cleanup (dots to underscores, strip special chars)
-    char final_buf[256];        // For final assembly with all prefixes (O_, E_, M_, and extref_prefix)
-    const char *source_for_cleanup; // Pointer to the string to be cleaned in Step 2
-    const char *prepend_internal = NULL; // E_, M_, O_ prefix determined in Step 3
-    size_t len;
-    int i, j;
+	if (symbol == NULL) return NULL;
+	char *buf = smalloc(strlen(symbol) * 2 + 50);
+	
+	if (strncmp(symbol, "_kernel_", 8) == 0 || strncmp(symbol, "_O_", 3) == 0 || strncmp(symbol, "_E_", 3) == 0 || strncmp(symbol, "_M_", 3) == 0 || strncmp(symbol, "_ccsp_", 6) == 0 || strncmp(symbol, "_occam_", 7) == 0 || strncmp(symbol, "_main", 5) == 0 || strncmp(symbol, "__", 2) == 0 || strncmp(symbol, "_C_", 3) == 0 || strncmp(symbol, "_BX_", 4) == 0) {
+		sprintf(buf, "%s", symbol);
+		return buf;
+	}
 
-    if (symbol == NULL) {
-        return NULL;
+	if (strstr(symbol, "kernel_") != NULL || strncmp(symbol, "X_", 2) == 0 || strncmp(symbol, "Y_", 2) == 0) {
+		const char *cname = symbol;
+		if (strncmp(cname, "KR.", 3) == 0) cname += 3;
+		if (strncmp(cname, "kernel_", 7) == 0) cname += 7;
+		sprintf(buf, "_kernel_%s", cname);
+		return buf;
+	}
+
+	if (strncmp(symbol, "ccsp_", 5) == 0 || strncmp(symbol, "occam_", 6) == 0 || strstr(symbol, "wsbytes") != NULL || strstr(symbol, "msbytes") != NULL || strstr(symbol, "vsbytes") != NULL || strstr(symbol, "wsadjust") != NULL) {
+        const char *basename = symbol;
+        while (*basename == '_') basename++;
+        sprintf(buf, "__%s", basename);
+		return buf;
+	}
+
+	if (strcmp(symbol, "main") == 0) {
+		sprintf(buf, "_main");
+		return buf;
+	}
+
+	if (strstr(symbol, "local_scheduler") != NULL) {
+		sprintf(buf, "_local_scheduler");
+		return buf;
+	}
+
+    char temp[256];
+    int j = 0;
+    const char *s = symbol;
+    
+    if (strncmp(s, "KR.", 3) == 0) s += 3;
+
+    const char *prefix = "O_";
+    int is_c_func = 0;
+    
+    if (s[0] == '^') {
+        prefix = "E_";
+        s++;
+    } else if (s[0] == '*') {
+        prefix = "M_";
+        s++;
+    } else if (s[0] == '$') {
+        prefix = "O_";
+        s++;
+    } else if (strncmp(s, "M.", 2) == 0) {
+        prefix = "M_";
+        s += 2;
+    } else if (strncmp(s, "E.", 2) == 0) {
+        prefix = "E_";
+        s += 2;
+    } else if (strncmp(s, "C.", 2) == 0) {
+        prefix = "C_"; 
+        is_c_func = 1;
+        s += 2;
+    } else if (strncmp(s, "BX.", 3) == 0) {
+        prefix = "BX_"; 
+        is_c_func = 1;
+        s += 3;
     }
 
-    work_buf_initial[0] = '\0'; // Ensure buffer is null-terminated for safety
+    while (*s && j < 250) {
+        if (*s == '.') temp[j++] = '_';
+        else if (*s == '$') { temp[j++] = 'O'; temp[j++] = '_'; }
+        else if (*s == '^') { temp[j++] = 'E'; temp[j++] = '_'; }
+        else if (*s == '*') { temp[j++] = 'M'; temp[j++] = '_'; }
+        else if (*s == '%') temp[j++] = '_';
+        else temp[j++] = *s;
+        s++;
+    }
+    temp[j] = '\0';
 
-    // --- Step 1: Initial prefix stripping and special transformations ---
-    // This step modifies `symbol` if it matches specific prefixes.
-    // The result is either pointed to by `source_for_cleanup` (if original symbol or `symbol+offset`)
-    // or copied into `work_buf_initial` (for "kernel_" prefixes).
-    if (strncmp(symbol, "__", 2) == 0) {
-        // CRITICAL FIX: Don't strip __ prefix - it should be treated as a normal symbol
-        // that gets O_ prefix added, not stripped
-        source_for_cleanup = symbol;
-    } else if (strncmp(symbol, "C.", 2) == 0) {
-        source_for_cleanup = symbol + 2;
-    } else if (strncmp(symbol, "CIF.", 4) == 0) {
-        source_for_cleanup = symbol + 4;
-    } else if (strncmp(symbol, "B.", 2) == 0) {
-        source_for_cleanup = symbol + 2;
-    } else if (strncmp(symbol, "BX.", 3) == 0) {
-        source_for_cleanup = symbol + 3;
-    } else if (strncmp(symbol, "KR.", 3) == 0) {
-        source_for_cleanup = symbol + 3;
-    } else if (strncmp(symbol, "Y_", 2) == 0) {
-        // Specific aarch64 transformation: Y_ -> kernel_Y_
-        // Copy to `work_buf_initial` as source for next step
-        snprintf(work_buf_initial, sizeof(work_buf_initial), "kernel_%s", symbol + 2);
-        source_for_cleanup = work_buf_initial;
-    } else if (strncmp(symbol, "X_", 2) == 0) {
-        // Specific aarch64 transformation: X_ -> kernel_X_
-        // Copy to `work_buf_initial` as source for next step
-        snprintf(work_buf_initial, sizeof(work_buf_initial), "kernel_%s", symbol + 2);
-        source_for_cleanup = work_buf_initial;
+    if (is_c_func) {
+        sprintf(buf, "_%s%s", prefix, temp);
+    } else if (temp[0] == '_') {
+        sprintf(buf, "_%s", temp);
+    } else if (strncmp(temp, prefix, strlen(prefix)) == 0) {
+        sprintf(buf, "_%s", temp);
     } else {
-        source_for_cleanup = symbol; // No initial prefix stripping, use original symbol
-    }
-
-    // --- Step 2: Character-level processing (strip/replace/truncate) onto `work_buf_cleaned` ---
-    // This logic replicates the first loop of `modify_name` in `asm386.c`.
-    // Source is `source_for_cleanup`, destination is `work_buf_cleaned`.
-    j = 0; // Index for `work_buf_cleaned`
-    len = strlen(source_for_cleanup);
-    for (i = 0; i < len && j < sizeof(work_buf_cleaned) - 1; i++) {
-        switch (source_for_cleanup[i]) {
-            case '.':
-                work_buf_cleaned[j++] = '_';
-                break;
-            case '$':
-            case '^': // Strip '^' from the name body (modify_name behavior)
-            case '*':
-            case '@':
-            case '&':
-                break; // Skip these characters
-            case '%':
-                i = len; // Truncate at '%' (modify_name behavior) by exiting loop
-                break;
-            default:
-                work_buf_cleaned[j++] = source_for_cleanup[i];
-                break;
-        }
-    }
-    work_buf_cleaned[j] = '\0'; // Null-terminate `work_buf_cleaned`
-
-    // --- Step 3: Determine internal `E_`, `M_`, `O_` prefixes based on original `symbol` ---
-    // This replicates the `prepend` logic in `modify_name` from `asm386.c`.
-    // It's crucial this check is against the *original* `symbol` for consistency.
-    if ((work_buf_cleaned[0] == '_') || (!strncmp(work_buf_cleaned, "O_", 2)) || (!strncmp(work_buf_cleaned, "DCR_", 4))
-        || (symbol[0] == '&') || (symbol[0] == '@')) {
-        // Skip internal prepend if already starting with specific prefixes/chars
-        prepend_internal = NULL;
-    } else if (symbol[0] == '^') { // If original symbol started with '^'
-        prepend_internal = "E_";
-    } else if (symbol[0] == '*') { // If original symbol started with '*'
-        prepend_internal = "M_";
-    } else {
-        prepend_internal = "O_"; // Default occam internal symbol prefix
-    }
-
-    // --- Step 4: Construct the final symbol string with all prefixes ---
-    // Combines `prepend_internal`, `work_buf_cleaned`, and `options.extref_prefix`.
-    int current_final_len = 0;
-    final_buf[0] = '\0'; // Initialize final buffer to empty string
-
-    // Apply internal prepend (E_, M_, O_)
-    if (prepend_internal) {
-        current_final_len = snprintf(final_buf, sizeof(final_buf), "%s", prepend_internal);
+        sprintf(buf, "_%s%s", prefix, temp);
     }
     
-    // Append the `work_buf_cleaned` content to `final_buf`.
-    // Ensure `strncat` does not overflow `final_buf`.
-    strncat(final_buf + current_final_len, work_buf_cleaned, sizeof(final_buf) - current_final_len - 1);
-    final_buf[sizeof(final_buf) - 1] = '\0'; // Explicitly null-terminate
-
-    // Apply external reference prefix (like '_' for Darwin) if `options.extref_prefix` is set and non-empty.
-    // The `symbol-naming-summary.md` implies this prefix is generally applied for external linkage.
-    // The previous code had a complex condition for this application. A simpler, more universal
-    // application for external symbols handled by this function seems appropriate for aarch64.
-    // This `options.extref_prefix` typically adds the leading '_' on Darwin.
-    if (options.extref_prefix && strlen(options.extref_prefix) > 0) {
-        char temp_prefix_application_buf[256];
-        // Prepend `options.extref_prefix` to the current `final_buf` content.
-        snprintf(temp_prefix_application_buf, sizeof(temp_prefix_application_buf), "%s%s", options.extref_prefix, final_buf);
-        // Copy the result back to `final_buf`, ensuring no overflow and null-termination.
-        strncpy(final_buf, temp_prefix_application_buf, sizeof(final_buf) - 1);
-        final_buf[sizeof(final_buf) - 1] = '\0';
-    }
-
-    // The function returns a newly allocated string, which the caller must free using `sfree`.
-    return strdup(final_buf);
+	return buf;
 }
-/*
- *  Emit a reference to an external/global symbol
- */
+
 static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, const char *instruction)
 {
     char *fixed_symbol = aarch64_convert_symbol_name(symbol);
@@ -3015,17 +3145,17 @@ static void aarch64_emit_large_immediate (FILE *stream, long value, const char *
 }
 /*}}}*/
 
-/*{{{  static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg)*/
+/*{{{  static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg, int set_flags)*/
 /*
  * Emits ARM64 arithmetic instruction with immediate, handling large values automatically
  */
-static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg)
+static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg, int set_flags)
 {
 	if (imm >= 0 && imm <= 4095) {
 		fprintf (stream, "\t%s\t%s, %s, #%ld\n", op, dst, src, imm);
 	} else {
 		aarch64_emit_large_immediate (stream, imm, temp_reg);
-		fprintf (stream, "\t%s\t%s, %s, %s\n", op, dst, src, temp_reg);
+		fprintf (stream, "\t%s%s\t%s, %s, %s\n", op, set_flags ? "s" : "", dst, src, temp_reg);
 	}
 }
 /*}}}*/

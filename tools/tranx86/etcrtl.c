@@ -5917,19 +5917,8 @@ static void make_c_name (char *src, int slen, char *dst)
 	} else if (!strncmp (src, "KR.", 3)) {
 		i = 0, j = 2;
 	} else {
-		/* Use extref_prefix instead of hardcoded '$' */
-		if (options.extref_prefix && prefix_len > 0) {
-			memcpy (dst, options.extref_prefix, prefix_len);
-			i = prefix_len, j = 0;
-			/* For Darwin/macOS, add extra underscore for dot-separated symbols */
-			if (strchr(src, '.') != NULL) {
-				dst[i] = '_';
-				i++;
-			}
-		} else {
-			*dst = '$';
-			i = 1, j = 0;
-		}
+		*dst = '$';
+		i = 1, j = 0;
 	}
 	/* Convert dots to underscores in the remaining cases */
 	for (k = i; j < slen; j++, k++) {

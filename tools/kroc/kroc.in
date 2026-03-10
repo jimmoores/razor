@@ -1299,7 +1299,7 @@ for src in $srcs; do
 		else
 			tcefile="$base.tce"
 		fi
-		if [ "X$translate" != "X" -a "X$outfile" != "X" ]; then
+		if [ "X$translate" = "X" -a "X$outfile" != "X" ]; then
 			tfile=$outfile
 		else
 			tfile="$base.$tsuffix"
@@ -1313,6 +1313,8 @@ for src in $srcs; do
 
 	# Native object file
 	if [ "X$link" != "X" -a "X$outfile" != "X" ]; then
+		ofile=$outfile
+	elif [ "X$translate" != "X" -a "X$outfile" != "X" -a "X$link" = "X" ]; then
 		ofile=$outfile
 	else
 		ofile="$base.o"

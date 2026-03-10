@@ -116,7 +116,7 @@ void _occ_enter (void)
 	} else {
 		/* initialise the workspace/vectorspace with (MOSTNEG INT) */
 
-		for (i=0; i < (INITIAL_WS >> 2); i++) {
+		for (i=0; i < (INITIAL_WS / sizeof(word)); i++) {
 			((word *) ws)[i] = MostNeg;
 		}
 		

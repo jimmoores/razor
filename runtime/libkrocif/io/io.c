@@ -276,13 +276,13 @@ int kill_kbdio (void)
 }
 /*}}}*/
 #endif
-/*{{{  void read_keyboard (int *wsptr)*/
+/*{{{  void read_keyboard (word *wsptr)*/
 /*
  *	reads the keyboard and places a byte at (char *)wsptr[0]
  */
-void read_keyboard (int *wsptr)
+void read_keyboard (word *wsptr)
 {
-	int *ch = (int *)(wsptr[0]);
+	word *ch = (word *)(wsptr[0]);
 	int c_read, n;
 	unsigned char tty_char;
 
@@ -305,12 +305,12 @@ void read_keyboard (int *wsptr)
 /*  output handling*/
 #define KROC_OUTPUT_BUFFER_SIZE 256
 
-/*{{{  void write_screen (int *wsptr)*/
+/*{{{  void write_screen (word *wsptr)*/
 /*
  *	krocif.s calls this to print something on the screen channel
  *	PROC C.write.screen (VAL []BYTE buffer)
  */
-void write_screen (int *wsptr)
+void write_screen (word *wsptr)
 {
 	const char *buffer = (char *)(wsptr[0]);
 
@@ -319,24 +319,24 @@ void write_screen (int *wsptr)
 	return;
 }
 /*}}}*/
-/*{{{  void write_error (int *wsptr)*/
+/*{{{  void write_error (word *wsptr)*/
 /*
  *	krocif.s calls this to print something on the error channel
  *	PROC C.write.error (VAL BYTE ch)
  */
-void write_error (int *wsptr)
+void write_error (word *wsptr)
 {
 	fputc ((int)(wsptr[0]), kroc_err);
 	fflush (kroc_err);
 	return;
 }
 /*}}}*/
-/*{{{  void out_stderr (int *wsptr)*/
+/*{{{  void out_stderr (word *wsptr)*/
 /*
  *	this is available for debugging
  *	PROC C.out.stderr (VAL []BYTE str)
  */
-void out_stderr (int *wsptr)
+void out_stderr (word *wsptr)
 {
 	const char *buf = (char*)(wsptr[0]);
 	int slen = (int)(wsptr[1]);
@@ -346,12 +346,12 @@ void out_stderr (int *wsptr)
 	return;
 }
 /*}}}*/
-/*{{{  void out_stderr_int (int *wsptr)*/
+/*{{{  void out_stderr_int (word *wsptr)*/
 /*
  *	this is available for debugging
  *	PROC C.out.stderr.int (VAL INT n)
  */
-void out_stderr_int (int *wsptr)
+void out_stderr_int (word *wsptr)
 {
 	const int n = (int)(wsptr[0]);
 
@@ -363,8 +363,13 @@ void out_stderr_int (int *wsptr)
 
 /* Create aliases for external linkage from occam code.
  * The occam toolchain expects these exact symbol names. */
-void _read_keyboard (int *wsptr) asm("read_keyboard");
-void _write_screen (int *wsptr) asm("write_screen");
-void _write_error (int *wsptr) asm("write_error");
-void _out_stderr (int *wsptr) asm("out_stderr");
-void _out_stderr_int (int *wsptr) asm("out_stderr_int");
+void _read_keyboard (word *wsptr) asm("_BX_read_keyboard");
+void _write_screen (word *wsptr) asm("_C_write_screen");
+void _write_error (word *wsptr) asm("_C_write_error");
+void _out_stderr (word *wsptr) asm("_C_out_stderr");
+void _out_stderr_int (word *wsptr) asm("_C_out_stderr_int");
+void _read_keyboard (word *wsptr) { read_keyboard(wsptr); }
+void _write_screen (word *wsptr) { write_screen(wsptr); }
+void _write_error (word *wsptr) { write_error(wsptr); }
+void _out_stderr (word *wsptr) { out_stderr(wsptr); }
+void _out_stderr_int (word *wsptr) { out_stderr_int(wsptr); }

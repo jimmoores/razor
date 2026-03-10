@@ -1717,6 +1717,7 @@ ins_chain *compose_ins_ex (int etc_ins, int ins, int ops_in, int ops_out, ...)
 			}
 			if (flag & ARG_DISP) {
 				tmp_ins->in_args[i_in]->disp = va_arg (ap, int);
+				fprintf(stderr, "DEBUG_IN: disp=%d\n", tmp_ins->in_args[i_in]->disp);
 			}
 			if ((flag & ARG_IND) && (ins != INS_CALL) && (ins != INS_JUMP) && (ins != INS_PJUMP) && (ins != INS_CJUMP)) {
 				fprintf (stderr, "%s: warning: IND specified on non call/jump instruction %d\n", progname, tmp_ins->type);
@@ -1749,6 +1750,7 @@ ins_chain *compose_ins_ex (int etc_ins, int ins, int ops_in, int ops_out, ...)
 			}
 			if (flag & ARG_DISP) {
 				tmp_ins->out_args[i_out]->disp = va_arg (ap, int);
+				fprintf(stderr, "DEBUG_OUT: disp=%d\n", tmp_ins->out_args[i_out]->disp);
 			}
 			if ((flag & ARG_IND) && (ins != INS_CALL) && (ins != INS_JUMP) && (ins != INS_PJUMP) && (ins != INS_CJUMP)) {
 				fprintf (stderr, "%s: warning: IND specified on non call/jump instruction %d\n", progname, tmp_ins->type);

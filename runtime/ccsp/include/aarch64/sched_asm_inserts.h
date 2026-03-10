@@ -137,16 +137,16 @@ LABEL_TYPE( ,X) \
 	do { \
 		TRACE_RETURN (Wptr[Iptr]); \
 		__asm__ __volatile__ ("\t\t\t\n" \
-			"\tmov x29, %0\t\n" \
-			"\tldr x9, [%1]\t\n" \
+			"\tmov x28, %0\t\n" \
+			"\tmov x25, %1\t\n" \
+			"\tldr x9, [x25]\t\n" \
 			"\tmov sp, x9\t\n" \
-			"\tldr x9, [x29, #-8]\t\n" \
+			"\tldr x9, [x28, #-8]\t\n" \
 			"\tbr x9\t\n" \
 			: /* no outputs */ \
 			: "r" (Wptr), "r" (sched) \
-			: "memory", "x9", "x29"); \
+			: "memory", "x9", "x25", "x28"); \
 	} while (0)
-
 #define K_ONE_OUT(A) \
 	return ((word) (A))
 #define K_ONE_OUT_JUMP(R,A) \
@@ -172,11 +172,14 @@ LABEL_TYPE( ,X) \
 /*{{{  entry and label functions */
 #define K_ENTRY(init,stack,Wptr,Fptr) \
 	__asm__ __volatile__ ("\t\t\t\t\n" \
-		"\tmov sp, %0\t\t\t\n" \
+		"\tmov x0, %0\t\t\t\n" \
+		"\tmov x1, %2\t\t\t\n" \
+		"\tmov x2, %1\t\t\t\n" \
+		"\tmov sp, x0\t\t\t\n" \
 		"\tblr %3\t\t\t\n" \
 		: /* no outputs */ \
 		: "r" (stack), "r" (Wptr), "r" (Fptr), "r" (init) \
-		: "memory")
+		: "x0", "x1", "x2", "memory", "x30", "cc")
 /*}}}*/
 
 /*{{{  CIF helpers */
@@ -187,28 +190,60 @@ LABEL_TYPE( ,X) \
 	} while (0)
 
 #define K_CIF_ENDP_RESUME(address) \
-	do { \
-		address = __builtin_return_address(0); \
-		__asm__ __volatile__ ("\t\t\t\t\n" \
-			"\tldr x29, [x29, #-16]\t\n" \
-			"\tldr x9, [x29, #-8]\t\n" \
-			"\tbr x9\t\t\t\n" \
-			: /* no outputs */ \
-			: /* no inputs */ \
-			: "memory", "x9", "x29"); \
-	} while (0)
-
-#define K_CIF_PROC(address, call, offset) \
-	__asm__ __volatile__ ("				\n" \
-		"	bl	0f			\n" \
-		"	/* Simplified aarch64 implementation */\n" \
-		"0:	mov	%0, x30			\n" \
+	__asm__ __volatile__ ("\t\t\t\t\n" \
+		"\tadr %0, 0f\t\n" \
+		"\tb 1f\t\t\n" \
+		"0:\t\t\t\t\n" \
+		"\tldr x28, [x28, #-32]\t\n" \
+		"\tldr x9, [x28, #-8]\t\n" \
+		"\tbr x9\t\t\t\n" \
+		"1:\t\t\t\t\n" \
 		: "=r" (address) \
 		: /* no inputs */ \
-		: "memory", "x30")
-
+		: "memory", "x9", "x28")
+#define K_CIF_PROC(address, call, offset) \
+	__asm__ __volatile__ ("\t\t\t\t\n" \
+		"\tadr %0, 0f\t\n" \
+		"\tb 1f\t\t\n" \
+		"0:\t\t\t\t\n" \
+		"\tldr x9, [x28, #0]\t\n" \
+		"\tstr x25, [x28, #-56]\t\n" \
+		"\tmov sp, x9\t\n" \
+		"\tldr x30, [sp], #16\t\n" \
+		"\tblr x30\t\t\n" \
+		"\tldr x25, [x28, #-56]\t\n" \
+		"\tldr x9, [x25, #0]\t\n" \
+		"\tmov sp, x9\t\n" \
+		"\tmov x0, x28\t\n" \
+		"\tadd x0, x0, %2\t\n" \
+		"\tldr x9, [x25, %1]\t\n" \
+		"\tbr x9\t\t\n" \
+		"1:\t\t\t\t\n" \
+		: "=r" (address) \
+		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
+		: "memory", "x0", "x9")
 #define K_CIF_PROC_IND(address, call, offset) \
-	K_CIF_PROC(address, call, offset)
+	__asm__ __volatile__ ("\t\t\t\t\n" \
+		"\tadr %0, 0f\t\n" \
+		"\tb 1f\t\t\n" \
+		"0:\t\t\t\t\n" \
+		"\tldr x9, [x28, #0]\t\n" \
+		"\tstr x25, [x28, #-56]\t\n" \
+		"\tmov sp, x9\t\n" \
+		"\tldr x30, [sp], #16\t\n" \
+		"\tldr x30, [x30]\t\n" \
+		"\tblr x30\t\t\n" \
+		"\tldr x25, [x28, #-56]\t\n" \
+		"\tldr x9, [x25, #0]\t\n" \
+		"\tmov sp, x9\t\n" \
+		"\tmov x0, x28\t\n" \
+		"\tadd x0, x0, %2\t\n" \
+		"\tldr x9, [x25, %1]\t\n" \
+		"\tbr x9\t\t\n" \
+		"1:\t\t\t\t\n" \
+		: "=r" (address) \
+		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
+		: "memory", "x0", "x9")
 /*}}}*/
 
 #endif /* AARCH64_SCHED_ASM_INSERTS */

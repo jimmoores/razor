@@ -2040,7 +2040,7 @@ K_CALL_DEFINE_1_0 (Y_rtthreadinit)
 {
 	K_CALL_HEADER;
 
-	unsigned int stack = K_CALL_PARAM(0);
+	word stack = K_CALL_PARAM(0);
 	word *fptr = (word *) sched;
 	void *allocator;
 	word i, tried;
@@ -3185,7 +3185,7 @@ static INLINE word *mt_alloc_cb (void *allocator, word type, word channels)
 	word i;
 
 	if (type & MT_CB_STATE_SPACE) {
-		words += sizeof(mt_cb_pony_state_t) / sizeof(word);
+		words += (sizeof(mt_cb_pony_state_t) + sizeof(word) - 1) / sizeof(word);
 	}
 	type |= channels << MT_CB_CHANNELS_SHIFT;
 
@@ -6525,10 +6525,10 @@ K_CALL_DEFINE_3_0 (Y_mppdeserialise)
 /*{{{  void *kernel_CIF_endp_resume_stub (void)*/
 /*
  *	@SYMBOL:	CIF_endp_resume_stub
- *	@CALL: 		K_CIF_ENDP_RESUME_STUB
+ *	@CALL:		K_CIF_ENDP_RESUME_STUB
  *	@PRIO:		0
  */
-static void *kernel_CIF_endp_resume_stub (void)
+static void * __attribute__((noinline)) kernel_CIF_endp_resume_stub (void)
 {
 	void *address;
 	K_CIF_ENDP_RESUME (address);
@@ -6538,10 +6538,10 @@ static void *kernel_CIF_endp_resume_stub (void)
 /*{{{  void *kernel_CIF_light_proc_stub (void)*/
 /*
  *	@SYMBOL:	CIF_light_proc_stub
- *	@CALL: 		K_CIF_LIGHT_PROC_STUB
+ *	@CALL:		K_CIF_LIGHT_PROC_STUB
  *	@PRIO:		0
  */
-static void *kernel_CIF_light_proc_stub (void)
+static void * __attribute__((noinline)) kernel_CIF_light_proc_stub (void)
 {
 	void *address;
 	K_CIF_PROC_IND (address, K_ENDP, BarrierPtr);
@@ -6551,10 +6551,10 @@ static void *kernel_CIF_light_proc_stub (void)
 /*{{{  void *kernel_CIF_proc_stub (void)*/
 /*
  *	@SYMBOL:	CIF_proc_stub
- *	@CALL: 		K_CIF_PROC_STUB
+ *	@CALL:		K_CIF_PROC_STUB
  *	@PRIO:		0
  */
-static void *kernel_CIF_proc_stub (void)
+static void * __attribute__((noinline)) kernel_CIF_proc_stub (void)
 {
 	void *address;
 	K_CIF_PROC (address, K_PROC_END, -CIF_PROCESS_WORDS);

@@ -22,7 +22,7 @@
 #define __TRANSPUTER_H
 
 
-#define WSH		2		/* ws shift (x4) */
+#define WSH		3		/* ws shift (x4) */
 #define BytesPerWord	(1<<WSH)
 #define BitsPerWord	(BytesPerWord * 8)
 #define ByteSelectMask	(~(-1 << WSH))

@@ -1171,8 +1171,7 @@ def main(args):
 		patterns["so"] = "liboccam_%s.dylib"
 		build_shared = (toolchain.__class__ == toolchains["tvm"])
 		if target_cpu == "aarch64":
-			linker_opts.extend(["-arch", "arm64", 
-				"-mmacosx-version-min=11.0"])
+			linker_opts.extend(["-arch", "arm64"])
 		elif target_cpu == "x86_64":
 			linker_opts.extend(["-arch", "x86_64", 
 				"-mmacosx-version-min=10.9"])

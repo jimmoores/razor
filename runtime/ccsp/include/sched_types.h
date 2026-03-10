@@ -203,7 +203,7 @@ static inline void init_tqnode_t (tqnode_t *tn) {
 /*{{{  sched_t */
 struct _sched_t {
 	/** stack pointer	- must be at the right offset **/
-	unsigned int	stack;
+	word		stack;
 	/** call params		- must be at the right offset **/
 	word		cparam[5];
 	/** calltable		- must be at the right offset **/

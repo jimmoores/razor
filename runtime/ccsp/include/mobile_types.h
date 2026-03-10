@@ -223,7 +223,7 @@ typedef struct _mt_cb_internal_t {
 } _PACK_STRUCT mt_cb_internal_t;
 
 #define MT_CB_SHARED_PTR_OFFSET \
-	(2 + (2 * (sizeof(mt_sem_t) / sizeof(word))))
+	((sizeof(struct _mt_cb_shared_internal_t) - sizeof(mt_cb_t)) / sizeof(word))
 typedef struct _mt_cb_shared_internal_t {
 	mt_sem_t	sem[2];
 	word		ref_count;

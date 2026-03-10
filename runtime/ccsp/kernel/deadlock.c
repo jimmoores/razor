@@ -93,7 +93,7 @@ void ccsp_give_ws_code (char *ws, int ws_bytes, unsigned char *codeptr)
 	debug_dead++;
 	ws_ptrs[slot] = ws;
 	ws_sizes[slot] = ws_bytes;
-	if ((unsigned int)codeptr < (unsigned int)lowest_code_address) {
+	if ((word)codeptr < (word)lowest_code_address) {
 		lowest_code_address = codeptr;
 	}
 	return;
@@ -167,17 +167,17 @@ static void debug_deadlock_out (FILE *stream, char *ops, char *proc, char *file,
 #endif
 
 #if !defined(RMOX_BUILD)
-/*{{{  static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)*/
+/*{{{  static int deadlock_debug (word *iws_ptr, int bytes, int *did_print)*/
 /*
  * Performs a WS search over `iws_ptr' for `bytes' bytes
  * Returns number-of-matches on success, -1 on failure (ie, program compiled without -X5)
  */
-static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)
+static int deadlock_debug (word *iws_ptr, int bytes, int *did_print)
 {
 	char *search, *debug_filename, *debug_procname;
 	static unsigned char *codeptr;
-	static int *search_int;
-	int *search_limit;
+	static word *search_int;
+	word *search_limit;
 	static int found;
 	int debug_dlop, debug_kentry, debug_line, debug_file, debug_proc;
 	unsigned char ins_1, ins_2;
@@ -186,19 +186,19 @@ static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)
 
 	found = 0;
 	if (((int) iws_ptr) & 0x03) {
-		search = (char *)(((unsigned int)iws_ptr & 0xfffffffc) + 4);
+		search = (char *)(((word)iws_ptr & 0xfffffffc) + 4);
 	} else {
 		search = (char *)iws_ptr;
 	}
 	old_segv_handler = signal (SIGSEGV, segv_handler);
 	/* Nicely aligned workspace */
-	search_int = (int *)((unsigned int)search + 8);
-	search_limit = (int *)((unsigned int)search + (unsigned int)bytes);
+	search_int = (int *)((word)search + 8);
+	search_limit = (int *)((word)search + (word)bytes);
 	#ifdef DEBUG_DEBUG
 		BMESSAGE ("%s: searching from 0x%lx to 0x%lx...\n", __FILE__, (unsigned long int)search_int, (unsigned long int)search_limit);
 	#endif
 	for (; search_int < search_limit; search_int++) {
-		if ((int *)search_int[-2] == search_int) {
+		if ((word *)search_int[-2] == search_int) {
 			/* Possibility */
 			codeptr = (unsigned char *)search_int[-1];
 			if (codeptr < lowest_code_address) {
@@ -371,7 +371,7 @@ static int deadlock_debug (int *iws_ptr, int bytes, int *did_print)
 				continue;
 			}
 			#ifdef DEBUG_DEBUG
-			BMESSAGE ("%s: debug_file=0x%8.8x, debug_filename=0x%8.8x, debug_proc=0x%8.8x, debug_procname=0x%8.8x\n", __FILE__, (unsigned int)debug_file, (unsigned int)debug_filename, (unsigned int)debug_proc, (unsigned int)debug_procname);
+			BMESSAGE ("%s: debug_file=0x%8.8x, debug_filename=0x%8.8x, debug_proc=0x%8.8x, debug_procname=0x%8.8x\n", __FILE__, (word)debug_file, (word)debug_filename, (word)debug_proc, (word)debug_procname);
 			#endif
 			/* Check them */
 			if (debug_file >= *(int *)(debug_filename)) {

@@ -44,7 +44,7 @@ void ccsp_kernel_entry (word *wptr, word *fptr)
 	word stack = (word) (((byte *)&fptr) + sizeof(word));
 
 	stack -= sizeof(sched_t);	/* allocate stack for sched_t structure */
-	stack &= 0xfffff000;		/* align the stack on a page boundary */
+	stack &= ~((word)0xFFF);	/* align the stack on a page boundary */
 
 	K_ENTRY (ccsp_calltable[K_RTTHREADINIT], stack, wptr, fptr);
 }

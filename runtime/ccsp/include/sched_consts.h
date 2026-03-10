@@ -53,7 +53,11 @@
 #undef  VPTR                            /* Under development */
 
 /* workspace shift (bytes -> words) */
-#define WSH		2		/* FIXME: should come from arch config */
+#if defined(TARGET_64BIT)
+#define WSH		3		/* 8 bytes per word */
+#else
+#define WSH		2		/* 4 bytes per word */
+#endif
 
 /* scheduler sync flags */
 #define SYNC_INTR_BIT	1
