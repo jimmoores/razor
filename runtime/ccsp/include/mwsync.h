@@ -27,7 +27,7 @@ struct TAG_mwsyncwait;
 
 typedef struct TAG_mwsyncwait {
 	struct TAG_mwsyncwait *next;
-	unsigned int *wptr;
+	word *wptr;
 	unsigned int priority;
 } mwsyncwait_t;
 

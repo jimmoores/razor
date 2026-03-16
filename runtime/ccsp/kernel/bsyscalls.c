@@ -450,9 +450,9 @@ int bsyscall_kill (word *ptr)
 void _killcall (word *w)
 {
 	word	*ptr 	= (word *)(w[0]);
-	int	*result = (int *)(w[1]);
-	
-	*result = bsyscall_kill (ptr);
+	word	*result = (word *)(w[1]);
+
+	*result = (word) bsyscall_kill (ptr);
 }
 /*}}}*/
 /*{{{  int bsyscalls_pending (void)*/

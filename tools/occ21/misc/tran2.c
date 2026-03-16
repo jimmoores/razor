@@ -1206,7 +1206,13 @@ PUBLIC BOOL istargetbytesize (int type)
  *****************************************************************************/
 PUBLIC BOOL fitsinregister (int type)
 {
-	return (istargetintsize (type) || isshorttype (type));
+	if (istargetintsize (type) || isshorttype (type))
+		return TRUE;
+	/* On 64-bit targets (bytesperword==8), double-word types on 32-bit
+	 * targets (REAL64, INT64, UINT64) fit in a single register. */
+	if (bytesperword == 8 && (type == S_REAL64 || type == S_INT64 || type == S_UINT64))
+		return TRUE;
+	return FALSE;
 }
 
 /*}}}  */

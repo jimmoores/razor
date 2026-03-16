@@ -31,81 +31,64 @@
 #endif
 
 #include <spunixhdr.h>
+#include <rts.h>
 
-typedef int word;
-
-void _fopen (w)
-word w[3];
-{       C_fopen ((int *)w[0], w[1], w[2]);
+void _fopen (word w[])
+{	C_fopen ((word *)w[0], w[1], w[2]);
 }
 
-void _fflush (w)
-word w[2];
-{       C_fflush ((int *)w[0], w[1]);
+void _fflush (word w[])
+{	C_fflush ((word *)w[0], w[1]);
 }
 
-void _fclose (w)
-word w[2];
-{       C_fclose ((int *)w[0], w[1]);
+void _fclose (word w[])
+{	C_fclose ((word *)w[0], w[1]);
 }
 
-void _fread (w)
-word w[5];
-{       C_fread ((int *)w[0], w[1], w[2], w[3], (int *)w[4]);
+void _fread (word w[])
+{	C_fread ((word *)w[0], w[1], w[2], w[3], (word *)w[4]);
 }
 
-void _fgets (w)
-word w[5];
-{       C_fgets ((int *)w[0], w[1], w[2], w[3], (int *)w[4]);
+void _fgets (word w[])
+{	C_fgets ((word *)w[0], w[1], w[2], w[3], (word *)w[4]);
 }
 
-void _fwrite (w)
-word w[5];
-{       C_fwrite ((int *)w[0], w[1], w[2], w[3], (int *)w[4]);
+void _fwrite (word w[])
+{	C_fwrite ((word *)w[0], w[1], w[2], w[3], (word *)w[4]);
 }
 
-void _fremove (w)
-word w[2];
-{       C_fremove ((int *)w[0], w[1]);
+void _fremove (word w[])
+{	C_fremove ((word *)w[0], w[1]);
 }
 
-void _frename (w)
-word w[3];
-{       C_frename ((int *)w[0], w[1], w[2]);
+void _frename (word w[])
+{	C_frename ((word *)w[0], w[1], w[2]);
 }
 
-void _fseek (w)
-word w[4];
-{       C_fseek ((int *)w[0], w[1], w[2], w[3]);
+void _fseek (word w[])
+{	C_fseek ((word *)w[0], w[1], w[2], w[3]);
 }
 
-void _ftell (w)
-word w[3];
-{       C_ftell ((int *)w[0], w[1], (int *)w[2]);
+void _ftell (word w[])
+{	C_ftell ((word *)w[0], w[1], (word *)w[2]);
 }
 
-void _comdline (w)
-word w[5];
-{       C_comdline ((int *)w[0], w[1], (int *)w[2], w[3], w[4]);
+void _comdline (word w[])
+{	C_comdline ((word *)w[0], w[1], (word *)w[2], w[3], w[4]);
 }
 
-void _getenvval (w)
-word w[5];
-{       C_getenv ((int *)w[0], w[1], (int *)w[2], w[3], w[4]);
+void _getenvval (word w[])
+{	C_getenv ((word *)w[0], w[1], (word *)w[2], w[3], w[4]);
 }
 
-void _timenow (w)
-word w[2];
-{       C_time ((int *)w[0], (int *)w[1]);
+void _timenow (word w[])
+{	C_time ((word *)w[0], (word *)w[1]);
 }
 
-void _system (w)
-word w[3];
-{       C_system ((int *)w[0], (int *)w[1], w[2]);
+void _system (word w[])
+{	C_system ((word *)w[0], (word *)w[1], w[2]);
 }
 
-void _exitoccam (w)      /* MUST not be _exit as there is a Unix function with this name */
-word w[2];
-{       C_exit ((int *)w[0], w[1]);
+void _exitoccam (word w[])      /* MUST not be _exit as there is a Unix function with this name */
+{	C_exit ((word *)w[0], w[1]);
 }
-

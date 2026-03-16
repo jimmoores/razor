@@ -58,7 +58,7 @@ typedef struct TAG_mws_procbarrier {
 	struct TAG_mws_procbarrier *q_next;		/* next blocked process (procbarrier) */
 	struct TAG_mws_procbarrier *q_prev;		/* prev blocked process */
 	mws_parbarrier_t *parbarrier_link;		/* link to parbarrier */
-	unsigned int *wptr;				/* NotProcess, blocked-process (sync/alt) or pointer to sub-barrier */
+	word *wptr;					/* NotProcess, blocked-process (sync/alt) or pointer to sub-barrier */
 	mwspflags_e flags;				/* alt/interleave/sub-par flags */
 } mws_procbarrier_t;
 

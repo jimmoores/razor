@@ -79,8 +79,6 @@ extern char *long_cmdline, *short_cmdline;
 #define SP_INVALID_HANDLE (-2)
 #define SP_BUFFER_OVERFLOW (-3)
 
-typedef long PTRINT;
-
 void
 call_occam_exit (void)
 {
@@ -88,20 +86,17 @@ call_occam_exit (void)
 }
 
 void
-C_fopen (int *handle, int p_name, int p_mode)
+C_fopen (word *handle, word p_name, word p_mode)
 {
 	FILE *Fd;
-	PTRINT P_name = p_name;
-	PTRINT P_mode = p_mode;
-	Fd = fopen ((char *) P_name, (char *) P_mode);
-	*handle = (int) ((PTRINT) Fd & 0xffffffff);
+	Fd = fopen ((char *) p_name, (char *) p_mode);
+	*handle = (word) Fd;
 }
 
 void
-C_fflush (int *result, int handle)
+C_fflush (word *result, word handle)
 {
-	PTRINT Handle = handle;
-	if (fflush ((FILE *) (Handle))) {
+	if (fflush ((FILE *) handle)) {
 		if (errno == EBADF)
 			*result = SP_INVALID_HANDLE;
 		else
@@ -111,10 +106,9 @@ C_fflush (int *result, int handle)
 }
 
 void
-C_fclose (int *result, int handle)
+C_fclose (word *result, word handle)
 {
-	PTRINT Handle = handle;
-	if (fclose ((FILE *) (Handle))) {
+	if (fclose ((FILE *) handle)) {
 		if (errno == EBADF)
 			*result = SP_INVALID_HANDLE;
 		else
@@ -124,175 +118,134 @@ C_fclose (int *result, int handle)
 }
 
 void
-C_fread (int *result, int handle, int p_buffer, int SIZEbuffer, int *bytes_read)
+C_fread (word *result, word handle, word p_buffer, word SIZEbuffer, word *bytes_read)
 {
-	PTRINT P_buffer = p_buffer;
-	PTRINT Handle = handle;
-	FILE *Fhandle = (handle == 0) ? stdin : (FILE *) (Handle);
-	*bytes_read = fread ((void *) (P_buffer), 1, SIZEbuffer, Fhandle);
+	FILE *Fhandle = (handle == 0) ? stdin : (FILE *) handle;
+	*bytes_read = (word) fread ((void *) p_buffer, 1, (size_t) SIZEbuffer, Fhandle);
 	*result = SP_OK;
 }
 
 void
-C_fgets (int *result, int handle, int p_buffer, int SIZEbuffer, int *bytes_read)
+C_fgets (word *result, word handle, word p_buffer, word SIZEbuffer, word *bytes_read)
 {
 	char terminator;
-	PTRINT P_buffer = p_buffer;
-	PTRINT Handle = handle;
-	FILE *Fhandle = (handle == 0) ? stdin : (FILE *) (Handle);
-	char *str = fgets ((void *) (P_buffer), SIZEbuffer, Fhandle);
+	FILE *Fhandle = (handle == 0) ? stdin : (FILE *) handle;
+	char *str = fgets ((void *) p_buffer, (int) SIZEbuffer, Fhandle);
 	if (str == NULL) {
 		*bytes_read = 0;
 		*result = SP_ERROR;
 		return;
 	} else
-		*bytes_read = strlen (str);
+		*bytes_read = (word) strlen (str);
 	if (*bytes_read == 0) {
 		*result = SP_ERROR;
 		return;
 	}
-	terminator = ((char *) P_buffer)[*bytes_read - 1];
+	terminator = ((char *) p_buffer)[*bytes_read - 1];
 	if (terminator != '\n') {
 		while (terminator != '\n')
 			terminator = (char) fgetc (Fhandle);	/* read file to end of line */
 		*result = SP_BUFFER_OVERFLOW;
 	} else {
 		while ((terminator == '\n') || (terminator == '\r'))	/* handle DOS text files better */
-			terminator = ((char *) P_buffer)[--(*bytes_read)];
-		((char *) P_buffer)[++(*bytes_read)] = '\0';
+			terminator = ((char *) p_buffer)[--(*bytes_read)];
+		((char *) p_buffer)[++(*bytes_read)] = '\0';
 		*result = SP_OK;
 	}
 }
 void
-C_fwrite (int *result, int handle, int p_buffer, int SIZEbuffer, int *bytes_written)
+C_fwrite (word *result, word handle, word p_buffer, word SIZEbuffer, word *bytes_written)
 {
-	PTRINT P_buffer = p_buffer;
-	PTRINT Handle = handle;
-	FILE *Fhandle = (handle == 1) ? stdout : (handle == 2) ? stderr : (FILE *) (Handle);
-	*bytes_written = fwrite ((void *) (P_buffer), 1, SIZEbuffer, Fhandle);
+	FILE *Fhandle = (handle == 1) ? stdout : (handle == 2) ? stderr : (FILE *) handle;
+	*bytes_written = (word) fwrite ((void *) p_buffer, 1, (size_t) SIZEbuffer, Fhandle);
 	if (handle == 1)
 		fflush (Fhandle);
 	*result = SP_OK;
 }
 
 void
-C_fremove (int *result, int p_fname)
+C_fremove (word *result, word p_fname)
 {
-	PTRINT P_fname = p_fname;
-	if (remove ((char *) (P_fname)))
+	if (remove ((char *) p_fname))
 		*result = SP_ERROR;
 	else
 		*result = SP_OK;
 }
 
 void
-C_frename (int *result, int p_oldname, int p_newname)
+C_frename (word *result, word p_oldname, word p_newname)
 {
-	PTRINT P_oldname = p_oldname;
-	PTRINT P_newname = p_newname;
-	if (rename ((char *) (P_oldname), (char *) (P_newname)))
+	if (rename ((char *) p_oldname, (char *) p_newname))
 		*result = SP_ERROR;
 	else
 		*result = SP_OK;
 }
 
 void
-C_fseek (int *result, int handle, int origin, int position)
+C_fseek (word *result, word handle, word origin, word position)
 {
-	PTRINT Handle = handle;
-	if (fseek ((FILE *) (Handle), position, origin))
+	if (fseek ((FILE *) handle, (long) position, (int) origin))
 		*result = SP_ERROR;
 	else
 		*result = SP_OK;
 }
 
 void
-C_ftell (int *result, int handle, int *position)
+C_ftell (word *result, word handle, word *position)
 {
-	PTRINT Handle = handle;
-	*position = ftell ((FILE *) (Handle));
-	if (*position < 0)
+	*position = (word) ftell ((FILE *) handle);
+	if ((long)*position < 0)
 		*result = SP_ERROR;
 	else
 		*result = SP_OK;
 }
 
 void
-C_comdline (int *result, int all, int *len, int p_block, int SIZEblock)
+C_comdline (word *result, word all, word *len, word p_block, word SIZEblock)
 {
-	PTRINT P_block = p_block;
 	if (all)
-		strcpy ((char *) (P_block), long_cmdline);
+		strcpy ((char *) p_block, long_cmdline);
 	else
-		strcpy ((char *) (P_block), short_cmdline);
-	*len = strlen ((char *) (P_block));
+		strcpy ((char *) p_block, short_cmdline);
+	*len = (word) strlen ((char *) p_block);
 	assert (*len < (SIZEblock - 1));
 	*result = SP_OK;
 }
 
 void
-C_getenv (int *result, int p_envname, int *len, int p_block, int SIZEblock)
+C_getenv (word *result, word p_envname, word *len, word p_block, word SIZEblock)
 {
-	PTRINT P_envname = p_envname;
-	PTRINT P_block = p_block;
 	char *Name;
 
-#if 0
-/* debug */
-	fprintf (stderr, "C_getenv: result @ %p, p_envname = [%s], len @ %p, P_block @ %p, SIZEblock = %d\n", result, (char *) P_envname, len, (char *) P_block, SIZEblock);
-#endif
-	Name = (char *) getenv ((char *) (P_envname));
+	Name = (char *) getenv ((char *) p_envname);
 	if (Name == NULL) {
-#if 0
-		fprintf (stderr, "C_getenv: yuk! getenv() returned NULL..\n");
-#endif
 		*result = SP_ERROR;
 	} else {
-#if 0
-/* debug */
-		fprintf (stderr, "C_getenv: looks good.., result is [%s]\n", Name);
-#endif
-		*len = strlen (Name);
+		*len = (word) strlen (Name);
 		assert (*len < (SIZEblock - 1));
-		(void) strcpy ((char *) (P_block), Name);
+		(void) strcpy ((char *) p_block, Name);
 		*result = SP_OK;
 	}
 }
 void
-C_time (int *loctime, int *UTCtime)
+C_time (word *loctime, word *UTCtime)
 {
-#if defined(TARGET_CPU_ALPHA)
-	struct timespec tp;
-	getclock (TIMEOFDAY, &tp);
-	*loctime = tp.tv_sec;
-#else
-	/*if defined(TARGET_CPU_SPARC) */
-	struct timeval tp;	/* resolution 1 usec?   */
-#if 0	/* DEBUG */
-fprintf (stderr, "C_time: here! loctime @ %p, UTCtime @ %p\n", loctime, UTCtime);
-#endif
+	struct timeval tp;
 	(void) gettimeofday (&tp, 0);
-	*loctime = tp.tv_sec;
-#endif
+	*loctime = (word) tp.tv_sec;
 	*UTCtime = 0;
 }
 
 void
-C_system (int *result, int *rstatus, int p_block)
+C_system (word *result, word *rstatus, word p_block)
 {
-	PTRINT P_block = p_block;
-	*rstatus = system ((char *) (P_block));
+	*rstatus = (word) system ((char *) p_block);
 	*result = SP_OK;
 }
 
 void
-C_exit (int *result, int estatus)
+C_exit (word *result, word estatus)
 {
-#if defined(TARGET_CPU_ALPHA)
-	atexit (call_occam_exit);
-#else
 	call_occam_exit ();
-#endif
-	exit (estatus);		/* never returns */
+	exit ((int) estatus);		/* never returns */
 }
-

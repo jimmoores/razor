@@ -28,7 +28,7 @@
  * stored in memory immediately after the last channel.
  */
 typedef struct _mt_cb_pony_state_t {
-	unsigned int	*typedesc;	/* generation 1 type descriptor */
+	word		*typedesc;	/* generation 1 type descriptor */
 	mt_cb_t		*uiohook;	/* channel bundle to pony kernel,
 					   or NULL for non-networked bundle */
 	int		state;		/* sharing state: 0xCCCCSSSS */

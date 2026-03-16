@@ -355,9 +355,9 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, word *proc
 	char symname[128], *tptr, *error, *ch;
 	void *func;
 	int i, j;
-	int *new_wsbytes;
-	int *new_vsbytes;
-	int *new_msbytes;
+	word *new_wsbytes;
+	word *new_vsbytes;
+	word *new_msbytes;
 
 	if ((plen > 112) || !libhandle) {
 		BMESSAGE ("load_dynamic_process: name too long!\n");
@@ -391,7 +391,7 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, word *proc
 			*ch = '_';
 		}
 	}
-	new_wsbytes = (int *)dlsym (libhandle, symname);
+	new_wsbytes = (word *)dlsym (libhandle, symname);
 	error = dlerror ();
 	if (error) {
 		BMESSAGE ("load_dynamic_process: symbol %s not found in library %p\n", symname, libhandle);
@@ -400,7 +400,7 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, word *proc
 	}
 	/* get 'pname_vsbytes' symbol */
 	symname[plen + 2] = 'v';
-	new_vsbytes = (int *)dlsym (libhandle, symname);
+	new_vsbytes = (word *)dlsym (libhandle, symname);
 	error = dlerror ();
 	if (error) {
 		BMESSAGE ("load_dynamic_process: symbol %s not found in library %p\n", symname, libhandle);
@@ -409,7 +409,7 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, word *proc
 	}
 	/* get 'pname_msbytes' symbol */
 	symname[plen + 2] = 'm';
-	new_msbytes = (int *)dlsym (libhandle, symname);
+	new_msbytes = (word *)dlsym (libhandle, symname);
 	error = dlerror ();
 	if (error) {
 		BMESSAGE ("load_dynamic_process: symbol %s not found in library %p\n", symname, libhandle);
@@ -584,9 +584,9 @@ static void do_ccsp_suspendproc (d_process *tp, word *result)
 	/* save in/out channel params (and reset channel words) */
 	if (!tp->suspended) {
 		t_suspended = (d_suspended_inf *)dmem_alloc (sizeof (d_suspended_inf));
-		t_suspended->num_ichans = (int)(tp->ws_ptr[3]);
+		t_suspended->num_ichans = (int)(word)(tp->ws_ptr[3]);
 		t_suspended->ichans = (word *)dmem_alloc ((t_suspended->num_ichans + 1) * sizeof (word));
-		t_suspended->num_ochans = (int)(tp->ws_ptr[5]);
+		t_suspended->num_ochans = (int)(word)(tp->ws_ptr[5]);
 		t_suspended->ochans = (word *)dmem_alloc ((t_suspended->num_ochans + 1) * sizeof (word));
 	} else {
 		t_suspended = tp->suspended;

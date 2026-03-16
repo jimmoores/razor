@@ -21,24 +21,25 @@
 #ifndef __SPUNIXHDR_H
 #define __SPUNIXHDR_H
 
+#include <rts.h>
+
 void call_occam_exit (void);
-void C_fopen (int *handle, int p_name, int p_mode);
-void C_fflush (int *result, int handle);
-void C_fclose (int *result, int handle);
-void C_fread (int *result, int handle, int p_buffer, int SIZEbuffer, int *bytes_read);
-void C_fgets (int *result, int handle, int p_buffer, int SIZEbuffer, int *bytes_read);
-void C_fwrite (int *result, int handle, int p_buffer, int SIZEbuffer, int *bytes_written);
-void C_fremove (int *result, int p_fname);
-void C_frename (int *result, int p_oldname, int p_newname);
-void C_fseek (int *result, int handle, int origin, int position);
-void C_ftell (int *result, int handle, int *position);
-void C_comdline (int *result, int all, int *len, int p_block, int SIZEblock);
-void C_getenv (int *result, int p_envname, int *len, int p_block, int SIZEblock);
-void C_time (int *loctime, int *UTCtime);
-void C_system (int *result, int *status, int p_block);
-void C_exit (int *result, int status);
-void C_getkey (int *keyval);
-void C_pollkey (int *result, int *keyval);
+void C_fopen (word *handle, word p_name, word p_mode);
+void C_fflush (word *result, word handle);
+void C_fclose (word *result, word handle);
+void C_fread (word *result, word handle, word p_buffer, word SIZEbuffer, word *bytes_read);
+void C_fgets (word *result, word handle, word p_buffer, word SIZEbuffer, word *bytes_read);
+void C_fwrite (word *result, word handle, word p_buffer, word SIZEbuffer, word *bytes_written);
+void C_fremove (word *result, word p_fname);
+void C_frename (word *result, word p_oldname, word p_newname);
+void C_fseek (word *result, word handle, word origin, word position);
+void C_ftell (word *result, word handle, word *position);
+void C_comdline (word *result, word all, word *len, word p_block, word SIZEblock);
+void C_getenv (word *result, word p_envname, word *len, word p_block, word SIZEblock);
+void C_time (word *loctime, word *UTCtime);
+void C_system (word *result, word *status, word p_block);
+void C_exit (word *result, word status);
+void C_getkey (word *keyval);
+void C_pollkey (word *result, word *keyval);
 
 #endif	/* !__SPUNIXHDR_H */
-

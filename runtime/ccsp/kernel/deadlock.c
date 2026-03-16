@@ -185,15 +185,15 @@ static int deadlock_debug (word *iws_ptr, int bytes, int *did_print)
 	static int num_dlops = 9;
 
 	found = 0;
-	if (((int) iws_ptr) & 0x03) {
-		search = (char *)(((word)iws_ptr & 0xfffffffc) + 4);
+	if (((word) iws_ptr) & 0x03) {
+		search = (char *)(((word)iws_ptr & ~(word)0x03) + 4);
 	} else {
 		search = (char *)iws_ptr;
 	}
 	old_segv_handler = signal (SIGSEGV, segv_handler);
 	/* Nicely aligned workspace */
-	search_int = (int *)((word)search + 8);
-	search_limit = (int *)((word)search + (word)bytes);
+	search_int = (word *)((word)search + 8);
+	search_limit = (word *)((word)search + (word)bytes);
 	#ifdef DEBUG_DEBUG
 		BMESSAGE ("%s: searching from 0x%lx to 0x%lx...\n", __FILE__, (unsigned long int)search_int, (unsigned long int)search_limit);
 	#endif
