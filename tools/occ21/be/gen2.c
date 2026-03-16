@@ -1306,8 +1306,12 @@ PUBLIC BIT32 checkmask (int type)
 		return (INT16_CHECK_MASK);
 	case S_INT32:
 		return (INT32_CHECK_MASK);
+	case S_INT:
+		return (bytesperword == 8) ? INT32_CHECK_MASK : INT32_CHECK_MASK;
+		/* INT is word-sized: 32-bit on 32-bit targets, 64-bit on 64-bit.
+		 * The check mask value 0x80000000 works for both because on 64-bit
+		 * the ETC output uses MINT (most negative int) which is target-specific. */
 	case S_INT64:
-		/* For INT64 on 64-bit targets, use 32-bit check mask since operations are word-sized */
 		return (INT32_CHECK_MASK);
 	default:
 		badtag (genlocn, type, "checkmask");

@@ -1180,7 +1180,14 @@ PUBLIC BOOL isshorttype (const int type)
  *****************************************************************************/
 PUBLIC BOOL istargetintsize (int type)
 {
-	return ((type == S_INT) || (type == S_UINT) || (type == targetintsize) || ((type == S_REAL32) && ((targetintsize == S_INT32) || (targetintsize == S_UINT32))) || (type == S_CHAN));
+	if ((type == S_INT) || (type == S_UINT) || (type == targetintsize) || (type == S_CHAN))
+		return TRUE;
+	if ((type == S_REAL32) && ((targetintsize == S_INT32) || (targetintsize == S_UINT32)))
+		return TRUE;
+	/* On 64-bit targets, INT64/UINT64/REAL64 are word-sized (same as INT). */
+	if (bytesperword == 8 && (type == S_INT64 || type == S_UINT64 || type == S_REAL64))
+		return TRUE;
+	return FALSE;
 }
 
 /*}}}  */
@@ -1238,6 +1245,10 @@ PUBLIC BOOL fitsinword (const int type)
  *****************************************************************************/
 PUBLIC BOOL isdoublelength (const int type)
 {
+	/* On 64-bit targets (bytesperword==8), INT64/UINT64/REAL64 are single-word,
+	 * not double-length. Only types that occupy 2 machine words qualify. */
+	if (bytesperword == 8)
+		return FALSE;	/* no scalar type is double-length on a 64-bit target */
 	return (((targetintsize == S_INT16) || (targetintsize == S_UINT16)) && ((type == S_INT32) || (type == S_UINT32) || (type == S_REAL32)))
 		|| (((targetintsize == S_INT32) || (targetintsize == S_UINT32)) && ((type == S_INT64) || (type == S_UINT64) || (type == S_REAL64)));
 }
