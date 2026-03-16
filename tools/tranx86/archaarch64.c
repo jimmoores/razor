@@ -1022,9 +1022,9 @@ static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name,
 {
 	int tmp_reg;
 
-	/* AArch64 ABI: first argument in x0.  Pass Wptr+4 (pointer to params). */
+	/* AArch64 ABI: first argument in x0.  Pass Wptr + 1 word (pointer to params). */
 	tmp_reg = tstack_newreg (ts->stack);
-	*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, 4, ARG_REG, tmp_reg);
+	*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, tmp_reg);
 	add_to_ins_chain (*pst_first);
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REG, REG_X0));
 
@@ -1038,9 +1038,9 @@ static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name,
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (name + 1)));
 	}
 
-	/* Restore Wptr adjustment if needed (i386 does Wptr += 16 after) */
+	/* Restore Wptr adjustment: i386 does Wptr += 4<<WSH (=16 on 32-bit, 32 on 64-bit) */
 	if (!options.nocc_codegen) {
-		*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, 16, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
+		*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)(4 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	} else {
 		*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// external ccall complete"));
 	}
@@ -1937,14 +1937,8 @@ static void compose_aarch64_entry_prolog (tstate *ts)
 	trtl->u.label_name = sbuffer;
 	add_to_rtl_chain (trtl);
 
-		/* Initialize aarch64 FPU and workspace inline */
+		/* Initialize aarch64 FPU - default IEEE 754 settings, no adjustment needed */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64 FPU init (default IEEE 754)")));
-
-		/* CRITICAL FIX: Shift Wptr up by 1 word (8 bytes) to account for ccsp_occam_entry
-		 * initializing wspptr = 1. This aligns original_Wptr[1] with new_Wptr[4] after
-		 * the .ENTRY.CG block drops Wptr by 4 words.
-		 */
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 8, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 
 		/* Call kernel initialization */		compose_aarch64_kcall (ts, K_PAUSE, 0, 0);
 	}/*}}}*/
@@ -2662,6 +2656,37 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							fprintf (stream, "\tmov\t%s, %s\n",
 									aarch64_get_register_name (dst_reg),
 									aarch64_get_register_name (src_reg));
+						}
+					}
+					break;
+				case INS_LEA:
+					/* LEA: load effective address.
+					 * Format: INS_LEA, 1 in (ARG_REGIND|ARG_DISP or ARG_NAMEDLABEL), 1 out (ARG_REG)
+					 * On aarch64 this is just add dest, base, #offset */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+							int base_reg = ins->in_args[0]->regconst;
+							long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+							int dest_reg = ins->out_args[0]->regconst;
+							if (disp == 0) {
+								fprintf (stream, "\tmov\t%s, %s\n",
+									aarch64_get_register_name (dest_reg),
+									aarch64_get_register_name (base_reg));
+							} else {
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									aarch64_get_register_name (dest_reg),
+									aarch64_get_register_name (base_reg),
+									disp, "x16", 0);
+							}
+						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
+							char *symbol = (char *)ins->in_args[0]->regconst;
+							char *fixed = aarch64_convert_symbol_name(symbol);
+							fprintf (stream, "\tadrp\t%s, %s@PAGE\n",
+								aarch64_get_register_name (ins->out_args[0]->regconst), fixed);
+							fprintf (stream, "\tadd\t%s, %s, %s@PAGEOFF\n",
+								aarch64_get_register_name (ins->out_args[0]->regconst),
+								aarch64_get_register_name (ins->out_args[0]->regconst), fixed);
+							sfree(fixed);
 						}
 					}
 					break;
