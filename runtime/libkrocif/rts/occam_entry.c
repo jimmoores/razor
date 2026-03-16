@@ -219,7 +219,7 @@ void _occ_enter (void)
 			extadd_ord_mem (ms, _msbytes, MODE_READ | MODE_WRITE);
 		#endif
 		/* initialise mobile-space to MOSTNEG INT */
-		for (i = 0; i < (_msbytes >> 2); i++) {
+		for (i = 0; i < (_msbytes / sizeof(word)); i++) {
 			((word *) ms)[i] = MostNeg;
 		}
 		Wptr[wspptr++] = (word) ms;

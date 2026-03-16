@@ -196,13 +196,13 @@ static void dump_workspace (FILE *stream, void **wsptr, int wsbytes, mp_mapchain
 	void **orig_wsptr = wsptr;
 
 	MESSAGETO (stream, "workspace for %p:", wsptr);
-	for (i=0; wsbytes > 0; wsbytes -= 4, wsptr++, i++) {
-		unsigned int ival = (unsigned int)(*wsptr);
+	for (i=0; wsbytes > 0; wsbytes -= sizeof(word), wsptr++, i++) {
+		word ival = (word)(*wsptr);
 		mp_mapchain *tmp;
 		int did_attr = 0;
 
-		if (!(i % 4)) {
-			MESSAGETO (stream, "\n0x%8.8x: ", (unsigned int)wsptr);
+		if (!(i % 2)) {
+			MESSAGETO (stream, "\n0x%016lx: ", (word)wsptr);
 		}
 		/* this is horribly expensive, but hey-ho.. */
 		MESSAGETO (stream, "  0x");
@@ -236,7 +236,7 @@ static void dump_workspace (FILE *stream, void **wsptr, int wsbytes, mp_mapchain
 				}
 			}
 		}
-		MESSAGETO (stream, "%8.8x", ival);
+		MESSAGETO (stream, "%016lx", ival);
 		if (did_attr) {
 			MESSAGETO (stream, "\033[0m");
 		}
@@ -316,7 +316,7 @@ MESSAGE ("recover_entries (mc = %p, mp = %p): offset = %d, type = %d\n", mc, mp,
 #if 0
 MESSAGE ("recover_entries: WSMAP_MOB_DA: slots = %d, basebytes = %d\n", nslots, basebytes);
 #endif
-				if ((int)(wsbase[offset + 1])) {
+				if (wsbase[offset + 1]) {
 					/* should be a pointer to free */
 					dmem_release (wsbase[offset]);
 					wsbase[offset + 1] = (void *)0;
@@ -418,26 +418,26 @@ static void remap_workspace (mp_ctrlblk *newproc, mp_ctrlblk *oldproc, mp_mapcha
 		case WSMAP_CHANPTR:
 		case WSMAP_STATICLINK:
 			{
-				int boffset;
+				word boffset;
 
 				/* remap channel pointer or static-link */
-				boffset = (int)(oldws[offset]) - (int)(oldws);
-				newws[offset] = (void *)(((int)newws) + boffset);
+				boffset = (word)(oldws[offset]) - (word)(oldws);
+				newws[offset] = (void *)(((word)newws) + boffset);
 			}
 			break;
 			/*}}}*/
 			/*{{{  WSMAP_GENPTR*/
 		case WSMAP_GENPTR:
-			if ((oldws[offset] >= oldproc->wsbase) && (oldws[offset] < (void *)((int)(oldproc->wsbase) + oldproc->wssize))) {
+			if ((oldws[offset] >= oldproc->wsbase) && (oldws[offset] < (void *)((word)(oldproc->wsbase) + oldproc->wssize))) {
 				/* remapping workspace pointer */
-				int boffset = (int)(oldws[offset]) - (int)(oldws);
+				word boffset = (word)(oldws[offset]) - (word)(oldws);
 				
-				newws[offset] = (void *)(((int)newws) + boffset);
-			} else if ((oldws[offset] >= oldproc->vsbase) && (oldws[offset] < (void *)((int)(oldproc->vsbase) + oldproc->vssize))) {
+				newws[offset] = (void *)(((word)newws) + boffset);
+			} else if ((oldws[offset] >= oldproc->vsbase) && (oldws[offset] < (void *)((word)(oldproc->vsbase) + oldproc->vssize))) {
 				/* remapping vectorspace pointer */
-				int boffset = (int)(oldws[offset]) - (int)(oldproc->vsbase);
+				word boffset = (word)(oldws[offset]) - (word)(oldproc->vsbase);
 
-				newws[offset] = (void *)((int)(newproc->vsbase) + boffset);
+				newws[offset] = (void *)((word)(newproc->vsbase) + boffset);
 			}
 			break;
 			/*}}}*/
@@ -500,11 +500,11 @@ static void remap_workspace (mp_ctrlblk *newproc, mp_ctrlblk *oldproc, mp_mapcha
 			/*{{{  WSMAP_VSPTR*/
 		case WSMAP_VSPTR:
 			{
-				int boffset;
+				word boffset;
 
 				/* remap vectorspace pointer */
-				boffset = (int)(oldws[offset]) - (int)(oldproc->vsbase);
-				newws[offset] = (void *)((int)(newproc->vsbase) + boffset);
+				boffset = (word)(oldws[offset]) - (word)(oldproc->vsbase);
+				newws[offset] = (void *)((word)(newproc->vsbase) + boffset);
 			}
 			break;
 			/*}}}*/
@@ -554,16 +554,16 @@ MESSAGE ("clone_workspace(): newws = %p, oldws = %p\n", newws, oldws);
 
 #if 0
 MESSAGE ("clone_workspace(): MOB_DA: basebytes = %d, nslots = %d, oldws + offset = %p, oldws[offset + 1] = %d, oldws[offset] = %p\n",
-		basebytes, nslots, oldws + offset, (int)(oldws[offset + 1]), oldws[offset]);
+		basebytes, nslots, oldws + offset, (word)(oldws[offset + 1]), oldws[offset]);
 #endif
 				/* blank out the entry, clone happens separately */
 				if (oldws[offset + 1]) {
 					/* duplicate the array */
-					int size = basebytes;
+					word size = basebytes;
 
 					for (i=1; i<nslots; i++) {
 						newws[offset + i] = oldws[offset + i];
-						size *= (int)(newws[offset + i]);
+						size *= (word)(newws[offset + i]);
 					}
 #if 0
 MESSAGE ("clone_workspace(): MOB_DA: size = %d, basebytes = %d, nslots = %d\n", size, basebytes, nslots);
@@ -675,9 +675,9 @@ static void mcache_add (void **cmap, char **nmap, int entries)
 	if (!(n_cached_maps & 0x07)) {
 		/* increase size */
 		if (!cached_maps) {
-			cached_maps = (cmapcache_t **)dmem_alloc (n_cached_maps + 8);
+			cached_maps = (cmapcache_t **)dmem_alloc ((n_cached_maps + 8) * sizeof (cmapcache_t *));
 		} else {
-			cmapcache_t **newmaps = (cmapcache_t **)dmem_alloc (n_cached_maps + 8);
+			cmapcache_t **newmaps = (cmapcache_t **)dmem_alloc ((n_cached_maps + 8) * sizeof (cmapcache_t *));
 
 			memcpy (newmaps, cached_maps, n_cached_maps * sizeof (cmapcache_t *));
 			dmem_release (cached_maps);
@@ -745,19 +745,19 @@ static char *make_c_name (char *oname, int olen)
  */
 static void word_roundup (int *val)
 {
-	if (*val & 0x03) {
-		*val = (*val & ~0x03) + 4;
+	if (*val & (sizeof(word)-1)) {
+		*val = (*val & ~(sizeof(word)-1)) + sizeof(word);
 	}
 	return;
 }
 /*}}}*/
 
 
-/*{{{  void mpcb_add_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, unsigned int *wptr)*/
+/*{{{  void mpcb_add_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, word *wptr)*/
 /*
  *	adds a workspace map to a mobile-process chain
  */
-void mpcb_add_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, unsigned int *wptr)
+void mpcb_add_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, word *wptr)
 {
 	mp_mapchain **mcp;
 
@@ -771,7 +771,7 @@ MESSAGE ("mpcb_add_wsmap: adding workspace map for process block at %p, mapdata 
 	*mcp = new_mapchain ();
 	(*mcp)->mapdata = mapdata;
 	(*mcp)->mapsize = (int)((mapdata[0] << 8) | mapdata[1]);
-	(*mcp)->wsoffset = (((int)wptr - (int)(mp->wsbase)) >> WSH);
+	(*mcp)->wsoffset = (int)(((word)wptr - (word)(mp->wsbase)) >> WSH);
 #if 0
 MESSAGE ("mpcb_add_wsmap: mp=%p chain=%p mapdata=%p (%d entries, %d bytes) Wptr=%p, (*mcp)->wsoffset=%d\n",
 		mp, mp->mapchain, mapdata, (int)((mapdata[0] << 8) | mapdata[1]), (int)((mapdata[2] << 8) | mapdata[3]), wptr, (*mcp)->wsoffset);
@@ -783,14 +783,14 @@ dump_workspace_mapchain (stderr, *mcp);
 	return;
 }
 /*}}}*/
-/*{{{  void mpcb_del_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, unsigned int *wptr)*/
+/*{{{  void mpcb_del_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, word *wptr)*/
 /*
  *	called to remove a map-entry from a mobile process
  */
-void mpcb_del_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, unsigned int *wptr)
+void mpcb_del_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, word *wptr)
 {
 	mp_mapchain **mcp, *tmp;
-	int eoffset = (((int)wptr - (int)(mp->wsbase)) >> WSH);
+	int eoffset = (int)(((word)wptr - (word)(mp->wsbase)) >> WSH);
 	int mapsize = (int)((mapdata[0] << 8) | mapdata[1]);
 
 #if 0
@@ -847,7 +847,7 @@ mp_ctrlblk *mpcb_mpp_clone (mp_ctrlblk *mp)
 {
 	mp_ctrlblk *tmp;
 	mp_mapchain **mcp, *mc;
-	int ws_byte_adjust = 0;
+	word ws_byte_adjust = 0;
 
 	tmp = (mp_ctrlblk *)dmem_alloc (sizeof (mp_ctrlblk));
 
@@ -856,7 +856,7 @@ mp_ctrlblk *mpcb_mpp_clone (mp_ctrlblk *mp)
 	tmp->wssize = mp->wssize;
 	memcpy (tmp->wsbase, mp->wsbase, mp->wssize);
 
-	ws_byte_adjust = (int)(tmp->wsbase) - (int)(mp->wsbase);
+	ws_byte_adjust = (word)(tmp->wsbase) - (word)(mp->wsbase);
 
 	if (mp->vsbase) {
 		tmp->vsbase = (void *)dmem_alloc (mp->vssize);
@@ -923,7 +923,7 @@ MESSAGE ("mpcb_mpp_clone(): remapping from wsbase=%p to wsbase=%p..\n", mp->wsba
 	/*}}}*/
 	/*{{{  repair suspended Wptr*/
 	if (mp->wptr != NotProcess_p) {
-		tmp->wptr = (void *)((int)(mp->wptr) + ws_byte_adjust);
+		tmp->wptr = (void *)((word)(mp->wptr) + ws_byte_adjust);
 	} else {
 		tmp->wptr = NotProcess_p;
 	}
@@ -937,14 +937,14 @@ MESSAGE ("mpcb_mpp_clone(): remapping from wsbase=%p to wsbase=%p..\n", mp->wsba
 	if (mp->bfptr) {
 		void *pptr;
 
-		tmp->bfptr = (void *)((int)(mp->bfptr) + ws_byte_adjust);
-		tmp->bbptr = (void *)((int)(mp->bbptr) + ws_byte_adjust);
+		tmp->bfptr = (void *)((word)(mp->bfptr) + ws_byte_adjust);
+		tmp->bbptr = (void *)((word)(mp->bbptr) + ws_byte_adjust);
 
 		for (pptr = tmp->bfptr; pptr != tmp->bbptr; pptr = ((void **)pptr)[Link]) {
 			void **linkp = &(((void **)pptr)[Link]);
 
 			if (*linkp) {
-				*linkp = (void *)((int)(*linkp) + ws_byte_adjust);
+				*linkp = (void *)((word)(*linkp) + ws_byte_adjust);
 			}
 		}
 	} else {
@@ -1003,20 +1003,20 @@ fprintf (stderr, "checkmax(): resizing: nentries=%d, nmax=%d, n=%d, bytes=%d, ma
  */
 static int make_codemap (void **cmap, void ***mapentries, char ***nameentries, int *nentries, int *nmax)
 {
-	int nsubmaps = (int)(cmap[3]);
+	int nsubmaps = (int)((word)cmap[3]);
 	int i, r = 0;
 
 	checkmax (mapentries, nameentries, nentries, nmax, 8);
 
 #if 0
-fprintf (stderr, "make_codemap(): map ptr 0x%8.8x, nentries=%d, nmax=%d, mapentries @%p, namenetries @%p\n", (unsigned int)cmap[0], *nentries, *nmax, *mapentries, *nameentries);
+fprintf (stderr, "make_codemap(): map ptr 0x%p, nentries=%d, nmax=%d, mapentries @%p, namenetries @%p\n", cmap[0], *nentries, *nmax, *mapentries, *nameentries);
 #endif
 	/* add the top-level */
 	for (i=0; i<*nentries; i++) {
 		if ((*mapentries)[i] == cmap[0]) {
 			/* got this one already */
 #if 0
-fprintf (stderr, "make_codemap(): skipping map ptr at 0x%8.8x\n", (unsigned int)cmap[0]);
+fprintf (stderr, "make_codemap(): skipping map ptr at 0x%p\n", cmap[0]);
 #endif
 			return 0;
 		}
@@ -1035,9 +1035,9 @@ fprintf (stderr, "make_codemap(): skipping map ptr at 0x%8.8x\n", (unsigned int)
 		checkmax (mapentries, nameentries, nentries, nmax, 8);
 
 #if 0
-fprintf (stderr, "make_codemap(): submaps: taddr=0x%8.8x, nextmap=0x%8.8x, tname=[%s]\n", (unsigned int)taddr, (unsigned int)nextmap, tname);
+fprintf (stderr, "make_codemap(): submaps: taddr=0x%p, nextmap=0x%p, tname=[%s]\n", taddr, nextmap, tname);
 #endif
-		if ((int)nextmap != -1) {
+		if ((word)nextmap != (word)-1) {
 			r += make_codemap (nextmap, mapentries, nameentries, nentries, nmax);
 		} else {
 			int j;
@@ -1045,7 +1045,7 @@ fprintf (stderr, "make_codemap(): submaps: taddr=0x%8.8x, nextmap=0x%8.8x, tname
 			/* check that we didn't already add this (shouldn't have) */
 			for (j=0; (j<*nentries) && ((*mapentries)[j] != taddr); j++);
 #if 0
-fprintf (stderr, "make_codemap(): adding submap entry 0x%8.8x if (%d == %d)\n", (unsigned int)taddr, j, *nentries);
+fprintf (stderr, "make_codemap(): adding submap entry 0x%p if (%d == %d)\n", taddr, j, *nentries);
 #endif
 			if (j == *nentries) {
 				/* add this one */
@@ -1060,12 +1060,12 @@ fprintf (stderr, "make_codemap(): adding submap entry 0x%8.8x if (%d == %d)\n", 
 	return r;
 }
 /*}}}*/
-/*{{{  int mpcb_mpp_serialise (mp_ctrlblk **mpp, unsigned int *thashp, int *raddr, int *rsize)*/
+/*{{{  int mpcb_mpp_serialise (mp_ctrlblk **mpp, unsigned int *thashp, word *raddr, int *rsize)*/
 /*
  *	serialises a mobile process
  *	returns 0 on failure, non-zero on success
  */
-int mpcb_mpp_serialise (mp_ctrlblk **mpp, unsigned int *thashp, int *raddr, int *rsize)
+int mpcb_mpp_serialise (mp_ctrlblk **mpp, unsigned int *thashp, word *raddr, int *rsize)
 {
 	mp_ctrlblk *blk = *mpp;
 	int bytes = 0;
@@ -1116,7 +1116,7 @@ MESSAGE ("mpcb_mpp_serialise (mpp = %p, *mpp = %p, thashp = %p, *thashp = 0x%8.8
 { int i;
 MESSAGE ("codemap (%d/%d) cmapentries @%p, cmaplabels @%p:\n", ncmapentries, mcmapentries, cmapentries, cmaplabels);
 for (i=0; i<ncmapentries; i++) {
-	MESSAGE ("    0x%8.8x  %s\n", (unsigned int)(cmapentries[i]), cmaplabels[i]);
+	MESSAGE ("    0x%p  %s\n", cmapentries[i], cmaplabels[i]);
 }
 }
 #endif
@@ -1128,7 +1128,7 @@ for (i=0; i<ncmapentries; i++) {
 { int i;
 MESSAGE ("codemap (%d/%d):\n", ncmapentries, mcmapentries);
 for (i=0; i<ncmapentries; i++) {
-	MESSAGE ("    0x%8.8x  %s\n", (unsigned int)(cmapentries[i]), cmaplabels[i]);
+	MESSAGE ("    0x%p  %s\n", cmapentries[i], cmaplabels[i]);
 }
 }
 #endif
@@ -1140,7 +1140,7 @@ for (i=0; i<ncmapentries; i++) {
 	/* FIXME: mobilespace size */
 
 	/*{{{  walk through workspace map-chain and count up size -- some things collected in objectspace*/
-	rws = blk->wsbase;
+	rws = (unsigned int *)blk->wsbase;
 	wsmbytes = 0;
 	for (mc = blk->mapchain; mc; mc = mc->next) {
 		unsigned char *mapptr = mc->mapdata;
@@ -1182,7 +1182,7 @@ fprintf (stderr, "serialising from workspace map at %p: %d bytes, %d entries\n",
 
 					icount = basebytes;
 					for (i=1; i<nslots; i++) {
-						icount *= (int)orgws[offset + i];
+						icount *= (int)(word)orgws[offset + i];
 					}
 #if 0
 MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_DA: nslots=%d, basebytes=%d, icount=%d\n", nslots, basebytes, icount);
@@ -1266,7 +1266,9 @@ MESSAGE ("mpcb_mpp_serialise(): mapchain %d at %p offset %d, (%d entries, %d byt
 	#endif
 	fhdr->pname_offs = (unsigned int)(sizeof (mp_filehdr));
 	fhdr->wsdata_offs = fhdr->pname_offs + nlen;
+	fhdr->wsdata_offs = (fhdr->wsdata_offs + (sizeof(word)-1)) & ~(sizeof(word)-1);
 	fhdr->vsdata_offs = fhdr->wsdata_offs + fhdr->wsbytes;
+	fhdr->vsdata_offs = (fhdr->vsdata_offs + (sizeof(word)-1)) & ~(sizeof(word)-1);
 	fhdr->msdata_offs = fhdr->vsdata_offs + fhdr->vsbytes;
 	fhdr->wsmap_offs = fhdr->msdata_offs + fhdr->msbytes;
 	fhdr->obj_offs = fhdr->wsmap_offs + fhdr->wsmapbytes;
@@ -1276,14 +1278,14 @@ MESSAGE ("mpcb_mpp_serialise(): mapchain %d at %p offset %d, (%d entries, %d byt
 	/*{{{  copy name, workspace and vectorspace, setup for data into objectspace*/
 	memcpy ((byte *)fhdr + fhdr->pname_offs, cmaplabels[0], strlen (cmaplabels[0]) + 1);
 
-	rws = blk->wsbase;
+	rws = (unsigned int *)blk->wsbase;
 	sws = (unsigned int *)((byte *)fhdr + fhdr->wsdata_offs);
 	memcpy (sws, blk->wsbase, fhdr->wsbytes);
 
 	if (fhdr->vsbytes) {
 		svs = (unsigned int *)((byte *)fhdr + fhdr->vsdata_offs);
 		memcpy (svs, blk->vsbase, fhdr->vsbytes);
-		rvs = blk->vsbase;
+		rvs = (unsigned int *)blk->wsbase;
 	}
 
 	/* from here, objspacebytes is the offset from the start of objectspace */
@@ -1296,9 +1298,9 @@ MESSAGE ("mpcb_mpp_serialise(): mapchain %d at %p offset %d, (%d entries, %d byt
 
 	/*}}}*/
 	/*{{{  fixup specials*/
-	fhdr->wsptr = (unsigned int)((int)blk->wptr - (int)blk->wsbase);
+	fhdr->wsptr = (unsigned int)((word)blk->wptr - (word)blk->wsbase);
 	if (blk->iptr == NotProcess_p) {
-		fhdr->iptr = (unsigned int)ENCODED_NOTPROCESS;
+		fhdr->iptr = (unsigned int)(word)ENCODED_NOTPROCESS;
 	} else {
 		int i;
 
@@ -1316,11 +1318,11 @@ MESSAGE ("mpcb_mpp_serialise(): mapchain %d at %p offset %d, (%d entries, %d byt
 	#if 0
 	if (blk->bfptr == NotProcess_p) {
 		/* nothing on the barrier queue */
-		fhdr->bfptr = (unsigned int)ENCODED_NOTPROCESS;
-		fhdr->bbptr = (unsigned int)ENCODED_NOTPROCESS;
+		fhdr->bfptr = (unsigned int)(word)ENCODED_NOTPROCESS;
+		fhdr->bbptr = (unsigned int)(word)ENCODED_NOTPROCESS;
 	} else {
-		fhdr->bfptr = (unsigned int)((int)blk->bfptr - (int)blk->wsbase);
-		fhdr->bbptr = (unsigned int)((int)blk->bbptr - (int)blk->wsbase);
+		fhdr->bfptr = (unsigned int)((word)blk->bfptr - (word)blk->wsbase);
+		fhdr->bbptr = (unsigned int)((word)blk->bbptr - (word)blk->wsbase);
 	}
 	#endif
 	/*}}}*/
@@ -1364,16 +1366,16 @@ MESSAGE ("mpcb_mpp_serialise(): storing wsmap %d, swsoffs=%d\n", wsmblks, swsoff
 					relws[offset] = (void *)ENCODED_NOTPROCESS;
 				} else {
 					/* remap channel-pointer or static-link */
-					relws[offset] = (void *)((int)orgws[offset] - (int)rws);
+					relws[offset] = (void *)((word)orgws[offset] - (word)rws);
 				}
 				break;
 				/*}}}*/
 				/*{{{  WSMAP_GENPTR*/
 			case WSMAP_GENPTR:
 				if (((byte *)orgws[offset] >= (byte *)rws) && ((byte *)orgws[offset] < ((byte *)rws + fhdr->wsbytes))) {
-					relws[offset] = (void *)((int)orgws[offset] - (int)rws);
+					relws[offset] = (void *)((word)orgws[offset] - (word)rws);
 				} else if (fhdr->vsbytes && ((byte *)orgws[offset] >= (byte *)rvs) && ((byte *)orgws[offset] < ((byte *)rvs + fhdr->vsbytes)) && (type & WSMAP_FLAG_VS)) {
-					relws[offset] = (void *)((int)orgws[offset] - (int)rvs);
+					relws[offset] = (void *)((word)orgws[offset] - (word)rvs);
 				} else if (orgws[offset] == NotProcess_p) {
 					relws[offset] = (void *)ENCODED_NOTPROCESS;		/* flag as notprocess */
 				} else {
@@ -1394,7 +1396,7 @@ MESSAGE ("mpcb_mpp_serialise(): storing wsmap %d, swsoffs=%d\n", wsmblks, swsoff
 
 					icount = basebytes;
 					for (i=1; i<nslots; i++) {
-						icount *= (int)orgws[offset + i];
+						icount *= (int)(word)orgws[offset + i];
 					}
 
 #if 0
@@ -1405,7 +1407,7 @@ MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_DA: nslots=%d, basebytes=%d, icount=%d
 						osuptr[1] = basebytes;
 
 						for (i=1; i<nslots; i++) {
-							osuptr[i+1] = (int)orgws[offset + i];
+							osuptr[i+1] = (int)(word)orgws[offset + i];
 						}
 
 						osdptr = objspaceptr + ((nslots + 1) * sizeof (unsigned int));
@@ -1417,7 +1419,7 @@ MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_DA: nslots=%d, basebytes=%d, icount=%d
 
 						/* round up if not word aligned */
 						word_roundup (&icount);
-						relws[offset] = (void *)objspaceents;
+						relws[offset] = (void *)(word)objspaceents;
 
 						*objspacebiptr = objspacebytes;		/* offset in objectspace */
 						objspacebiptr++;
@@ -1481,7 +1483,7 @@ MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_DA: nslots=%d, basebytes=%d, icount=%d
 				if (orgws[offset] == NotProcess_p) {
 					relws[offset] = ENCODED_NOTPROCESS;
 				} else {
-					relws[offset] = (void *)((int)orgws[offset] - (int)rvs);
+					relws[offset] = (void *)((word)orgws[offset] - (word)rvs);
 				}
 				break;
 				/*}}}*/
@@ -1505,7 +1507,7 @@ MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_DA: nslots=%d, basebytes=%d, icount=%d
 
 					for (i=0; i<ncmapentries; i++) {
 						if (cmapentries[i] == orgws[offset]) {
-							relws[offset] = (void *)i;
+							relws[offset] = (void *)(word)i;
 							break;		/* for() */
 						}
 					}
@@ -1538,20 +1540,20 @@ dump_workspace (stderr, (void **)sws, blk->wssize, blk->mapchain);
 
 	if (*rsize) {
 		/* free existing process here */
-		dmem_release ((void *)(*raddr));
+		dmem_release ((void *)(word)(*raddr));
 	}
-	*raddr = (int)fhdr;
+	*raddr = (word)fhdr;
 	*rsize = bytes;
 
 	return 1;
 }
 /*}}}*/
-/*{{{  int mpcb_mpp_deserialise (int addr, int size, mp_ctrlblk **mpp, unsigned int *thashp)*/
+/*{{{  int mpcb_mpp_deserialise (word addr, int size, mp_ctrlblk **mpp, unsigned int *thashp)*/
 /*
  *	de-serialises a mobile process
  *	returns 0 on failure, non-zero on success
  */
-int mpcb_mpp_deserialise (int addr, int size, mp_ctrlblk **mpp, unsigned int *thashp)
+int mpcb_mpp_deserialise (word addr, int size, mp_ctrlblk **mpp, unsigned int *thashp)
 {
 #if !defined(DYNAMIC_PROCS) || defined(RMOX_BUILD)
 	BMESSAGE ("no dynamic process support, cannot de-serialise process.\n");
@@ -1576,7 +1578,6 @@ int mpcb_mpp_deserialise (int addr, int size, mp_ctrlblk **mpp, unsigned int *th
 	unsigned int *objspacebiptr = NULL;
 	char *objspaceptr = NULL;
 	int objspaceents = 0;
-	int objspaceidx = 0;
 
 	if (!addr) {
 		BMESSAGE ("null mobile process!\n");
@@ -1618,7 +1619,7 @@ int mpcb_mpp_deserialise (int addr, int size, mp_ctrlblk **mpp, unsigned int *th
 		return 0;
 	}
 
-	fhdr = (mp_filehdr *)addr;
+	fhdr = (mp_filehdr *)(word)addr;
 
 	if (memcmp (&(fhdr->hdr[0]), "OCMP", 4)) {
 		goto out_bad_header;
@@ -1695,7 +1696,6 @@ MESSAGE ("mpcb_mpp_deserialise(): process name [%s]\n", pname);
 	objspaceents = *objspacebiptr;
 	objspacebiptr++;
 	objspaceptr = (char *)fhdr + fhdr->obj_offs;
-	objspaceidx = 0;
 
 
 	/*}}}*/
@@ -1759,11 +1759,11 @@ fprintf (stderr, "deserialising from workspace map at %p: %d bytes, %d entries\n
 						orgws[offset] = NotProcess_p;
 					} else {
 						/* remap channel-pointer or static-link */
-						if ((int)relws[offset] > blk->wssize) {
-							BMESSAGE ("error: CHANPTR/STATICLINK workspace offset %d out of range\n", (int)relws[offset]);
+						if ((word)relws[offset] > blk->wssize) {
+							BMESSAGE ("error: CHANPTR/STATICLINK workspace offset %d out of range\n", (int)(word)relws[offset]);
 							orgws[offset] = NotProcess_p;
 						} else {
-							orgws[offset] = (void *)((int)(relws[offset]) + (int)rws);
+							orgws[offset] = (void *)((word)(relws[offset]) + (word)rws);
 						}
 					}
 					break;
@@ -1777,19 +1777,19 @@ fprintf (stderr, "deserialising from workspace map at %p: %d bytes, %d entries\n
 						if (!blk->vsbase || !blk->vssize) {
 							BMESSAGE ("error: GENPTR in non-existant vectorspace\n");
 							orgws[offset] = NotProcess_p;
-						} else if (blk->vsbase && ((int)relws[offset] > blk->vssize)) {
-							BMESSAGE ("error: GENPTR vectorspace offset %d out of range\n", (int)relws[offset]);
+						} else if (blk->vsbase && ((word)relws[offset] > blk->vssize)) {
+							BMESSAGE ("error: GENPTR vectorspace offset %d out of range\n", (int)(word)relws[offset]);
 							orgws[offset] = NotProcess_p;
 						} else {
-							orgws[offset] = (void *)((int)relws[offset] + (int)rvs);
+							orgws[offset] = (void *)((word)relws[offset] + (word)rvs);
 						}
 					} else {
 						/* workspace */
-						if ((int)relws[offset] > blk->wssize) {
-							BMESSAGE ("error: GENPTR workspace offset %d out of range\n", (int)relws[offset]);
+						if ((word)relws[offset] > blk->wssize) {
+							BMESSAGE ("error: GENPTR workspace offset %d out of range\n", (int)(word)relws[offset]);
 							orgws[offset] = NotProcess_p;
 						} else {
-							orgws[offset] = (void *)((int)relws[offset] + (int)rws);
+							orgws[offset] = (void *)((word)relws[offset] + (word)rws);
 						}
 					}
 					break;
@@ -1808,19 +1808,19 @@ fprintf (stderr, "deserialising from workspace map at %p: %d bytes, %d entries\n
 							for (i=1; i<nslots; i++) {
 								relws[offset+i] = (void *)0;
 							}
-						} else if ((int)relws[offset] >= objspaceents) {
-							BMESSAGE ("error: object-space entity %d out of range (%d entries)\n", (int)relws[offset], objspaceents);
+						} else if ((word)relws[offset] >= objspaceents) {
+							BMESSAGE ("error: object-space entity %d out of range (%d entries)\n", (int)(word)relws[offset], objspaceents);
 						} else {
-							int objoffs = objspacebiptr[(int)relws[offset]];
+							int objoffs = objspacebiptr[(int)(word)relws[offset]];
 							unsigned int *objuptr = (unsigned int *)(objspaceptr + objoffs);
 							char *objptr = (char *)(objuptr + (nslots + 1));
-							int icount;
+							word icount;
 
 							/* at objuptr, got [nslots,basebytes,dim1..dimN] */
 							icount = basebytes;
 							for (i=1; i<nslots; i++) {
 								icount *= objuptr[i+1];
-								orgws[offset + i] = (void *)(objuptr[i+1]);
+								orgws[offset + i] = (void *)(word)(objuptr[i+1]);
 							}
 							orgws[offset] = dmem_alloc (icount);
 							memcpy (orgws[offset], objptr, icount);		/* copy data back in */
@@ -1878,11 +1878,11 @@ MESSAGE ("re-serialised dynamic mobile array, pointer at %p for %d bytes (nslots
 					} else if (!blk->vsbase || !blk->vssize) {
 						BMESSAGE ("error: VSPTR in non-existant vectorspace\n");
 						orgws[offset] = NotProcess_p;
-					} else if (blk->vsbase && ((int)relws[offset] > blk->vssize)) {
-						BMESSAGE ("error: VSPTR vectorspace offset %d out of range\n", (int)relws[offset]);
+					} else if (blk->vsbase && ((word)relws[offset] > blk->vssize)) {
+						BMESSAGE ("error: VSPTR vectorspace offset %d out of range\n", (int)(word)relws[offset]);
 						orgws[offset] = NotProcess_p;
 					} else {
-						orgws[offset] = (void *)((int)relws[offset] + (int)rvs);
+						orgws[offset] = (void *)((word)relws[offset] + (word)rvs);
 					}
 					break;
 					/*}}}*/
@@ -1902,7 +1902,7 @@ MESSAGE ("re-serialised dynamic mobile array, pointer at %p for %d bytes (nslots
 					} else if (relws[offset] == ENCODED_AIPTR) {
 						orgws[offset] = NULL;				/* activator return address (not relevant) */
 					} else {
-						int cinum = (int)relws[offset];
+						int cinum = (int)(word)relws[offset];
 
 						if ((cinum < 0) || (cinum >= ncmapentries)) {
 							BMESSAGE ("error: code-pointer-index %d not in code-map\n", cinum);
@@ -1927,7 +1927,7 @@ MESSAGE ("re-serialised dynamic mobile array, pointer at %p for %d bytes (nslots
 	/*}}}*/
 	/*{{{  fixup specials*/
 	blk->wptr = (byte *)blk->wsbase + fhdr->wsptr;
-	if (fhdr->iptr == (unsigned int)ENCODED_NOTPROCESS) {
+	if (fhdr->iptr == (unsigned int)(word)ENCODED_NOTPROCESS) {
 		blk->iptr = NotProcess_p;
 	} else {
 		int cinum = (int)fhdr->iptr;
@@ -1940,12 +1940,12 @@ MESSAGE ("re-serialised dynamic mobile array, pointer at %p for %d bytes (nslots
 	}
 	/* FIXME: fhdr->barrier */
 	#if 0
-	if (fhdr->bfptr == (unsigned int)ENCODED_NOTPROCESS) {
+	if (fhdr->bfptr == (unsigned int)(word)ENCODED_NOTPROCESS) {
 		blk->bfptr = NotProcess_p;
 		blk->bbptr = NotProcess_p;
 	} else {
-		blk->bfptr = (void *)blk->wsbase + fhdr->bfptr;
-		blk->bbptr = (void *)blk->wsbase + fhdr->bbptr;
+		blk->bfptr = (void *)((word)blk->wsbase + fhdr->bfptr);
+		blk->bbptr = (void *)((word)blk->wsbase + fhdr->bbptr);
 	}
 	blk->becnt = fhdr->becnt;
 	#endif
@@ -2057,15 +2057,15 @@ static void dump_codemap (FILE *stream, void **codemap, int indent)
 {
 	int subs, i, j;
 
-	subs = (int)(codemap[3]);
+	subs = (int)((word)codemap[3]);
 	for (j=0; j<indent; MESSAGETO (stream, "    "), j++);
-	MESSAGETO (stream, "CMAP:    \"%s\" at %p, %d bytes (%d subs)\n", (char *)(codemap[2]), codemap[0], (int)(codemap[1]), subs);
+	MESSAGETO (stream, "CMAP:    \"%s\" at %p, %d bytes (%d subs)\n", (char *)(codemap[2]), codemap[0], (int)(word)(codemap[1]), subs);
 	for (i=0; i<subs; i++) {
 		void **nextmap = (void **)(codemap[(i * 4) + 5]);
 
 		for (j=0; j<indent; MESSAGETO (stream, "    "), j++);
 		MESSAGETO (stream, "CMAPSUB: \"%s\" at %p", (char *)(codemap[(i * 4) + 6]), (void *)(codemap[(i*4) + 4]));
-		if ((int)nextmap != -1) {
+		if ((word)nextmap != (word)-1) {
 			MESSAGETO (stream, ", nextmap at %p:\n", nextmap);
 			dump_codemap (stream, nextmap, indent + 1);
 		} else{
@@ -2146,17 +2146,17 @@ int mpp_unloadlibrary (char *lname)
 
 
 /*{{{  occam interfaces -- dropped in the occam8 library for MPP.SERIALISE, MPP.DESERIALISE, MPP.CHECKROUTINE, MPP.LOADLIBRARY and MPP.UNLOADLIBRARY*/
-void _do_mpp_serialise (int *ws)
+void _do_mpp_serialise (word *ws)
 {
-	mpcb_mpp_serialise ((mp_ctrlblk **)(ws + 0), (unsigned int *)(ws + 1), (int *)(ws + 2), (int *)(ws + 3));
+	mpcb_mpp_serialise ((mp_ctrlblk **)ws[0], (unsigned int *)ws[1], (word *)ws[2], (int *)ws[3]);
 }
 
-void _do_mpp_deserialise (int *ws)
+void _do_mpp_deserialise (word *ws)
 {
-	mpcb_mpp_deserialise ((int)(ws[0]), (int)(ws[1]), (mp_ctrlblk **)(ws + 2), (unsigned int *)(ws + 3));
+	mpcb_mpp_deserialise ((word)(ws[0]), (int)(ws[1]), (mp_ctrlblk **)(ws + 2), (unsigned int *)(ws + 3));
 }
 
-void _do_mpp_checkroutine (int *ws)
+void _do_mpp_checkroutine (word *ws)
 {
 #if defined(DYNAMIC_PROCS) && !defined(RMOX_BUILD)
 	mpcb_mpp_checkroutine ((char *)(ws[0]), (int)(ws[1]), (int *)(ws[2]));
@@ -2165,7 +2165,7 @@ void _do_mpp_checkroutine (int *ws)
 #endif
 }
 
-void _do_mpp_loadlibrary (int *ws)
+void _do_mpp_loadlibrary (word *ws)
 {
 #if defined(DYNAMIC_PROCS) && !defined(RMOX_BUILD)
 	mpcb_mpp_loadlibrary ((char *)(ws[0]), (int)(ws[1]), (int *)(ws[2]));
@@ -2174,7 +2174,7 @@ void _do_mpp_loadlibrary (int *ws)
 #endif
 }
 
-void _do_mpp_unloadlibrary (int *ws)
+void _do_mpp_unloadlibrary (word *ws)
 {
 #if defined(DYNAMIC_PROCS) && !defined(RMOX_BUILD)
 	mpcb_mpp_unloadlibrary ((char *)(ws[0]), (int)(ws[1]), (int *)(ws[2]));
@@ -2184,4 +2184,3 @@ void _do_mpp_unloadlibrary (int *ws)
 }
 
 /*}}}*/
-

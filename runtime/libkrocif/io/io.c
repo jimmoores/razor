@@ -49,9 +49,9 @@
 #include <kroc_io.h>
 
 /* constants */
-#define KBD_WORKSPACE_WORDS 18
-#define SCR_WORKSPACE_WORDS 36
-#define ERR_WORKSPACE_WORDS 12
+#define KBD_WORKSPACE_WORDS 64
+#define SCR_WORKSPACE_WORDS 64
+#define ERR_WORKSPACE_WORDS 64
 
 static int stdin_is_tty;
 
@@ -104,6 +104,9 @@ int init_occam_io (int tlpiface)
 {
 	int i;
 
+	fprintf(stderr, "DEBUG: init_occam_io called with tlpiface=%d\n", tlpiface);
+	fflush(stderr);
+
 	#if defined(DM_DEBUG) && (DM_DEBUG == 1)
 		extadd_ord_mem (_kbd_workspace_bottom, 13 * sizeof(word), MODE_READ | MODE_WRITE);
 		extadd_ord_mem (_scr_workspace_bottom, 128 * sizeof(word), MODE_READ | MODE_WRITE);
@@ -132,6 +135,9 @@ int init_occam_io (int tlpiface)
 	scr_chan = setup_chan (0x00010002); /* client shared not claimed, server unshared */
 	err_chan = setup_chan (0x00010002); /* client shared not claimed, server unshared */
 
+	fprintf(stderr, "DEBUG: kbd_chan=%p, scr_chan=%p, err_chan=%p\n", kbd_chan, scr_chan, err_chan);
+	fflush(stderr);
+
 	kbd_ws = &(kbd_workspace_bottom[KBD_WORKSPACE_WORDS - 4]);
 	kbd_ws[-3] = 0;
 	kbd_ws[-2] = (word) NotProcess_p;
@@ -139,42 +145,47 @@ int init_occam_io (int tlpiface)
 #if defined(__aarch64__)
 	asm ("adrp %0, _O_kroc_keyboard_process@PAGE\n\t" /* aarch64 */
 		 "add  %0, %0, _O_kroc_keyboard_process@PAGEOFF" : "=r" (kbd_ws[-1]));
-#elif defined(__i386__)
+	#elif defined(__i386__)
 	asm ("movl $O_kroc_keyboard_process, %0" : "=r" (kbd_ws[-1]));
-#endif
-	kbd_ws[0] = 0;
+	#endif
+	for (i = -10; i <= 2; i++) {
+		if (i != -1) kbd_ws[i] = 0;
+	}
+	kbd_ws[-2] = (word) NotProcess_p;
 	kbd_ws[1] = (word) kbd_chan;
 	kbd_ws[2] = (word) &kbd_termchan;
 	kbd_termchan = NotProcess_p;
 
 	scr_ws = &(scr_workspace_bottom[SCR_WORKSPACE_WORDS - 4]);
-	scr_ws[-3] = 0;
+	for (i = -10; i <= 2; i++) {
+		if (i != -1) scr_ws[i] = 0;
+	}
 	scr_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
-#if defined(__aarch64__)
+	#if defined(__aarch64__)
 	asm ("adrp %0, _O_kroc_screen_process@PAGE\n\t"
 	     "add  %0, %0, _O_kroc_screen_process@PAGEOFF" : "=r" (scr_ws[-1]));
-#elif defined(__i386__)
-    asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[-1]));
-#endif
-	scr_ws[0] = 0;
+	#elif defined(__i386__)
+	asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[-1]));
+	#endif
 	scr_ws[1] = (word) scr_chan;
-	scr_ws[2] = 0;
 
 	err_ws = &(err_workspace_bottom[ERR_WORKSPACE_WORDS - 4]);
-	err_ws[-3] = 0;
+	for (i = -10; i <= 2; i++) {
+		if (i != -1) err_ws[i] = 0;
+	}
 	err_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
-#if defined(__aarch64__)
+	#if defined(__aarch64__)
 	asm ("adrp %0, _O_kroc_error_process@PAGE\n\t"
 	     "add  %0, %0, _O_kroc_error_process@PAGEOFF" : "=r" (err_ws[-1]));
-#elif defined(__i386__)
+	#elif defined(__i386__)
 	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[-1]));
-#endif
-	err_ws[0] = 0;
+	#endif
 	err_ws[1] = (word) err_chan;
-	err_ws[2] = 0;
 
+	fprintf(stderr, "DEBUG: kbd_ws=%p, scr_ws=%p, err_ws=%p\n", kbd_ws, scr_ws, err_ws);
+	fflush(stderr);
 	return 0;
 }
 /*}}}*/
@@ -209,19 +220,19 @@ bool process_blocked_on_kbd (void)
 /*{{{  word *kbd_chan_addr (void)*/
 word *kbd_chan_addr (void)
 {
-	return (word *) kbd_chan;
+	return (word *) &(kbd_chan[0]);
 }
 /*}}}*/
 /*{{{  word *scr_chan_addr (void)*/
 word *scr_chan_addr (void)
 {
-	return (word *) scr_chan;
+	return (word *) &(scr_chan[0]);
 }
 /*}}}*/
 /*{{{  word *err_chan_addr (void)*/
 word *err_chan_addr (void)
 {
-	return (word *) err_chan;
+	return (word *) &(err_chan[0]);
 }
 /*}}}*/
 
@@ -363,11 +374,11 @@ void out_stderr_int (word *wsptr)
 
 /* Create aliases for external linkage from occam code.
  * The occam toolchain expects these exact symbol names. */
-void _read_keyboard (word *wsptr) asm("_BX_read_keyboard");
-void _write_screen (word *wsptr) asm("_C_write_screen");
-void _write_error (word *wsptr) asm("_C_write_error");
-void _out_stderr (word *wsptr) asm("_C_out_stderr");
-void _out_stderr_int (word *wsptr) asm("_C_out_stderr_int");
+void _read_keyboard (word *wsptr) asm("__read_keyboard");
+void _write_screen (word *wsptr) asm("__write_screen");
+void _write_error (word *wsptr) asm("__write_error");
+void _out_stderr (word *wsptr) asm("__out_stderr");
+void _out_stderr_int (word *wsptr) asm("__out_stderr_int");
 void _read_keyboard (word *wsptr) { read_keyboard(wsptr); }
 void _write_screen (word *wsptr) { write_screen(wsptr); }
 void _write_error (word *wsptr) { write_error(wsptr); }

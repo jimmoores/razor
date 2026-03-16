@@ -123,7 +123,7 @@ int ccsp_calibrate_timers (void);
 /*}}}*/
 
 /*{{{ userproc.c */
-void ccsp_kernel_exit (int exit_status, int iptr);
+void ccsp_kernel_exit (int exit_status, word iptr);
 void ccsp_bad_exit (void);
 void ccsp_dead (int erfl);
 void ccsp_dead_quiet (int erfl);

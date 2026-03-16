@@ -52,8 +52,8 @@ extern void 			**_ccsp_calltable;
 sched_t *local_scheduler (void);
 void ccsp_kernel_init (void);
 
-int not_on_any_queue (unsigned int ws_base, unsigned int ws_limit);
-int remove_from_any_queue (unsigned int ws_base, unsigned int ws_limit);
+int not_on_any_queue (word ws_base, word ws_limit);
+int remove_from_any_queue (word ws_base, word ws_limit);
 void do_queue_process (word *process);
 
 #define SCHED_POLICY_US 1		/* suspend other and reschedule invoking process */

@@ -24,7 +24,11 @@
 #define __CCSP_CONSTS_H
 
 /* Constants used in transputer instructions */
-#define MostNeg 		0x80000000
+#if defined(TARGET_64BIT) || defined(__x86_64__) || defined(__aarch64__)
+#define MostNeg 		((word)0x8000000000000000ULL)
+#else
+#define MostNeg 		((word)0x80000000)
+#endif
 #define NotProcess_p 		0
 #if 0
 #define Enabling_p 		NotProcess_p+1
@@ -93,7 +97,11 @@
 
 /* CIF constants */
 #define CIF_STACK_ALIGN		4 /* words */
-#define CIF_STACK_LINKAGE	1 /* words */
+#if defined(__aarch64__) || defined(__x86_64__)
+#define CIF_STACK_LINKAGE   2 /* words */
+#else
+#define CIF_STACK_LINKAGE   1 /* words */
+#endif
 #define CIF_PROCESS_WORDS	8 /* words */
 
 #endif /* __CCSP_CONSTS_H */

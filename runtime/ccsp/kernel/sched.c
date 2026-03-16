@@ -132,14 +132,14 @@ void 			**_ccsp_calltable		CACHELINE_ALIGN = NULL;
 
 	#define ENTRY_TRACE(X, FMT, args...) \
 		LOAD_ESP (the_stackptr); \
-		MESSAGE ("<enter>   "#X" [0x%x,0x%8.8x,%p,%p,%p,%p] (esp=%8.8x) [%d:%d] ", (unsigned int)PPriority, (unsigned int)PState, Wptr, Fptr, Bptr, Tptr, the_stackptr, \
-				(mdparam1 == 0xffffffff) ? 0 : ((mdparam1 >> 16) & 0xffff), (mdparam1 == 0xffffffff) ? 0 : (mdparam1 & 0xffff)); \
-		if ((MaskedPPriority < 0) || (MaskedPPriority >= MAX_PRIORITY_LEVELS)) { MESSAGE ("b0rked!\n"); ccsp_kernel_exit(0,(int)Wptr); } \
+		MESSAGE ("<enter>   "#X" [0x%lx,0x%016lx,%p,%p,%p,%p] (esp=%016lx) [%d:%d] ", (word)PPriority, (word)PState, Wptr, Fptr, Bptr, Tptr, the_stackptr, \
+				(mdparam1 == 0xffffffffffffffffULL) ? 0 : ((mdparam1 >> 16) & 0xffff), (mdparam1 == 0xffffffffffffffffULL) ? 0 : (mdparam1 & 0xffff)); \
+		if ((MaskedPPriority < 0) || (MaskedPPriority >= MAX_PRIORITY_LEVELS)) { MESSAGE ("b0rked!\n"); ccsp_kernel_exit(0,(word)Wptr); } \
 		MESSAGE ("(" FMT ")\n", ##args)
 	#define ENTRY_TRACE0(X) \
 		LOAD_ESP (the_stackptr); \
-		MESSAGE ("<enter>   "#X" [0x%x,0x%8.8x,%p,%p,%p,%p] (esp=%8.8x) [%d:%d]\n", (unsigned int)PPriority, (unsigned int)PState, Wptr, Fptr, Bptr, Tptr, the_stackptr, \
-				(mdparam1 == 0xffffffff) ? 0 : ((mdparam1 >> 16) & 0xffff), (mdparam1 == 0xffffffff) ? 0 : (mdparam1 & 0xffff))
+		MESSAGE ("<enter>   "#X" [0x%lx,0x%016lx,%p,%p,%p,%p] (esp=%016lx) [%d:%d]\n", (word)PPriority, (word)PState, Wptr, Fptr, Bptr, Tptr, the_stackptr, \
+				(mdparam1 == 0xffffffffffffffffULL) ? 0 : ((mdparam1 >> 16) & 0xffff), (mdparam1 == 0xffffffffffffffffULL) ? 0 : (mdparam1 & 0xffff))
 #else	/* !ENABLE_KTRACES */
 	#define ENTRY_TRACE(X, FMT, args...)
 	#define ENTRY_TRACE0(X)
@@ -550,8 +550,8 @@ static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)
 	Wptr[Priofinity] = sched->priofinity;
 }
 /*}}}*/
-/*{{{  static TRIVIAL void save_return (sched_t *sched, word *Wptr, unsigned int return_address)*/
-static TRIVIAL void save_return (sched_t *sched, word *Wptr, unsigned int return_address)
+/*{{{  static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address)*/
+static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address)
 {
 	Wptr[Iptr] = (word) return_address;
 }
@@ -1771,8 +1771,8 @@ static bool find_remove_from_timerq (sched_t *sched, bool remove, word ws_base, 
 	return false;
 }
 /*}}}*/
-/*{{{  int not_on_any_queue (unsigned int ws_base, unsigned int ws_limit)*/
-int not_on_any_queue (unsigned int ws_base, unsigned int ws_limit)
+/*{{{  int not_on_any_queue (word ws_base, word ws_limit)*/
+int not_on_any_queue (word ws_base, word ws_limit)
 {
 	sched_t *sched 		= _local_scheduler;
 	unsigned int rqstate 	= att_val (&(sched->rqstate));
@@ -1793,8 +1793,8 @@ int not_on_any_queue (unsigned int ws_base, unsigned int ws_limit)
 	return find_remove_from_timerq (sched, false, ws_base, ws_limit) ? false : true;
 }
 /*}}}*/
-/*{{{  int remove_from_any_queue (unsigned int ws_base, unsigned int ws_limit)*/
-int remove_from_any_queue (unsigned int ws_base, unsigned int ws_limit)
+/*{{{  int remove_from_any_queue (word ws_base, word ws_limit)*/
+int remove_from_any_queue (word ws_base, word ws_limit)
 {
 	sched_t *sched 		= _local_scheduler;
 	unsigned int rqstate 	= att_val (&(sched->rqstate));
@@ -2146,7 +2146,7 @@ K_CALL_DEFINE_0_0 (Y_shutdown)
 /*}}}*/
 /*{{{  error entry-points */
 /*{{{  static void kernel_common_error (...) */
-static void kernel_common_error (word *Wptr, sched_t *sched, unsigned int return_address, char *name)
+static void kernel_common_error (word *Wptr, sched_t *sched, word return_address, char *name)
 {
 #if defined(DYNAMIC_PROCS) && !defined(RMOX_BUILD)
 	d_process *kr_dptr;
@@ -2332,20 +2332,20 @@ K_CALL_DEFINE_0_0 (Y_BasicRangeError)
 	kernel_common_error (Wptr, sched, return_address, "BasicRangeError");
 }
 /*}}}*/
-/*{{{  void dump_trap_info (unsigned int return_address, word a_val, word b_val, word c_val)*/
+/*{{{  void dump_trap_info (word return_address, word a_val, word b_val, word c_val)*/
 /* dump_trap_info for dumping on TRAP*/
-void dump_trap_info (word *Wptr, word *Fptr, word *Bptr, unsigned int return_address, word a_val, word b_val, word c_val)
+void dump_trap_info (word *Wptr, word *Fptr, word *Bptr, word return_address, word a_val, word b_val, word c_val)
 {
 	int i;
 
 	BMESSAGE ("** TRAP **\n");
-	MESSAGE ("\tWptr  0x%8.8x    raddr 0x%8.8x\n", (unsigned int)Wptr, (unsigned int)return_address);
-	MESSAGE ("\tFptr  0x%8.8x    Bptr  0x%8.8x\n", (unsigned int)Fptr, (unsigned int)Bptr);
-	MESSAGE ("\tAreg  0x%8.8x    Iptr  0x%8.8x\n", (unsigned int)a_val, (unsigned int)Wptr[Iptr]);
-	MESSAGE ("\tBreg  0x%8.8x    Creg  0x%8.8x\n", (unsigned int)b_val, (unsigned int)c_val);
+	MESSAGE ("\tWptr  0x%016lx    raddr 0x%016lx\n", (word)Wptr, (word)return_address);
+	MESSAGE ("\tFptr  0x%016lx    Bptr  0x%016lx\n", (word)Fptr, (word)Bptr);
+	MESSAGE ("\tAreg  0x%016lx    Iptr  0x%016lx\n", (word)a_val, (word)Wptr[Iptr]);
+	MESSAGE ("\tBreg  0x%016lx    Creg  0x%016lx\n", (word)b_val, (word)c_val);
 	for (i=6; i >= -5; i-=2) {
-		MESSAGE ("\tWptr[%-2d] @ (0x%8.8x) = 0x%8.8x", i, (unsigned int)&(Wptr[i]), (unsigned int)Wptr[i]);
-		MESSAGE ("\tWptr[%-2d] @ (0x%8.8x) = 0x%8.8x\n", i-1, (unsigned int)&(Wptr[i-1]), (unsigned int)Wptr[i-1]);
+		MESSAGE ("\tWptr[%-2d] @ (0x%016lx) = 0x%016lx", i, (word)&(Wptr[i]), (word)Wptr[i]);
+		MESSAGE ("\tWptr[%-2d] @ (0x%016lx) = 0x%016lx\n", i-1, (word)&(Wptr[i-1]), (word)Wptr[i-1]);
 	}
 	
 	ccsp_show_last_debug_insert ();
@@ -3627,7 +3627,7 @@ void ccsp_mt_release (void *ptr)
 /*{{{  blocking system calls */
 #if !defined(RMOX_BUILD) && defined(BLOCKING_SYSCALLS)
 /*{{{  static void kernel_bsc_dispatch (...)*/
-static void kernel_bsc_dispatch (sched_t *sched, unsigned int return_address, word *Wptr, void *b_func, void *b_param, int adjust)
+static void kernel_bsc_dispatch (sched_t *sched, word return_address, word *Wptr, void *b_func, void *b_param, int adjust)
 {
 	bsc_batch_t *job;
 
@@ -3638,8 +3638,8 @@ static void kernel_bsc_dispatch (sched_t *sched, unsigned int return_address, wo
 		MESSAGE ("kernel_bsc_dispatch: return_address = %p, b_param = %p, b_func = %p, Wptr = %p, adjust = %d\n",
 			(void *)return_address, (void *)b_param, (void *)b_func, (void *)Wptr, adjust);
 		for (i=6; i >= -5; i-=2) {
-			MESSAGE ("\tWptr[%-2d] @ (0x%8.8x) = 0x%8.8x", i, (unsigned int)&(Wptr[i]), (unsigned int)Wptr[i]);
-			MESSAGE ("\tWptr[%-2d] @ (0x%8.8x) = 0x%8.8x\n", i-1, (unsigned int)&(Wptr[i-1]), (unsigned int)Wptr[i-1]);
+			MESSAGE ("\tWptr[%-2d] @ (0x%016lx) = 0x%016lx", i, (word)&(Wptr[i]), (word)Wptr[i]);
+			MESSAGE ("\tWptr[%-2d] @ (0x%016lx) = 0x%016lx\n", i-1, (word)&(Wptr[i-1]), (word)Wptr[i-1]);
 		}
 	}
 	#endif
@@ -4726,6 +4726,8 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 		atw_set (channel_address, NotProcess_p);
 	}
 
+	BMESSAGE ("kernel_chan_io: temp=%p, Pointer=%d, temp[Pointer]=%p\n", (void *)temp, Pointer, (void *)(((word *)temp)[Pointer]));
+
 	if (flags & CIO_INPUT) {
 		destination_address = pointer;
 		source_address = (byte *)(((word *)temp)[Pointer]);
@@ -4859,6 +4861,9 @@ K_CALL_DEFINE_2_0 (Y_outbyte)
 
 	pointer		= (byte *) Wptr;
 	*pointer	= (byte) value;
+	
+	/* DEBUG */
+	BMESSAGE ("kernel_Y_outbyte: Wptr=%p, channel=%p, value=%ld, pointer=%p\n", Wptr, channel_address, value, pointer);
 	
 	kernel_chan_io (CIO_OUTPUT, Wptr, sched, channel_address, pointer, 1);
 }
@@ -5153,8 +5158,8 @@ K_CALL_DEFINE_0_0 (X_talt)
 	K_ZERO_OUT ();
 }
 /*}}}*/
-/*{{{  static INLINE void kernel_altend (word *Wptr, sched_t *sched, unsigned int return_address, bool jump)*/
-static INLINE void kernel_altend (word *Wptr, sched_t *sched, unsigned int return_address, bool jump)
+/*{{{  static INLINE void kernel_altend (word *Wptr, sched_t *sched, word return_address, bool jump)*/
+static INLINE void kernel_altend (word *Wptr, sched_t *sched, word return_address, bool jump)
 {
 	word state = atw_val (&(Wptr[State]));
 
@@ -5310,7 +5315,7 @@ K_CALL_DEFINE_0_0 (Y_taltwt)
 /*
  *	enable channel
  */
-static INLINE bool kernel_enbc (word *Wptr, sched_t *sched, unsigned int return_address, word **channel_address, bool jump, bool set_address)
+static INLINE bool kernel_enbc (word *Wptr, sched_t *sched, word return_address, word **channel_address, bool jump, bool set_address)
 {
 	const word ptr = (((word) Wptr) | 1);
 	word temp = atw_val (channel_address);
@@ -5450,7 +5455,7 @@ K_CALL_DEFINE_2_1 (X_cenbc)
 /*
  *	enable skip guard
  */
-static INLINE void kernel_enbs (word *Wptr, unsigned int return_address, bool jump, bool set_address)
+static INLINE void kernel_enbs (word *Wptr, word return_address, bool jump, bool set_address)
 {
 	if (jump) {
 		atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
@@ -5563,7 +5568,7 @@ K_CALL_DEFINE_1_1 (X_cenbs)
 /*
  *	enable timer
  */
-static INLINE bool kernel_enbt (word *Wptr, sched_t *sched, unsigned int return_address, Time timeout, bool jump, bool check, bool set_address)
+static INLINE bool kernel_enbt (word *Wptr, sched_t *sched, word return_address, Time timeout, bool jump, bool check, bool set_address)
 {
 	Time now = (jump || check) ? Time_GetTime (sched) : 0;
 
@@ -5693,7 +5698,7 @@ K_CALL_DEFINE_2_1 (X_cenbt)
 /*
  *	disable channel
  */
-static INLINE word kernel_disc (word *Wptr, unsigned int process_address, word **channel_address, bool set_jump)
+static INLINE word kernel_disc (word *Wptr, word process_address, word **channel_address, bool set_jump)
 {
 	word temp = atw_val (channel_address);
 
@@ -5865,7 +5870,7 @@ K_CALL_DEFINE_2_1 (X_ndiss)
 /*
  *	disable timer
  */
-static INLINE word kernel_dist (word *Wptr, sched_t *sched, unsigned int process_address, Time timeout, bool set_jump)
+static INLINE word kernel_dist (word *Wptr, sched_t *sched, word process_address, Time timeout, bool set_jump)
 {
 	word tlink = Wptr[TLink];
 	
@@ -6464,19 +6469,19 @@ K_CALL_DEFINE_1_1 (X_mppclone)
  */
 K_CALL_DEFINE_3_0 (Y_mppserialise)
 {
-	unsigned int count, process_address;
+	word count, process_address;
 	word **channel_address;
 	byte *destination_address;
 	
 	K_CALL_PARAMS_3 (count, destination_address, channel_address);
 
 	/* actually pass a pointer to it, may need to nullify */
-	process_address = ((word *)(*channel_address))[Pointer];
-	if (!mpcb_mpp_serialise ((mp_ctrlblk **)process_address, (unsigned int *)process_address + 1, (int *)destination_address, (int *)count)) {
+	process_address = (word)(((word *)(*channel_address))[Pointer]);
+	if (!mpcb_mpp_serialise ((mp_ctrlblk **)process_address, (unsigned int *)((word *)process_address + 1), (word *)destination_address, (int *)count)) {
 		if (ccsp_ignore_errors) {
 			kernel_scheduler (sched);
 		} else {
-			BMESSAGE ("mobile process serialise error at 0x%x, Wptr = 0x%x.\n", return_address, (unsigned int)Wptr);
+			BMESSAGE ("mobile process serialise error at 0x%lx, Wptr = 0x%p.\n", return_address, Wptr);
 			ccsp_kernel_exit (1, return_address);
 		}
 	}
@@ -6498,19 +6503,19 @@ K_CALL_DEFINE_3_0 (Y_mppserialise)
  */
 K_CALL_DEFINE_3_0 (Y_mppdeserialise)
 {
-	unsigned int count, process_address;
+	word count, process_address;
 	word **channel_address;
 	byte *source_address;
 	
 	K_CALL_PARAMS_3 (channel_address, source_address, count);
 
 	/* pass a pointer to the ws locn */
-	process_address = ((word *)(*channel_address))[Pointer];
-	if (!mpcb_mpp_deserialise ((int)source_address, (int)count, (mp_ctrlblk **)process_address, (unsigned int *)process_address + 1)) {
+	process_address = (word)(((word *)(*channel_address))[Pointer]);
+	if (!mpcb_mpp_deserialise ((word)source_address, (int)count, (mp_ctrlblk **)process_address, (unsigned int *)((word *)process_address + 1))) {
 		if (ccsp_ignore_errors) {
 			kernel_scheduler (sched);
 		} else {
-			BMESSAGE ("mobile process serialise error at 0x%x, Wptr = 0x%x.\n", return_address, (unsigned int)Wptr);
+			BMESSAGE ("mobile process serialise error at 0x%lx, Wptr = 0x%p.\n", return_address, Wptr);
 			ccsp_kernel_exit (1, return_address);
 		}
 	}

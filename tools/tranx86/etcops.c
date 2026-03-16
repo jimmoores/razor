@@ -1,3 +1,7 @@
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 /*
  *	etcops.h - ETC operations
  *	Copyright (C) 2000-2004 Fred Barnes <frmb@kent.ac.uk>

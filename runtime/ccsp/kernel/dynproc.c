@@ -58,12 +58,12 @@ static d_process_msqueue *dyn_process_msqueue = NULL;
 static d_process_libnamehash *dyn_process_lhash = NULL;
 /*}}}*/
 
-/*{{{  void _dynproc_dumpinfo (int *ws)*/
+/*{{{  void _dynproc_dumpinfo (word *ws)*/
 /*
- *	void _dynproc_dumpinfo (int *ws)
+ *	void _dynproc_dumpinfo (word *ws)
  *	dumps information about dynamic processes (debug mostly, called from occam)
  */
-void _dynproc_dumpinfo (int *ws)
+void _dynproc_dumpinfo (word *ws)
 {
 	d_process *tp_pq;
 	d_process_msqueue *tp_mq;
@@ -75,7 +75,7 @@ void _dynproc_dumpinfo (int *ws)
 		MESSAGE ("DPCB %p (par:%p, chld:%p, q:%p,%p) mem %p\n", tp_pq, tp_pq->parent, tp_pq->children, tp_pq->prev, tp_pq->next, tp_pq->mem_start);
 		MESSAGE ("     ws %d @ %p (base @ %p), vs %d @ %p\n", tp_pq->ws_size, tp_pq->ws_ptr, tp_pq->ws_base, tp_pq->vs_size, tp_pq->vs_ptr);
 		MESSAGE ("     ms %d MSCP %p\n", tp_pq->ms_size, tp_pq->ms_ptr);
-		MESSAGE ("     occam caller Wptr %p, raddr %p\n", (word *)tp_pq->holding_wptr, (char *)tp_pq->holding_raddr);
+		MESSAGE ("     occam caller Wptr %p, raddr %p\n", (word *)tp_pq->holding_wptr, (void *)tp_pq->holding_raddr);
 		MESSAGE ("     proc [%s] entered @ %p, suspended @ %p, running %d\n", tp_pq->proc_name, tp_pq->entrypoint, tp_pq->suspended, tp_pq->is_running);
 	}
 	for (tp_mq = dyn_process_msqueue; tp_mq; tp_mq = tp_mq->next) {
@@ -87,14 +87,14 @@ void _dynproc_dumpinfo (int *ws)
 	return;
 }
 /*}}}*/
-/*{{{  int faulting_dynproc (word **wptr_ptr, unsigned int *raddr_ptr, char *fault, d_process **tp_return)*/
+/*{{{  int faulting_dynproc (word **wptr_ptr, word *raddr_ptr, char *fault, d_process **tp_return)*/
 /*
- *	int faulting_dynproc (word **wptr_ptr, unsigned int *raddr_ptr, char *fault, d_process **tp_return)
+ *	int faulting_dynproc (word **wptr_ptr, word *raddr_ptr, char *fault, d_process **tp_return)
  *	called to see if a dynamic process is responsible for a run-time error,
  *	and if so, arrange for its termination (and return to occam for the
  *	calling process).
  */
-int faulting_dynproc (word **wptr_ptr, unsigned int *raddr_ptr, char *fault, d_process **tp_return)
+int faulting_dynproc (word **wptr_ptr, word *raddr_ptr, char *fault, d_process **tp_return)
 {
 	d_process *tp;
 
@@ -103,10 +103,10 @@ MESSAGE ("faulting_dynproc: having a look for broken dynamic processes... *wptr_
 _dynproc_dumpinfo (NULL);
 #endif
 	for (tp = dyn_process_list; tp; tp = tp->next) {
-		if (tp->is_running && ((int)(*wptr_ptr) >= (int)tp->ws_base) && ((int)(*wptr_ptr) < ((int)tp->ws_base + tp->ws_size + (4 * sizeof (int))))) {
-			if (!not_on_any_queue ((unsigned int)tp->ws_base, ((unsigned int)tp->ws_base) + tp->ws_size)) {
+		if (tp->is_running && ((word)(*wptr_ptr) >= (word)tp->ws_base) && ((word)(*wptr_ptr) < ((word)tp->ws_base + tp->ws_size + (4 * sizeof (word))))) {
+			if (!not_on_any_queue ((word)tp->ws_base, ((word)tp->ws_base) + tp->ws_size)) {
 				BMESSAGE ("dynamic process at %p generated %s but is still active, removing from queues\n", *wptr_ptr, fault);
-				remove_from_any_queue ((unsigned int)tp->ws_base, ((unsigned int)tp->ws_base) + tp->ws_size);
+				remove_from_any_queue ((word)tp->ws_base, ((word)tp->ws_base) + tp->ws_size);
 			}
 			if (tp->ms_ptr) {
 				BMESSAGE ("dynamic process has mobilespace at %p, invalidating it\n", tp->ms_ptr->msptr);
@@ -343,12 +343,12 @@ static void do_ccsp_closelib (void *handle)
 	}
 }
 /*}}}*/
-/*{{{  static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, int *process)*/
+/*{{{  static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, word *process)*/
 /*
- *	void do_ccsp_loadproc (void *libhandle, char *pname, int plen, int *process)
+ *	void do_ccsp_loadproc (void *libhandle, char *pname, int plen, word *process)
  *	loads a dynamic process (sets up initial workspace, etc.)
  */
-static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, int *process)
+static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, word *process)
 {
 	d_process *tp;
 	d_process_msqueue *msinfo;
@@ -417,8 +417,8 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, int *proce
 		return;
 	}
 	/* create new workspace */
-	i = (*new_wsbytes + 64 + *new_vsbytes + sizeof (d_process));
-	i += (4 - (i % 4));
+	i = (*new_wsbytes + (16 * sizeof(word)) + *new_vsbytes + sizeof (d_process));
+	i += (sizeof(word) - (i % sizeof(word)));
 	tptr = (char *)dmem_alloc (i);
 	if (!tptr) {
 		BMESSAGE ("load_dynamic_process: out of memory (wanted %d bytes)\n", i);
@@ -442,8 +442,8 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, int *proce
 			*process = 0;
 			return;
 		}
-		for (k=0; k<(*new_msbytes >> 2); k++) {
-			((int *)(msinfo->msptr))[k] = 0x80000000;
+		for (k=0; k<(*new_msbytes / sizeof(word)); k++) {
+			((word *)(msinfo->msptr))[k] = MostNeg;
 		}
 	} else {
 		msinfo = NULL;
@@ -456,10 +456,10 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, int *proce
 	tp->vs_size 		= *new_vsbytes;
 	tp->ms_size 		= *new_msbytes;
 	j = sizeof (d_process);
-	j = ((j + 3) >> 2) << 2;	/* round up to word boundary */
+	j = ((j + (sizeof(word)-1)) / sizeof(word)) * sizeof(word);	/* round up to word boundary */
 	tp->ws_ptr 		= (word *)(((char *)tptr) + j + tp->ws_size);
 	tp->ws_base 		= (word *)(((char *)tp->ws_ptr) - tp->ws_size);
-	tp->vs_ptr 		= (word *)(((char *)tp->ws_ptr) + 64);
+	tp->vs_ptr 		= (word *)(((char *)tp->ws_ptr) + (16 * sizeof(word)));
 	tp->ms_ptr 		= msinfo;
 	if (msinfo) {
 		msinfo->in_use	= tp;
@@ -483,7 +483,7 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, int *proce
 		MESSAGE ("***     (entrypoint=%p, lhandle=%p, result=%p, suspended=%p)\n",
 			tp->entrypoint, tp->lhandle, tp->result, tp->suspended);
 	#endif
-	*process = (int)tp;
+	*process = (word)tp;
 
 	/* add to the queue */
 	tp->next = NULL;
@@ -501,12 +501,12 @@ static void do_ccsp_loadproc (void *libhandle, char *pname, int plen, int *proce
 	return;
 }
 /*}}}*/
-/*{{{  static void do_ccsp_freeproc (int *process)*/
+/*{{{  static void do_ccsp_freeproc (word *process)*/
 /*
- *	void do_ccsp_freeproc (int *process)
+ *	void do_ccsp_freeproc (word *process)
  *	frees a dynamic process (deallocates workspace, etc.)
  */
-static void do_ccsp_freeproc (int *process)
+static void do_ccsp_freeproc (word *process)
 {
 	d_process *tp;
 
@@ -552,23 +552,23 @@ static void do_ccsp_freeproc (int *process)
 	return;
 }
 /*}}}*/
-/*{{{  static void do_ccsp_suspendproc (d_process *tp, int *result)*/
+/*{{{  static void do_ccsp_suspendproc (d_process *tp, word *result)*/
 /*
- *	void do_ccsp_suspendproc (d_process *tp, int *result)
+ *	void do_ccsp_suspendproc (d_process *tp, word *result)
  *	suspends a dynamic process
  */
-static void do_ccsp_suspendproc (d_process *tp, int *result)
+static void do_ccsp_suspendproc (d_process *tp, word *result)
 {
 	int i, saved;
-	unsigned int ws_base, ws_limit;
-	unsigned int **ca_base;
+	word ws_base, ws_limit;
+	word **ca_base;
 	d_suspended_inf *t_suspended;
 	word *xx_wptr;
 
-	ws_base = (unsigned int)tp->ws_ptr - tp->ws_size;
-	ws_limit = (unsigned int)tp->ws_ptr;
+	ws_base = (word)tp->ws_ptr - tp->ws_size;
+	ws_limit = (word)tp->ws_ptr;
 	#ifdef DEBUG_DYNPROC
-		MESSAGE ("debug: do_ccsp_suspendproc (%p, %p)\ndebug: checking [base=0x%x, limit=0x%x, size=0x%x]", tp, result, ws_base, ws_limit, ws_limit - ws_base);
+		MESSAGE ("debug: do_ccsp_suspendproc (%p, %p)\ndebug: checking [base=0x%lx, limit=0x%lx, size=0x%x]", tp, result, ws_base, ws_limit, (unsigned int)(ws_limit - ws_base));
 	#endif
 	if (!not_on_any_queue (ws_base, ws_limit)) {
 		/* component on run queue or timer queue */
@@ -585,14 +585,14 @@ static void do_ccsp_suspendproc (d_process *tp, int *result)
 	if (!tp->suspended) {
 		t_suspended = (d_suspended_inf *)dmem_alloc (sizeof (d_suspended_inf));
 		t_suspended->num_ichans = (int)(tp->ws_ptr[3]);
-		t_suspended->ichans = (int *)dmem_alloc ((t_suspended->num_ichans + 1) * sizeof (int));
+		t_suspended->ichans = (word *)dmem_alloc ((t_suspended->num_ichans + 1) * sizeof (word));
 		t_suspended->num_ochans = (int)(tp->ws_ptr[5]);
-		t_suspended->ochans = (int *)dmem_alloc ((t_suspended->num_ochans + 1) * sizeof (int));
+		t_suspended->ochans = (word *)dmem_alloc ((t_suspended->num_ochans + 1) * sizeof (word));
 	} else {
 		t_suspended = tp->suspended;
 	}
 	saved = 0;
-	ca_base = (unsigned int **)tp->ws_ptr[2];
+	ca_base = (word **)tp->ws_ptr[2];
 	for (i=0; i<t_suspended->num_ichans; i++) {
 		if (!(*ca_base)[i]) {
 			t_suspended->ichans[i] = 0;
@@ -602,11 +602,11 @@ MESSAGE ("debug: not one of my input channels (do_ccsp_suspendproc)\n");
 			t_suspended->ichans[i] = 0;
 		} else {
 			t_suspended->ichans[i] = (*ca_base)[i];
-			*ca_base[i] = NotProcess_p;
+			(*ca_base)[i] = NotProcess_p;
 			saved++;
 		}
 	}
-	ca_base = (unsigned int **)tp->ws_ptr[4];
+	ca_base = (word **)tp->ws_ptr[4];
 	for (i=0; i<t_suspended->num_ochans; i++) {
 		if (!(*ca_base)[i]) {
 			t_suspended->ochans[i] = 0;
@@ -638,26 +638,26 @@ MESSAGE ("debug: not one of my output channels (do_ccsp_suspendproc)\n");
 	return;
 }
 /*}}}*/
-/*{{{  static void do_ccsp_sizeproc (int *process, int *bytes)*/
+/*{{{  static void do_ccsp_sizeproc (word *process, word *bytes)*/
 /*
- *	void do_ccsp_sizeproc (int *process, int *bytes)
+ *	void do_ccsp_sizeproc (word *process, word *bytes)
  *	sizes a process (bytes required to store it)
  */
-static void do_ccsp_sizeproc (int *process, int *bytes)
+static void do_ccsp_sizeproc (word *process, word *bytes)
 {
 	d_process *tp;
 
 	tp = (d_process *)*process;
-	*bytes = -1;
+	*bytes = (word)-1;
 	return;
 }
 /*}}}*/
-/*{{{  static void do_ccsp_writeproc (int *process, char *fname, int flen, int *result)*/
+/*{{{  static void do_ccsp_writeproc (word *process, char *fname, int flen, word *result)*/
 /*
- *	void do_ccsp_writeproc (int *process, char *fname, int flen, int *result)
+ *	void do_ccsp_writeproc (word *process, char *fname, int flen, word *result)
  *	writes a (suspended) process to disk
  */
-static void do_ccsp_writeproc (int *process, char *fname, int flen, int *result)
+static void do_ccsp_writeproc (word *process, char *fname, int flen, word *result)
 {
 	d_process *tp;
 	static char dp_wfname[FILENAME_MAX];
@@ -667,12 +667,13 @@ static void do_ccsp_writeproc (int *process, char *fname, int flen, int *result)
 	dp_offset *offsets, *new_offsets;
 	int num_offs, max_offs, new_max_offs;
 	word *ws_start, *ws_limit, *ws_walk;
-	int *c_offsets;
+	word *c_offsets;
+	int j;
 
 	c_offsets = NULL;
 	tp = (d_process *)*process;
 	if (tp->is_running || !tp->suspended) {
-		*result = -1;
+		*result = (word)-1;
 		return;
 	}
 	if (flen >= FILENAME_MAX) {
@@ -682,7 +683,7 @@ static void do_ccsp_writeproc (int *process, char *fname, int flen, int *result)
 	dp_wfname[flen] = '\0';
 	fd = open (dp_wfname, O_CREAT | O_TRUNC | O_WRONLY, 0600);
 	if (fd < 0) {
-		*result = -1;
+		*result = (word)-1;
 		return;
 	}
 	memcpy (dph.magic, "\033SOPv0.9", 8);
@@ -715,7 +716,7 @@ static void do_ccsp_writeproc (int *process, char *fname, int flen, int *result)
 				max_offs = new_max_offs;
 			}
 			offsets[num_offs].ws_offset = i;
-			offsets[num_offs].adjustment = (int)(*ws_walk - (word)tp->mem_start);
+			offsets[num_offs].adjustment = (int)((word)*ws_walk - (word)tp->mem_start);
 			num_offs++;
 		}
 	}
@@ -734,25 +735,25 @@ static void do_ccsp_writeproc (int *process, char *fname, int flen, int *result)
 	/* generate channel offsets */
 	i = (tp->suspended->num_ichans > tp->suspended->num_ochans) ? tp->suspended->num_ichans : tp->suspended->num_ochans;
 	if (i) {
-		c_offsets = (int *)dmem_alloc (i * sizeof (int));
+		c_offsets = (word *)dmem_alloc (i * sizeof (word));
 
 		if (tp->suspended->num_ichans) {
 			/* input channel offsets */
 			for (i=0; i<tp->suspended->num_ichans; i++) {
-				c_offsets[i] = (tp->suspended->ichans[i] > 0) ? (int)((word)tp->suspended->ichans[i] - (word)tp->mem_start) : 0;
+				c_offsets[i] = (tp->suspended->ichans[i] > 0) ? (word)((word)tp->suspended->ichans[i] - (word)tp->mem_start) : 0;
 			}
-			i *= sizeof (int);
-			if (write (fd, (char *)c_offsets, i) != i) {
+			j = i * sizeof (word);
+			if (write (fd, (char *)c_offsets, j) != j) {
 				goto cleanup_out_error;
 			}
 		}
 		if (tp->suspended->num_ochans) {
 			/* output channel offsets */
 			for (i=0; i<tp->suspended->num_ochans; i++) {
-				c_offsets[i] = (tp->suspended->ochans[i] > 0) ? (int)((word)tp->suspended->ochans[i] - (word)tp->mem_start) : 0;
+				c_offsets[i] = (tp->suspended->ochans[i] > 0) ? (word)((word)tp->suspended->ochans[i] - (word)tp->mem_start) : 0;
 			}
-			i *= sizeof (int);
-			if (write (fd, (char *)c_offsets, i) != i) {
+			j = i * sizeof (word);
+			if (write (fd, (char *)c_offsets, j) != j) {
 				goto cleanup_out_error;
 			}
 		}
@@ -790,23 +791,23 @@ cleanup_out_error:
 		offsets = NULL;
 	}
 	close (fd);
-	*result = -1;
+	*result = (word)-1;
 	return;
 }
 /*}}}*/
-/*{{{  static void do_ccsp_readproc (int *process, char *fname, int flen, int *result)*/
+/*{{{  static void do_ccsp_readproc (word *process, char *fname, int flen, word *result)*/
 /*
- *	void do_ccsp_readproc (int *process, char *fname, int flen, int *result)
+ *	void do_ccsp_readproc (word *process, char *fname, int flen, word *result)
  *	reads a (suspended) process from disk
  */
-static void do_ccsp_readproc (int *process, char *fname, int flen, int *result)
+static void do_ccsp_readproc (word *process, char *fname, int flen, word *result)
 {
 	dp_header dph;
-	int fd, i;
+	int fd, i, j;
 	static char dp_rname[FILENAME_MAX];
 	d_process *tp;
 	char *tmp_name;
-	int *c_offsets;
+	word *c_offsets;
 	word *ws_start, *ws_limit;
 	dp_offset dpo;
 
@@ -814,7 +815,7 @@ static void do_ccsp_readproc (int *process, char *fname, int flen, int *result)
 	tmp_name = NULL;
 	tp = (d_process *)*process;
 	if (tp->is_running || !tp->suspended) {
-		*result = -1;
+		*result = (word)-1;
 		return;
 	}
 	if (flen >= FILENAME_MAX) {
@@ -824,19 +825,19 @@ static void do_ccsp_readproc (int *process, char *fname, int flen, int *result)
 	dp_rname[flen] = '\0';
 	fd = open (fname, O_RDONLY);
 	if (fd < 0) {
-		*result = -1;
+		*result = (word)-1;
 		return;
 	}
 
 	/* read header */
 	if (read (fd, (char *)&dph, sizeof (dph)) != sizeof (dph)) {
 		close (fd);
-		*result = -1;
+		*result = (word)-1;
 		return;
 	}
 	if (memcmp (dph.magic, "\033SOPv0.9", 8)) {
 		close (fd);
-		*result = -1;
+		*result = (word)-1;
 		return;
 	}
 
@@ -844,7 +845,7 @@ static void do_ccsp_readproc (int *process, char *fname, int flen, int *result)
 	if ((dph.ws_size != tp->ws_size) || (dph.vs_size != tp->vs_size) ||
 		(dph.num_ichans != tp->suspended->num_ichans) || (dph.num_ochans != tp->suspended->num_ochans)) {
 		close (fd);
-		*result = -1;
+		*result = (word)-1;
 		return;
 	}
 
@@ -863,30 +864,30 @@ static void do_ccsp_readproc (int *process, char *fname, int flen, int *result)
 	/* allocate buffer read in channel offsets */
 	i = (dph.num_ichans > dph.num_ochans) ? dph.num_ichans : dph.num_ochans;
 	if (i) {
-		c_offsets = (int *)dmem_alloc (i * sizeof (int));
+		c_offsets = (word *)dmem_alloc (i * sizeof (word));
 		if (dph.num_ichans) {
-			i = dph.num_ichans * sizeof (int);
-			if (read (fd, (char *)c_offsets, i) != i) {
+			j = dph.num_ichans * sizeof (word);
+			if (read (fd, (char *)c_offsets, j) != j) {
 				goto r_out_error;
 			}
 			for (i=0; i<dph.num_ichans; i++) {
 				if (!c_offsets[i]) {
 					/* tp->suspended->ichans[i] = 0; */
 				} else {
-					tp->suspended->ichans[i] = (c_offsets[i] + (int)tp->mem_start);
+					tp->suspended->ichans[i] = (word)((word)c_offsets[i] + (word)tp->mem_start);
 				}
 			}
 		}
 		if (dph.num_ochans) {
-			i = dph.num_ochans * sizeof (int);
-			if (read (fd, (char *)c_offsets, i) != i) {
+			j = dph.num_ochans * sizeof (word);
+			if (read (fd, (char *)c_offsets, j) != j) {
 				goto r_out_error;
 			}
 			for (i=0; i<dph.num_ochans; i++) {
 				if (!c_offsets[i]) {
 					/* tp->suspended->ochans[i] = 0; */
 				} else {
-					tp->suspended->ochans[i] = (c_offsets[i] + (int)tp->mem_start);
+					tp->suspended->ochans[i] = (word)((word)c_offsets[i] + (word)tp->mem_start);
 				}
 			}
 		}
@@ -908,7 +909,7 @@ static void do_ccsp_readproc (int *process, char *fname, int flen, int *result)
 		if (read (fd, (char *)&dpo, sizeof (dp_offset)) != sizeof (dp_offset)) {
 			goto r_out_error;
 		}
-		ws_start[dpo.ws_offset] = dpo.adjustment + (int)tp->mem_start;
+		ws_start[dpo.ws_offset] = dpo.adjustment + (word)tp->mem_start;
 	}
 	/* okay, should have done that OK... */
 
@@ -929,18 +930,18 @@ r_out_error:
 		tmp_name = NULL;
 	}
 	close (fd);
-	*result = -1;
+	*result = (word)-1;
 	return;
 }
 /*}}}*/
-/*{{{  static void do_ccsp_libhandleof (d_process *tp, int *hptr)*/
+/*{{{  static void do_ccsp_libhandleof (d_process *tp, word *hptr)*/
 /*
- *	void do_ccsp_libhandleof (d_process *tp, int *hptr)
+ *	void do_ccsp_libhandleof (d_process *tp, word *hptr)
  *	returns the libhandle for a particular process
  */
-static void do_ccsp_libhandleof (d_process *tp, int *hptr)
+static void do_ccsp_libhandleof (d_process *tp, word *hptr)
 {
-	*hptr = (int)tp->lhandle;
+	*hptr = (word)tp->lhandle;
 	return;
 }
 /*}}}*/
@@ -948,15 +949,15 @@ static void do_ccsp_libhandleof (d_process *tp, int *hptr)
 /*
  *	occam -> C stubs
  */
-void _ccsp_openlib (int *wsarg) { do_ccsp_openlib ((char *)(wsarg[0]), (int)(wsarg[1]), (void **)(wsarg[2])); }
-void _ccsp_closelib (int *wsarg) { do_ccsp_closelib ((void *)(wsarg[0])); }
-void _ccsp_loadproc (int *wsarg) { do_ccsp_loadproc ((void *)(wsarg[0]), (char *)(wsarg[1]), (int)(wsarg[2]), (int *)(wsarg[3])); }
-void _ccsp_freeproc (int *wsarg) { do_ccsp_freeproc ((int *)(wsarg[0])); }
-void _ccsp_suspendproc (int *wsarg) { do_ccsp_suspendproc ((d_process *)(wsarg[0]), (int *)(wsarg[1])); }
-void _ccsp_sizeproc (int *wsarg) { do_ccsp_sizeproc ((int *)(wsarg[0]), (int *)(wsarg[1])); }
-void _ccsp_writeproc (int *wsarg) { do_ccsp_writeproc ((int *)(wsarg[0]), (char *)(wsarg[1]), (int)(wsarg[2]), (int *)(wsarg[3])); }
-void _ccsp_readproc (int *wsarg) { do_ccsp_readproc ((int *)(wsarg[0]), (char *)(wsarg[1]), (int)(wsarg[2]), (int *)(wsarg[3])); }
-void _ccsp_libhandleof (int *wsarg) { do_ccsp_libhandleof ((d_process *)(wsarg[0]), (int *)(wsarg[1])); }
+void _ccsp_openlib (word *wsarg) { do_ccsp_openlib ((char *)(wsarg[0]), (int)(wsarg[1]), (void **)(wsarg[2])); }
+void _ccsp_closelib (word *wsarg) { do_ccsp_closelib ((void *)(wsarg[0])); }
+void _ccsp_loadproc (word *wsarg) { do_ccsp_loadproc ((void *)(wsarg[0]), (char *)(wsarg[1]), (int)(wsarg[2]), (word *)(wsarg[3])); }
+void _ccsp_freeproc (word *wsarg) { do_ccsp_freeproc ((word *)(wsarg[0])); }
+void _ccsp_suspendproc (word *wsarg) { do_ccsp_suspendproc ((d_process *)(wsarg[0]), (word *)(wsarg[1])); }
+void _ccsp_sizeproc (word *wsarg) { do_ccsp_sizeproc ((word *)(wsarg[0]), (word *)(wsarg[1])); }
+void _ccsp_writeproc (word *wsarg) { do_ccsp_writeproc ((word *)(wsarg[0]), (char *)(wsarg[1]), (int)(wsarg[2]), (word *)(wsarg[3])); }
+void _ccsp_readproc (word *wsarg) { do_ccsp_readproc ((word *)(wsarg[0]), (char *)(wsarg[1]), (int)(wsarg[2]), (word *)(wsarg[3])); }
+void _ccsp_libhandleof (word *wsarg) { do_ccsp_libhandleof ((d_process *)(wsarg[0]), (word *)(wsarg[1])); }
 
 /*}}}*/
 /*{{{  void dynproc_dumpprocess (d_process *p)*/
@@ -975,14 +976,14 @@ void dynproc_dumpprocess (d_process *p)
 		return;
 	}
 	ws_start = (word *)((char *)(p->ws_ptr) - (p->ws_size));
-	ws_limit = (word *)((char *)(p->ws_ptr) + 64);
-	MESSAGE ("process at %p: {mem_start=%p, ws_ptr=%p, vs_ptr=%p, ws_size=%d, vs_size=%d, holding_wptr=0x%x, holding_raddr=0x%x, entrypoint=%p, lhandle=%p, result=%p, suspended=%p\n",
-		p, p->mem_start, p->ws_ptr, p->vs_ptr, p->ws_size, p->vs_size, (word) p->holding_wptr, p->holding_raddr, p->entrypoint, p->lhandle, p->result, p->suspended);
+	ws_limit = (word *)((char *)(p->ws_ptr) + (16 * sizeof(word)));
+	MESSAGE ("process at %p: {mem_start=%p, ws_ptr=%p, vs_ptr=%p, ws_size=%d, vs_size=%d, holding_wptr=%p, holding_raddr=%p, entrypoint=%p, lhandle=%p, result=%p, suspended=%p\n",
+		p, p->mem_start, p->ws_ptr, p->vs_ptr, p->ws_size, p->vs_size, (void *) p->holding_wptr, (void *)p->holding_raddr, p->entrypoint, p->lhandle, p->result, p->suspended);
 	for (i=0, ws_walk=ws_start; ws_walk <= ws_limit; ws_walk++, i = ((i+1)%4)) {
 		if (!i) {
-			MESSAGE ("0x%8.8x:  ", (int)ws_walk);
+			MESSAGE ("%p:  ", (void *)ws_walk);
 		}
-		MESSAGE ("%8.8X  ", (unsigned int)*ws_walk);
+		MESSAGE ("%16.16lX  ", (word)*ws_walk);
 		if (i == 3) {
 			MESSAGE ("\n");
 		}
@@ -1014,7 +1015,7 @@ static int workspace_in_dprocess (word *wptr, d_process *p)
  */
 static void fixup_channel_words (d_process *p)
 {
-	unsigned int **ca_base;
+	word **ca_base;
 	int i, fixedup;
 
 	fixedup = 0;
@@ -1022,14 +1023,14 @@ static void fixup_channel_words (d_process *p)
 		BMESSAGE ("fatal: resumed process given %d input channels (expected %d)\n", (int)p->ws_ptr[3], p->suspended->num_ichans);
 		ccsp_bad_exit ();
 	}
-	ca_base = (unsigned int **)p->ws_ptr[2];
+	ca_base = (word **)p->ws_ptr[2];
 	for (i=0; i<p->suspended->num_ichans; i++) {
 		if (p->suspended->ichans[i]) {
 			if ((*ca_base)[i]) {
 				BMESSAGE ("fatal: collision in input channel\n");
 				ccsp_bad_exit ();
 			}
-			(*ca_base)[i] = p->suspended->ichans[i];
+			(*ca_base)[i] = (word)p->suspended->ichans[i];
 			fixedup++;
 		}
 	}
@@ -1037,14 +1038,14 @@ static void fixup_channel_words (d_process *p)
 		BMESSAGE ("fatal: resumed process given %d input channels (expected %d)\n", (int)p->ws_ptr[5], p->suspended->num_ochans);
 		ccsp_bad_exit ();
 	}
-	ca_base = (unsigned int **)p->ws_ptr[4];
+	ca_base = (word **)p->ws_ptr[4];
 	for (i=0; i<p->suspended->num_ochans; i++) {
 		if (p->suspended->ochans[i]) {
 			if ((*ca_base)[i]) {
 				BMESSAGE ("fatal: collision in output channel\n");
 				ccsp_bad_exit ();
 			}
-			(*ca_base)[i] = p->suspended->ochans[i];
+			(*ca_base)[i] = (word)p->suspended->ochans[i];
 			fixedup++;
 		}
 	}
@@ -1054,63 +1055,63 @@ static void fixup_channel_words (d_process *p)
 	return;
 }
 /*}}}*/
-/*{{{  d_process *dynproc_startprocess (int *params, void *exitpoint)*/
+/*{{{  d_process *dynproc_startprocess (word *params, void *exitpoint)*/
 /*
- *	d_process *dynproc_startprocess (int *params, void *exitpoint)
+ *	d_process *dynproc_startprocess (word *params, void *exitpoint)
  *	called before a dynamic process is launched
  */
-d_process *dynproc_startprocess (int *params, void *exitpoint)
+d_process *dynproc_startprocess (word *params, void *exitpoint)
 {
 	d_process *tp;
 	int i;
 
 	tp = *(d_process **)(params[0]);
 	/* tp->ws_ptr[0] = 0; */
-	tp->ws_ptr[0] = (int)exitpoint;
-	tp->ws_ptr[1] = (int)tp;
+	tp->ws_ptr[0] = (word)exitpoint;
+	tp->ws_ptr[1] = (word)tp;
 	/* copy channel array pointers */
 	for (i=0; i<4; i++) {
 		tp->ws_ptr[i+2] = params[i+1];
 	}
-	tp->result = (int *)(params[5]);
+	tp->result = (word *)(params[5]);
 	if (!tp->suspended) {
 		int sptr = 6;
 
 		if (tp->vs_size) {
-			tp->ws_ptr[sptr] = (int)tp->vs_ptr;
+			tp->ws_ptr[sptr] = (word)tp->vs_ptr;
 			sptr++;
 		}
 		if (tp->ms_size) {
-			tp->ws_ptr[sptr] = (int)tp->ms_ptr;
+			tp->ws_ptr[sptr] = (word)tp->ms_ptr;
 			sptr++;
 		}
-		tp->ws_ptr[8] = (int)tp;
+		tp->ws_ptr[8] = (word)tp;
 		for (sptr=9; sptr<16; tp->ws_ptr[sptr] = 0, sptr++);
 		ccsp_give_ws_code ((char *)tp->ws_ptr - tp->ws_size, tp->ws_size, (unsigned char *)tp->entrypoint);
 	} else {
 		fixup_channel_words (tp);
 		#ifdef DEBUG_DYNPROC
-			MESSAGE ("dynproc_startprocess: repaired channels for suspended process wptr = %p, raddr = %p\n", tp->suspended->wptr, tp->suspended->return_addr);
+			MESSAGE ("dynproc_startprocess: repaired channels for suspended process wptr = %p, raddr = %p\n", tp->suspended->wptr, (void *)tp->suspended->return_addr);
 		#endif
 	}
 	#ifdef DEBUG_DYNPROC
 		for (i=0; i<16; i++) {
-			MESSAGE ("dynproc_startprocess: tp->wsptr[%d] = 0x%8.8x\n", i, tp->ws_ptr[i]);
+			MESSAGE ("dynproc_startprocess: tp->wsptr[%d] = 0x%8.8lx\n", i, tp->ws_ptr[i]);
 		}
 	#endif
 	tp->is_running = 1;
 	return tp;
 }
 /*}}}*/
-/*{{{  int dynproc_suspendprocess (d_process *p, int *result, word *wptr, unsigned int raddr, word paf)*/
+/*{{{  int dynproc_suspendprocess (d_process *p, word *result, word *wptr, word raddr, word paf)*/
 /*
- *	int dynproc_suspendprocess (d_process *p, int *result, word *wptr, unsigned int raddr, word paf)
+ *	int dynproc_suspendprocess (d_process *p, word *result, word *wptr, word raddr, word paf)
  *	called to save various things when suspending a dynamic process
  */
-int dynproc_suspendprocess (d_process *p, int *result, word *wptr, unsigned int raddr, word paf)
+int dynproc_suspendprocess (d_process *p, word *result, word *wptr, word raddr, word paf)
 {
 	#ifdef DEBUG_DYNPROC
-		MESSAGE ("debug: in dynproc_suspendprocess (%p, %p, %p, %p)\n", p, result, wptr, raddr);
+		MESSAGE ("debug: in dynproc_suspendprocess (%p, %p, %p, %p)\n", p, result, wptr, (void *)raddr);
 	#endif
 	/* check to make sure that `wptr' is in the range (tp->ws_ptr - tp->ws_size) --> tp->ws_ptr */
 	if (!workspace_in_dprocess (wptr, p)) {

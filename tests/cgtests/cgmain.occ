@@ -1,8 +1,8 @@
 -- version control marker $Id: cgmain.occ,v 3.9 1997/03/06 16:36:15 dcw Exp $
 #IF NOT DEFINED (COMPILER.TOCK)
-#INCLUDE "cglib.module"
+#INCLUDE "cglib.occ"
 #ELSE
-#USE "cglib"
+#INCLUDE "cglib.occ"
 #ENDIF
 
 #IF DEFINED (SUCCESSFUL.TESTS)
@@ -39,6 +39,7 @@ PROC newline ()
 :
 --}}}
 --{{{  PROC writes (VAL []BYTE s)
+#PRAGMA NOINLINE writes
 PROC writes (VAL []BYTE s)
   out.string (s, 0, scr)
 :
@@ -55,12 +56,14 @@ INLINE PROC in (INT ch)
 :
 --}}}
 --{{{  [INLINE] PROC writen (VAL INT n)
-INLINE PROC writen (VAL INT n)
+#PRAGMA NOINLINE writen
+PROC writen (VAL INT n)
   out.number (n, 0, scr)
 :
 --}}}
 --{{{  [INLINE] PROC writehex (VAL INT value, length)
-INLINE PROC writehex (VAL INT value, length)
+#PRAGMA NOINLINE writehex
+PROC writehex (VAL INT value, length)
   --VAL hex IS "0123456789ABCDEF" :
   --SEQ
   --  SEQ i = 1 FOR length
@@ -70,7 +73,8 @@ INLINE PROC writehex (VAL INT value, length)
 :
 --}}}
 --{{{  [INLINE] PROC beep ()
-INLINE PROC beep ()
+#PRAGMA NOINLINE beep
+PROC beep ()
   out (7)
 :
 --}}}

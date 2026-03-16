@@ -30,13 +30,6 @@ PROC out.ch (VAL BYTE ch,  VAL INT field,  CHAN OF BYTE out)
   --}}}
 :
 
-PROC out.ch.funny (VAL BYTE ch,  VAL INT field,  CHAN OF [1]BYTE out)
-  --{{{
-  SEQ
-    VAL [1]BYTE thing RETYPES ch:
-    out ! thing
-  --}}}
-:
 
 PROC out.nl (CHAN OF BYTE out)
   SEQ
@@ -44,17 +37,7 @@ PROC out.nl (CHAN OF BYTE out)
     out ! '*n'
 :
 
-PROC in.ch (BYTE ch, CHAN OF BYTE in)
-  --{{{
-  in ? ch
-  --}}}
-:
 
-PROC out.bell (CHAN OF BYTE out)
-  --{{{
-  out.ch (BELL, 1, out)
-  --}}}
-:
 
 PROC out.string (VAL []BYTE s,  VAL INT field,  CHAN OF BYTE out)
   --{{{
@@ -122,27 +105,7 @@ PROC out.number (VAL INT n,  VAL INT field,  CHAN OF BYTE out)
   --}}}
 :
 
-PROC out.bool (VAL BOOL b,  VAL INT field,  CHAN OF BYTE out)
-  --{{{
-  IF
-    (b = TRUE)
-      out.ch ('1', field, out)
-    (b = FALSE)
-      out.ch ('0', field, out)
-    (TRUE)
-      out.ch ('.', field, out)
-  --}}}
-:
 
-PROC out.yes.no (VAL BOOL b,  VAL INT field,  CHAN OF BYTE out)
-  --{{{
-  IF
-    b
-      out.string ("yes", field, out)
-    TRUE
-      out.string ("no", field, out)
-  --}}}
-:
 
 PROC out.hex.int (VAL INT x, l, CHAN OF BYTE out)
   --{{{  body of cg.write.hex.int
@@ -166,11 +129,4 @@ PROC out.hex.int (VAL INT x, l, CHAN OF BYTE out)
   --}}}
 :
 
-PROC black.hole (CHAN OF BYTE in)
-  --{{{
-  WHILE TRUE
-    BYTE any:
-    in ? any
-  --}}}
-:
 --}}}

@@ -39,7 +39,8 @@ libccsp_a_LIBADD = \
 	kernel/dynproc.o \
 	kernel/entry.o \
 	kernel/sched.o \
-	kernel/stats.o
+	kernel/stats.o \
+	kernel/aarch64_cif.o
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = ccsp-1.6.pc

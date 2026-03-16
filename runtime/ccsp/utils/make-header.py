@@ -464,7 +464,6 @@ def gen_i386_cif_stub(f, symbol, inputs, outputs):
 		f.line("\tcall *%d(%%%%edx)" % offset)
 		f.line("\tmovl %%esi, %%esp")
 	f.end_asm()
-
 	f.begin_line()
 	if resched:
 		f.add(": \"=D\" (__wptr), \"=S\" (__sched)")
@@ -523,107 +522,36 @@ def gen_sparc_cif_stub(f, symbol, inputs, outputs):
 	f.line("/* sparc unsupported */")
 
 def gen_aarch64_cif_stub(f, symbol, inputs, outputs):
-	resched = (symbol["name"][0] == 'Y')
-	regs	= [ "0", "1", "2" ]  # x0, x1, x2 for aarch64
-	cregs	= [ "x0", "x1", "x2" ]
-	in_regs = 0
-	out_regs= 0
-	offset  = (6 * 8) + (8 * symbol["offset"])  # 64-bit offsets
+        resched = (symbol["name"][0] == 'Y')
+        in_regs = len(inputs)
+        out_regs= len(outputs)
+        if in_regs > 1:
+                in_regs = 1
+        if out_regs > 1:
+                out_regs = 1
 
-	in_regs = len(inputs)
-	out_regs = len(outputs)
+        if len(inputs) > 1:
+                for (n, i) in enumerate(inputs):
+                        if n >= 1:
+                                f.line("__sched->cparam[%d] = (word) (%s);" % ((n - 1), i))
 
-	if in_regs > 1:
-		in_regs = 1
-	if out_regs > 1:
-		out_regs = 1
-	
-	dummies = []
-	if not resched:
-		dummies.append("sched_dummy")
-		dummies.append("wptr_dummy")
-	if in_regs > out_regs:
-		dummies = ["dummy0"] + dummies
+        param0 = inputs[0] if in_regs > 0 else "0"
+        asm_func = "ccsp_cif_call_asm_resched" if resched else "ccsp_cif_call_asm"
 
-	if len(dummies) > 0:
-		f.line("{")
-		f.indent()
-		for dummy in dummies:
-			f.line("word %s;" % dummy)
+        f.line("extern word %s(void *wptr, void *sched, word param0, void *func);" % asm_func)
+        f.line("void *__kernel_func = __sched->calltable[%d];" % symbol["offset"])
+        f.line("word _res = %s((void *)__wptr, (void *)__sched, (word)(%s), __kernel_func);" % (asm_func, param0))
 
-	if len(inputs) > 1:
-		for (n, i) in enumerate(inputs):
-			if n >= 1:
-				f.line("__sched->cparam[%d] = (word) (%s);" % ((n - 1), i))
-	
-	f.line("__asm__ __volatile__ (\"\\n\"")
-	f.indent()
+        if resched:
+                f.line("(__wptr)[SchedPtr] = (word) __sched;")
 
-	f.begin_asm()
-	if resched:
-		f.line("\tstp x19, x20, [sp, #-16]!")
-		f.line("\tstp x29, x30, [sp, #-16]!")
-		f.line("\tstr x1, [x28, #-224]")  # 64-bit offset (-28*8)
-		f.line("\tmov x1, x2")
-		f.line("\tmov x2, x28")
-		f.line("\tmov x3, x28")
-		f.line("\tldr x4, [x2, #%d]" % offset)
-		f.line("\tblr x4")
-		f.line("\tldr x1, [x3, #-224]")
-		f.line("\tmov x28, x3")
-		f.line("\tldp x29, x30, [sp], #16")
-		f.line("\tldp x19, x20, [sp], #16")
-	else:
-		f.line("\tmov x2, x1")
-		f.line("\tmov x19, x1")
-		f.line("\tmov x1, sp")
-		f.line("\tmov sp, x2")
-		f.line("\tldr x3, [x2, #%d]" % offset)
-		f.line("\tblr x3")
-		f.line("\tmov sp, x1")
-	f.end_asm()
+        if out_regs > 0:
+                f.line("%s = (__typeof__(%s)) _res;" % (outputs[0], outputs[0]))
 
-	f.begin_line()
-	if resched:
-		f.add(": \"=r\" (__wptr), \"=r\" (__sched)")
-	else:
-		f.add(": \"=r\" (wptr_dummy), \"=r\" (sched_dummy)")
-	if (in_regs + out_regs) > 0:
-		f.add(", \"=r\" (%s)" % ((outputs + dummies)[0]))
-	f.end_line()
-
-	f.begin_line()
-	f.add(": \"0\" (__wptr), \"1\" (__sched)")
-	for (idx, name) in enumerate(inputs):
-		if idx < in_regs:
-			f.add(", \"%d\" (%s)" % (idx + 2, name))
-	f.end_line()
-
-	f.begin_line()
-	f.add(": \"cc\", \"memory\", \"x0\", \"x1\"")
-	if (in_regs + out_regs) == 0:
-		f.add(", \"x0\"")
-	if resched:
-		f.add(", \"x2\", \"x3\", \"x4\", \"x19\", \"x20\"")
-	else:
-		f.add(", \"x2\", \"x3\", \"x19\"")
-	f.end_line()
-
-	f.outdent()
-	f.line(");")
-
-	if resched:
-		f.line("(__wptr)[SchedPtr] = (word) __sched;")
-
-	if len(outputs) > 1:
-		for (n, i) in enumerate(outputs):
-			if n >= 1:
-				f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
-
-	if len(dummies) > 0:
-		f.outdent()
-		f.line("}")
-
+        if len(outputs) > 1:
+                for (n, i) in enumerate(outputs):
+                        if n >= 1:
+                                f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
 def gen_aarch64_header(f):
 	# ccsp_cif_external_call
 	f.begin_macro()
@@ -635,18 +563,19 @@ def gen_aarch64_header(f):
 	f.line("do {")
 	
 	f.indent()
+	f.line("word __tmp_sp;")
 	f.line("__asm__ __volatile__ (\"\\n\"")
 	f.indent()
 
 	f.begin_asm()
-	f.line("\tmov x19, sp")
-	f.line("\tmov sp, %2")
-	f.line("\tblr %1")
-	f.line("\tmov sp, x19")
+	f.line("\tmov %0, sp")
+	f.line("\tmov sp, %3")
+	f.line("\tblr %2")
+	f.line("\tmov sp, %0")
 	f.end_asm()
-	f.line(": \"=r\" (result)")
+	f.line(": \"=&r\" (__tmp_sp), \"=r\" (result)")
 	f.line(": \"r\" (func), \"r\" (stack)")
-	f.line(": \"cc\", \"memory\", \"x0\", \"x1\", \"x2\", \"x3\", \"x4\", \"x5\", \"x6\", \"x7\", \"x8\", \"x9\", \"x10\", \"x11\", \"x12\", \"x13\", \"x14\", \"x15\", \"x16\", \"x17\", \"x18\", \"x19\"")
+	f.line(": \"cc\", \"memory\", \"x0\", \"x1\", \"x2\", \"x3\", \"x4\", \"x5\", \"x6\", \"x7\", \"x8\", \"x9\", \"x10\", \"x11\", \"x12\", \"x13\", \"x14\", \"x15\", \"x16\", \"x17\", \"x30\"")
 
 	f.outdent()
 	f.line(");")

@@ -51,6 +51,7 @@
 #include "etcdump.h"
 #include "tstate.h"
 #include "archdef.h"
+#include "machine.h"
 #include "rtlops.h"
 #include "stubtable.h"
 #define WANT_TCOFF_TAGNAMES
@@ -189,7 +190,6 @@ static void generate_call (tstate *ts, etc_chain *etc_code, arch_t *arch, int st
 		}
 		break;
 	}
-	fprintf(stderr, "*** generate_call: i = %d, d_str = %s\n", i, d_str);
 	switch (i) {
 	case 0:
 		/* normal call */
@@ -2155,7 +2155,7 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 					switch (tcoff_tag) {
 						/*{{{  DESCRIPTOR_TAG -- descriptor line*/
 					case DESCRIPTOR_TAG:
-						if (!ts->jentry_name || options.not_main_module) {
+						if (!ts->jentry_name || options.not_main_module || options.output_format == OUTPUT_COMMENTS) {
 							/* uninteresting */
 							break;
 						} else {
@@ -3127,46 +3127,47 @@ fprintf (stderr, "[%s]\t[%-16s]\t[%s]\t[%s]\t[%s]\n", type_list[i], name_list[i]
  */
 static void gen_mobilespace_init (tstate *ts, int msp_offset, int count, int *slot_offsets, int *data_offsets)
 {
-	int i;
-	static char sbuffer[32];
-	int out_lab, tmp_reg, tmp_reg2;
+        int i;
+        static char sbuffer[32];
+        int out_lab, tmp_reg, tmp_reg2;
+        intptr_t most_neg = (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000;
 
-	out_lab = ++(ts->last_lab);
-	tmp_reg = tstack_newreg (ts->stack);
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (msp_offset << WSH), ARG_REG, tmp_reg));
-	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST | ARG_ISCONST, 0x80000000, ARG_REGIND, tmp_reg, ARG_REG | ARG_IMP, REG_CC));
-	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NZ, ARG_LABEL, out_lab));
-	for (i=0; i<count; i++) {
-		if (slot_offsets[i] < 0) {
-			if (options.annotate_output) {
-				sprintf (sbuffer, ".MOBILEINITMINT %d", data_offsets[i]);
-				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
-			}
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0x80000000, ARG_REGIND | ARG_DISP, tmp_reg, (data_offsets[i] << WSH)));
-		} else if (data_offsets[i] > 0) {
-			if (options.annotate_output) {
-				sprintf (sbuffer, ".MOBILEINITPAIR %d %d", slot_offsets[i], data_offsets[i]);
-				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
-			}
-			tmp_reg2 = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, tmp_reg, (data_offsets[i] << WSH), ARG_REG, tmp_reg2));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg2, ARG_REGIND | ARG_DISP, tmp_reg, (slot_offsets[i] << WSH)));
-		} else if (data_offsets[i] < 0) {
-			if (options.annotate_output) {
-				sprintf (sbuffer, ".MOBILEINITNULL %d", slot_offsets[i]);
-				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
-			}
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, tmp_reg, (slot_offsets[i] << WSH)));
-		} else {
-			if (options.annotate_output) {
-				sprintf (sbuffer, ".MOBILEINITARRAY %d", slot_offsets[i]);
-				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
-			}
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0x80000000, ARG_REGIND | ARG_DISP, tmp_reg, (slot_offsets[i] << WSH)));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, tmp_reg, ((slot_offsets[i] + 1) << WSH)));
-		}
-	}
-	add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, out_lab));
+        out_lab = ++(ts->last_lab);
+        tmp_reg = tstack_newreg (ts->stack);
+        add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(msp_offset << WSH), ARG_REG, tmp_reg));
+        add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST | ARG_ISCONST, most_neg, ARG_REGIND, tmp_reg, ARG_REG | ARG_IMP, REG_CC));
+        add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NZ, ARG_LABEL, out_lab));
+        for (i=0; i<count; i++) {
+                if (slot_offsets[i] < 0) {
+                        if (options.annotate_output) {
+                                sprintf (sbuffer, ".MOBILEINITMINT %d", data_offsets[i]);
+                                add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
+                        }
+                        add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, most_neg, ARG_REGIND | ARG_DISP, tmp_reg, (intptr_t)(data_offsets[i] << WSH)));
+                } else if (data_offsets[i] > 0) {
+                        if (options.annotate_output) {
+                                sprintf (sbuffer, ".MOBILEINITPAIR %d %d", slot_offsets[i], data_offsets[i]);
+                                add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
+                        }
+                        tmp_reg2 = tstack_newreg (ts->stack);
+                        add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, tmp_reg, (intptr_t)(data_offsets[i] << WSH), ARG_REG, tmp_reg2));
+                        add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg2, ARG_REGIND | ARG_DISP, tmp_reg, (intptr_t)(slot_offsets[i] << WSH)));
+                } else if (data_offsets[i] < 0) {
+                        if (options.annotate_output) {
+                                sprintf (sbuffer, ".MOBILEINITNULL %d", slot_offsets[i]);
+                                add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
+                        }
+                        add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, tmp_reg, (intptr_t)(slot_offsets[i] << WSH)));
+                } else {
+                        if (options.annotate_output) {
+                                sprintf (sbuffer, ".MOBILEINITARRAY %d", slot_offsets[i]);
+                                add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
+                        }
+                        add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, most_neg, ARG_REGIND | ARG_DISP, tmp_reg, (intptr_t)(slot_offsets[i] << WSH)));
+                        add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, tmp_reg, (intptr_t)((slot_offsets[i] + 1) << WSH)));
+                }
+                }
+                add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, out_lab));
 	return;
 }
 /*}}}*/
@@ -3249,11 +3250,19 @@ static void generate_overflowed_code (tstate *ts, int dcode, arch_t *arch)
  */
 static void generate_range_code (tstate *ts, int rcode, arch_t *arch)
 {
-	if (arch->compose_rangestop_jumpcode && (options.debug_options & DEBUG_RANGESTOP)) {
-		arch->compose_rangestop_jumpcode (ts, rcode);
-	} else {
-		arch->compose_kcall (ts, K_BNSETERR, 0, 0);
+	int thislab = ++(ts->last_lab);
+
+	fprintf(stderr, "GENERATE RANGE CODE CALLED rcode=%d\n", rcode);
+
+	if (0 /* Hardcoded disable: AArch64 and non-inline schedulers do not support Wptr corruption */) {
+		/* flag an error on Wptr */
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 1, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR, ARG_REG | ARG_IMP, REG_CC));
+		/* jump if no overflow */
+		compose_cond_jump (ts, CC_NO, thislab);
 	}
+	/* jump to actual error handler */
+	arch->compose_kcall (ts, K_BRANGERR, 0, -1);
+	add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, thislab));
 	return;
 }
 /*}}}*/
@@ -3496,10 +3505,8 @@ static void do_code_nocc_special (tstate *ts, etc_chain **ecodeptr, arch_t *arch
 			add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 #endif
 			generate_call (ts, etc_code, arch, 0);
-			/* XXX: if this was an external C call, need to adjust the workspace back to where it was */
-			if (fname && !strncmp (fname, "C.", 2)) {
-				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, adj << WSH, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-			}
+			/* XXX: adjust the workspace back to where it was */
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, 32, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 		}
 		break;
 		/*}}}*/
@@ -4204,9 +4211,12 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*}}}*/
 		/*{{{  I_MINT -- generate MOSTNEG INT*/
 	case I_MINT:
-		tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, (signed int)0x80000000, ARG_REG, ts->stack->a_reg);
-		constmap_new (ts->stack->a_reg, VALUE_CONST, (signed int)0x80000000, tmp_ins);
-		add_to_ins_chain (tmp_ins);
+		{
+			intptr_t most_neg = (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000;
+			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, most_neg, ARG_REG, ts->stack->a_reg);
+			constmap_new (ts->stack->a_reg, VALUE_CONST, most_neg, tmp_ins);
+			add_to_ins_chain (tmp_ins);
+		}
 		break;
 		/*}}}*/
 		/*{{{  I_NULL -- generate NULL (zero)*/
@@ -4784,32 +4794,25 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_CSNGL -- range check*/
 	case I_CSNGL:
 		if (!options.disable_checking) {
-			/*
-			 *	inc	%oldbreg
-			 *	cmp	2,%oldbreg
-			 *	jae	L0
-			 *	dec	%oldbreg
-			 *	xor	%oldareg,%oldbreg
-			 *	jns	L1
-			 * L0:
-			 *	<range-code> | <kcall (BRANGERR)>
-			 * L1:
-			 */
-			add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_INC, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CMP, 2, 1, ARG_CONST, 2, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
-			ts->last_lab += 2;
-			this_lab = ts->last_lab - 1;
-			add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CJUMP, 2, 0, ARG_COND, CC_AE, ARG_LABEL, this_lab));
-			add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_DEC, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_XOR, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
-			add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CJUMP, 2, 0, ARG_COND, CC_NS, ARG_LABEL, this_lab + 1));
-			add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
+			if (0 /* disabled Wptr corruption */) {
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_INC, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CMP, 2, 1, ARG_CONST, 2, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+				ts->last_lab += 2;
+				this_lab = ts->last_lab - 1;
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CJUMP, 2, 0, ARG_COND, CC_AE, ARG_LABEL, this_lab));
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_DEC, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_XOR, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CJUMP, 2, 0, ARG_COND, CC_NS, ARG_LABEL, this_lab + 1));
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
+			}
 			if (options.debug_options & DEBUG_RANGESTOP) {
 				generate_range_code (ts, REOP_CSNGL, arch);
 			} else {
 				arch->compose_kcall (ts, K_BRANGERR, 0, -1);
 			}
-			add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_SETLABEL, 1, 0, ARG_LABEL, this_lab + 1));
+			if (0 /* disabled Wptr corruption */) {
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_SETLABEL, 1, 0, ARG_LABEL, this_lab + 1));
+			}
 		}
 		ts->stack->a_reg = ts->stack->old_a_reg;
 		ts->stack->must_set_cmp_flags = 1;
@@ -5402,7 +5405,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			fprintf (stderr, "%s: warning: not translatable %d\n", progname, sec);
 		} else if (options.kernel_interface & (KRNLIFACE_NEWCCSP | KRNLIFACE_RMOX)) {
 			/* Bptr is now in REG_BPTR */
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NZ, ARG_FLABEL, 0));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->old_a_reg));
 			add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
@@ -5420,7 +5423,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			fprintf (stderr, "%s: warning: not translatable %d\n", progname, sec);
 		} else if (options.kernel_interface & (KRNLIFACE_NEWCCSP | KRNLIFACE_RMOX)) {
 			/* Fptr is now in REG_FPTR */
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NZ, ARG_FLABEL, 0));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->old_a_reg));
 			add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
@@ -5537,9 +5540,9 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 	case I_FMUL:
 		if (options.debug_options & DEBUG_OVERFLOW) {
 			this_lab = ++(ts->last_lab);
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NE, ARG_LABEL, this_lab));
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0x80000000, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NE, ARG_LABEL, this_lab));
 			arch->compose_overflow_jumpcode (ts, PMOP_FMUL);
 			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
@@ -5866,65 +5869,18 @@ static void generate_constmapped_21instr (tstate *ts, int etc_instr, int instr, 
  */
 static void make_c_name (char *src, int slen, char *dst)
 {
-	int i, j, k;
-	int prefix_len = options.extref_prefix ? strlen(options.extref_prefix) : 0;
+	int i, j;
 
-	/* Special handling for kroc process symbols that need O_ prefix */
-	if (slen >= 18 && !strncmp(src, "kroc.keyboard.process", 21)) {
-		strcpy(dst, "O_kroc_keyboard_process");
-		return;
-	} else if (slen >= 16 && !strncmp(src, "kroc.screen.process", 19)) {
-		strcpy(dst, "O_kroc_screen_process");
-		return;
-	} else if (slen >= 15 && !strncmp(src, "kroc.error.process", 18)) {
-		strcpy(dst, "O_kroc_error_process");
-		return;
-	}
-
-	/* Special handling for C. and BX. prefixed symbols */
-	if (!strncmp (src, "C.", 2)) {
-		/* C.function.name -> _function_name (strip C. and convert dots to underscores) */
-		if (options.extref_prefix && prefix_len > 0) {
-			memcpy (dst, options.extref_prefix, prefix_len);
-			i = prefix_len;
-		} else {
-			*dst = '_';
-			i = 1;
-		}
-		/* Copy rest of name, converting dots to underscores */
-		for (j = 2, k = i; j < slen; j++, k++) {
-			dst[k] = (src[j] == '.') ? '_' : src[j];
-		}
-		dst[k] = '\0';
-		return;
-	} else if (!strncmp (src, "BX.", 3)) {
-		/* BX.function.name -> _function_name (strip BX. and convert dots to underscores) */
-		if (options.extref_prefix && prefix_len > 0) {
-			memcpy (dst, options.extref_prefix, prefix_len);
-			i = prefix_len;
-		} else {
-			*dst = '_';
-			i = 1;
-		}
-		/* Copy rest of name, converting dots to underscores */
-		for (j = 3, k = i; j < slen; j++, k++) {
-			dst[k] = (src[j] == '.') ? '_' : src[j];
-		}
-		dst[k] = '\0';
-		return;
-	} else if (!strncmp (src, "B.", 2)) {
+	if (!strncmp (src, "C.", 2) || !strncmp (src, "B.", 2)) {
 		i = 0, j = 1;
-	} else if (!strncmp (src, "KR.", 3)) {
+	} else if (!strncmp (src, "BX.", 3) || !strncmp (src, "KR.", 3)) {
 		i = 0, j = 2;
 	} else {
 		*dst = '$';
 		i = 1, j = 0;
 	}
-	/* Convert dots to underscores in the remaining cases */
-	for (k = i; j < slen; j++, k++) {
-		dst[k] = (src[j] == '.') ? '_' : src[j];
-	}
-	dst[k] = '\0';
+	memcpy (dst + i, src + j, slen - j);
+	dst[i + (slen - j)] = '\0';
 	return;
 }
 /*}}}*/

@@ -210,12 +210,14 @@ LABEL_TYPE( ,X) \
 		"\tstr x25, [x28, #-56]\t\n" \
 		"\tmov sp, x9\t\n" \
 		"\tldr x30, [sp], #16\t\n" \
+		"\tldur x0, [sp, #-8]\t\n" \
 		"\tblr x30\t\t\n" \
 		"\tldr x25, [x28, #-56]\t\n" \
 		"\tldr x9, [x25, #0]\t\n" \
 		"\tmov sp, x9\t\n" \
-		"\tmov x0, x28\t\n" \
-		"\tadd x0, x0, %2\t\n" \
+		"\tldur x0, [x28, %2]\t\n" \
+		"\tmov x1, x25\t\n" \
+		"\tmov x2, x28\t\n" \
 		"\tldr x9, [x25, %1]\t\n" \
 		"\tbr x9\t\t\n" \
 		"1:\t\t\t\t\n" \
@@ -231,13 +233,14 @@ LABEL_TYPE( ,X) \
 		"\tstr x25, [x28, #-56]\t\n" \
 		"\tmov sp, x9\t\n" \
 		"\tldr x30, [sp], #16\t\n" \
-		"\tldr x30, [x30]\t\n" \
+		"\tldur x0, [sp, #-8]\t\n" \
 		"\tblr x30\t\t\n" \
 		"\tldr x25, [x28, #-56]\t\n" \
 		"\tldr x9, [x25, #0]\t\n" \
 		"\tmov sp, x9\t\n" \
-		"\tmov x0, x28\t\n" \
-		"\tadd x0, x0, %2\t\n" \
+		"\tldur x0, [x28, %2]\t\n" \
+		"\tmov x1, x25\t\n" \
+		"\tmov x2, x28\t\n" \
 		"\tldr x9, [x25, %1]\t\n" \
 		"\tbr x9\t\t\n" \
 		"1:\t\t\t\t\n" \

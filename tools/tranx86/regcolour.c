@@ -384,6 +384,10 @@ static int select_register (graphnode *node, arch_t *arch)
 	}
 	for (i=0; i<arch_rmax; i++) {
 		if (r_free[i]) {
+                        if (r_names[i] == 28) {
+                            fprintf(stderr, "FATAL: select_register returning 28 for vreg %d! arch_rmax=%d\n", node->vreg, arch_rmax);
+                            exit(1);
+                        }
 			return r_names[i];
 		}
 	}

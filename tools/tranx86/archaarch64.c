@@ -209,6 +209,27 @@ static const char *aarch64_get_label_prefix(int flags);
 static int aarch64_sets_flags (ins_chain *ins);
 static int aarch64_validate_register(int reg);
 static char *aarch64_convert_symbol_name(const char *symbol);
+static void aarch64_emit_mem_op(FILE *stream, const char *op, const char *val_reg, const char *base_reg, long disp) {
+	if (disp >= -256 && disp <= 255) {
+		/* Assembler automatically chooses ldr/ldur or str/stur */
+		fprintf(stream, "\t%s	%s, [%s, #%ld]\n", op, val_reg, base_reg, disp);
+	} else if (disp >= 0 && disp <= 32760 && (disp % 8 == 0) && (op[2] == 'r' || op[2] == 'p')) {
+		/* Unsigned scaled 12-bit offset for 64-bit loads/stores */
+		fprintf(stream, "\t%s	%s, [%s, #%ld]\n", op, val_reg, base_reg, disp);
+	} else if (disp >= 0 && disp <= 4095) {
+		fprintf(stream, "\tadd	x16, %s, #%ld\n", base_reg, disp);
+		fprintf(stream, "\t%s	%s, [x16]\n", op, val_reg);
+	} else if (disp < 0 && disp >= -4095) {
+		fprintf(stream, "\tsub	x16, %s, #%ld\n", base_reg, -disp);
+		fprintf(stream, "\t%s	%s, [x16]\n", op, val_reg);
+	} else {
+		/* Fallback for very large offsets */
+		aarch64_emit_large_immediate(stream, disp, "x16");
+		fprintf(stream, "\tadd	x16, %s, x16\n", base_reg);
+		fprintf(stream, "\t%s	%s, [x16]\n", op, val_reg);
+	}
+}
+
 static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, const char *instruction);
 static char *aarch64_convert_process_symbol(const char *fixed_name);
 static char *aarch64_cleanup_symbol_name(const char *fixed_name);
@@ -562,10 +583,9 @@ static void compose_inline_altwt_aarch64 (tstate *ts)
 static void compose_inline_stlx_aarch64 (tstate *ts, int ins)
 {
 	int skip_lab = ++(ts->last_lab);
-	
-	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (signed int)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
-	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NE, ARG_FLABEL, skip_lab));
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->old_a_reg));
+
+	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)0x8000000000000000ULL, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NE, ARG_FLABEL, skip_lab));	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->old_a_reg));
 	constmap_remove (ts->stack->old_a_reg);
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, skip_lab));
 	switch (ins) {
@@ -591,7 +611,7 @@ static void compose_inline_malloc_aarch64 (tstate *ts)
 	/* Set up call to dmem_alloc2 */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_X1));
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, strdup("dmem_alloc2")));
+	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup ("&dmem_alloc2")));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X0, ARG_REG, ts->stack->a_reg));
 	return;
 }
@@ -946,42 +966,39 @@ static void compose_move_loadptrs_aarch64 (tstate *ts)
 
 /*{{{  static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int unused, char *name, ins_chain **pst_first, ins_chain **pst_last)*/
 /*
- * Generates code for blocking system calls
+ *	generates code for blocking system calls.
+ *	Mirrors compose_bcall_i386: the 'i' parameter (inlined) matches
+ *	generate_call() case values: 2=B., 3=BX., 4=KR.
+ *	i386 uses: name + ((i == 2) ? 1 : 2) to keep the leading dot.
  */
 static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int unused, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
-	char sbuf[256];
-	char *fixed_name;
-	int offset = 0;
+	int arg_reg;
 
-	/* Transform symbol name like i386 version - strip prefixes (B., BX., KR.) */
-	if (strncmp(name, "B.", 2) == 0) {
-		offset = 2;
-	} else if (strncmp(name, "BX.", 3) == 0) {
-		offset = 3;
-	} else if (strncmp(name, "KR.", 3) == 0) {
-		offset = 3;
-	}
+	arg_reg = tstack_newreg (ts->stack);
 
-	sprintf(sbuf, "%s%s", options.extref_prefix ? options.extref_prefix : "", name + offset);
+	/* Set up workspace pointer parameter */
+	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, 4, ARG_REG, arg_reg));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, arg_reg, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[0])));
 
-	/* Apply character transformations (dots to underscores, etc) */
-	for (char *p = sbuf; *p; p++) {
-		if (*p == '.') {
-			*p = '_';
+	if (kernel_call != K_KERNEL_RUN) {
+		/* push address of function to call - skip prefix, keep leading dot */
+		int name_offset = (inlined == 2) ? 1 : 2;
+		int tmp_reg = tstack_newreg (ts->stack);
+
+		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, tmp_reg, ARG_REG, REG_X0));
+		if (options.extref_prefix) {
+			char sbuf[256];
+
+			sprintf (sbuf, "%s%s", options.extref_prefix, name + name_offset);
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, string_dup (sbuf), ARG_REG, tmp_reg));
+		} else {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, string_dup (name + name_offset), ARG_REG, tmp_reg));
 		}
+		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg));
 	}
 
-	fixed_name = strdup(sbuf);
-
-	/* Set up workspace pointer in x0 */
-	*pst_first = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0);
-	add_to_ins_chain (*pst_first);
-
-	/* Set up function address in x1 */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, fixed_name, ARG_REG, REG_X1));
-
-	/* Call kernel function */
+	/* Call kernel dispatch function */
 	compose_aarch64_kcall (ts, kernel_call, 2, 0);
 
 	*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// bcall complete"));
@@ -991,39 +1008,42 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 
 /*{{{  static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)*/
 /*
- * Generates code to perform an external C call
+ *	generates code to perform an external C call.
+ *	Mirrors compose_external_ccall_i386: prepends extref_prefix to name+1
+ *	(keeping the leading dot from "C.name"), leaving final dot-to-underscore
+ *	conversion to aarch64_convert_symbol_name (like modify_name on i386).
+ *
+ *	On Darwin with extref_prefix="_": C.write.screen -> _.write.screen
+ *	  -> aarch64_convert_symbol_name -> __write_screen (starts with '_', no prefix added)
+ *	On Linux with no extref_prefix:   C.write.screen -> .write.screen
+ *	  -> aarch64_convert_symbol_name -> _write_screen (starts with '_', no prefix added)
  */
 static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
-	char sbuf[256];
-	char *fixed_name;
+	int tmp_reg;
 
-	/* Transform symbol name like i386 version - strip "C." prefix */
-	sprintf(sbuf, "%s%s", options.extref_prefix ? options.extref_prefix : "", name + 1);
+	/* AArch64 ABI: first argument in x0.  Pass Wptr+4 (pointer to params). */
+	tmp_reg = tstack_newreg (ts->stack);
+	*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, 4, ARG_REG, tmp_reg);
+	add_to_ins_chain (*pst_first);
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REG, REG_X0));
 
-	/* Apply character transformations (dots to underscores, etc) */
-	for (char *p = sbuf; *p; p++) {
-		if (*p == '.') {
-			*p = '_';
-		}
+	/* Build symbol name: extref_prefix + name+1 (skip 'C', keep '.') */
+	if (options.extref_prefix) {
+		char sbuf[256];
+
+		sprintf (sbuf, "%s%s", options.extref_prefix, name + 1);
+		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (sbuf)));
+	} else {
+		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (name + 1)));
 	}
 
-	fixed_name = strdup(sbuf);
-
-	/* Set up stack frame */
-	*pst_first = compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, 16, ARG_REG, REG_SP, ARG_REG, REG_SP);
-	add_to_ins_chain (*pst_first);
-
-	/* Set up workspace pointer parameter */
-	int tmp_reg = tstack_newreg (ts->stack);
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, 4, ARG_REG, tmp_reg));
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND, REG_SP));
-
-	/* Call external function */
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, fixed_name));
-
-	/* Clean up stack */
-	*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, 16, ARG_REG, REG_SP, ARG_REG, REG_SP);
+	/* Restore Wptr adjustment if needed (i386 does Wptr += 16 after) */
+	if (!options.nocc_codegen) {
+		*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, 16, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
+	} else {
+		*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// external ccall complete"));
+	}
 	add_to_ins_chain (*pst_last);
 }
 /*}}}*/
@@ -1037,32 +1057,31 @@ static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name,
 static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
 	char sbuf[256];
-	char *fixed_name;
 
-	/* Transform symbol name like i386 version - strip CIF. prefix and add @ prefix */
-	if (strncmp(name, "CIF.", 4) == 0) {
-		sprintf(sbuf, "@%s%s", options.extref_prefix, name + 4);
-	} else {
-		sprintf(sbuf, "@%s%s", options.extref_prefix, name);
-	}
-
-	/* Apply character transformations (dots to underscores, etc) */
-	for (char *p = sbuf; *p; p++) {
-		if (*p == '.') {
-			*p = '_';
-		}
-	}
-
-	fixed_name = strdup(sbuf);
-
-	/* Set up CIF call frame */
-	*pst_first = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0);
+	/* Adjust Wptr like i386 CIF call: Wptr += 4 (one word) */
+	*pst_first = compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, (intptr_t)4, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	add_to_ins_chain (*pst_first);
 
-	/* Call CIF function directly */
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, fixed_name));
+	/* Save resumption label and sched pointer for restoration after call */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-36)));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(-1), ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-32)));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-28)));
 
-	*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// CIF call complete"));
+	/* Pass Wptr in x0 (AArch64 first argument register) */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0));
+
+	/* Build symbol: @<extref_prefix><name+4>
+	 * The '@' prevents aarch64_convert_symbol_name from adding O_ prefix,
+	 * matching compose_cif_call_i386 behaviour. */
+	sprintf (sbuf, "@%s%s", options.extref_prefix ? options.extref_prefix : "", name + 4);
+	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (sbuf)));
+
+	/* Restore state after CIF call */
+	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-28), ARG_REG, REG_SCHED));
+
+	/* Restore Wptr: subtract back the 4 we added */
+	*pst_last = compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, (intptr_t)4, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	add_to_ins_chain (*pst_last);
 }
 /*}}}*/
@@ -1268,12 +1287,22 @@ static int compose_aarch64_remainder (tstate *ts, int dividend, int divisor) {
 
 static void compose_aarch64_occam_call (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
-	char *sbuf = aarch64_convert_symbol_name(name);
-	*pst_first = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, sbuf);
-	add_to_ins_chain (*pst_first);
-	*pst_last = *pst_first;
+	if (name) {
+		char *sbuf = aarch64_convert_symbol_name(name);
+		*pst_first = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, sbuf);
+		add_to_ins_chain (*pst_first);
+		*pst_last = *pst_first;
+	} else {
+		/* Internal Occam call generated by I_CALL */
+		/* In AArch64, we don't drop Wptr here since etcrtl.c already dropped it.
+		 * The return address MUST go into Wptr[-1] (W_IPTR), NOT Wptr[0]!
+		 * Wptr[0] contains the 4th argument (Wptr[-4] from the caller)!
+		 */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_ISCONST | ARG_FLABEL, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_IPTR));
+		add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_LABEL, ts->stack->old_a_reg));
+		add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
+	}
 }
-
 static void compose_aarch64_external_ccall (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last) {
 	/* For aarch64, occam-to-occam calls are handled by compose_aarch64_occam_call.
 	 * This function is now only for C calls, which are handled by compose_cif_call. */
@@ -1577,7 +1606,7 @@ static arch_t aarch64_arch = {
 	.compose_widenword = compose_aarch64_widenword,
 	.compose_longop = compose_aarch64_longop,
 	.compose_fpop = compose_aarch64_fpop,
-	.compose_external_ccall = compose_aarch64_occam_call,
+	.compose_external_ccall = compose_external_ccall_aarch64,
 	.compose_bcall = compose_bcall_aarch64,
 	.compose_cif_call = compose_cif_call_aarch64,
 	.compose_entry_prolog = compose_aarch64_entry_prolog,
@@ -1628,7 +1657,7 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 		entrypoint_name = aarch64_convert_symbol_name(entry->entrypoint);
 	}
 
-	/* Map stack registers to aarch64 registers */
+				/* Map stack registers to aarch64 registers */
 	if (ts->stack) {
 		cregs[0] = ts->stack->old_a_reg;
 		cregs[1] = ts->stack->old_b_reg;
@@ -1641,30 +1670,15 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	/* The CCSP runtime expects: kernel_func(param0, sched, Wptr) */
 	/* where param0 is the first parameter, sched is scheduler pointer, Wptr is workspace */
 	/* Additional parameters are accessed via sched->cparam[] array */
-	
-	/* First parameter (value) goes to x0 */
-	if (regs_in > 0 && cregs[0] != REG_UNDEFINED) {
-		switch (constmap_typeof (cregs[0])) {
-		case VALUE_CONST:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[0]), ARG_REG, REG_X0));
-			break;
-		default:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, cregs[0], ARG_REG, REG_X0));
-			break;
-		}
-	} else {
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, REG_X0));
-	}
-	
-	/* Get scheduler pointer and store in x1 */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, REG_X1));
 
-	/* Workspace pointer goes to x2 */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X2));
-
+	/* CRITICAL FIX: We must process cregs[1] and cregs[2] BEFORE cregs[0] to avoid
+	 * clobbering the register that cregs[1] might be stored in (e.g. x0) when we
+	 * write cregs[0] into REG_X0.
+	 */
+	 
 	/* Store additional parameters in scheduler cparam array for K_CALL_PARAM macro access */
 	if (regs_in > 1 && cregs[1] != REG_UNDEFINED) {
-		/* Second parameter (channel address) goes to sched->cparam[0] */
+		/* Second parameter goes to sched->cparam[0] */
 		switch (constmap_typeof (cregs[1])) {
 		case VALUE_CONST:
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[1]), ARG_REGIND | ARG_DISP, REG_SCHED, 8));
@@ -1687,9 +1701,31 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 		}
 	}
 
-	call_ins = compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, entrypoint_name);
-	add_to_ins_chain (call_ins);
+	/* First parameter (value) goes to x0 */
+	if (regs_in > 0 && cregs[0] != REG_UNDEFINED) {
+		switch (constmap_typeof (cregs[0])) {
+		case VALUE_CONST:
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[0]), ARG_REG, REG_X0));
+			break;
+		default:
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, cregs[0], ARG_REG, REG_X0));
+			break;
+		}
+	} else {
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, REG_X0));
+	}
 
+	/* Get scheduler pointer and store in x1 */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, REG_X1));
+
+	/* Workspace pointer goes to x2 */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X2));
+
+	/* CRITICAL FIX: Pass REG_X0, REG_X1, REG_X2 as input arguments to INS_CALL
+	 * so that optimise.c does not delete the INS_MOVE instructions above due to DCE!
+	 */
+	call_ins = compose_ins (INS_CALL, 4, 0, ARG_NAMEDLABEL, entrypoint_name, ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2);
+	add_to_ins_chain (call_ins);
 	/* Handle output registers */
 	if (regs_out > 0 && ts->stack) {
 		tstack_undefine (ts->stack);
@@ -1903,50 +1939,48 @@ static void compose_aarch64_entry_prolog (tstate *ts)
 
 		/* Initialize aarch64 FPU and workspace inline */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64 FPU init (default IEEE 754)")));
-	
-		/* Call kernel initialization */
-		compose_aarch64_kcall (ts, K_PAUSE, 0, 0);
+
+		/* CRITICAL FIX: Shift Wptr up by 1 word (8 bytes) to account for ccsp_occam_entry
+		 * initializing wspptr = 1. This aligns original_Wptr[1] with new_Wptr[4] after
+		 * the .ENTRY.CG block drops Wptr by 4 words.
+		 */
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 8, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+
+		/* Call kernel initialization */		compose_aarch64_kcall (ts, K_PAUSE, 0, 0);
 	}/*}}}*/
 
 /*{{{  static void compose_aarch64_return (tstate *ts)*/
 static void compose_aarch64_return (tstate *ts)
 {
-	/* CRITICAL FIX: For ARM64, we need to handle kernel cleanup calls differently
-	 * to prevent dead code generation that causes runtime hangs.
-	 * 
-	 * The issue is that the original code generation puts cleanup calls after
-	 * the ret instruction, creating unreachable code that ARM64 executes due
-	 * to fall-through, causing hangs.
-	 * 
-	 * For ARM64, we generate a direct exit instead of using the flushscreenpoint
-	 * mechanism which creates dead code after ret.
-	 */
-	
 	/* Check if this is the main function that needs cleanup */
 	if (ts && ts->flushscreenpoint >= 0) {
 		/* For ARM64, generate direct kernel exit calls - these are terminal */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64: direct kernel exit (terminal)")));
-		
-		/* Call Y_shutdown directly */
-		char *shutdown_name = aarch64_convert_symbol_name("KR.kernel_Y_shutdown");
-		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, shutdown_name));
-		
-		/* Call Y_BNSeterr directly */
-		char *bnseterr_name = aarch64_convert_symbol_name("KR.kernel_Y_BNSeterr");
-		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, bnseterr_name));
-		
+
+		/* Call Y_shutdown directly. Must setup x0, x1, x2 first! */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx0, #0\n\tmov\tx1, x25\n\tmov\tx2, x28")));
+
+		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup ("Y_shutdown")));
+
+		/* Call Y_BNSeterr directly. Must setup x0, x1, x2 first! */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx0, #0\n\tmov\tx1, x25\n\tmov\tx2, x28")));
+
+		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup ("Y_BNSeterr")));
+
 		/* Mark cleanup as handled to prevent the original flushscreenpoint code */
 		ts->flushscreenpoint = -1;
-		
+
 		/* NO RET after kernel cleanup - these calls should exit the program */
 		return;
 	}
-	
-	/* Generate the return instruction only if no kernel cleanup was done */
-	add_to_ins_chain (compose_ins (INS_RET, 0, 0));
+
+        /* Pop 32 bytes from Wptr */
+        add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 32, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+
+        /* Generate the return instruction */
+        add_to_ins_chain (compose_ins (INS_RET, 0, 0));
 }
 /*}}}*/
-
 /*{{{  static int compose_aarch64_widenshort (tstate *ts)*/
 static int compose_aarch64_widenshort (tstate *ts)
 {
@@ -2522,58 +2556,74 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						break;
 					}
 					
-					/* Handle store operations first */
-					if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->out_args[0]->flags & ARG_DISP)) {
-						/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
-						if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
-							fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
-							fprintf (stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name (ins->out_args[0]->regconst));
-						} else {
-							fprintf (stream, "\tstr\t%s, [%s]\n", 
-									aarch64_get_register_name (ins->in_args[0]->regconst),
-									aarch64_get_register_name (ins->out_args[0]->regconst));
-						}
-					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
-						/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
-						if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
-							fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
-							fprintf (stream, "\tstr\tx16, [%s, #%ld]\n",
-									aarch64_get_register_name (ins->out_args[0]->regconst),
-									(long)ins->out_args[0]->disp);
-						} else {
-							fprintf (stream, "\tstr\t%s, [%s, #%ld] // MY_STR_MARKER\n",
-									aarch64_get_register_name (ins->in_args[0]->regconst),
-									aarch64_get_register_name (ins->out_args[0]->regconst),
-									(long)ins->out_args[0]->disp);
-						}
-						/* Handle load/move operations */
-					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
+					/* Handle ARG_CONST source first so it doesn't get treated as a register store */
+					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
 						long const_val = (long)ins->in_args[0]->regconst;
+						int is_mem_dest = ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
+						const char *dest_reg = is_mem_dest ? "x16" : aarch64_get_register_name(ins->out_args[0]->regconst);
+						
 						/* ARM64 can only encode 16-bit immediates in mov instruction */
 						if (const_val >= 0 && const_val <= 65535) {
-							fprintf (stream, "\tmov\t%s, #%ld\n",
-									aarch64_get_register_name (ins->out_args[0]->regconst), const_val);
+							fprintf (stream, "\tmov\t%s, #%ld\n", dest_reg, const_val);
 						} else {
 							/* For large constants, use movz/movk sequence */
 							unsigned long uval = (unsigned long)const_val;
-							fprintf (stream, "\tmovz\t%s, #%lu\n",
-									aarch64_get_register_name (ins->out_args[0]->regconst), uval & 0xFFFF);
+							fprintf (stream, "\tmovz\t%s, #%lu\n", dest_reg, uval & 0xFFFF);
 							if (uval > 0xFFFF) {
-								fprintf (stream, "\tmovk\t%s, #%lu, lsl #16\n",
-										aarch64_get_register_name (ins->out_args[0]->regconst), (uval >> 16) & 0xFFFF);
+								fprintf (stream, "\tmovk\t%s, #%lu, lsl #16\n", dest_reg, (uval >> 16) & 0xFFFF);
 							}
-							if (uval > 0xFFFFFFFF) {
-								fprintf (stream, "\tmovk\t%s, #%lu, lsl #32\n",
-										aarch64_get_register_name (ins->out_args[0]->regconst), (uval >> 32) & 0xFFFF);
+							if (uval > 0xFFFFFFFFULL) {
+								fprintf (stream, "\tmovk\t%s, #%lu, lsl #32\n", dest_reg, (uval >> 32) & 0xFFFF);
 							}
-							if (uval > 0xFFFFFFFFFFFF) {
-								fprintf (stream, "\tmovk\t%s, #%lu, lsl #48\n",
-										aarch64_get_register_name (ins->out_args[0]->regconst), (uval >> 48) & 0xFFFF);
+							if (uval > 0xFFFFFFFFFFFFULL) {
+								fprintf (stream, "\tmovk\t%s, #%lu, lsl #48\n", dest_reg, (uval >> 48) & 0xFFFF);
 							}
 						}
+						
+						if (is_mem_dest) {
+							if (ins->out_args[0]->flags & ARG_DISP) {
+								aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
+							} else {
+								fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
+							}
+						}
+					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->out_args[0]->flags & ARG_DISP)) {
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
+							long label_num = (long)ins->in_args[0]->regconst;
+							fprintf(stream, "\tadr\tx16, %ldf\n", label_num);
+							fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
+						} else {
+							/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
+							if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
+								fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
+								fprintf (stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name (ins->out_args[0]->regconst));
+							} else {
+								fprintf (stream, "\tstr\t%s, [%s]\n",
+										aarch64_get_register_name (ins->in_args[0]->regconst),
+										aarch64_get_register_name (ins->out_args[0]->regconst));
+							}
+						}
+					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
+							long label_num = (long)ins->in_args[0]->regconst;
+							fprintf(stream, "\tadr\tx16, %ldf\n", label_num);
+							aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
+						} else {
+							/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
+							if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
+								fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
+								aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
+							} else {
+								aarch64_emit_mem_op(stream, "str", 
+										aarch64_get_register_name (ins->in_args[0]->regconst),
+										aarch64_get_register_name (ins->out_args[0]->regconst),
+										(long)ins->out_args[0]->disp);
+							}
+						}
+						/* Handle load/move operations */
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 						char *symbol = (char *)ins->in_args[0]->regconst;
-						
+
 						fprintf (stream, "\tadrp\t%s, %s@PAGE\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								symbol);
@@ -2581,12 +2631,22 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								symbol);
-					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {
-						fprintf (stream, "\tldr\t%s, [%s]\n",
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
+						long label_num = (long)ins->in_args[0]->regconst;
+						if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
+							fprintf(stream, "\tadr\t%s, %ldf\n", aarch64_get_register_name(ins->out_args[0]->regconst), label_num);
+						} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->out_args[0]->flags & ARG_DISP)) {
+							fprintf(stream, "\tadr\tx16, %ldf\n", label_num);
+							fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
+						} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
+							fprintf(stream, "\tadr\tx16, %ldf\n", label_num);
+							aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
+						}
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {						fprintf (stream, "\tldr\t%s, [%s]\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst));
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->in_args[0]->flags & ARG_DISP)) {
-						fprintf (stream, "\tldr\t%s, [%s, #%ld] // MY_LDR_MARKER\n",
+						aarch64_emit_mem_op(stream, "ldr", 
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst),
 								(long)ins->in_args[0]->disp);
@@ -2809,8 +2869,11 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					}
 					break;
 				case INS_RET:
-					/* Occam processes return by jumping to the address stored in Wptr[Iptr] */
-					fprintf (stream, "\tldr\tx9, [x28, #-8]\n");
+					/* Occam processes return by jumping to the address stored in new_Wptr[Iptr].
+					 * Since compose_aarch64_return already added 32 to x28, new_Wptr is x28 - 32.
+					 * etcrtl.c fallback stores the return address at new_Wptr[0], so we read from x28 - 32.
+					 */
+					fprintf (stream, "\tldr\tx9, [x28, #-32]\n");
 					fprintf (stream, "\tbr\tx9\n");
 					/* Set flag to skip any subsequent instructions until next label */
 					/* skip_dead_code = 1; disabled */
@@ -2903,7 +2966,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
 						op0_reg = "x16";
 					} else if (mode0 == ARG_REGIND && (ins->in_args[0]->flags & ARG_DISP)) {
-						fprintf(stream, "\tldr\tx16, [%s, #%ld]\n", aarch64_get_register_name(ins->in_args[0]->regconst), (long)ins->in_args[0]->disp);
+						aarch64_emit_mem_op(stream, "ldr", "x16", aarch64_get_register_name(ins->in_args[0]->regconst), (long)ins->in_args[0]->disp);
 						op0_reg = "x16";
 					} else if (mode0 == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {
 						fprintf(stream, "\tldr\tx16, [%s]\n", aarch64_get_register_name(ins->in_args[0]->regconst));
@@ -2926,7 +2989,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							op1_reg = "x17";
 						}
 					} else if (mode1 == ARG_REGIND && (ins->in_args[1]->flags & ARG_DISP)) {
-						fprintf(stream, "\tldr\tx17, [%s, #%ld]\n", aarch64_get_register_name(ins->in_args[1]->regconst), (long)ins->in_args[1]->disp);
+						aarch64_emit_mem_op(stream, "ldr", "x17", aarch64_get_register_name(ins->in_args[1]->regconst), (long)ins->in_args[1]->disp);
 						op1_reg = "x17";
 					} else if (mode1 == ARG_REGIND && !(ins->in_args[1]->flags & ARG_DISP)) {
 						fprintf(stream, "\tldr\tx17, [%s]\n", aarch64_get_register_name(ins->in_args[1]->regconst));
@@ -2939,7 +3002,8 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 
-					fprintf (stream, "\tcmp\t%s, %s\n", op0_reg, op1_reg);
+					/* CRITICAL FIX: Match x86 CMP semantics by computing in_args[1] - in_args[0] */
+					fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
 					break;
 
 				
@@ -3018,100 +3082,108 @@ static int aarch64_validate_register(int reg)
 
 /*
  * Converts an occam symbol to a valid assembly symbol.
- * This function is responsible for applying all the necessary transformations
- * to a symbol to make it valid for the aarch64 assembler and linker.
+ *
+ * This is the aarch64 equivalent of modify_name() in asm386.c.
+ * It is called for every ARG_NAMEDLABEL during assembly emission,
+ * so it must be idempotent for symbols already processed by the
+ * compose_*_aarch64 functions (which prepend extref_prefix and
+ * convert dots to underscores).
+ *
+ * The logic mirrors modify_name():
+ *   1. Convert '.' to '_', strip '$', '^', '*', '@', '&', stop at '%'
+ *   2. Add prefix (O_, E_, M_) unless result starts with '_', 'O_', 'DCR_',
+ *      or original started with '&' or '@'
+ *   3. If a prefix was added (or original was '&'), prepend extref_prefix
+ *
  * The caller is responsible for freeing the returned string.
  */
 static char *aarch64_convert_symbol_name(const char *symbol) {
 	if (symbol == NULL) return NULL;
-	char *buf = smalloc(strlen(symbol) * 2 + 50);
-	
-	if (strncmp(symbol, "_kernel_", 8) == 0 || strncmp(symbol, "_O_", 3) == 0 || strncmp(symbol, "_E_", 3) == 0 || strncmp(symbol, "_M_", 3) == 0 || strncmp(symbol, "_ccsp_", 6) == 0 || strncmp(symbol, "_occam_", 7) == 0 || strncmp(symbol, "_main", 5) == 0 || strncmp(symbol, "__", 2) == 0 || strncmp(symbol, "_C_", 3) == 0 || strncmp(symbol, "_BX_", 4) == 0) {
-		sprintf(buf, "%s", symbol);
-		return buf;
+
+	int len = strlen(symbol);
+	char *rbuf = smalloc(len * 2 + 20);
+	int i, j;
+	const char *prepend = NULL;
+	const char *ext = options.extref_prefix ? options.extref_prefix : "";
+
+	/*
+	 * AArch64-specific: kernel call entrypoints (Y_xxx, X_xxx) are called
+	 * directly (not through calltable like i386), so we must map them to
+	 * the C symbol names: kernel_Y_xxx / kernel_X_xxx.
+	 */
+	if ((symbol[0] == 'Y' || symbol[0] == 'X') && symbol[1] == '_') {
+		sprintf(rbuf, "%skernel_%s", ext, symbol);
+		return rbuf;
 	}
 
-	if (strstr(symbol, "kernel_") != NULL || strncmp(symbol, "X_", 2) == 0 || strncmp(symbol, "Y_", 2) == 0) {
-		const char *cname = symbol;
-		if (strncmp(cname, "KR.", 3) == 0) cname += 3;
-		if (strncmp(cname, "kernel_", 7) == 0) cname += 7;
-		sprintf(buf, "_kernel_%s", cname);
-		return buf;
+	/* System symbols: ccsp_*, occam_*, *wsbytes, etc -> __name */
+	if (!strncmp(symbol, "ccsp_", 5) || !strncmp(symbol, "occam_", 6) ||
+	    strstr(symbol, "wsbytes") || strstr(symbol, "msbytes") ||
+	    strstr(symbol, "vsbytes") || strstr(symbol, "wsadjust")) {
+		const char *base = symbol;
+		while (*base == '_') base++;
+		sprintf(rbuf, "__%s", base);
+		return rbuf;
 	}
 
-	if (strncmp(symbol, "ccsp_", 5) == 0 || strncmp(symbol, "occam_", 6) == 0 || strstr(symbol, "wsbytes") != NULL || strstr(symbol, "msbytes") != NULL || strstr(symbol, "vsbytes") != NULL || strstr(symbol, "wsadjust") != NULL) {
-        const char *basename = symbol;
-        while (*basename == '_') basename++;
-        sprintf(buf, "__%s", basename);
-		return buf;
+	/* local_scheduler -> _local_scheduler */
+	if (strstr(symbol, "local_scheduler")) {
+		sprintf(rbuf, "%slocal_scheduler", ext);
+		return rbuf;
 	}
 
-	if (strcmp(symbol, "main") == 0) {
-		sprintf(buf, "_main");
-		return buf;
+	/*
+	 * General case: mirrors modify_name() from asm386.c exactly.
+	 * Step 1: convert '.' to '_', strip '$', '^', '*', '@', '&', stop at '%'
+	 */
+	j = 0;
+	for (i = 0; i < len; i++) {
+		switch (symbol[i]) {
+		case '.':
+			rbuf[j++] = '_';
+			break;
+		case '$':
+		case '^':
+		case '*':
+		case '@':
+		case '&':
+			break;
+		case '%':
+			i = len;  /* stop processing */
+			break;
+		default:
+			rbuf[j++] = symbol[i];
+			break;
+		}
+	}
+	rbuf[j] = '\0';
+
+	/* Step 2: determine if we need to add a semantic prefix */
+	if ((rbuf[0] == '_') || (!strncmp(rbuf, "O_", 2)) || (!strncmp(rbuf, "DCR_", 4)) || (symbol[0] == '&') || (symbol[0] == '@')) {
+		/* skip - no prefix needed */
+	} else if (symbol[0] == '^') {
+		prepend = "E_";
+	} else if (symbol[0] == '*') {
+		prepend = "M_";
+	} else {
+		prepend = "O_";
 	}
 
-	if (strstr(symbol, "local_scheduler") != NULL) {
-		sprintf(buf, "_local_scheduler");
-		return buf;
+	if (prepend) {
+		int plen = strlen(prepend);
+		memmove(rbuf + plen, rbuf, strlen(rbuf) + 1);
+		memcpy(rbuf, prepend, plen);
 	}
 
-    char temp[256];
-    int j = 0;
-    const char *s = symbol;
-    
-    if (strncmp(s, "KR.", 3) == 0) s += 3;
+	/* Step 3: add platform prefix (e.g. '_' on Darwin) if a semantic prefix
+	 * was added, or if the original symbol started with '&' */
+	if (options.extref_prefix && (prepend || symbol[0] == '&')) {
+		int plen = strlen(options.extref_prefix);
+		memmove(rbuf + plen, rbuf, strlen(rbuf) + 1);
+		memcpy(rbuf, options.extref_prefix, plen);
+	}
 
-    const char *prefix = "O_";
-    int is_c_func = 0;
-    
-    if (s[0] == '^') {
-        prefix = "E_";
-        s++;
-    } else if (s[0] == '*') {
-        prefix = "M_";
-        s++;
-    } else if (s[0] == '$') {
-        prefix = "O_";
-        s++;
-    } else if (strncmp(s, "M.", 2) == 0) {
-        prefix = "M_";
-        s += 2;
-    } else if (strncmp(s, "E.", 2) == 0) {
-        prefix = "E_";
-        s += 2;
-    } else if (strncmp(s, "C.", 2) == 0) {
-        prefix = "C_"; 
-        is_c_func = 1;
-        s += 2;
-    } else if (strncmp(s, "BX.", 3) == 0) {
-        prefix = "BX_"; 
-        is_c_func = 1;
-        s += 3;
-    }
-
-    while (*s && j < 250) {
-        if (*s == '.') temp[j++] = '_';
-        else if (*s == '$') { temp[j++] = 'O'; temp[j++] = '_'; }
-        else if (*s == '^') { temp[j++] = 'E'; temp[j++] = '_'; }
-        else if (*s == '*') { temp[j++] = 'M'; temp[j++] = '_'; }
-        else if (*s == '%') temp[j++] = '_';
-        else temp[j++] = *s;
-        s++;
-    }
-    temp[j] = '\0';
-
-    if (is_c_func) {
-        sprintf(buf, "_%s%s", prefix, temp);
-    } else if (temp[0] == '_') {
-        sprintf(buf, "_%s", temp);
-    } else if (strncmp(temp, prefix, strlen(prefix)) == 0) {
-        sprintf(buf, "_%s", temp);
-    } else {
-        sprintf(buf, "_%s%s", prefix, temp);
-    }
-    
-	return buf;
+	return rbuf;
 }
 
 static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, const char *instruction)
@@ -3152,7 +3224,7 @@ static void aarch64_emit_large_immediate (FILE *stream, long value, const char *
 static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op, const char *dst, const char *src, long imm, const char *temp_reg, int set_flags)
 {
 	if (imm >= 0 && imm <= 4095) {
-		fprintf (stream, "\t%s\t%s, %s, #%ld\n", op, dst, src, imm);
+		fprintf (stream, "\t%s%s\t%s, %s, #%ld\n", op, set_flags ? "s" : "", dst, src, imm);
 	} else {
 		aarch64_emit_large_immediate (stream, imm, temp_reg);
 		fprintf (stream, "\t%s%s\t%s, %s, %s\n", op, set_flags ? "s" : "", dst, src, temp_reg);
@@ -3163,7 +3235,10 @@ static void aarch64_emit_arithmetic_with_immediate (FILE *stream, const char *op
 /*{{{  static char *aarch64_get_register_name (int reg)*/
 static char *aarch64_get_register_name (int reg)
 {
-	static char regname[16];
+	static char regnames[8][16];
+	static int regnames_idx = 0;
+	char *regname = regnames[regnames_idx];
+	regnames_idx = (regnames_idx + 1) % 8;
 
 	// TODO: investigate this 'fix'
 	/* CRITICAL FIX: Handle invalid register numbers that cause crashes */

@@ -280,7 +280,7 @@ PUBLIC void write_entry_desc (treenode * const nptr, const INT32 offset)
 	{
 		id = p_symbol_id (objfile, 0L, EXPORT_USAGE | ROUTINE_USAGE, WNameOf (nameptr), exported_origin_id);
 		if (LINKED_OUTPUT_FILE)
-			tcoff_putrec (objfile, DEFINE_SYMBOL_TAG, "%ld%ld%ld", id, CO_VALUE_TAG, offset);
+			tcoff_putrec (objfile, DEFINE_SYMBOL_TAG, "%ld%ld%ld", id, CO_VALUE_TAG, (wordshift == 3) ? (offset * 2) : offset);
 		else {
 			int label_ws = INVALID_SYMBOL_ID;
 			int label_vs = INVALID_SYMBOL_ID;	/* initialised to shut up gcc's optimiser */
@@ -303,7 +303,7 @@ PUBLIC void write_entry_desc (treenode * const nptr, const INT32 offset)
 				memfree (str);
 			}
 
-			tcoff_putrec (objfile, DEFINE_SYMBOL_TAG, "%ld%ld%ld%ld%ld%ld", id, PLUS_OP, SV_VALUE_TAG, local_text, CO_VALUE_TAG, offset);
+			tcoff_putrec (objfile, DEFINE_SYMBOL_TAG, "%ld%ld%ld%ld%ld%ld", id, PLUS_OP, SV_VALUE_TAG, local_text, CO_VALUE_TAG, (wordshift == 3) ? (offset * 2) : offset);
 
 			if ((object_file_wrt_flags & OBJ_FILE_WRT_NO_WS_SYMBOLS) == 0) {
 				tcoff_putrec (objfile, DEFINE_SYMBOL_TAG, "%ld%ld%ld", label_ws, CO_VALUE_TAG, NPDatasizeOf (nptr));

@@ -1,3 +1,7 @@
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 /*
  *	tceread.c - TCE reading stuff
  *	Copyright (C) 2000-2004 Fred Barnes <frmb@kent.ac.uk>

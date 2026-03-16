@@ -294,6 +294,31 @@ __attribute__ ((unused)) /* make GCC ignore when unused */
 #endif
 static word ExternalCallN (void *func, word argc, ...)
 {
+#if defined(__aarch64__)
+	va_list ap;
+	word result = 0;
+	word args[8] = {0};
+	int i;
+
+	va_start (ap, argc);
+	for (i = 0; i < argc && i < 8; ++i) {
+		args[i] = va_arg (ap, word);
+	}
+	va_end (ap);
+
+	switch (argc) {
+		case 0: result = ((word (*)())func) (); break;
+		case 1: result = ((word (*)())func) (args[0]); break;
+		case 2: result = ((word (*)())func) (args[0], args[1]); break;
+		case 3: result = ((word (*)())func) (args[0], args[1], args[2]); break;
+		case 4: result = ((word (*)())func) (args[0], args[1], args[2], args[3]); break;
+		case 5: result = ((word (*)())func) (args[0], args[1], args[2], args[3], args[4]); break;
+		case 6: result = ((word (*)())func) (args[0], args[1], args[2], args[3], args[4], args[5]); break;
+		case 7: result = ((word (*)())func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
+		case 8: result = ((word (*)())func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
+	}
+	return result;
+#else
 	ccsp_sched_t *sched = ccsp_scheduler;
 	word *stack = (word *) sched->stack;
 	va_list ap;
@@ -313,6 +338,7 @@ static word ExternalCallN (void *func, word argc, ...)
 	ccsp_cif_external_call (func, stack, result);
 
 	return result;
+#endif
 }
 /*}}}*/
 #if !defined(RMOX_BUILD) && defined(BLOCKING_SYSCALLS)

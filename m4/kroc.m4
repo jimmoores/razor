@@ -124,7 +124,7 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
       ;;
     darwin*)
       # Disable automatic PIC usage on Apple's GCC.
-      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DHOSTOS_DARWIN -mdynamic-no-pic -fno-pie -no-pie"
+      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DHOSTOS_DARWIN -mdynamic-no-pic -fno-pie -no-pie -fno-stack-protector -fno-ptrauth-calls"
       ;;
   esac
 

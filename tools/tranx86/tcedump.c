@@ -1,3 +1,6 @@
+#include <stdlib.h>
+#include <string.h>
+
 /*
  *	tcedump.c - TCE dumper
  *	Copyright (C) 2004 Christian L. Jacobsen <clj3@kent.ac.uk>, 

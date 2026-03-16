@@ -82,12 +82,12 @@ struct mp_ctrlblk_struct {
 typedef struct mp_ctrlblk_struct mp_ctrlblk;
 
 
-extern void mpcb_add_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, unsigned int *wptr);
-extern void mpcb_del_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, unsigned int *wptr);
+extern void mpcb_add_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, word *wptr);
+extern void mpcb_del_wsmap (mp_ctrlblk *mp, unsigned char *mapdata, word *wptr);
 extern void mpcb_rm_wsmap (mp_ctrlblk *mp);
 extern mp_ctrlblk *mpcb_mpp_clone (mp_ctrlblk *mp);
-extern int mpcb_mpp_serialise (mp_ctrlblk **mpp, unsigned int *thashp, int *raddr, int *rsize);
-extern int mpcb_mpp_deserialise (int addr, int size, mp_ctrlblk **mpp, unsigned int *thashp);
+extern int mpcb_mpp_serialise (mp_ctrlblk **mpp, unsigned int *thashp, word *raddr, int *rsize);
+extern int mpcb_mpp_deserialise (word addr, int size, mp_ctrlblk **mpp, unsigned int *thashp);
 extern void mpcb_dump_process (mp_ctrlblk *mp);
 
 extern int mpp_checkroutine (char *name);
@@ -141,9 +141,18 @@ extern int mpp_unloadlibrary (char *lname);
  *	when serialised, some encodings are specisl:
  */
 
+#if defined(__aarch64__) || defined(__x86_64__)
+#define ENCODED_NOTPROCESS	((void *)0x8000000000000000ULL)
+#else
 #define ENCODED_NOTPROCESS	((void *)0x80000000)
+#endif
+#if defined(__aarch64__) || defined(__x86_64__)
+#define ENCODED_AIPTR		((void *)0x8000000000000004ULL)
+#define ENCODED_MPP		((void *)0x8000000000000008ULL)
+#else
 #define ENCODED_AIPTR		((void *)0x80000004)
 #define ENCODED_MPP		((void *)0x80000008)
+#endif
 
 
 #endif	/* !__MOBPROC_H */

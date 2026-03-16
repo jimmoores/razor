@@ -1,3 +1,7 @@
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 /*
  *	support.c - support functions
  *	Copyright (C) 2000 Fred Barnes <frmb@kent.ac.uk>

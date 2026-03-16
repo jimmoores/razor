@@ -137,19 +137,19 @@ static void userproc_exit (int exit_status, bool dump_core)
 	ccsp_exit_handler (exit_status, dump_core);
 }
 /*}}}*/
-/*{{{  void ccsp_kernel_exit (int exit_status, int iptr)*/
+/*{{{  void ccsp_kernel_exit (int exit_status, word iptr)*/
 /*
  *	called from run-time kernel to exit
  */
-void ccsp_kernel_exit (int exit_status, int iptr)
+void ccsp_kernel_exit (int exit_status, word iptr)
 {
 	#ifndef ALONE
 	if (iptr != 0) {
-		/* MESSAGE ("STOPped at %08x\n", iptr); */
+		/* MESSAGE ("STOPped at %016lx\n", iptr); */
 	}
 	#endif
 	#if defined(RMOX_BUILD)
-	MESSAGE ("CCSP: kernel exit at 0x%8.8x\n", (unsigned int)iptr);
+	MESSAGE ("CCSP: kernel exit at 0x%016lx\n", (word)iptr);
 	#endif
 	userproc_exit (exit_status, false);
 }
@@ -765,7 +765,7 @@ void ccsp_new_thread (void)
 #endif /* !ENABLE_MP */
 
 /*{{{ PROC C.ccsp.new.thread () */
-void _ccsp_new_thread (int *ws) {
+void _ccsp_new_thread (word *ws) {
 	ccsp_new_thread ();
 }
 /*}}}*/

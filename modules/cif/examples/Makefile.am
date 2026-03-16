@@ -109,8 +109,7 @@ cift14: cift14.occ cift14-c.o ciftutils.o
 	$(OCCBUILD) --program $(srcdir)/cift14.occ cift14-c.o ciftutils.o
 
 cift15: cift15.o ciftutils.o
-	$(CC) $(CFLAGS) -o cift15 cift15.o ciftutils.o @KROC_CCSP_LDFLAGS@ @KROC_CCSP_LIBPATH@ -lccsp -lpthread @KROC_CCSP_LIBS@
-
+	$(CC) $(CFLAGS) -o cift15 cift15.o ciftutils.o @KROC_CCSP_LDFLAGS@ @KROC_CCSP_LIBPATH@ -lkrocif -lccsp -lpthread @KROC_CCSP_LIBS@
 cift16: cift16.occ cift16-c.o ciftutils.o
 	$(OCCBUILD) --program $(srcdir)/cift16.occ cift16-c.o ciftutils.o
 

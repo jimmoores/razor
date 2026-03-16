@@ -22,6 +22,7 @@ libkrocif_a_SOURCES = \
 	io/io.c \
 	io/input.occ \
 	io/output.occ \
+	rts/cif.c \
 	rts/occam_entry.c \
 	rts/rtsmain.c \
 	rts/tty.c \

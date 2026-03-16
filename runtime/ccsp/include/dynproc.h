@@ -25,10 +25,10 @@
 
 typedef struct {
 	int num_ichans, num_ochans;		/* number of input and output channels */
-	int *ichans, *ochans;			/* arrays to hold main channel addresses */
-	int *result;				/* hold pointer to result param of ccsp.suspendproc */
+	word *ichans, *ochans;			/* arrays to hold main channel addresses */
+	word *result;				/* hold pointer to result param of ccsp.suspendproc */
 	word *wptr;				/* Wptr of suspended process */
-	unsigned int return_addr;		/* return address of suspended process */
+	word return_addr;			/* return address of suspended process */
 	word priofinity;			/* priofinity of suspended process */
 } d_suspended_inf;
 
@@ -49,11 +49,11 @@ typedef struct tag_d_process {
 	int vs_size;				/* vectorspace size */
 	int ms_size;				/* mobilespace size */
 	word *holding_wptr;			/* process waiting for the completion of this */
-	unsigned holding_raddr;			/* and it's return address */
+	word holding_raddr;			/* and it's return address */
 	word holding_priofinity;		/* and it's priofinity */
 	char *entrypoint;			/* where the function starts */
 	void *lhandle;				/* associated dlopen() handle */
-	int *result;				/* pointer to the (INT result) parameter in an */
+	word *result;				/* pointer to the (INT result) parameter in an */
 						/* occam workspace (calling ccsp.{run,resume}proc) */
 	d_suspended_inf *suspended;		/* info about a suepended process */
 	int is_running;				/* 1 if the process is running/blocked, 0 if it is suspended */
@@ -120,11 +120,11 @@ typedef struct dp_offset_struct dp_offset;
 
 #ifndef __DYNPROC_C
 	#ifdef DYNAMIC_PROCS
-		extern d_process *dynproc_startprocess (int *params, void *exitpoint);
-		extern int dynproc_suspendprocess (d_process *p, int *result, word *wptr, unsigned int raddr, word paf);
+		extern d_process *dynproc_startprocess (word *params, void *exitpoint);
+		extern int dynproc_suspendprocess (d_process *p, word *result, word *wptr, word raddr, word paf);
 		extern d_process *dynproc_endprocess (word *wptr);
 		extern void dynproc_dumpprocess (d_process *p);
-		extern int faulting_dynproc (word **wptr_ptr, unsigned int *raddr_ptr, char *fault, d_process **tp_return);
+		extern int faulting_dynproc (word **wptr_ptr, word *raddr_ptr, char *fault, d_process **tp_return);
 	#else	/* !DYNAMIC_PROCS */
 		extern void no_dynamic_process_support (void);
 	#endif	/* !DYNAMIC_PROCS */

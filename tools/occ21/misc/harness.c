@@ -817,12 +817,11 @@ PRIVATEPARAM void setprocessorattr(void)
 		}
 	}
 	if ((processorattr & ATTRIB_WORD_64) != 0) {
-		needs_quadalign = TRUE;
-		/* INT remains 32-bit even on 64-bit targets */
-		/* targetintsize = S_INT64; */
-		wordshift = 3;
-	}
-}
+	        needs_quadalign = TRUE;
+	        /* INT remains 32-bit even on 64-bit targets */
+	        /* targetintsize = S_INT64; */
+	        wordshift = 3;
+	}}
 /*}}}*/
 /*{{{  PUBLIC void setprocessordefault()*/
 #ifdef DEFAULT_PROCESSOR_TYPE

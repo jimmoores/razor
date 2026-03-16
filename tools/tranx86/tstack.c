@@ -1,3 +1,7 @@
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 /*
  *	tstack.c - transputer stack manipulation
  *	Copyright (C) 2000 Fred Barnes <frmb@kent.ac.uk>

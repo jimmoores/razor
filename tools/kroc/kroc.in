@@ -148,7 +148,7 @@ tsuffix='tce'
 
 # Default: medium warnings
 occwopts=
-occopts="-w -y -znd -znec -udo -zncc -init -xin -mobiles -mpt -zrpe @KROC_CCSP_OCCFLAGS@"
+occopts="-w -y -znd -znec -udo -zncc -init -xin -mobiles -mpt @KROC_CCSP_OCCFLAGS@"
 
 case "$target_cpu" in
 	i386 | i486 | i586 | i686)
