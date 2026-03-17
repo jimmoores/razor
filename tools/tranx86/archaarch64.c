@@ -2949,6 +2949,49 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 					break;
+				case INS_INC:
+				case INS_DEC:
+					if (!ins->out_args[0] || !ins->in_args[0]) {
+						fprintf (stream, "\t// INVALID INC/DEC: missing arguments\n");
+						break;
+					}
+					{
+						const char *op = (ins->type == INS_INC) ? "add" : "sub";
+						int in_is_regind = ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
+						int out_is_regind = ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
+						int set_flags = aarch64_sets_flags(ins);
+
+						if (in_is_regind && out_is_regind) {
+							/* Memory-to-memory inc/dec: load, op, store */
+							long in_disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+							long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[0]->regconst), in_disp);
+							fprintf (stream, "\t%s%s\tx17, x17, #1\n", op, set_flags ? "s" : "");
+							aarch64_emit_mem_op (stream, "str", "x17",
+								aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+						} else if (in_is_regind) {
+							/* Memory source, register dest */
+							long in_disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[0]->regconst), in_disp);
+							fprintf (stream, "\t%s%s\t%s, x17, #1\n", op, set_flags ? "s" : "",
+								aarch64_get_register_name (ins->out_args[0]->regconst));
+						} else if (out_is_regind) {
+							/* Register source, memory dest */
+							const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+							long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+							fprintf (stream, "\t%s%s\tx17, %s, #1\n", op, set_flags ? "s" : "", src);
+							aarch64_emit_mem_op (stream, "str", "x17",
+								aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+						} else {
+							/* Register to register */
+							fprintf (stream, "\t%s%s\t%s, %s, #1\n", op, set_flags ? "s" : "",
+								aarch64_get_register_name (ins->out_args[0]->regconst),
+								aarch64_get_register_name (ins->in_args[0]->regconst));
+						}
+					}
+					break;
 				case INS_MUL:
 					if (!ins->out_args[0] || !ins->in_args[0] || !ins->in_args[1]) {
 						fprintf (stream, "\t// INVALID MUL: missing arguments\n");
@@ -3300,7 +3343,8 @@ static int aarch64_sets_flags (ins_chain *ins)
 {
 	int i;
 	for (i = 0; i < 4; i++) {
-		if (ins->out_args[i] && (ins->out_args[i]->flags & ARG_MODEMASK) == ARG_REG && ins->out_args[i]->regconst == REG_CC) {
+		if (ins->out_args[i] && (ins->out_args[i]->flags & ARG_MODEMASK) == ARG_REG &&
+		    (ins->out_args[i]->regconst == REG_CC || ins->out_args[i]->regconst == AARCH64_REG_CC)) {
 			return 1;
 		}
 	}
