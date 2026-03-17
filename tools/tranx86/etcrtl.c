@@ -5851,10 +5851,21 @@ static void generate_constmapped_21instr (tstate *ts, int etc_instr, int instr, 
 		}
 		break;
 	case VALUE_LOCAL:
-		if (usecc) {
-			add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (src_reg1) << WSH), ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
+		if (options.machine_class == CLASS_AARCH64 || options.machine_class == CLASS_X64) {
+			/* RISC targets: arithmetic instructions can't use memory operands
+			 * directly. Use the register (value should already be loaded by LDL). */
+			if (usecc) {
+				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_REG, src_reg1, ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
+			} else {
+				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 1, ARG_REG, src_reg1, ARG_REG, src_reg2, ARG_REG, dst_reg));
+			}
 		} else {
-			add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (src_reg1) << WSH), ARG_REG, src_reg2, ARG_REG, dst_reg));
+			/* CISC targets (x86): can use memory operands in arithmetic */
+			if (usecc) {
+				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (src_reg1) << WSH), ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
+			} else {
+				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (src_reg1) << WSH), ARG_REG, src_reg2, ARG_REG, dst_reg));
+			}
 		}
 		break;
 	}

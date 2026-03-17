@@ -1946,33 +1946,11 @@ static void compose_aarch64_entry_prolog (tstate *ts)
 /*{{{  static void compose_aarch64_return (tstate *ts)*/
 static void compose_aarch64_return (tstate *ts)
 {
-	/* Check if this is the main function that needs cleanup */
-	if (ts && ts->flushscreenpoint >= 0) {
-		/* For ARM64, generate direct kernel exit calls - these are terminal */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64: direct kernel exit (terminal)")));
+	/* Pop 32 bytes from Wptr (I_CALL frame = 4 words on 64-bit) */
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 32, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 
-		/* Call Y_shutdown directly. Must setup x0, x1, x2 first! */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx0, #0\n\tmov\tx1, x25\n\tmov\tx2, x28")));
-
-		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup ("Y_shutdown")));
-
-		/* Call Y_BNSeterr directly. Must setup x0, x1, x2 first! */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx0, #0\n\tmov\tx1, x25\n\tmov\tx2, x28")));
-
-		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup ("Y_BNSeterr")));
-
-		/* Mark cleanup as handled to prevent the original flushscreenpoint code */
-		ts->flushscreenpoint = -1;
-
-		/* NO RET after kernel cleanup - these calls should exit the program */
-		return;
-	}
-
-        /* Pop 32 bytes from Wptr */
-        add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 32, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-
-        /* Generate the return instruction */
-        add_to_ins_chain (compose_ins (INS_RET, 0, 0));
+	/* Jump to return address at old Wptr[0] (now at Wptr[-32]) */
+	add_to_ins_chain (compose_ins (INS_RET, 0, 0));
 }
 /*}}}*/
 /*{{{  static int compose_aarch64_widenshort (tstate *ts)*/
@@ -2584,9 +2562,18 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							}
 						}
 					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->out_args[0]->flags & ARG_DISP)) {
-						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
+						int in_mode = ins->in_args[0]->flags & ARG_MODEMASK;
+						if (in_mode == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
 							long label_num = (long)ins->in_args[0]->regconst;
 							fprintf(stream, "\tadr\tx16, %ldf\n", label_num);
+							fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
+						} else if (in_mode == ARG_LABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
+							long label_num = (long)ins->in_args[0]->regconst;
+							fprintf(stream, "\tadr\tx16, L%ld\n", label_num);
+							fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
+						} else if (in_mode == ARG_INSLABEL) {
+							long label_num = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
+							fprintf(stream, "\tadr\tx16, L%ld\n", label_num);
 							fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
 						} else {
 							/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
@@ -2600,11 +2587,21 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							}
 						}
 					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
-						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
-							long label_num = (long)ins->in_args[0]->regconst;
-							fprintf(stream, "\tadr\tx16, %ldf\n", label_num);
-							aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
-						} else {
+						{
+							int in_mode2 = ins->in_args[0]->flags & ARG_MODEMASK;
+							if (in_mode2 == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
+								long label_num = (long)ins->in_args[0]->regconst;
+								fprintf(stream, "\tadr\tx16, %ldf\n", label_num);
+								aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
+							} else if (in_mode2 == ARG_LABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
+								long label_num = (long)ins->in_args[0]->regconst;
+								fprintf(stream, "\tadr\tx16, L%ld\n", label_num);
+								aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
+							} else if (in_mode2 == ARG_INSLABEL) {
+								long label_num = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
+								fprintf(stream, "\tadr\tx16, L%ld\n", label_num);
+								aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
+							} else {
 							/* CRITICAL FIX: ARM64 doesn't allow sp as source register in str */
 							if (ins->in_args[0]->regconst == REG_SP || ins->in_args[0]->regconst == 31) {
 								fprintf (stream, "\tmov\tx16, %s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
@@ -2615,6 +2612,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 										aarch64_get_register_name (ins->out_args[0]->regconst),
 										(long)ins->out_args[0]->disp);
 							}
+						}
 						}
 						/* Handle load/move operations */
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
@@ -2698,27 +2696,128 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						fprintf (stream, "\t// INVALID ADD: missing arguments\n");
 						break;
 					}
-					if (!aarch64_validate_register(ins->out_args[0]->regconst) || 
-					    !aarch64_validate_register(ins->in_args[0]->regconst) ||
-					    !aarch64_validate_register(ins->in_args[1]->regconst)) {
-						fprintf (stream, "\t// SKIPPED ADD: invalid register\n");
-						break;
-					}
-					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
-						aarch64_emit_arithmetic_with_immediate (stream, "add", 
-							aarch64_get_register_name (ins->out_args[0]->regconst),
-							aarch64_get_register_name (ins->in_args[1]->regconst),
-							(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
-					} else if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
-						aarch64_emit_arithmetic_with_immediate (stream, "add", 
-							aarch64_get_register_name (ins->out_args[0]->regconst),
-							aarch64_get_register_name (ins->in_args[0]->regconst),
-							(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
-					} else {
-						fprintf (stream, "\t%s\t%s, %s, %s\n", aarch64_sets_flags(ins) ? "adds" : "add",
-							aarch64_get_register_name (ins->out_args[0]->regconst),
-							aarch64_get_register_name (ins->in_args[1]->regconst),
-							aarch64_get_register_name (ins->in_args[0]->regconst));
+					{
+						int in0_is_const = ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST);
+						int in1_is_const = ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST);
+						int in0_is_regind = ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
+						int in1_is_regind = ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_REGIND);
+						int out_is_regind = ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
+						const char *src_reg, *dst_reg;
+
+						if (in0_is_const && in1_is_regind) {
+							/* CONST + memory -> load memory to x17, add const, store if needed */
+							long disp = (ins->in_args[1]->flags & ARG_DISP) ? ins->in_args[1]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[1]->regconst), disp);
+							if (out_is_regind) {
+								/* Result goes to memory */
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									"x17", "x17",
+									(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								dst_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									dst_reg, "x17",
+									(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+							}
+						} else if (in1_is_const && in0_is_regind) {
+							/* memory + CONST -> load memory to x17, add const, store if needed */
+							long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[0]->regconst), disp);
+							if (out_is_regind) {
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									"x17", "x17",
+									(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								dst_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									dst_reg, "x17",
+									(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
+							}
+						} else if (in0_is_const) {
+							src_reg = aarch64_get_register_name (ins->in_args[1]->regconst);
+							if (out_is_regind) {
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									"x17", src_reg,
+									(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								dst_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									dst_reg, src_reg,
+									(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+							}
+						} else if (in1_is_const) {
+							src_reg = aarch64_get_register_name (ins->in_args[0]->regconst);
+							if (out_is_regind) {
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									"x17", src_reg,
+									(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								dst_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								aarch64_emit_arithmetic_with_immediate (stream, "add",
+									dst_reg, src_reg,
+									(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
+							}
+						} else if (in0_is_regind) {
+							/* Memory operand: load into temp first */
+							long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[0]->regconst), disp);
+							if (out_is_regind) {
+								src_reg = aarch64_get_register_name (ins->in_args[1]->regconst);
+								fprintf (stream, "\t%s\tx17, %s, x17\n", aarch64_sets_flags(ins) ? "adds" : "add", src_reg);
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								fprintf (stream, "\t%s\t%s, %s, x17\n", aarch64_sets_flags(ins) ? "adds" : "add",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst));
+							}
+						} else if (in1_is_regind) {
+							long disp = (ins->in_args[1]->flags & ARG_DISP) ? ins->in_args[1]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[1]->regconst), disp);
+							if (out_is_regind) {
+								src_reg = aarch64_get_register_name (ins->in_args[0]->regconst);
+								fprintf (stream, "\t%s\tx17, %s, x17\n", aarch64_sets_flags(ins) ? "adds" : "add", src_reg);
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								fprintf (stream, "\t%s\t%s, %s, x17\n", aarch64_sets_flags(ins) ? "adds" : "add",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[0]->regconst));
+							}
+						} else {
+							/* reg + reg -> reg or memory */
+							if (out_is_regind) {
+								fprintf (stream, "\t%s\tx17, %s, %s\n", aarch64_sets_flags(ins) ? "adds" : "add",
+									aarch64_get_register_name (ins->in_args[1]->regconst),
+									aarch64_get_register_name (ins->in_args[0]->regconst));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								fprintf (stream, "\t%s\t%s, %s, %s\n", aarch64_sets_flags(ins) ? "adds" : "add",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst),
+									aarch64_get_register_name (ins->in_args[0]->regconst));
+							}
+						}
 					}
 					break;
 				case INS_SUB:
@@ -2726,27 +2825,128 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						fprintf (stream, "\t// INVALID SUB: missing arguments\n");
 						break;
 					}
-					if (!aarch64_validate_register(ins->out_args[0]->regconst) || 
-					    !aarch64_validate_register(ins->in_args[0]->regconst) ||
-					    !aarch64_validate_register(ins->in_args[1]->regconst)) {
-						fprintf (stream, "\t// SKIPPED SUB: invalid register\n");
-						break;
-					}
-					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
-						aarch64_emit_arithmetic_with_immediate (stream, "sub", 
-							aarch64_get_register_name (ins->out_args[0]->regconst),
-							aarch64_get_register_name (ins->in_args[1]->regconst),
-							(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
-					} else if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
-						aarch64_emit_arithmetic_with_immediate (stream, "sub", 
-							aarch64_get_register_name (ins->out_args[0]->regconst),
-							aarch64_get_register_name (ins->in_args[0]->regconst),
-							(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
-					} else {
-						fprintf (stream, "\t%s\t%s, %s, %s\n", aarch64_sets_flags(ins) ? "subs" : "sub",
-							aarch64_get_register_name (ins->out_args[0]->regconst),
-							aarch64_get_register_name (ins->in_args[1]->regconst),
-							aarch64_get_register_name (ins->in_args[0]->regconst));
+					{
+						int in0_is_const = ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST);
+						int in1_is_const = ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST);
+						int in0_is_regind = ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
+						int in1_is_regind = ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_REGIND);
+						int out_is_regind = ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
+						const char *src_reg, *dst_reg;
+
+						if (in0_is_const && in1_is_regind) {
+							/* CONST, memory -> load memory to x17, sub const, store if needed */
+							long disp = (ins->in_args[1]->flags & ARG_DISP) ? ins->in_args[1]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[1]->regconst), disp);
+							if (out_is_regind) {
+								aarch64_emit_arithmetic_with_immediate (stream, "sub",
+									"x17", "x17",
+									(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								dst_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								aarch64_emit_arithmetic_with_immediate (stream, "sub",
+									dst_reg, "x17",
+									(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+							}
+						} else if (in1_is_const && in0_is_regind) {
+							/* memory, CONST -> load memory to x17, sub const, store if needed */
+							long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[0]->regconst), disp);
+							if (out_is_regind) {
+								aarch64_emit_arithmetic_with_immediate (stream, "sub",
+									"x17", "x17",
+									(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								dst_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								aarch64_emit_arithmetic_with_immediate (stream, "sub",
+									dst_reg, "x17",
+									(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
+							}
+						} else if (in0_is_const) {
+							src_reg = aarch64_get_register_name (ins->in_args[1]->regconst);
+							if (out_is_regind) {
+								aarch64_emit_arithmetic_with_immediate (stream, "sub",
+									"x17", src_reg,
+									(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								dst_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								aarch64_emit_arithmetic_with_immediate (stream, "sub",
+									dst_reg, src_reg,
+									(long)ins->in_args[0]->regconst, "x16", aarch64_sets_flags(ins));
+							}
+						} else if (in1_is_const) {
+							src_reg = aarch64_get_register_name (ins->in_args[0]->regconst);
+							if (out_is_regind) {
+								aarch64_emit_arithmetic_with_immediate (stream, "sub",
+									"x17", src_reg,
+									(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								dst_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								aarch64_emit_arithmetic_with_immediate (stream, "sub",
+									dst_reg, src_reg,
+									(long)ins->in_args[1]->regconst, "x16", aarch64_sets_flags(ins));
+							}
+						} else if (in0_is_regind) {
+							/* Memory operand: load from [base, #disp] into temp, then subtract */
+							long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[0]->regconst), disp);
+							if (out_is_regind) {
+								src_reg = aarch64_get_register_name (ins->in_args[1]->regconst);
+								fprintf (stream, "\t%s\tx17, %s, x17\n", aarch64_sets_flags(ins) ? "subs" : "sub", src_reg);
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								fprintf (stream, "\t%s\t%s, %s, x17\n", aarch64_sets_flags(ins) ? "subs" : "sub",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst));
+							}
+						} else if (in1_is_regind) {
+							/* Memory operand on second input */
+							long disp = (ins->in_args[1]->flags & ARG_DISP) ? ins->in_args[1]->disp : 0;
+							aarch64_emit_mem_op (stream, "ldr", "x17",
+								aarch64_get_register_name (ins->in_args[1]->regconst), disp);
+							if (out_is_regind) {
+								src_reg = aarch64_get_register_name (ins->in_args[0]->regconst);
+								fprintf (stream, "\t%s\tx17, %s, x17\n", aarch64_sets_flags(ins) ? "subs" : "sub", src_reg);
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								fprintf (stream, "\t%s\t%s, x17, %s\n", aarch64_sets_flags(ins) ? "subs" : "sub",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[0]->regconst));
+							}
+						} else {
+							/* reg - reg -> reg or memory */
+							if (out_is_regind) {
+								fprintf (stream, "\t%s\tx17, %s, %s\n", aarch64_sets_flags(ins) ? "subs" : "sub",
+									aarch64_get_register_name (ins->in_args[1]->regconst),
+									aarch64_get_register_name (ins->in_args[0]->regconst));
+								long out_disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+								aarch64_emit_mem_op (stream, "str", "x17",
+									aarch64_get_register_name (ins->out_args[0]->regconst), out_disp);
+							} else {
+								fprintf (stream, "\t%s\t%s, %s, %s\n", aarch64_sets_flags(ins) ? "subs" : "sub",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst),
+									aarch64_get_register_name (ins->in_args[0]->regconst));
+							}
+						}
 					}
 					break;
 				case INS_MUL:
@@ -3037,7 +3237,13 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 				
 								case INS_ANNO:
 					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_TEXT) {
-						fprintf (stream, "\t%s\n", (char *)ins->in_args[0]->regconst);
+						const char *text = (const char *)ins->in_args[0]->regconst;
+						/* Check if text is already a comment or a real instruction */
+						if (text[0] == '/' || strncmp(text, "dmb", 3) == 0 || strncmp(text, "dsb", 3) == 0 || strncmp(text, "isb", 3) == 0) {
+							fprintf (stream, "\t%s\n", text);
+						} else {
+							fprintf (stream, "\t// %s\n", text);
+						}
 					}
 					break;
 				default:
