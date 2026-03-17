@@ -2618,7 +2618,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 						/* Handle load/move operations */
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
-						char *symbol = (char *)ins->in_args[0]->regconst;
+						char *symbol = aarch64_convert_symbol_name((char *)ins->in_args[0]->regconst);
 
 						fprintf (stream, "\tadrp\t%s, %s@PAGE\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
@@ -2627,6 +2627,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								symbol);
+						sfree(symbol);
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
 						long label_num = (long)ins->in_args[0]->regconst;
 						if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
