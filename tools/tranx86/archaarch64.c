@@ -3289,6 +3289,80 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 					break;
+				case INS_MOVEB:
+					/* Byte move/store */
+					if (!ins->in_args[0] || !ins->out_args[0]) break;
+					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST && (ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+						/* Store constant byte to memory */
+						long val = (long)ins->in_args[0]->regconst & 0xFF;
+						long disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+						const char *base = aarch64_get_register_name(ins->out_args[0]->regconst);
+						fprintf(stream, "\tmov\tw16, #%ld\n", val);
+						aarch64_emit_mem_op(stream, "strb", "w16", base, disp);
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
+						/* Load byte from memory */
+						long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+						const char *base = aarch64_get_register_name(ins->in_args[0]->regconst);
+						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
+						char wdst[8];
+						snprintf(wdst, sizeof(wdst), "w%ld", (long)ins->out_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "ldrb", wdst, base, disp);
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REG && (ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+						/* Store register byte to memory */
+						long disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+						const char *base = aarch64_get_register_name(ins->out_args[0]->regconst);
+						char wsrc[8];
+						snprintf(wsrc, sizeof(wsrc), "w%ld", (long)ins->in_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "strb", wsrc, base, disp);
+					}
+					break;
+				case INS_MOVEZEXT8TO32:
+					/* Zero-extend byte to 32/64-bit */
+					if (!ins->in_args[0] || !ins->out_args[0]) break;
+					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+						long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+						const char *base = aarch64_get_register_name(ins->in_args[0]->regconst);
+						char wdst[8];
+						snprintf(wdst, sizeof(wdst), "w%ld", (long)ins->out_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "ldrb", wdst, base, disp);
+					} else {
+						/* Register source: zero-extend with uxtb */
+						char wsrc[8], wdst[8];
+						snprintf(wsrc, sizeof(wsrc), "w%ld", (long)ins->in_args[0]->regconst);
+						snprintf(wdst, sizeof(wdst), "w%ld", (long)ins->out_args[0]->regconst);
+						fprintf(stream, "\tuxtb\t%s, %s\n", wdst, wsrc);
+					}
+					break;
+				case INS_MOVEZEXT16TO32:
+					/* Zero-extend halfword to 32/64-bit */
+					if (!ins->in_args[0] || !ins->out_args[0]) break;
+					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+						long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+						const char *base = aarch64_get_register_name(ins->in_args[0]->regconst);
+						char wdst[8];
+						snprintf(wdst, sizeof(wdst), "w%ld", (long)ins->out_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "ldrh", wdst, base, disp);
+					} else {
+						char wsrc[8], wdst[8];
+						snprintf(wsrc, sizeof(wsrc), "w%ld", (long)ins->in_args[0]->regconst);
+						snprintf(wdst, sizeof(wdst), "w%ld", (long)ins->out_args[0]->regconst);
+						fprintf(stream, "\tuxth\t%s, %s\n", wdst, wsrc);
+					}
+					break;
+				case INS_MOVESEXT16TO32:
+					/* Sign-extend halfword to 64-bit */
+					if (!ins->in_args[0] || !ins->out_args[0]) break;
+					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+						long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+						const char *base = aarch64_get_register_name(ins->in_args[0]->regconst);
+						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "ldrsh", dst, base, disp);
+					} else {
+						const char *src = aarch64_get_register_name(ins->in_args[0]->regconst);
+						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
+						fprintf(stream, "\tsxth\t%s, %s\n", dst, src);
+					}
+					break;
 				default:
 					/* Skip unhandled instructions */
 					break;
