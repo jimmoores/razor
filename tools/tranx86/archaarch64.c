@@ -167,7 +167,7 @@ extern kif_entrytype *kif_entry (int call);
 #define REG_X17 17  /* Temporary register */
 #define REG_X29 29  /* Frame pointer */
 #define REG_X30 30  /* Link register */
-#define REG_SP 31   /* Stack pointer */
+#define REG_SP (-10)   /* Stack pointer - negative to keep out of register allocation */
 
 /* Special register mappings for occam runtime (use existing definitions from tstack.h) */
 #define AARCH64_REG_WPTR 28  /* Workspace pointer */
@@ -1620,7 +1620,7 @@ static arch_t aarch64_arch = {
 	.compose_nreturn = compose_nreturn_aarch64,
 	.compose_funcresults = compose_funcresults_aarch64,
 	.regcolour_special_to_real = aarch64_regcolour_special_to_real,
-	.regcolour_rmax = 31,
+	.regcolour_rmax = 25,	/* x0-x24 are available; x25-x28 reserved for runtime, x29-x31 reserved */
 	.regcolour_nodemax = 256,
 	.regcolour_get_regs = aarch64_regcolour_get_regs,
 	.regcolour_fp_regs = regcolour_fp_regs_aarch64,
@@ -2364,21 +2364,23 @@ static int aarch64_regcolour_special_to_real (int reg)
 	case REG_SCHED:
 		return AARCH64_REG_SCHED; /* x25 */
 	case REG_SP:
-		return 31;  /* sp */
+		return REG_SP;  /* keep as-is; aarch64_get_register_name handles it */
 	case REG_CC:
 		return AARCH64_REG_CC;  /* condition codes */
+	case REG_SPTR:
+		return 24;  /* x24 - occam stack pointer (distinct from hardware sp) */
 	default:
-		/* For negative register numbers, map to positive range */
+		/* For negative register numbers, map to safe range */
 		if (reg < 0 && reg > -1000) {
 			return (-reg) % 25; /* Use x0-x24 for negative regs */
 		}
-		/* For valid positive registers */
-		if (reg >= 0 && reg < 32) {
+		/* For valid positive registers within available range */
+		if (reg >= 0 && reg <= 24) {
 			return reg;
 		}
-		/* For large register numbers, map to safe range */
-		if (reg > 31) {
-			return reg % 25; /* Use x0-x24 for large regs */
+		/* For registers outside available range, map to safe range */
+		if (reg > 24) {
+			return reg % 25; /* Use x0-x24 */
 		}
 		/* Default safe fallback */
 		return 0;
