@@ -2771,6 +2771,34 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						break;
 					}
 					{
+						/* Check for label address operands (e.g., string_base + index) */
+						int in0_mode = ins->in_args[0]->flags & ARG_MODEMASK;
+						int in1_mode = ins->in_args[1]->flags & ARG_MODEMASK;
+						if (in0_mode == ARG_INSLABEL || (in0_mode == ARG_LABEL && (ins->in_args[0]->flags & ARG_ISCONST))) {
+							long label_num;
+							if (in0_mode == ARG_INSLABEL)
+								label_num = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
+							else
+								label_num = (long)ins->in_args[0]->regconst;
+							fprintf(stream, "\tadr\tx16, L%ld\n", label_num);
+							fprintf(stream, "\t%s\t%s, x16, %s\n", aarch64_sets_flags(ins) ? "adds" : "add",
+								aarch64_get_register_name(ins->out_args[0]->regconst),
+								aarch64_get_register_name(ins->in_args[1]->regconst));
+							break;
+						} else if (in1_mode == ARG_INSLABEL || (in1_mode == ARG_LABEL && (ins->in_args[1]->flags & ARG_ISCONST))) {
+							long label_num;
+							if (in1_mode == ARG_INSLABEL)
+								label_num = (long)((ins_chain *)ins->in_args[1]->regconst)->in_args[0]->regconst;
+							else
+								label_num = (long)ins->in_args[1]->regconst;
+							fprintf(stream, "\tadr\tx16, L%ld\n", label_num);
+							fprintf(stream, "\t%s\t%s, %s, x16\n", aarch64_sets_flags(ins) ? "adds" : "add",
+								aarch64_get_register_name(ins->out_args[0]->regconst),
+								aarch64_get_register_name(ins->in_args[0]->regconst));
+							break;
+						}
+					}
+					{
 						int in0_is_const = ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST);
 						int in1_is_const = ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST);
 						int in0_is_regind = ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
@@ -3134,16 +3162,27 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					break;
 				case INS_OR:
 					if (!ins->out_args[0] || !ins->in_args[0] || !ins->in_args[1]) break;
-					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
-						aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
-						fprintf (stream, "\torr\t%s, %s, x16\n",
+					{
+						/* AArch64 has no flag-setting orr (orrs doesn't exist).
+						 * When flags are needed, emit orr then tst the result. */
+						int sf = aarch64_sets_flags(ins);
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
+							aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
+							fprintf (stream, "\torr\t%s, %s, x16\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[1]->regconst));
-					} else {
-						fprintf (stream, "\torr\t%s, %s, %s\n",
+						} else {
+							fprintf (stream, "\torr\t%s, %s, %s\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[1]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst));
+					}
+						if (sf) {
+							/* Emit tst to set flags after the orr */
+							fprintf(stream, "\ttst\t%s, %s\n",
+								aarch64_get_register_name(ins->out_args[0]->regconst),
+								aarch64_get_register_name(ins->out_args[0]->regconst));
+						}
 					}
 					break;
 				case INS_XOR:
@@ -3443,6 +3482,50 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						const char *src = aarch64_get_register_name(ins->in_args[0]->regconst);
 						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
 						fprintf(stream, "\tsxth\t%s, %s\n", dst, src);
+					}
+					break;
+				case INS_LOADLABDIFF:
+					/* Compute label difference: dst = L1 - L2 */
+					if (ins->in_args[0] && ins->in_args[1] && ins->out_args[0]) {
+						long lab1, lab2;
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_INSLABEL)
+							lab1 = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
+						else
+							lab1 = (long)ins->in_args[0]->regconst;
+						if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_INSLABEL)
+							lab2 = (long)((ins_chain *)ins->in_args[1]->regconst)->in_args[0]->regconst;
+						else
+							lab2 = (long)ins->in_args[1]->regconst;
+						fprintf(stream, "\tadr\tx16, L%ld\n", lab1);
+						fprintf(stream, "\tadr\tx17, L%ld\n", lab2);
+						fprintf(stream, "\tsub\t%s, x16, x17\n",
+							aarch64_get_register_name(ins->out_args[0]->regconst));
+					}
+					break;
+				case INS_CONSTLABDIFF:
+					/* Emit constant label difference (for data sections) */
+					if (ins->in_args[0] && ins->in_args[1]) {
+						long lab1, lab2;
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_INSLABEL)
+							lab1 = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
+						else
+							lab1 = (long)ins->in_args[0]->regconst;
+						if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_INSLABEL)
+							lab2 = (long)((ins_chain *)ins->in_args[1]->regconst)->in_args[0]->regconst;
+						else
+							lab2 = (long)ins->in_args[1]->regconst;
+						fprintf(stream, "\t.quad\t(L%ld - L%ld)\n", lab1, lab2);
+					}
+					break;
+				case INS_CONSTLABADDR:
+					/* Emit constant label address (for data sections) */
+					if (ins->in_args[0]) {
+						long lab;
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_INSLABEL)
+							lab = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
+						else
+							lab = (long)ins->in_args[0]->regconst;
+						fprintf(stream, "\t.quad\tL%ld\n", lab);
 					}
 					break;
 				default:
