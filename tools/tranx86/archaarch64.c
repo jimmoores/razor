@@ -1003,6 +1003,11 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 	 * cause the kcall to overwrite cparam[0] with the transputer B-reg. */
 	compose_aarch64_kcall (ts, kernel_call, 1, 0);
 
+	/* After the blocking call returns (process rescheduled), pop the
+	 * I_CALL frame that was allocated before the call.  The I_CALL
+	 * pushed 4 words (AJW -4 = -32 bytes on 64-bit). */
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, (4 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+
 	*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// bcall complete"));
 	add_to_ins_chain (*pst_last);
 }
