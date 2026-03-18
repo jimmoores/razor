@@ -2474,6 +2474,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 	fprintf (stream, "// aarch64 assembly output - FIXED VERSION\n");
 	fprintf (stream, ".text\n");
 
+
 	for (tmp = rtl_code; tmp; tmp = tmp->next) {
 		switch (tmp->type) {
 		case RTL_WSVS:
@@ -2497,6 +2498,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 			disassemble_data ((unsigned char *)tmp->u.data.bytes, tmp->u.data.length, stream);
 			break;
 		case RTL_RDATA:
+			fprintf (stream, "L%d:\n", tmp->u.rdata.label);
 			disassemble_data ((unsigned char *)tmp->u.rdata.bytes, tmp->u.rdata.length, stream);
 			break;
 		case RTL_XDATA:
@@ -2508,6 +2510,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 		case RTL_CODE:
 			if (!tmp->u.code.head) break;
 			for (ins = tmp->u.code.head; ins; ins = ins->next) {
+
 				/* Reset dead code flag on any label */
 				if (ins->type == INS_SETLABEL || ins->type == INS_SETFLABEL) {
 					skip_dead_code = 0;
@@ -3150,16 +3153,24 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					/* skip_dead_code = 1; disabled */
 					break;
 				case INS_SETLABEL:
-				case INS_SETFLABEL:
-				
 					if (ins->in_args[0]) {
-						long label_num = (long)ins->in_args[0]->regconst;
 						int mode = ins->in_args[0]->flags & ARG_MODEMASK;
-						if (mode == ARG_LABEL) {
-							fprintf (stream, "L%ld:\n", label_num);
+						long lnum;
+						if (mode == ARG_INSLABEL) {
+							lnum = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
 						} else {
-							fprintf (stream, "%ld:\n", label_num);
+							lnum = (long)ins->in_args[0]->regconst;
 						}
+						fprintf (stream, "L%ld:\n", lnum);
+						skip_dead_code = 0;
+					} else {
+						fprintf(stderr, "SETLABEL with NULL in_args[0]!\n");
+					}
+					break;
+				case INS_SETFLABEL:
+					/* Local (forward/backward) labels - bare numeric */
+					if (ins->in_args[0]) {
+						fprintf (stream, "%ld:\n", (long)ins->in_args[0]->regconst);
 						skip_dead_code = 0;
 					}
 					break;
