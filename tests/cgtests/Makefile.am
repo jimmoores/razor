@@ -66,211 +66,211 @@ cglib.lib: $(cglib_lib_objs)
 
 #{{{  build rules for cgtests
 cgtest00: cgtest00.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest00.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest00.occ cglib.o
 
 cgtest01: cgtest01.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest01.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest01.occ cglib.o
 
 cgtest02: cgtest02.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest02.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest02.occ cglib.o
 
 cgtest03: cgtest03.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest03.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest03.occ cglib.o
 
 cgtest04: cgtest04.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest04.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest04.occ cglib.o
 
 cgtest05: cgtest05.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest05.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest05.occ cglib.o
 
 cgtest06: cgtest06.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest06.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest06.occ cglib.o
 
 cgtest07: cgtest07.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest07.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest07.occ cglib.o
 
 cgtest08: cgtest08.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest08.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest08.occ cglib.o
 
 cgtest09: cgtest09.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest09.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest09.occ cglib.o
 
 cgtest10: cgtest10.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest10.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest10.occ cglib.o
 
 cgtest11: cgtest11.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest11.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest11.occ cglib.o
 
 cgtest12: cgtest12.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest12.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest12.occ cglib.o
 
 cgtest13: cgtest13.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest13.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest13.occ cglib.o
 
 cgtest14: cgtest14.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest14.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest14.occ cglib.o
 
 cgtest15: cgtest15.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest15.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest15.occ cglib.o
 
 cgtest16: cgtest16.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest16.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest16.occ cglib.o
 
 cgtest17: cgtest17.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest17.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest17.occ cglib.o
 
 cgtest18: cgtest18.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest18.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest18.occ cglib.o
 
 cgtest19: cgtest19.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest19.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest19.occ cglib.o
 
 cgtest20: cgtest20.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest20.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest20.occ cglib.o
 
 cgtest21: cgtest21.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest21.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest21.occ cglib.o
 
 cgtest22: cgtest22.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest22.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest22.occ cglib.o
 
 cgtest23: cgtest23.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest23.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest23.occ cglib.o
 
 cgtest24: cgtest24.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest24.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest24.occ cglib.o
 
 cgtest25: cgtest25.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest25.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest25.occ cglib.o
 
 cgtest26: cgtest26.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest26.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest26.occ cglib.o
 
 cgtest27: cgtest27.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest27.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest27.occ cglib.o
 
 cgtest50: cgtest50.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest50.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest50.occ cglib.o
 
 cgtest51: cgtest51.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest51.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest51.occ cglib.o
 
 cgtest52: cgtest52.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest52.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest52.occ cglib.o
 
 cgtest53: cgtest53.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest53.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest53.occ cglib.o
 
 cgtest54: cgtest54.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest54.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest54.occ cglib.o
 
 cgtest55: cgtest55.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest55.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest55.occ cglib.o
 
 cgtest56: cgtest56.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest56.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest56.occ cglib.o
 
 cgtest57: cgtest57.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest57.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest57.occ cglib.o
 
 cgtest58: cgtest58.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest58.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest58.occ cglib.o
 
 cgtest59: cgtest59.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest59.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest59.occ cglib.o
 
 cgtest60: cgtest60.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest60.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest60.occ cglib.o
 
 cgtest61: cgtest61.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest61.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest61.occ cglib.o
 
 cgtest62: cgtest62.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest62.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest62.occ cglib.o
 
 cgtest63: cgtest63.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest63.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest63.occ cglib.o
 
 cgtest64: cgtest64.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest64.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest64.occ cglib.o
 
 cgtest65: cgtest65.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest65.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest65.occ cglib.o
 
 cgtest66: cgtest66.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest66.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest66.occ cglib.o
 
 cgtest67: cgtest67.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest67.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest67.occ cglib.o
 
 cgtest70: cgtest70.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest70.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest70.occ cglib.o
 
 cgtest71: cgtest71.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest71.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest71.occ cglib.o
 
 cgtest72: cgtest72.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest72.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest72.occ cglib.o
 
 cgtest73: cgtest73.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest73.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest73.occ cglib.o
 
 cgtest74: cgtest74.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest74.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest74.occ cglib.o
 
 cgtest75: cgtest75.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest75.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest75.occ cglib.o
 
 cgtest76: cgtest76.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest76.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest76.occ cglib.o
 
 cgtest77: cgtest77.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest77.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest77.occ cglib.o
 
 cgtest78: cgtest78.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest78.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest78.occ cglib.o
 
 cgtest79: cgtest79.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest79.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest79.occ cglib.o
 
 cgtest80: cgtest80.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest80.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest80.occ cglib.o
 
 cgtest81: cgtest81.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest81.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest81.occ cglib.o
 
 cgtest82: cgtest82.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest82.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest82.occ cglib.o
 
 cgtest83: cgtest83.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest83.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest83.occ cglib.o
 
 cgtest84: cgtest84.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest84.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest84.occ cglib.o
 
 cgtest85: cgtest85.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest85.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest85.occ cglib.o
 
 cgtest86: cgtest86.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest86.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest86.occ cglib.o
 
 cgtest87: cgtest87.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest87.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest87.occ cglib.o
 
 cgtest88: cgtest88.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest88.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest88.occ cglib.o
 
 cgtest89: cgtest89.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest89.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest89.occ cglib.o
 
 cgtest90: cgtest90.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest90.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest90.occ cglib.o
 
 cgtest91: cgtest91.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest91.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest91.occ cglib.o
 
 cgtest92: cgtest92.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest92.occ
+	$(OCCBUILD) --program $(srcdir)/cgtest92.occ cglib.o
 #}}}
 
 install-exec-local: $(libs) $(tests)
