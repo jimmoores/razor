@@ -2394,6 +2394,45 @@ static int aarch64_regcolour_get_regs (int *regs)
 }
 /*}}}*/
 
+/*{{{  static void aarch64_dump_codemap_labels (procinf *pinf, FILE *stream, int toplvl)*/
+/*
+ *	Emits codemap labels for AArch64.  The full codemap data structure
+ *	uses label-to-label relocations (.quad L<num>) which aren't supported
+ *	on AArch64 macOS.  For now, emit just the label definitions so that
+ *	LOADCODEMAP references resolve.  The actual codemap data can be
+ *	implemented later using PC-relative addressing if needed.
+ */
+static void aarch64_dump_codemap_labels (procinf *pinf, FILE *stream, int toplvl)
+{
+	int i;
+
+	if (toplvl) {
+		fprintf (stream, "\n.align 3\n");
+		fprintf (stream, "L%d:\n", pinf->maplab);
+		fprintf (stream, "\t.quad\t0\n");	/* placeholder */
+	}
+
+	/* emit name string labels */
+	if (!pinf->written_out) {
+		if (pinf->namelen) {
+			fprintf (stream, "L%d:\t.asciz\t\"%*s\"\n", pinf->namelab, pinf->namelen, pinf->name);
+		}
+		if (pinf->inamelen) {
+			fprintf (stream, "L%d:\t.asciz\t\"%*s\"\n", pinf->inamelab, pinf->inamelen, pinf->iname);
+		}
+		pinf->written_out = 1;
+	}
+
+	/* subordinates */
+	for (i = 0; i < pinf->refs_cur; i++) {
+		if (pinf->refs[i]->is_internal) {
+			pinf->refs[i]->namelab = pinf->inamelab;
+		}
+		aarch64_dump_codemap_labels (pinf->refs[i], stream, 0);
+	}
+}
+/*}}}*/
+
 /*{{{  static int aarch64_code_to_asm (rtl_chain *rtl_code, char *filename)*/
 static int aarch64_code_to_asm (rtl_chain *rtl_code, char *filename)
 {
@@ -2503,6 +2542,10 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 			break;
 		case RTL_XDATA:
 			disassemble_xdata ((unsigned char *)tmp->u.xdata.bytes, tmp->u.xdata.length, tmp->u.xdata.fixups, stream);
+			break;
+		case RTL_CODEMAP:
+			/* Emit codemap labels in .text so adr can reach them */
+			aarch64_dump_codemap_labels (tmp->u.codemap.pinf, stream, 1);
 			break;
 		case RTL_ALIGN:
 			fprintf (stream, "\n.align %d\n", tmp->u.alignment);
