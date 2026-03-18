@@ -3698,7 +3698,7 @@ K_CALL_DEFINE_2_0 (Y_b_dispatch)
 K_CALL_DEFINE_2_0 (Y_bx_dispatch)
 {
 	void *b_func, *b_param;
-	
+
 	K_CALL_PARAMS_2 (b_func, b_param);
 	ENTRY_TRACE (Y_bx_dispatch, "%p, %p", (void *)b_func, (void *)b_param);
 

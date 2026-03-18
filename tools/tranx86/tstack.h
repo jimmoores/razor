@@ -46,8 +46,8 @@
 typedef struct constmap_t {
 	int v_reg;		/* register */
 	int type;		/* VALUE_... */
-	int c_val;		/* constant value */
-	int c_val2;		/* other label for VALUE_LABDIFF */
+	intptr_t c_val;		/* constant value (intptr_t for 64-bit targets) */
+	intptr_t c_val2;	/* other label for VALUE_LABDIFF */
 	ins_chain *load_ins;	/* pointer to load instruction */
 } constmap;
 
@@ -81,8 +81,8 @@ struct TAG_arch_t;
 
 extern void constmap_cleanup (tstack *stack);
 extern int constmap_typeof (int reg);
-extern int constmap_regconst (int reg);
-extern int constmap_otherlab (int reg);
+extern intptr_t constmap_regconst (int reg);
+extern intptr_t constmap_otherlab (int reg);
 extern void constmap_remove (int reg);
 extern void constmap_removelocal (int slot);
 extern void constmap_clearall (void);

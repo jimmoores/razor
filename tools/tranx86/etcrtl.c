@@ -4212,9 +4212,10 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*{{{  I_MINT -- generate MOSTNEG INT*/
 	case I_MINT:
 		{
-			intptr_t most_neg = (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000;
+			/* occam INT is always 32-bit; MOSTNEG INT = 0x80000000 */
+			int most_neg = (int)0x80000000;
 			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, most_neg, ARG_REG, ts->stack->a_reg);
-			constmap_new (ts->stack->a_reg, VALUE_CONST, most_neg, tmp_ins);
+			constmap_new (ts->stack->a_reg, VALUE_CONST, (intptr_t)most_neg, tmp_ins);
 			add_to_ins_chain (tmp_ins);
 		}
 		break;

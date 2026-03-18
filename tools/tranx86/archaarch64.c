@@ -977,8 +977,8 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 
 	arg_reg = tstack_newreg (ts->stack);
 
-	/* Set up workspace pointer parameter */
-	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, 4, ARG_REG, arg_reg));
+	/* Set up workspace pointer parameter: Wptr + 1 word points to the param block */
+	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, arg_reg));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, arg_reg, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[0])));
 
 	if (kernel_call != K_KERNEL_RUN) {
@@ -998,8 +998,10 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg));
 	}
 
-	/* Call kernel dispatch function */
-	compose_aarch64_kcall (ts, kernel_call, 2, 0);
+	/* Call kernel dispatch function.  Use regs_in=1 because cparam[0] is
+	 * already set to the parameter block pointer above; regs_in=2 would
+	 * cause the kcall to overwrite cparam[0] with the transputer B-reg. */
+	compose_aarch64_kcall (ts, kernel_call, 1, 0);
 
 	*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// bcall complete"));
 	add_to_ins_chain (*pst_last);
@@ -2517,16 +2519,9 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 				
 				switch (ins->type) {
 				case INS_MOVE:
-					/* CRITICAL FIX: Validate instruction arguments before processing */
+					/* Validate instruction arguments before processing */
 					if (!ins->out_args[0] || !ins->in_args[0]) {
 						fprintf (stream, "\t// INVALID MOVE: missing arguments\n");
-						break;
-					}
-					
-					/* Check for invalid register constants that cause crashes */
-					if (!aarch64_validate_register(ins->in_args[0]->regconst) || 
-					    !aarch64_validate_register(ins->out_args[0]->regconst)) {
-						fprintf (stream, "\t// SKIPPED: invalid register constant\n");
 						break;
 					}
 					

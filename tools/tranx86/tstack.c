@@ -325,11 +325,11 @@ int constmap_typeof (int reg)
 	return VALUE_UNDEFINED;
 }
 /*}}}*/
-/*{{{  int constmap_regconst (int reg)*/
+/*{{{  intptr_t constmap_regconst (int reg)*/
 /*
  *	returns constant value of `reg' -- errors if not here
  */
-int constmap_regconst (int reg)
+intptr_t constmap_regconst (int reg)
 {
 	int i;
 
@@ -371,11 +371,11 @@ void constmap_modregconst (int reg, int val)
 	exit (EXIT_FAILURE);
 }
 /*}}}*/
-/*{{{  int constmap_otherlab (int reg)*/
+/*{{{  intptr_t constmap_otherlab (int reg)*/
 /*
  *	returns the other label for VALUE_LABDIFF
  */
-int constmap_otherlab (int reg)
+intptr_t constmap_otherlab (int reg)
 {
 	int i;
 

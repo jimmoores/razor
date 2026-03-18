@@ -1800,8 +1800,8 @@ ins_arg *compose_ins_arg (int argtype, ...)
 
 		va_start (ap, argtype);
 		switch (flag & ARG_MODEMASK) {
-		case ARG_REG:
 		case ARG_CONST:
+		case ARG_REG:
 		case ARG_REGIND:
 		case ARG_COND:
 		case ARG_LABEL:
