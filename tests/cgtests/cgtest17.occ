@@ -511,6 +511,49 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
     bug.178()
     --}}}
     --{{{  Bug 494
+    -- Bug 494 tests RETYPES between INT and CHAN.
+    -- On 64-bit targets, CHAN is a word (8 bytes) but INT is 32-bit (4 bytes),
+    -- so INT64 must be used instead of INT for channel RETYPES.
+    #IF DEFINED(AARCH64)
+    PROC bug.494()
+      CHAN OF INT c1, c2, c3, c4 :
+      PAR
+        SEQ
+          c1 ! 88
+          ASM
+            LDAB 99, c2
+            OUTWORD
+          VAL INT64 x RETYPES c3 :
+          SEQ
+            VAL CHAN OF INT d RETYPES x :
+            d ! 101
+          INT64 y :
+          SEQ
+            VAL INT64 x RETYPES c4 :
+            y := x
+            CHAN OF INT e RETYPES y :
+            e ! 199
+          ASM
+            LD ADDRESSOF c4
+            LDNL 0
+            LDC 299
+            OUTWORD
+
+        INT a1, a2, a3, a4 :
+        SEQ
+          c1 ? a1
+          check(a1, 88, "B494a")
+          c2 ? a2
+          check(a2, 99, "B494b")
+          c3 ? a3
+          check(a3, 101, "B494c")
+          c4 ? a4
+          check(a4, 199, "B494d")
+          c4 ? a4
+          check(a4, 299, "B494e")
+    :
+    bug.494()
+    #ELSE
     PROC bug.494()
       CHAN OF INT c1, c2, c3, c4 :
       PAR
@@ -534,7 +577,7 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
             LDNL 0
             LDC 299
             OUTWORD
-            
+
         INT a1, a2, a3, a4 :
         SEQ
           c1 ? a1
@@ -549,6 +592,7 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
           check(a4, 299, "B494e")
     :
     bug.494()
+    #ENDIF
     --}}}
     #ENDIF
     --}}}
