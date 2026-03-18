@@ -2564,6 +2564,34 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 								fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
 							}
 						}
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_INSLABEL) {
+						/* Label address → register or memory */
+						long label_num = (long)((ins_chain *)ins->in_args[0]->regconst)->in_args[0]->regconst;
+						if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+							long disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+							fprintf(stream, "\tadr\tx16, L%ld\n", label_num);
+							if (disp) {
+								aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), disp);
+							} else {
+								fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
+							}
+						} else {
+							fprintf(stream, "\tadr\t%s, L%ld\n", aarch64_get_register_name(ins->out_args[0]->regconst), label_num);
+						}
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_LABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
+						/* Label address (non-instruction) → register or memory */
+						long label_num = (long)ins->in_args[0]->regconst;
+						if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+							long disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+							fprintf(stream, "\tadr\tx16, L%ld\n", label_num);
+							if (disp) {
+								aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), disp);
+							} else {
+								fprintf(stream, "\tstr\tx16, [%s]\n", aarch64_get_register_name(ins->out_args[0]->regconst));
+							}
+						} else {
+							fprintf(stream, "\tadr\t%s, L%ld\n", aarch64_get_register_name(ins->out_args[0]->regconst), label_num);
+						}
 					} else if ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->out_args[0]->flags & ARG_DISP)) {
 						int in_mode = ins->in_args[0]->flags & ARG_MODEMASK;
 						if (in_mode == ARG_FLABEL && (ins->in_args[0]->flags & ARG_ISCONST)) {
