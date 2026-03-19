@@ -1209,17 +1209,8 @@ static void compose_nreturn_aarch64 (tstate *ts, int adjust)
 
 	nresults = ts->numfuncresults;
 
-	if (nresults == 0) {
-		/* IS abbreviation function: FUNCRETURN was not emitted by occ21,
-		 * so old_a_reg may not contain the result. For single-result IS
-		 * functions, the result is the first parameter at Wptr[1] (offset 8).
-		 * Load it into the funcres register explicitly. */
-		nresults = 1;
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, tfixedregs[0]));
-	} else {
-		for (i = 0; i < nresults; i++) {
-			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
-		}
+	for (i = 0; i < nresults; i++) {
+		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
 	}
 
 	/* Load return address from Wptr[0] */
@@ -1305,13 +1296,24 @@ static void aarch64_stub_rmox_entry_prolog (tstate *ts, rmoxmode_e mode) { /* st
 
 /* Critical function implementations to fix segfaults */
 static void compose_aarch64_move (tstate *ts) {
-	/* Basic memory move operation */
-	int src_reg = ts->stack->old_c_reg;
-	int dst_reg = ts->stack->old_b_reg;
-	int count_reg = ts->stack->old_a_reg;
-	
-	/* Simple move implementation */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, src_reg, ARG_REG, dst_reg));
+	/* BLOCKCOPY: copy count bytes from src to dst.
+	 * Transputer stack: Areg=count, Breg=dst, Creg=src.
+	 * Following the SPARC/PPC byte-at-a-time loop pattern. */
+	int tmpreg;
+
+	/* Loop: test count, decrement, copy byte, increment ptrs, repeat */
+	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
+	add_to_ins_chain (compose_ins (INS_OR, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg,
+		ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 1));
+	add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+	tmpreg = tstack_newreg (ts->stack);
+	add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REGIND, ts->stack->old_c_reg, ARG_REG | ARG_IS8BIT, tmpreg));
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
+	add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REG | ARG_IS8BIT, tmpreg, ARG_REGIND, ts->stack->old_b_reg));
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_BLABEL, 0));
+	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 1));
 }
 
 static void compose_aarch64_shift (tstate *ts, int sec, int r1, int r2, int r3) {
@@ -2004,10 +2006,9 @@ static void compose_aarch64_entry_prolog (tstate *ts)
 static void compose_aarch64_return (tstate *ts)
 {
 	int toldregs[3], tfixedregs[3];
-	int i, nresults;
+	int i;
 
-	/* Function result handling (SPARC/PPC pattern).
-	 * Constrain results to fixed physical registers before return. */
+	/* Function result handling (SPARC/PPC register-constrained pattern) */
 	toldregs[0] = ts->stack->old_a_reg;
 	toldregs[1] = ts->stack->old_b_reg;
 	toldregs[2] = ts->stack->old_c_reg;
@@ -2015,17 +2016,8 @@ static void compose_aarch64_return (tstate *ts)
 	tfixedregs[1] = AARCH64_REG_FUNCRES1;
 	tfixedregs[2] = AARCH64_REG_FUNCRES2;
 
-	nresults = ts->numfuncresults;
-
-	if (nresults == 0) {
-		/* IS abbreviation function: load first parameter from Wptr[1]
-		 * into the funcres register, since no FUNCRETURN was emitted. */
-		nresults = 1;
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, tfixedregs[0]));
-	} else {
-		for (i = 0; i < nresults; i++) {
-			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
-		}
+	for (i = 0; i < ts->numfuncresults; i++) {
+		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
 	}
 
 	/* Pop 32 bytes from Wptr (I_CALL frame = 4 words on 64-bit) */
@@ -2034,8 +2026,7 @@ static void compose_aarch64_return (tstate *ts)
 	/* Jump to return address at old Wptr[0] (now at Wptr[-32]) */
 	add_to_ins_chain (compose_ins (INS_RET, 0, 0));
 
-	/* Unconstrain (metadata for register allocator, placed after jump) */
-	for (i = nresults - 1; i >= 0; i--) {
+	for (i = ts->numfuncresults - 1; i >= 0; i--) {
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, toldregs[i]));
 	}
 	ts->numfuncresults = 0;
@@ -3461,14 +3452,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					if (is_const1) {
 						long val = (long)ins->in_args[1]->regconst;
 						if (val >= 0 && val <= 4095 && strcmp(op0_reg, "x17") != 0) {
-							/* Use 32-bit cmp for correct signed INT semantics */
-							char w0[8];
-							if (op0_reg[0] == 'x') {
-								snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
-							} else {
-								snprintf(w0, sizeof(w0), "%s", op0_reg);
-							}
-							fprintf (stream, "\tcmp\t%s, #%ld\n", w0, val);
+							fprintf (stream, "\tcmp\t%s, #%ld\n", op0_reg, val);
 							break;
 						} else {
 							aarch64_emit_large_immediate (stream, val, "x17");
@@ -3488,25 +3472,8 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 
-					/* CRITICAL FIX: Match x86 CMP semantics by computing in_args[1] - in_args[0].
-					 * Use 32-bit (w) register forms for correct signed INT comparison.
-					 * This ensures MOSTNEG INT (0x80000000) is negative and
-					 * MOSTPOS INT (0x7FFFFFFF) is positive in 32-bit signed comparison. */
-					{
-						/* Convert x-register names to w-register names for 32-bit comparison */
-						char w0[8], w1[8];
-						if (op0_reg[0] == 'x') {
-							snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
-						} else {
-							snprintf(w0, sizeof(w0), "%s", op0_reg);
-						}
-						if (op1_reg[0] == 'x') {
-							snprintf(w1, sizeof(w1), "w%s", op1_reg + 1);
-						} else {
-							snprintf(w1, sizeof(w1), "%s", op1_reg);
-						}
-						fprintf (stream, "\tcmp\t%s, %s\n", w1, w0);
-					}
+					/* CRITICAL FIX: Match x86 CMP semantics by computing in_args[1] - in_args[0] */
+					fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
 					break;
 
 				case INS_SETCC:
@@ -3651,6 +3618,17 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					if (ins->in_args[0] && ins->out_args[0]) {
 						fprintf(stream, "\tmov\tw%ld, w%ld\n",
 							(long)ins->out_args[0]->regconst,
+							(long)ins->in_args[0]->regconst);
+					}
+					break;
+				case INS_SIGNEXT32:
+					/* Sign-extend low 32 bits to 64: sxtw xN, wN.
+					 * Used before signed comparisons (I_GT) so that
+					 * 32-bit negative values are correctly negative
+					 * in 64-bit signed comparison. */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						fprintf(stream, "\tsxtw\t%s, w%ld\n",
+							aarch64_get_register_name(ins->out_args[0]->regconst),
 							(long)ins->in_args[0]->regconst);
 					}
 					break;

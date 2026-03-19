@@ -81,6 +81,7 @@ static void gen_mobilespace_init (tstate *ts, int msp_offset, int count, int *sl
 static void compose_cond_jump (tstate *ts, int cond, int label);
 static void deferred_cond (tstate *ts);
 static void emit_int_truncate (tstate *ts, int result_reg);
+static void emit_int_signext (tstate *ts, int reg);
 static void generate_overflow_code (tstate *ts, int dcode, arch_t *arch);
 static void generate_overflowed_code (tstate *ts, int dcode, arch_t *arch);
 static void generate_range_code (tstate *ts, int rcode, arch_t *arch);
@@ -3201,6 +3202,19 @@ static void emit_int_truncate (tstate *ts, int result_reg)
 #endif
 }
 /*}}}*/
+/*{{{  static void emit_int_signext (tstate *ts, int reg)*/
+/*
+ *	On 64-bit targets, sign-extend the low 32 bits to 64 bits.
+ *	Used before signed comparisons (I_GT) so that truncated INT
+ *	values are correctly interpreted as signed in 64-bit CMP.
+ */
+static void emit_int_signext (tstate *ts, int reg)
+{
+#if (BytesPerWord > 4)
+	add_to_ins_chain (compose_ins (INS_SIGNEXT32, 1, 1, ARG_REG, reg, ARG_REG, reg));
+#endif
+}
+/*}}}*/
 /*{{{  static void compose_cond_jump (tstate *ts, int cond, int label)*/
 /*
  *	generates a conditional jump to a label (maybe modifies ts)
@@ -4782,6 +4796,12 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_GT -- tests for greater-than*/
 	case I_GT:
 		ts->cond = CC_GT;
+		/* Sign-extend both operands for correct 32-bit signed comparison
+		 * on 64-bit targets. After INS_TRUNCATE32, INT values are zero-extended
+		 * (e.g., -1 = 0x00000000FFFFFFFF). Sign-extension makes them
+		 * correctly negative for 64-bit signed CMP (e.g., 0xFFFFFFFFFFFFFFFF). */
+		emit_int_signext (ts, ts->stack->old_a_reg);
+		emit_int_signext (ts, ts->stack->old_b_reg);
 		switch (constmap_typeof (ts->stack->old_a_reg)) {
 		default:
 			switch (constmap_typeof (ts->stack->old_b_reg)) {
