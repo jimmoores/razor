@@ -3149,16 +3149,22 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					break;
 				case INS_AND:
 					if (!ins->out_args[0] || !ins->in_args[0] || !ins->in_args[1]) break;
-					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
-						aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
-						fprintf (stream, "\tand\t%s, %s, x16\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
-								aarch64_get_register_name (ins->in_args[1]->regconst));
-					} else {
-						fprintf (stream, "\tand\t%s, %s, %s\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
-								aarch64_get_register_name (ins->in_args[1]->regconst),
-								aarch64_get_register_name (ins->in_args[0]->regconst));
+					{
+						/* On x86, AND always sets flags. On AArch64, use 'ands'
+						 * to set flags since subsequent conditional jumps depend
+						 * on them (e.g., BOOL materialisation via deferred_cond). */
+						const char *op = "ands";
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
+							aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
+							fprintf (stream, "\t%s\t%s, %s, x16\n", op,
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst));
+						} else {
+							fprintf (stream, "\t%s\t%s, %s, %s\n", op,
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst),
+									aarch64_get_register_name (ins->in_args[0]->regconst));
+						}
 					}
 					break;
 				case INS_OR:
@@ -3185,6 +3191,13 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 								aarch64_get_register_name(ins->out_args[0]->regconst));
 						}
 					}
+					break;
+				case INS_NOT:
+					/* Bitwise NOT: mvn dst, src */
+					if (!ins->in_args[0] || !ins->out_args[0]) break;
+					fprintf (stream, "\tmvn\t%s, %s\n",
+							aarch64_get_register_name (ins->out_args[0]->regconst),
+							aarch64_get_register_name (ins->in_args[0]->regconst));
 					break;
 				case INS_XOR:
 					if (!ins->out_args[0] || !ins->in_args[0] || !ins->in_args[1]) break;
@@ -3399,7 +3412,33 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
 					break;
 
-				
+				case INS_SETCC:
+					/* Set register to 0/1 based on condition flags (aarch64: cset) */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						int cc = (int)ins->in_args[0]->regconst;
+						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
+						const char *cond;
+						switch (cc) {
+							case CC_Z: cond = "eq"; break;
+							case CC_NZ: cond = "ne"; break;
+							case CC_LT: cond = "lt"; break;
+							case CC_GE: cond = "ge"; break;
+							case CC_LE: cond = "le"; break;
+							case CC_GT: cond = "gt"; break;
+							case CC_B: cond = "lo"; break;
+							case CC_AE: cond = "hs"; break;
+							case CC_BE: cond = "ls"; break;
+							case CC_A: cond = "hi"; break;
+							case CC_S: cond = "mi"; break;
+							case CC_NS: cond = "pl"; break;
+							case CC_O: cond = "vs"; break;
+							case CC_NO: cond = "vc"; break;
+							default: cond = "eq"; break;
+						}
+						fprintf(stream, "\tcset\t%s, %s\n", dst, cond);
+					}
+					break;
+
 								case INS_ANNO:
 					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_TEXT) {
 						const char *text = (const char *)ins->in_args[0]->regconst;
@@ -3498,11 +3537,12 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							aarch64_get_register_name(ins->out_args[0]->regconst), disp);
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND &&
 					           (ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
-						/* Load 32-bit: ldr wreg, [base] (zero-extends to 64-bit) */
+						/* Load 32-bit signed: ldrsw xreg, [base] (sign-extends to 64-bit)
+						 * INT is signed, so sign-extension preserves correct value
+						 * for negative numbers and MOSTNEG INT operations. */
 						long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
-						char wdst[8];
-						snprintf(wdst, sizeof(wdst), "w%ld", (long)ins->out_args[0]->regconst);
-						aarch64_emit_mem_op(stream, "ldr", wdst,
+						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "ldrsw", dst,
 							aarch64_get_register_name(ins->in_args[0]->regconst), disp);
 					}
 					break;

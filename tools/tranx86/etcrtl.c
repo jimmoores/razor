@@ -4580,6 +4580,10 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				} else {
 					arch->compose_division (ts, ts->stack->old_b_reg, ts->stack->old_a_reg, ts->stack->old_b_reg);
 				}
+				/* The result overwrites old_b_reg, which becomes the new a_reg.
+				 * Must clear constmap for it since the register now holds the
+				 * quotient, not whatever constant it previously contained. */
+				constmap_remove (ts->stack->old_b_reg);
 				if (ts->stack->ts_depth <= 1) {
 					ts->stack->b_reg = REG_UNDEFINED;
 				} else {
