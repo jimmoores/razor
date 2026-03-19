@@ -176,6 +176,11 @@ extern kif_entrytype *kif_entry (int call);
 #define AARCH64_REG_SCHED 25 /* Scheduler pointer */
 #define AARCH64_REG_CC 32    /* Condition codes (virtual) */
 
+/* Function result registers (following SPARC L0-L2 / PPC R6-R8 pattern) */
+#define AARCH64_REG_FUNCRES0  19  /* x19 — function result 0 */
+#define AARCH64_REG_FUNCRES1  20  /* x20 — function result 1 */
+#define AARCH64_REG_FUNCRES2  21  /* x21 — function result 2 */
+
 /*}}}*/
 /*{{{  forward declarations*/
 static void aarch64_emit_large_immediate (FILE *stream, long value, const char *temp_reg);
@@ -1187,20 +1192,37 @@ static void compose_memory_barrier_aarch64 (tstate *ts, int sec)
 static void compose_nreturn_aarch64 (tstate *ts, int adjust)
 {
 	int tmp_reg = tstack_newreg (ts->stack);
-	int toldregs[3];
-	int i;
+	int toldregs[3], tfixedregs[3];
+	int i, nresults;
 
-	/* Save function results if any */
+	/* Function result handling for aarch64, following the SPARC/PPC pattern:
+	 * Constrain results to fixed physical registers (x19/x20/x21).
+	 * The register allocator handles spilling for nested function calls.
+	 * Always constrain at least 1 result for IS abbreviation function
+	 * compatibility (where FUNCRETURN is not emitted by occ21). */
 	toldregs[0] = ts->stack->old_a_reg;
 	toldregs[1] = ts->stack->old_b_reg;
 	toldregs[2] = ts->stack->old_c_reg;
+	tfixedregs[0] = AARCH64_REG_FUNCRES0;
+	tfixedregs[1] = AARCH64_REG_FUNCRES1;
+	tfixedregs[2] = AARCH64_REG_FUNCRES2;
 
-	for (i = 0; i < ts->numfuncresults; i++) {
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, toldregs[i], ARG_REGIND | ARG_DISP, REG_SP, -(i+1) * 8));
+	nresults = ts->numfuncresults;
+
+	if (nresults == 0) {
+		/* IS abbreviation function: FUNCRETURN was not emitted by occ21,
+		 * so old_a_reg may not contain the result. For single-result IS
+		 * functions, the result is the first parameter at Wptr[1] (offset 8).
+		 * Load it into the funcres register explicitly. */
+		nresults = 1;
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, tfixedregs[0]));
+	} else {
+		for (i = 0; i < nresults; i++) {
+			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
+		}
 	}
-	ts->numfuncresults = 0;
 
-	/* Load return address */
+	/* Load return address from Wptr[0] */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, REG_WPTR, ARG_REG, tmp_reg));
 
 	/* Adjust workspace pointer */
@@ -1210,6 +1232,12 @@ static void compose_nreturn_aarch64 (tstate *ts, int adjust)
 
 	/* Jump to return address */
 	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_REGIND, tmp_reg));
+
+	/* Unconstrain (metadata for register allocator, placed after the jump) */
+	for (i = nresults - 1; i >= 0; i--) {
+		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, toldregs[i]));
+	}
+	ts->numfuncresults = 0;
 }
 /*}}}*/
 
@@ -1220,11 +1248,25 @@ static void compose_nreturn_aarch64 (tstate *ts, int adjust)
 static void compose_funcresults_aarch64 (tstate *ts, int nresults)
 {
 	int i;
+	int tnewregs[3], tfixedregs[3];
 
-	/* Collect function results from stack */
+	/* Collect function results from fixed registers (SPARC/PPC pattern).
+	 * The register allocator handles spilling if these regs were in use. */
 	for (i = 0; i < nresults; i++) {
 		tstack_push (ts->stack);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SP, -(i+1) * 8, ARG_REG, ts->stack->a_reg));
+	}
+	tfixedregs[0] = AARCH64_REG_FUNCRES0;
+	tfixedregs[1] = AARCH64_REG_FUNCRES1;
+	tfixedregs[2] = AARCH64_REG_FUNCRES2;
+	tnewregs[0] = ts->stack->a_reg;
+	tnewregs[1] = ts->stack->b_reg;
+	tnewregs[2] = ts->stack->c_reg;
+
+	for (i = 0; i < nresults; i++) {
+		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, tnewregs[i], ARG_REG, tfixedregs[i]));
+	}
+	for (i = 0; i < nresults; i++) {
+		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tnewregs[i]));
 	}
 }
 /*}}}*/
@@ -1961,11 +2003,42 @@ static void compose_aarch64_entry_prolog (tstate *ts)
 /*{{{  static void compose_aarch64_return (tstate *ts)*/
 static void compose_aarch64_return (tstate *ts)
 {
+	int toldregs[3], tfixedregs[3];
+	int i, nresults;
+
+	/* Function result handling (SPARC/PPC pattern).
+	 * Constrain results to fixed physical registers before return. */
+	toldregs[0] = ts->stack->old_a_reg;
+	toldregs[1] = ts->stack->old_b_reg;
+	toldregs[2] = ts->stack->old_c_reg;
+	tfixedregs[0] = AARCH64_REG_FUNCRES0;
+	tfixedregs[1] = AARCH64_REG_FUNCRES1;
+	tfixedregs[2] = AARCH64_REG_FUNCRES2;
+
+	nresults = ts->numfuncresults;
+
+	if (nresults == 0) {
+		/* IS abbreviation function: load first parameter from Wptr[1]
+		 * into the funcres register, since no FUNCRETURN was emitted. */
+		nresults = 1;
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, tfixedregs[0]));
+	} else {
+		for (i = 0; i < nresults; i++) {
+			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
+		}
+	}
+
 	/* Pop 32 bytes from Wptr (I_CALL frame = 4 words on 64-bit) */
 	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 32, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 
 	/* Jump to return address at old Wptr[0] (now at Wptr[-32]) */
 	add_to_ins_chain (compose_ins (INS_RET, 0, 0));
+
+	/* Unconstrain (metadata for register allocator, placed after jump) */
+	for (i = nresults - 1; i >= 0; i--) {
+		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, toldregs[i]));
+	}
+	ts->numfuncresults = 0;
 }
 /*}}}*/
 /*{{{  static int compose_aarch64_widenshort (tstate *ts)*/
