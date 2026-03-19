@@ -413,6 +413,10 @@
 #define I_EXT_MT_OUT   0x24C
 
 #define I_MT_RESIZE    0x24D
+
+/* 64-bit target: 32-bit (INT-sized) load/store -- needed when INT < word */
+#define I_LW           0x252  /* load 32-bit word (zero-extended to 64-bit) */
+#define I_SW           0x253  /* store 32-bit word (low 32 bits only) */
 /*}}}*/
 /*{{{  negatives */
 #define I_FPSTALL     ( 0x01 | I_NEGATIVE) /* T9000 */

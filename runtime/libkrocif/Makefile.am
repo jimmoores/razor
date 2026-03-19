@@ -8,7 +8,7 @@ ACLOCAL_AMFLAGS = -I ../../m4
 KROC=@KROC@
 ILIBR=@ILIBR@
 
-DEFS = -I$(srcdir)/include @DEFS@ @KROC_CCSP_CFLAGS@ @KROC_CCSP_CINCPATH@
+DEFS = -I$(srcdir)/include @DEFS@ @KROC_CCSP_CFLAGS@ @KROC_CCSP_CINCPATH@ -fPIC
 EXTRALDFLAGS = @KROC_CCSP_LDFLAGS@ @KROC_CCSP_LIBPATH@
 
 SUBDIRS = include
@@ -34,7 +34,7 @@ all-local: libkrocif.a $(shared_libs) rts/rtsmain.o
 
 if BUILD_SHARED
 @LIBKROCIF@: $(libkrocif_a_OBJECTS)
-	$(CC) @SLINKFLAGS@ $(CFLAGS) $(EXTRALDFLAGS) -lccsp -o @LIBKROCIF@ $(libkrocif_a_OBJECTS)
+	$(CC) @SLINKFLAGS@ $(CFLAGS) $(EXTRALDFLAGS) -Wl,-Bsymbolic -lccsp -o @LIBKROCIF@ $(libkrocif_a_OBJECTS)
 endif
 
 install-exec-local: libkrocif.a $(shared_libs) rts/rtsmain.o

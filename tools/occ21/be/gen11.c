@@ -491,6 +491,19 @@ PRIVATE void movepointer (const int dirn, const int inonlocal, const INT32 word,
 		/*}}} */
 		if (need_signextend != NULL)
 			*need_signextend = FALSE;
+	} else if (bytesperword > 4 && bytesinscalar(type) == 4 &&
+		   (type == S_INT || type == S_UINT || type == S_INT32 || type == S_UINT32 || type == S_REAL32)) {
+		/*{{{  load/store a 32-bit value on 64-bit target */
+		/* On 64-bit targets, INT is 32-bit but the native word is 64-bit.
+		 * Use I_LW/I_SW to generate 32-bit loads/stores instead of
+		 * I_LDNL/I_STNL which would load/store 64 bits. */
+		if (word != 0) {
+			tbyteoffset(word * 4);
+		}
+		if (dirn != MOVEDIRN_LOADPTR) {
+			gensecondary ((dirn == MOVEDIRN_STORE) ? I_SW : I_LW);
+		}
+		/*}}}*/
 	} else
 		/*{{{  load/store a word */
 	{

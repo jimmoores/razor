@@ -206,6 +206,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream);
 static char *aarch64_get_register_name (int reg);
 /* Helper function declarations */
 static const char *aarch64_get_label_prefix(int flags);
+static void aarch64_emit_symbol_addr (FILE *stream, const char *dst_reg, const char *symbol);
 static int aarch64_sets_flags (ins_chain *ins);
 static int aarch64_validate_register(int reg);
 static char *aarch64_convert_symbol_name(const char *symbol);
@@ -1286,9 +1287,16 @@ static void compose_aarch64_division (tstate *ts, int dividend, int divisor, int
 }
 
 static int compose_aarch64_remainder (tstate *ts, int dividend, int divisor) {
-	/* Basic remainder */
+	/* AArch64 has no hardware REM instruction.
+	 * Compute remainder as: dividend - (dividend / divisor) * divisor
+	 * Using: sdiv tmp, dividend, divisor; msub result, tmp, divisor, dividend */
+	int tmp_reg = tstack_newreg(ts->stack);
 	int result_reg = tstack_newreg(ts->stack);
-	add_to_ins_chain (compose_ins (INS_DIV, 2, 1, ARG_REG, dividend, ARG_REG, divisor, ARG_REG, result_reg));
+	/* tmp = dividend / divisor */
+	add_to_ins_chain (compose_ins (INS_DIV, 2, 1, ARG_REG, dividend, ARG_REG, divisor, ARG_REG, tmp_reg));
+	/* result = dividend - tmp * divisor  (using MUL then SUB since we don't have MSUB in RTL) */
+	add_to_ins_chain (compose_ins (INS_MUL, 2, 1, ARG_REG, tmp_reg, ARG_REG, divisor, ARG_REG, tmp_reg));
+	add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_REG, tmp_reg, ARG_REG, dividend, ARG_REG, result_reg));
 	return result_reg;
 }
 
@@ -2692,11 +2700,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 						char *symbol = aarch64_convert_symbol_name((char *)ins->in_args[0]->regconst);
 
-						fprintf (stream, "\tadrp\t%s, %s@PAGE\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
-								symbol);
-						fprintf (stream, "\tadd\t%s, %s, %s@PAGEOFF\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
+						aarch64_emit_symbol_addr (stream,
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								symbol);
 						sfree(symbol);
@@ -2756,10 +2760,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 							char *symbol = (char *)ins->in_args[0]->regconst;
 							char *fixed = aarch64_convert_symbol_name(symbol);
-							fprintf (stream, "\tadrp\t%s, %s@PAGE\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst), fixed);
-							fprintf (stream, "\tadd\t%s, %s, %s@PAGEOFF\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
+							aarch64_emit_symbol_addr (stream,
 								aarch64_get_register_name (ins->out_args[0]->regconst), fixed);
 							sfree(fixed);
 						}
@@ -3484,6 +3485,27 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						fprintf(stream, "\tsxth\t%s, %s\n", dst, src);
 					}
 					break;
+				case INS_MOVE32:
+					/* 32-bit load/store for INT on 64-bit targets */
+					if (!ins->in_args[0] || !ins->out_args[0]) break;
+					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REG &&
+					    (ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+						/* Store 32-bit: str wreg, [base] */
+						long disp = (ins->out_args[0]->flags & ARG_DISP) ? ins->out_args[0]->disp : 0;
+						char wsrc[8];
+						snprintf(wsrc, sizeof(wsrc), "w%ld", (long)ins->in_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "str", wsrc,
+							aarch64_get_register_name(ins->out_args[0]->regconst), disp);
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND &&
+					           (ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
+						/* Load 32-bit: ldr wreg, [base] (zero-extends to 64-bit) */
+						long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+						char wdst[8];
+						snprintf(wdst, sizeof(wdst), "w%ld", (long)ins->out_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "ldr", wdst,
+							aarch64_get_register_name(ins->in_args[0]->regconst), disp);
+					}
+					break;
 				case INS_LOADLABDIFF:
 					/* Compute label difference: dst = L1 - L2 */
 					if (ins->in_args[0] && ins->in_args[1] && ins->out_args[0]) {
@@ -3730,6 +3752,25 @@ static void aarch64_emit_large_immediate (FILE *stream, long value, const char *
 	}
 	if (uval > 0xFFFFFFFFFFFF) {
 		fprintf (stream, "\tmovk\t%s, #%lu, lsl #48\n", temp_reg, (uval >> 48) & 0xFFFF);
+	}
+}
+/*}}}*/
+
+/*{{{  static void aarch64_emit_symbol_addr (FILE *stream, const char *dst_reg, const char *symbol)*/
+/*
+ * Emits platform-correct adrp+add sequence to load symbol address.
+ * macOS uses @PAGE/@PAGEOFF, Linux ELF uses :got: or plain :lo12:
+ */
+static void aarch64_emit_symbol_addr (FILE *stream, const char *dst_reg, const char *symbol)
+{
+	if (options.extref_prefix && options.extref_prefix[0] == '_') {
+		/* macOS/Darwin: use @PAGE/@PAGEOFF syntax */
+		fprintf (stream, "\tadrp\t%s, %s@PAGE\n", dst_reg, symbol);
+		fprintf (stream, "\tadd\t%s, %s, %s@PAGEOFF\n", dst_reg, dst_reg, symbol);
+	} else {
+		/* Linux ELF: use :lo12: syntax */
+		fprintf (stream, "\tadrp\t%s, %s\n", dst_reg, symbol);
+		fprintf (stream, "\tadd\t%s, %s, :lo12:%s\n", dst_reg, dst_reg, symbol);
 	}
 }
 /*}}}*/

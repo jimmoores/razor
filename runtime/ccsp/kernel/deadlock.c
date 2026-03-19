@@ -424,7 +424,7 @@ void ccsp_kernel_deadlock (void)
 			int i;
 
 			for (i=0; i<num_ws; i++) {
-				found += deadlock_debug ((int *)ws_ptrs[i], ws_sizes[i], &did_print);
+				found += deadlock_debug ((word *)ws_ptrs[i], ws_sizes[i], &did_print);
 			}
 			if (!found) {
 				BMESSAGE ("deadlock: no valid processes found in workspace(s)\n");

@@ -4503,6 +4503,21 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		ts->stack->must_set_cmp_flags = 1;
 		break;
 		/*}}}*/
+		/*{{{  I_LW -- load 32-bit word (INT on 64-bit targets)*/
+	case I_LW:
+		/* Like I_LB but for 32-bit: load 32 bits zero-extended to register */
+		add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
+		constmap_remove (ts->stack->a_reg);
+		ts->stack->must_set_cmp_flags = 1;
+		break;
+		/*}}}*/
+		/*{{{  I_SW -- store 32-bit word (INT on 64-bit targets)*/
+	case I_SW:
+		/* Like I_SB but for 32-bit: store low 32 bits of register */
+		add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REGIND, ts->stack->old_a_reg));
+		ts->stack->must_set_cmp_flags = 1;
+		break;
+		/*}}}*/
 		/*{{{  I_AND -- bitwise and*/
 	case I_AND:
 		generate_constmapped_21instr (ts, EtcSecondary (I_AND), INS_AND, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 0);

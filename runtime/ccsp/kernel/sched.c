@@ -6274,7 +6274,7 @@ K_CALL_DEFINE_1_0 (X_kernel_run)
 	K_CALL_PARAMS_1 (kr_param);
 	ENTRY_TRACE (X_kernel_run, "%p", (void *)kr_param);
 
-	kr_dptr = dynproc_startprocess ((int *)kr_param, K_CALL_PTR (Y_dynproc_exit));
+	kr_dptr = dynproc_startprocess ((word *)kr_param, K_CALL_PTR (Y_dynproc_exit));
 	kr_dptr->holding_wptr 		= Wptr;
 	kr_dptr->holding_raddr 		= return_address;
 	kr_dptr->holding_priofinity 	= sched->priofinity;
@@ -6318,7 +6318,7 @@ K_CALL_DEFINE_1_0 (Y_dynproc_suspend)
 	ENTRY_TRACE (Y_dynproc_suspend, "%p", ds_param);
 
 	/* ds_param should point at the argument-set (VAL DPROCESS p, INT result) */
-	if (dynproc_suspendprocess ((d_process *)(ds_param[0]), (int *)(ds_param[1]), Wptr, return_address, sched->priofinity)) {
+	if (dynproc_suspendprocess ((d_process *)(ds_param[0]), (word *)(ds_param[1]), Wptr, return_address, sched->priofinity)) {
 		/* failed */
 		K_ZERO_OUT ();
 	} else {

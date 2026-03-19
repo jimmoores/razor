@@ -26,7 +26,7 @@
 #define BytesPerWord	(1<<WSH)
 #define BitsPerWord	(BytesPerWord * 8)
 #define ByteSelectMask	(~(-1 << WSH))
-#define WShift		2		/* x4 */
+#define WShift		2		/* x4 -- INT is always 32-bit (4 bytes) */
 #define DWShift		3		/* x8 */
 
 
@@ -473,6 +473,9 @@
 #define I_NJCSUB0	0x250
 
 #define I_XSTLN		0x251		/* STL -x, LDL -x (keeps register) */
+
+#define I_LW		0x252		/* load 32-bit word (for INT on 64-bit targets) */
+#define I_SW		0x253		/* store 32-bit word (for INT on 64-bit targets) */
 
 /*}}}*/
 /*{{{  negative instructions (mostly T9000)*/

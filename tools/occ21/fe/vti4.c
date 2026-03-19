@@ -395,7 +395,7 @@ PUBLIC int bytesinscalar (const int tag)
 #endif
 	case S_INT:
 	case S_UINT:
-		/* INT should be 32-bit even on 64-bit targets */
+		/* INT is 32-bit on all architectures (16-bit on 16-bit targets) */
 		switch (targetintsize) {
 		case S_INT16: return 2;
 		case S_INT32: return 4;

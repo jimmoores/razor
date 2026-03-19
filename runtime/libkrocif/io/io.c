@@ -142,9 +142,12 @@ int init_occam_io (int tlpiface)
 	kbd_ws[-3] = 0;
 	kbd_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
-#if defined(__aarch64__)
-	asm ("adrp %0, _O_kroc_keyboard_process@PAGE\n\t" /* aarch64 */
+#if defined(__aarch64__) && defined(__APPLE__)
+	asm ("adrp %0, _O_kroc_keyboard_process@PAGE\n\t"
 		 "add  %0, %0, _O_kroc_keyboard_process@PAGEOFF" : "=r" (kbd_ws[-1]));
+	#elif defined(__aarch64__)
+	asm ("adrp %0, O_kroc_keyboard_process\n\t"
+		 "add  %0, %0, :lo12:O_kroc_keyboard_process" : "=r" (kbd_ws[-1]));
 	#elif defined(__i386__)
 	asm ("movl $O_kroc_keyboard_process, %0" : "=r" (kbd_ws[-1]));
 	#endif
@@ -162,9 +165,12 @@ int init_occam_io (int tlpiface)
 	}
 	scr_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
-	#if defined(__aarch64__)
+	#if defined(__aarch64__) && defined(__APPLE__)
 	asm ("adrp %0, _O_kroc_screen_process@PAGE\n\t"
 	     "add  %0, %0, _O_kroc_screen_process@PAGEOFF" : "=r" (scr_ws[-1]));
+	#elif defined(__aarch64__)
+	asm ("adrp %0, O_kroc_screen_process\n\t"
+	     "add  %0, %0, :lo12:O_kroc_screen_process" : "=r" (scr_ws[-1]));
 	#elif defined(__i386__)
 	asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[-1]));
 	#endif
@@ -176,9 +182,12 @@ int init_occam_io (int tlpiface)
 	}
 	err_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
-	#if defined(__aarch64__)
+	#if defined(__aarch64__) && defined(__APPLE__)
 	asm ("adrp %0, _O_kroc_error_process@PAGE\n\t"
 	     "add  %0, %0, _O_kroc_error_process@PAGEOFF" : "=r" (err_ws[-1]));
+	#elif defined(__aarch64__)
+	asm ("adrp %0, O_kroc_error_process\n\t"
+	     "add  %0, %0, :lo12:O_kroc_error_process" : "=r" (err_ws[-1]));
 	#elif defined(__i386__)
 	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[-1]));
 	#endif
@@ -373,12 +382,23 @@ void out_stderr_int (word *wsptr)
 /*}}}*/
 
 /* Create aliases for external linkage from occam code.
- * The occam toolchain expects these exact symbol names. */
+ * The occam toolchain expects these exact symbol names.
+ * On macOS, C symbols get a leading underscore automatically, so
+ * _read_keyboard becomes __read_keyboard in the object file.
+ * On Linux, there is no automatic prefix, so we need _read_keyboard. */
+#if defined(__APPLE__)
 void _read_keyboard (word *wsptr) asm("__read_keyboard");
 void _write_screen (word *wsptr) asm("__write_screen");
 void _write_error (word *wsptr) asm("__write_error");
 void _out_stderr (word *wsptr) asm("__out_stderr");
 void _out_stderr_int (word *wsptr) asm("__out_stderr_int");
+#else
+void _read_keyboard (word *wsptr) asm("_read_keyboard");
+void _write_screen (word *wsptr) asm("_write_screen");
+void _write_error (word *wsptr) asm("_write_error");
+void _out_stderr (word *wsptr) asm("_out_stderr");
+void _out_stderr_int (word *wsptr) asm("_out_stderr_int");
+#endif
 void _read_keyboard (word *wsptr) { read_keyboard(wsptr); }
 void _write_screen (word *wsptr) { write_screen(wsptr); }
 void _write_error (word *wsptr) { write_error(wsptr); }

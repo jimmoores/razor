@@ -564,7 +564,7 @@ PUBLIC char asmfilename[MAX_FILENAME_LENGTH];
 #endif
 
 arg2_help_page_type help_level = 0;
-arg2_help_page_info oc_help_info;
+extern arg2_help_page_info oc_help_info;
 /*}}}*/
 
 /*{{{  extra definitions for COMPILING_TO_JCODE*/
@@ -818,7 +818,8 @@ PRIVATEPARAM void setprocessorattr(void)
 	}
 	if ((processorattr & ATTRIB_WORD_64) != 0) {
 	        needs_quadalign = TRUE;
-	        /* INT remains 32-bit even on 64-bit targets */
+	        /* TODO: Enable S_INT64 once bind1.c:mapsimpleassign
+	         * supports INT32 on 64-bit targets (internal error). */
 	        /* targetintsize = S_INT64; */
 	        wordshift = 3;
 	}}

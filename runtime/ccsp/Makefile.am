@@ -49,7 +49,7 @@ all-local: libccsp.a $(shared_libs)
 
 if BUILD_SHARED
 @LIBCCSP@: libccsp.a
-	$(CC) @SLINKFLAGS@ $(CFLAGS) $(EXTRALDFLAGS) -o @LIBCCSP@ $(libccsp_a_LIBADD) @LIBS@
+	$(CC) @SLINKFLAGS@ $(CFLAGS) $(EXTRALDFLAGS) -Wl,-Bsymbolic -o @LIBCCSP@ $(libccsp_a_LIBADD) @LIBS@
 endif
 
 install-exec-local: libccsp.a $(shared_libs)
