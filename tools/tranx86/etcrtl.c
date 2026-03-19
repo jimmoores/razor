@@ -80,6 +80,7 @@ static int check_top_level_process_signature (tstate *ts, char *namesig, int len
 static void gen_mobilespace_init (tstate *ts, int msp_offset, int count, int *slot_offsets, int *data_offsets);
 static void compose_cond_jump (tstate *ts, int cond, int label);
 static void deferred_cond (tstate *ts);
+static void emit_int_truncate (tstate *ts, int result_reg);
 static void generate_overflow_code (tstate *ts, int dcode, arch_t *arch);
 static void generate_overflowed_code (tstate *ts, int dcode, arch_t *arch);
 static void generate_range_code (tstate *ts, int rcode, arch_t *arch);
@@ -3186,6 +3187,20 @@ static void deferred_cond (tstate *ts)
 	return;
 }
 /*}}}*/
+/*{{{  static void emit_int_truncate (tstate *ts, int result_reg)*/
+/*
+ *	On 64-bit targets where INT (32-bit) < word (64-bit), truncate
+ *	the register to 32 bits after INT arithmetic.  On aarch64 this
+ *	emits "mov wN, wN" which zero-extends the low 32 bits.
+ *	On 32-bit targets this compiles to nothing.
+ */
+static void emit_int_truncate (tstate *ts, int result_reg)
+{
+#if (BytesPerWord > 4)
+	add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, result_reg, ARG_REG, result_reg));
+#endif
+}
+/*}}}*/
 /*{{{  static void compose_cond_jump (tstate *ts, int cond, int label)*/
 /*
  *	generates a conditional jump to a label (maybe modifies ts)
@@ -4212,10 +4227,13 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*{{{  I_MINT -- generate MOSTNEG INT*/
 	case I_MINT:
 		{
-			/* occam INT is always 32-bit; MOSTNEG INT = 0x80000000 */
-			int most_neg = (int)0x80000000;
+			/* occam INT is always 32-bit; MOSTNEG INT = 0x80000000.
+			 * Use unsigned cast to avoid sign-extension on 64-bit hosts,
+			 * keeping the value as 0x0000000080000000 (consistent with
+			 * the zero-extended INT representation from INS_TRUNCATE32). */
+			intptr_t most_neg = (intptr_t)(unsigned int)0x80000000;
 			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, most_neg, ARG_REG, ts->stack->a_reg);
-			constmap_new (ts->stack->a_reg, VALUE_CONST, (intptr_t)most_neg, tmp_ins);
+			constmap_new (ts->stack->a_reg, VALUE_CONST, most_neg, tmp_ins);
 			add_to_ins_chain (tmp_ins);
 		}
 		break;
@@ -4634,12 +4652,14 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		} else {
 			generate_constmapped_21instr (ts, EtcSecondary (I_SUM), INS_ADD, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 0);
 		}
+		emit_int_truncate (ts, ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 1;
 		break;
 		/*}}}*/
 		/*{{{  I_DIFF -- subtraction (without overflow checking)*/
 	case I_DIFF:
 		generate_constmapped_21instr (ts, EtcSecondary (I_DIFF), INS_SUB, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 0);
+		emit_int_truncate (ts, ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 1;
 		break;
 		/*}}}*/
@@ -4657,6 +4677,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			}
 			break;
 		}
+		emit_int_truncate (ts, ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 1;
 		break;
 		/*}}}*/
@@ -4664,6 +4685,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 	case I_NOT:
 		add_to_ins_chain (compose_ins (INS_NOT, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 		constmap_remove (ts->stack->a_reg);
+		emit_int_truncate (ts, ts->stack->old_a_reg);
 		ts->stack->must_set_cmp_flags = 0;
 		break;
 		/*}}}*/
@@ -4685,6 +4707,10 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 32, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, this_lab));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, this_lab2));
+			/* For SHR on 64-bit: truncate value to 32 bits before shifting */
+			if (sec == I_SHR) {
+				emit_int_truncate (ts, ts->stack->old_b_reg);
+			}
 			/* code shifted to architecture-dependant handling for actual shift */
 			arch->compose_shift (ts, sec, ts->stack->old_a_reg, ts->stack->a_reg, ts->stack->a_reg);
 			break;
@@ -4732,6 +4758,10 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				/* clear to zero (L1) */
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->a_reg));
 			} else {
+				/* For SHR on 64-bit: truncate value to 32 bits before shifting */
+				if (sec == I_SHR) {
+					emit_int_truncate (ts, ts->stack->old_b_reg);
+				}
 				/* insert shift (moved to arch) */
 				arch->compose_shift (ts, sec, ts->stack->old_a_reg, ts->stack->a_reg, ts->stack->a_reg);
 			}
@@ -4742,6 +4772,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		ts->stack->c_reg = REG_UNDEFINED;
 		ts->stack->must_set_cmp_flags = 1;
 		constmap_remove (ts->stack->a_reg);
+		emit_int_truncate (ts, ts->stack->a_reg);
 		/*
 		 *	obvious optimisation for (==32 case):
 		 *		cmovz	$0,%areg

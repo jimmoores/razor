@@ -3388,7 +3388,14 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					if (is_const1) {
 						long val = (long)ins->in_args[1]->regconst;
 						if (val >= 0 && val <= 4095 && strcmp(op0_reg, "x17") != 0) {
-							fprintf (stream, "\tcmp\t%s, #%ld\n", op0_reg, val);
+							/* Use 32-bit cmp for correct signed INT semantics */
+							char w0[8];
+							if (op0_reg[0] == 'x') {
+								snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
+							} else {
+								snprintf(w0, sizeof(w0), "%s", op0_reg);
+							}
+							fprintf (stream, "\tcmp\t%s, #%ld\n", w0, val);
 							break;
 						} else {
 							aarch64_emit_large_immediate (stream, val, "x17");
@@ -3408,8 +3415,25 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 
-					/* CRITICAL FIX: Match x86 CMP semantics by computing in_args[1] - in_args[0] */
-					fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
+					/* CRITICAL FIX: Match x86 CMP semantics by computing in_args[1] - in_args[0].
+					 * Use 32-bit (w) register forms for correct signed INT comparison.
+					 * This ensures MOSTNEG INT (0x80000000) is negative and
+					 * MOSTPOS INT (0x7FFFFFFF) is positive in 32-bit signed comparison. */
+					{
+						/* Convert x-register names to w-register names for 32-bit comparison */
+						char w0[8], w1[8];
+						if (op0_reg[0] == 'x') {
+							snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
+						} else {
+							snprintf(w0, sizeof(w0), "%s", op0_reg);
+						}
+						if (op1_reg[0] == 'x') {
+							snprintf(w1, sizeof(w1), "w%s", op1_reg + 1);
+						} else {
+							snprintf(w1, sizeof(w1), "%s", op1_reg);
+						}
+						fprintf (stream, "\tcmp\t%s, %s\n", w1, w0);
+					}
 					break;
 
 				case INS_SETCC:
@@ -3537,13 +3561,24 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							aarch64_get_register_name(ins->out_args[0]->regconst), disp);
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND &&
 					           (ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
-						/* Load 32-bit signed: ldrsw xreg, [base] (sign-extends to 64-bit)
-						 * INT is signed, so sign-extension preserves correct value
-						 * for negative numbers and MOSTNEG INT operations. */
+						/* Load 32-bit: ldr wN, [base] (zero-extends to 64-bit).
+						 * Consistent with INS_TRUNCATE32 which also zero-extends.
+						 * All INT values use zero-extended representation. */
 						long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
-						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
-						aarch64_emit_mem_op(stream, "ldrsw", dst,
+						char wdst[8];
+						snprintf(wdst, sizeof(wdst), "w%ld", (long)ins->out_args[0]->regconst);
+						aarch64_emit_mem_op(stream, "ldr", wdst,
 							aarch64_get_register_name(ins->in_args[0]->regconst), disp);
+					}
+					break;
+				case INS_TRUNCATE32:
+					/* Truncate to 32 bits: mov wN, wN (zero-extends to 64-bit).
+					 * This gives correct 32-bit INT overflow/wrap semantics
+					 * on 64-bit registers. */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						fprintf(stream, "\tmov\tw%ld, w%ld\n",
+							(long)ins->out_args[0]->regconst,
+							(long)ins->in_args[0]->regconst);
 					}
 					break;
 				case INS_LOADLABDIFF:
