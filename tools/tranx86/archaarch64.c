@@ -1837,16 +1837,31 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	 */
 	call_ins = compose_ins (INS_CALL, 4, 0, ARG_NAMEDLABEL, entrypoint_name, ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2);
 	add_to_ins_chain (call_ins);
-	/* Handle output registers */
+	/* Handle output registers.
+	 * On x86, INS_CONSTRAIN_REG forces cregs[0] == eax, so after the call
+	 * cregs[0] naturally contains the return value.  On aarch64 we use
+	 * INS_MOVE instead, so cregs[0] and x0 are different virtual registers.
+	 * We must copy the return value from x0 back to cregs[0] so that
+	 * subsequent code (e.g. CJ testing the result) uses the correct value.
+	 */
 	if (regs_out > 0 && ts->stack) {
 		tstack_undefine (ts->stack);
 		constmap_clearall ();
 		ts->stack->must_set_cmp_flags = 1;
 		ts->stack->ts_depth = regs_out;
-		/* Set up result registers */
-		if (regs_out >= 1) ts->stack->a_reg = cregs[0];
-		if (regs_out >= 2) ts->stack->b_reg = cregs[1];
-		if (regs_out >= 3) ts->stack->c_reg = cregs[2];
+		/* Copy return values from ABI registers back to virtual registers */
+		if (regs_out >= 1) {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X0, ARG_REG, cregs[0]));
+			ts->stack->a_reg = cregs[0];
+		}
+		if (regs_out >= 2) {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X1, ARG_REG, cregs[1]));
+			ts->stack->b_reg = cregs[1];
+		}
+		if (regs_out >= 3) {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X2, ARG_REG, cregs[2]));
+			ts->stack->c_reg = cregs[2];
+		}
 	}
 }
 /*}}}*/
