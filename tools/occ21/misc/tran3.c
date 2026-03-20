@@ -550,7 +550,15 @@ fprintf (stderr, "tran3: get_offset_and_subscript_bytes: something MOBILE, b = %
 	   when we use wsubdb (eg. subscripttype == S_INT64) */
 	offsettype = (bytesinscalar (subscripttype) > bytesperword) ? S_INT : subscripttype;
 
-	*offsetunits = bytesinscalar (offsettype);
+	/* Constant offsets become LDNL/STNL/LDNLP operands, which the
+	   translator multiplies by bytesperword (1 << WSH).  When elements
+	   are word-sized or larger (WSUB/WSUBDB case), offsetunits must
+	   equal bytesperword so that: byte_offset / offsetunits * bytesperword
+	   == byte_offset.  On 32-bit this was always true because
+	   bytesinscalar(S_INT) == bytesperword == 4.  On 64-bit with 32-bit
+	   INTs, bytesinscalar(S_INT) == 4 but bytesperword == 8, causing
+	   constant subscripts to be doubled. */
+	*offsetunits = (b >= bytesperword) ? bytesperword : bytesinscalar (offsettype);
 	*subscriptunits = bytesinscalar (subscripttype);
 }
 
