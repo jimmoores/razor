@@ -1049,7 +1049,14 @@ PUBLIC BOOL issimplelocal (treenode * const tptr, const int my_lexlevel)
 		case S_ARRAYSUB:
 		case S_RECORDITEM:
 		case S_RECORDSUB:
-			if (issimplelocal (ASBaseOf (tptr), my_lexlevel) && isconst (ASIndexOf (tptr)) && istargetintsize (basetype (gettype (tptr))))
+			/* Optimisation: constant subscript of local array can be accessed
+			 * directly if the element size equals the word size (so NVOffset
+			 * word arithmetic is exact). On 64-bit targets where INT is 4 bytes
+			 * but word is 8 bytes, this optimisation must be disabled because
+			 * NVOffset / bytesperword would truncate sub-word offsets. */
+			if (issimplelocal (ASBaseOf (tptr), my_lexlevel) && isconst (ASIndexOf (tptr))
+			    && istargetintsize (basetype (gettype (tptr)))
+			    && (bytesinscalar (basetype (gettype (tptr))) >= bytesperword))
 				return TRUE;
 			break;
 		}
