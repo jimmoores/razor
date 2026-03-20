@@ -3504,7 +3504,11 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					if (is_const1) {
 						long val = (long)ins->in_args[1]->regconst;
 						if (val >= 0 && val <= 4095 && strcmp(op0_reg, "x17") != 0) {
-							fprintf (stream, "\tcmp\t%s, #%ld\n", op0_reg, val);
+							/* Small immediate: use 32-bit cmp for INT semantics */
+							char w0[8];
+							if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
+							else snprintf(w0, sizeof(w0), "%s", op0_reg);
+							fprintf (stream, "\tcmp\t%s, #%ld\n", w0, val);
 							break;
 						} else {
 							aarch64_emit_large_immediate (stream, val, "x17");
@@ -3524,8 +3528,22 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 
-					/* CRITICAL FIX: Match x86 CMP semantics by computing in_args[1] - in_args[0] */
-					fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
+					/* CRITICAL FIX: Match x86 CMP semantics by computing in_args[1] - in_args[0].
+					 * When a constant operand is present (from I_EQC), use 32-bit cmp
+					 * for correct INT comparison. Constants are sign-extended to 64-bit
+					 * by va_arg(ap,int) but INT values from I_LW are zero-extended.
+					 * 32-bit cmp compares only the low 32 bits, giving correct results.
+					 * Register-only comparisons stay 64-bit for pointer compatibility. */
+					if (is_const0 || is_const1) {
+						char w0[8], w1[8];
+						if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
+						else snprintf(w0, sizeof(w0), "%s", op0_reg);
+						if (op1_reg[0] == 'x') snprintf(w1, sizeof(w1), "w%s", op1_reg + 1);
+						else snprintf(w1, sizeof(w1), "%s", op1_reg);
+						fprintf (stream, "\tcmp\t%s, %s\n", w1, w0);
+					} else {
+						fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
+					}
 					break;
 
 				case INS_SETCC:
