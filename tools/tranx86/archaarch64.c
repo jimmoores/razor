@@ -1298,8 +1298,56 @@ static void aarch64_stub_rmox_entry_prolog (tstate *ts, rmoxmode_e mode) { /* st
 static void compose_aarch64_move (tstate *ts) {
 	/* BLOCKCOPY: copy count bytes from src to dst.
 	 * Transputer stack: Areg=count, Breg=dst, Creg=src.
-	 * Following the SPARC/PPC byte-at-a-time loop pattern. */
+	 * Following the SPARC/PPC byte-at-a-time loop pattern.
+	 * Must materialise pointers from constmap before the loop since
+	 * the loop modifies the registers via INS_ADD. */
 	int tmpreg;
+
+	/* Materialise src pointer from constmap if needed */
+	switch (constmap_typeof (ts->stack->old_c_reg)) {
+	case VALUE_LABADDR:
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_c_reg), ARG_REG, ts->stack->old_c_reg));
+		break;
+	case VALUE_LOCALPTR:
+		if (constmap_regconst (ts->stack->old_c_reg)) {
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, ts->stack->old_c_reg));
+		} else {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, ts->stack->old_c_reg));
+		}
+		break;
+	default:
+		break;
+	}
+	constmap_remove (ts->stack->old_c_reg);
+
+	/* Materialise dst pointer from constmap if needed */
+	switch (constmap_typeof (ts->stack->old_b_reg)) {
+	case VALUE_LABADDR:
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_b_reg));
+		break;
+	case VALUE_LOCALPTR:
+		if (constmap_regconst (ts->stack->old_b_reg)) {
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, ts->stack->old_b_reg));
+		} else {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, ts->stack->old_b_reg));
+		}
+		break;
+	default:
+		break;
+	}
+	constmap_remove (ts->stack->old_b_reg);
+
+	/* Materialise count from constmap */
+	constmap_remove (ts->stack->old_a_reg);
+
+	/* Constrain count, src, dst to distinct physical registers so the
+	 * register allocator doesn't merge them with the byte temp register.
+	 * Use x0=count, x1=dst, x2=src, x3=tmp — all low registers. */
+	add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, ts->stack->old_a_reg, ARG_REG, 0));
+	add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, ts->stack->old_b_reg, ARG_REG, 1));
+	add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, ts->stack->old_c_reg, ARG_REG, 2));
+	tmpreg = tstack_newreg (ts->stack);
+	add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, tmpreg, ARG_REG, 3));
 
 	/* Loop: test count, decrement, copy byte, increment ptrs, repeat */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
@@ -1307,13 +1355,17 @@ static void compose_aarch64_move (tstate *ts) {
 		ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 1));
 	add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
-	tmpreg = tstack_newreg (ts->stack);
 	add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REGIND, ts->stack->old_c_reg, ARG_REG | ARG_IS8BIT, tmpreg));
 	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
 	add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REG | ARG_IS8BIT, tmpreg, ARG_REGIND, ts->stack->old_b_reg));
 	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_BLABEL, 0));
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 1));
+
+	add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmpreg));
+	add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, ts->stack->old_c_reg));
+	add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, ts->stack->old_b_reg));
+	add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, ts->stack->old_a_reg));
 }
 
 static void compose_aarch64_shift (tstate *ts, int sec, int r1, int r2, int r3) {
