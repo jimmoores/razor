@@ -4859,23 +4859,120 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_CWORD -- range check*/
 	case I_CWORD:
 		tmp_reg = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
-		/* On 64-bit with 32-bit INTs, MINT loads MOSTNEG as a
-		 * sign-extended 64-bit value (0xFFFFFFFF80000000).  The
-		 * ADD and SHL above produce 64-bit results that differ from
-		 * the expected 32-bit wraparound behavior.  Zero-extend
-		 * both operands to 32 bits before the range check so the
-		 * unsigned comparison works correctly. */
-		if (BytesPerWord > 4) {
-			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		if (0 && BytesPerWord > 4) {  /* DISABLED: use original algorithm with zero-extension below */
+			/* On 64-bit with 32-bit INTs, the MOSTNEG-based CWORD
+			 * algorithm doesn't work because MOSTNEG<<1 wraps to 0
+			 * in 32-bit arithmetic.  Instead, directly check that
+			 * the value is in INT32 range [-2^31, 2^31-1] by
+			 * checking (value + 2^31) < 2^32 using 64-bit unsigned
+			 * comparison.  We use ADC (add constant) with 2^31 and
+			 * then compare against 2^32, both as 64-bit values. */
+			int oklab;
+			/* Check at compile time if both are constants */
+			if ((constmap_typeof (ts->stack->old_b_reg) == VALUE_CONST) &&
+			    (constmap_typeof (ts->stack->old_a_reg) == VALUE_CONST)) {
+				/* old_b is the value, old_a is MOSTNEG */
+				intptr_t val = constmap_regconst (ts->stack->old_b_reg);
+				if (val >= -2147483648LL && val <= 2147483647LL) {
+					/* In range, do nothing */
+				} else {
+					/* Out of range, generate error */
+					if (options.debug_options & DEBUG_RANGESTOP) {
+						generate_range_code (ts, REOP_CWORD, arch);
+					} else {
+						arch->compose_kcall (ts, K_BRANGERR, 0, -1);
+					}
+				}
+			} else {
+				/* Runtime check: does old_b (the value) fit in INT32?
+				 * Add MOSTNEG (old_a = -2^31 sign-extended) to get
+				 * value + MOSTNEG.  On 64-bit, zero-extend to 32 bits
+				 * (mov w,w), then add MOSTNEG again. If the result
+				 * equals the original, the value fits in INT32.
+				 *
+				 * Simpler: use the MOSTNEG-based algorithm but
+				 * zero-extend BOTH results before the comparison. */
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
+				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+				add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+				/* Zero-extend both to 32 bits before unsigned compare.
+				 * On 64-bit, MOSTNEG << 1 = 0xFFFFFFFF00000000 (sign-
+				 * extended) but should wrap to 0x100000000.  After
+				 * zero-extension: old_a = 0x00000000 (wrong).  Instead,
+				 * use old_a directly as the 32-bit bound (it's 0 in
+				 * lower 32 bits regardless).  But we ALSO need
+				 * value+MOSTNEG zero-extended.  Since MOSTNEG<<1 wraps
+				 * to 0 in 32-bit, the correct 32-bit check is:
+				 *   (uint32)(value+MOSTNEG) < (uint32)(MOSTNEG<<1)
+				 * = (uint32)(value+MOSTNEG) < 0
+				 * This is never true! The algorithm fundamentally
+				 * can't work with 32-bit arithmetic.
+				 *
+				 * Use direct bound checking instead:
+				 *   value >= MOSTNEG_INT32 (-2^31) AND
+				 *   value <= MOSTPOS_INT32 (2^31 - 1)
+				 * MOSTNEG_INT32 is in old_a (before SHL). */
+				{
+					int oklab2;
+					/* Undo the SHL - restore old_a to MOSTNEG */
+					add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+					/* old_a = MOSTNEG_INT32 (-2^31, sign-extended to 64-bit).
+					 * Check: value >= MOSTNEG (signed).
+					 * old_b was clobbered by ADD. Use tmp_reg (saved original). */
+					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, tmp_reg, ARG_REG | ARG_IMP, REG_CC));
+					oklab = ++(ts->last_lab);
+					/* CC_A = unsigned above. But we need SIGNED >=.
+					 * On x86 CMP src,dst = dst-src; JGE = signed >=.
+					 * On aarch64 CMP Rn,Rm = Rn-Rm.
+					 * Our CMP(old_a, tmp) computes tmp - old_a.
+					 * We want tmp >= old_a (signed). CC_GE maps to b.ge. */
+					add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_GE, ARG_LABEL, oklab));
+					if (options.debug_options & DEBUG_RANGESTOP) {
+						generate_range_code (ts, REOP_CWORD, arch);
+					} else {
+						arch->compose_kcall (ts, K_BRANGERR, 0, -1);
+					}
+					add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, oklab));
+					/* Check: value <= MOSTPOS_INT32 (2^31 - 1).
+					 * MOSTPOS = ~MOSTNEG = NOT(old_a).
+					 * Compute NOT of old_a: XOR with -1. */
+					add_to_ins_chain (compose_ins (INS_XOR, 2, 1, ARG_CONST, -1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+					/* old_a = MOSTPOS_INT32 (0x7FFFFFFF, sign-ext to 0x000000007FFFFFFF) */
+					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, tmp_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+					oklab2 = ++(ts->last_lab);
+					/* We want old_a >= tmp (signed) = MOSTPOS >= value. */
+					add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_GE, ARG_LABEL, oklab2));
+					if (options.debug_options & DEBUG_RANGESTOP) {
+						generate_range_code (ts, REOP_CWORD, arch);
+					} else {
+						arch->compose_kcall (ts, K_BRANGERR, 0, -1);
+					}
+					add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, oklab2));
+				}
+			}
+			ts->stack->a_reg = tmp_reg;
+			constmap_remove (ts->stack->a_reg);
+			ts->stack->must_set_cmp_flags = 1;
+		} else {
+			/* Original MOSTNEG-based algorithm.
+			 * On 64-bit, MOSTNEG may be sign-extended by va_arg(ap,int)
+			 * (e.g. MOSTNEG INT32 = 0xFFFFFFFF80000000 instead of
+			 * 0x0000000080000000).  Zero-extend MOSTNEG BEFORE the
+			 * arithmetic so that MOSTNEG<<1 produces the correct value
+			 * (e.g. 0x100000000 instead of 0xFFFFFFFF00000000).
+			 * With zero-extended MOSTNEG, the algorithm works because
+			 * MOSTNEG<<1 doesn't wrap in 64-bit. */
+			if (BytesPerWord > 4) {
+				add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			}
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			translate_range_check (ts, 0, arch, REOP_CWORD);
+			ts->stack->a_reg = tmp_reg;
+			constmap_remove (ts->stack->a_reg);
+			ts->stack->must_set_cmp_flags = 1;
 		}
-		translate_range_check (ts, 0, arch, REOP_CWORD);
-		ts->stack->a_reg = tmp_reg;
-		constmap_remove (ts->stack->a_reg);
-		ts->stack->must_set_cmp_flags = 1;
 		break;
 		/*}}}*/
 		/*{{{  I_CSNGL -- range check*/
