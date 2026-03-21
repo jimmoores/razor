@@ -2729,10 +2729,11 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		break;
 	case I_FPR32TOR64:  /* 0xd7 (215) - Convert REAL32 FA to REAL64 */
 		if (aarch64_fp_stack_depth >= 1) {
-			/* fcvt d0, s0 -- widen single to double */
+			/* fcvt d0, s0 -- widen single to double (always exact) */
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfcvt\td0, s0")));
 			aarch64_fp_stack_prec[0] = 64;
 			aarch64_fp_precision = 64;
+			aarch64_fp_rounding_mode = 0;
 		}
 		break;
 	case I_FPR64TOR32:  /* 0xd8 (216) - Convert REAL64 FA to REAL32 */
@@ -2753,6 +2754,8 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			}
 			aarch64_fp_stack_prec[0] = 32;
 			aarch64_fp_precision = 32;
+			/* Reset rounding mode after precision conversion */
+			aarch64_fp_rounding_mode = 0;
 		}
 		break;
 	case I_FPLDZERODB:  /* 0xa0 (160) - Load REAL64 zero */
@@ -2790,12 +2793,25 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		ts->stack->fs_depth++;
 		break;
 	case I_FPLDNLSNI:  /* 0x86 - Load non-local single indexed */
-		/* Two values consumed from integer stack: index (old_a_reg) and base (old_b_reg).
-		 * Load from [old_b_reg + old_a_reg]. */
+		/* Two values consumed from integer stack.
+		 * old_a_reg = base (top of eval stack, loaded last).
+		 * old_b_reg = byte offset (pre-scaled by occ21 subscript code).
+		 * For REAL32 (4 bytes), the subscript code produces byte offset
+		 * directly (subscriptunits=1 for S_BYTE on 64-bit).
+		 * Just add base + byte_offset and load. */
 		aarch64_fp_push (32);
 		aarch64_fp_emit_push (ts);
-		add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
-			ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, ts->stack->old_a_reg));
+		{
+			int addr_reg = tstack_newreg (ts->stack);
+			/* Add base (old_a_reg) + byte_offset (old_b_reg) */
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+				ARG_REG, ts->stack->old_b_reg,
+				ARG_REG, ts->stack->old_a_reg,
+				ARG_REG, addr_reg));
+			/* Load REAL32 */
+			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+				ARG_REGIND, addr_reg));
+		}
 		ts->stack->fs_depth++;
 		break;
 	case I_FPRTOI32:  /* 0x9d - Mark FA for conversion to INT32 */
@@ -3045,8 +3061,49 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		}
 		if (ts->stack->fs_depth > 0) ts->stack->fs_depth--;
 		break;
+	case I_FPLDNLDBI:  /* 0x82 - Load non-local REAL64 indexed */
+		/* Two values consumed: index (old_a_reg) and base (old_b_reg).
+		 * The index is pre-scaled by the ETC subscript code.
+		 * On aarch64 with 64-bit target, the BSUB/SLLIMM before this
+		 * instruction produces a byte offset that's too small by a
+		 * factor of bytesperword/4 (= 2 on 64-bit).
+		 * We use the WSUB instruction pattern which correctly scales
+		 * by bytesperword: compute base + index * bytesperword. */
+		aarch64_fp_push (64);
+		aarch64_fp_emit_push (ts);
+		{
+			int addr_reg = tstack_newreg (ts->stack);
+			/* Use I_WSUB semantics: addr = base + index * bytesperword.
+			 * INS_SHL by WSH (3 on 64-bit) and then ADD. But we need
+			 * to shift old_a_reg (index) not old_b_reg (base).
+			 *
+			 * Use a WSUB-like pattern: emit SHL+ADD via the SUM
+			 * instruction. The key: we need index*8+base.
+			 * Rewrite as: base + (index << 3).
+			 * Using the rtl SHL instruction on old_a_reg (the INDEX):
+			 */
+			/* old_a_reg = BASE (top of eval stack, loaded last)
+			 * old_b_reg = INDEX (pre-scaled by SLLIMM, below base on stack)
+			 * Scale index by bytesperword: index << WSH */
+			/* Shift by 2 (not WSH=3) because the index is pre-scaled to
+			 * 32-bit word units by occ21 (index = k * elementsize/4).
+			 * Multiply by 4 to get bytes: k*2*4 = k*8 for REAL64. */
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1,
+				ARG_CONST, (intptr_t)2,
+				ARG_REG, ts->stack->old_b_reg,
+				ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+				ARG_REG, ts->stack->old_b_reg,
+				ARG_REG, ts->stack->old_a_reg,
+				ARG_REG, addr_reg));
+			add_to_ins_chain (compose_ins (INS_FLD32, 2, 0,
+				ARG_REGIND, addr_reg,
+				ARG_CONST, (intptr_t)64));
+		}
+		ts->stack->fs_depth++;
+		break;
 	/* Remaining stub operations */
-	case 0x80: case 0x81: case 0x82: case 0x85:
+	case 0x80: case 0x81: case 0x85:
 	case 0x8d:
 	case 0x8f: case 0x90: case 0x91: case 0x93:
 	case 0x97: case 0x99: case 0x9a: case 0x9b: case 0x9c:
