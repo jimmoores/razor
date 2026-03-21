@@ -271,8 +271,11 @@ static void compose_pre_enbc_aarch64 (tstate *ts)
 		skip_lab = ++(ts->last_lab);
 		add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_LABEL, skip_lab));
 	}
-	/* test channel for readiness */
-	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
+	/* test channel for readiness.  Channel words are 64-bit
+	 * pointers (Wptr|1), so we must use 64-bit comparison.
+	 * Load the channel word into a register, then compare
+	 * against NotProcess_p (0) using 64-bit x registers. */
+	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)0, ARG_REGIND, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
 	switch (constmap_typeof (ts->stack->old_a_reg)) {
 	case VALUE_LABADDR:
 		add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NE, ARG_LABEL, constmap_regconst (ts->stack->old_a_reg)));
@@ -483,7 +486,7 @@ static void compose_inline_enbc_aarch64 (tstate *ts, int instr)
 		add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_LABEL, out_lab));
 	}
 	/* test channel */
-	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND, chan_reg, ARG_REG | ARG_IMP, REG_CC));
+	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)0, ARG_REGIND, chan_reg, ARG_REG | ARG_IMP, REG_CC));
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NE, ARG_LABEL, tmp_lab));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REGIND, chan_reg));
 	constmap_remove (chan_reg);
@@ -536,7 +539,7 @@ static void compose_inline_disc_aarch64 (tstate *ts, int instr)
 	/* test channel */
 	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, REG_WPTR, ARG_REGIND, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_LABEL, out_rlab));
-	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
+	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)0, ARG_REGIND, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_LABEL, out_flab));
 	if (instr == I_DISC) {
 		add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, NONE_SELECTED, ARG_REGIND, REG_WPTR, ARG_REG | ARG_IMP, REG_CC));
@@ -3286,7 +3289,24 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						 * on them (e.g., BOOL materialisation via deferred_cond). */
 						const char *op = "ands";
 						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
-							aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
+							long val = (long)ins->in_args[0]->regconst;
+							unsigned long uval = (unsigned long)val;
+							/* Special case: AND with 0xFFFFFFFF is a 32-to-64
+							 * zero extension.  Use 'mov wd, ws' which is the
+							 * idiomatic aarch64 way to clear upper 32 bits. */
+							if (uval == 0xFFFFFFFFUL || uval == 0xFFFFFFFFFFFFFFFFUL) {
+								/* Might be 0xFFFFFFFF sign-extended to all-ones */
+								char w_out[8], w_in[8];
+								const char *out_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
+								const char *in_reg = aarch64_get_register_name (ins->in_args[1]->regconst);
+								if (out_reg[0] == 'x') snprintf(w_out, sizeof(w_out), "w%s", out_reg + 1);
+								else snprintf(w_out, sizeof(w_out), "%s", out_reg);
+								if (in_reg[0] == 'x') snprintf(w_in, sizeof(w_in), "w%s", in_reg + 1);
+								else snprintf(w_in, sizeof(w_in), "%s", in_reg);
+								fprintf (stream, "\tmov\t%s, %s\n", w_out, w_in);
+								break;
+							}
+							aarch64_emit_large_immediate (stream, val, "x16");
 							fprintf (stream, "\t%s\t%s, %s, x16\n", op,
 									aarch64_get_register_name (ins->out_args[0]->regconst),
 									aarch64_get_register_name (ins->in_args[1]->regconst));
@@ -3519,20 +3539,11 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					if (is_const1) {
 						long val = (long)ins->in_args[1]->regconst;
 						if (val >= 0 && val <= 4095 && strcmp(op0_reg, "x17") != 0) {
-							/* Small immediate comparison.
-							 * If op0 was loaded from memory (channel word,
-							 * pointer), use 64-bit cmp.  Otherwise use 32-bit
-							 * cmp for INT32 compatibility (upper 32 bits of
-							 * register may contain stale data). */
-							if (mode0 == ARG_REGIND || (mode0 == ARG_REGIND + ARG_DISP) ||
-							    (ins->in_args[0]->flags & ARG_DISP)) {
-								fprintf (stream, "\tcmp\t%s, #%ld\n", op0_reg, val);
-							} else {
-								char w0[8];
-								if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
-								else snprintf(w0, sizeof(w0), "%s", op0_reg);
-								fprintf (stream, "\tcmp\t%s, #%ld\n", w0, val);
-							}
+							/* Small immediate: use 32-bit cmp for INT semantics */
+							char w0[8];
+							if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
+							else snprintf(w0, sizeof(w0), "%s", op0_reg);
+							fprintf (stream, "\tcmp\t%s, #%ld\n", w0, val);
 							break;
 						} else {
 							aarch64_emit_large_immediate (stream, val, "x17");
@@ -3552,24 +3563,20 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 
-					/* Use 64-bit cmp when either operand was loaded from
-					 * memory (ARG_REGIND), since memory values are full
-					 * 64-bit words (channel words, pointers).  Use 32-bit
-					 * cmp when both operands are registers/constants, since
-					 * INT32 values may have stale upper 32 bits. */
+					/* Always use 32-bit w-register comparison.  On 64-bit
+					 * with 32-bit INTs, workspace slots are 8 bytes but
+					 * INT values only occupy the lower 4 bytes.  The upper
+					 * 4 bytes may contain stale data.  Using 32-bit cmp
+					 * ignores these stale bits.  Channel word comparisons
+					 * (which need 64-bit) are handled directly in the
+					 * inline ALT functions using explicit fprintf. */
 					{
-						int mem_load = (mode0 == ARG_REGIND) || (ins->in_args[0]->flags & ARG_DISP) ||
-						               (mode1 == ARG_REGIND) || (ins->in_args[1]->flags & ARG_DISP);
-						if (!mem_load && (is_const0 || is_const1)) {
-							char w0[8], w1[8];
-							if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
-							else snprintf(w0, sizeof(w0), "%s", op0_reg);
-							if (op1_reg[0] == 'x') snprintf(w1, sizeof(w1), "w%s", op1_reg + 1);
-							else snprintf(w1, sizeof(w1), "%s", op1_reg);
-							fprintf (stream, "\tcmp\t%s, %s\n", w1, w0);
-						} else {
-							fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
-						}
+						char w0[8], w1[8];
+						if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
+						else snprintf(w0, sizeof(w0), "%s", op0_reg);
+						if (op1_reg[0] == 'x') snprintf(w1, sizeof(w1), "w%s", op1_reg + 1);
+						else snprintf(w1, sizeof(w1), "%s", op1_reg);
+						fprintf (stream, "\tcmp\t%s, %s\n", w1, w0);
 					}
 					break;
 

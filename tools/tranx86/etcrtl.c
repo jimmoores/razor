@@ -1312,6 +1312,15 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					}
 					deferred_cond (ts);
 					ts->stack->old_a_reg = ts->stack->a_reg;
+					/* On 64-bit targets with 32-bit INTs, the subscript
+					 * value may have stale data in the upper 32 bits of
+					 * the 64-bit register (e.g. from a 4-byte channel
+					 * input into an 8-byte workspace slot).  Clear the
+					 * upper bits before shifting to prevent the stale
+					 * data from corrupting the address calculation. */
+					if (BytesPerWord > 4) {
+						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+					}
 					add_to_ins_chain (compose_ins (INS_SHL, 2, 2, ARG_CONST, y_opd, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 					if (constmap_typeof (ts->stack->old_a_reg) == VALUE_CONST) {
 						constmap_modregconst (ts->stack->old_a_reg, constmap_regconst(ts->stack->old_a_reg) << y_opd);
