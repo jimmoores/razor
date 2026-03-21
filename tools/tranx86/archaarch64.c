@@ -65,6 +65,14 @@ extern void tstack_undefine (tstack *);
 extern void constmap_clearall (void);
 extern kif_entrytype *kif_entry (int call);
 
+/* Forward declarations for FP stack simulation (defined later, used in fp_init) */
+#define AARCH64_FP_STACK_SIZE 3
+static int aarch64_fp_stack_prec[AARCH64_FP_STACK_SIZE];
+static int aarch64_fp_stack_depth;
+static int aarch64_fp_precision;
+static int aarch64_fp_rounding_mode = 0;  /* FPU_N=0 nearest, FPU_Z=3 truncate */
+static int aarch64_fp_had_fpint = 0;  /* set by I_FPINT, cleared by I_FPSTNLI32 */
+
 /*{{{  constants and definitions*/
 /* aarch64 secondary opcodes for long operations (avoid conflicts with transputer.h) */
 #define I_LADD_AARCH64 1
@@ -1108,8 +1116,15 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
  */
 static void compose_fp_set_fround_aarch64 (tstate *ts, int mode)
 {
-	/* ARM64 FPCR rounding mode set - stub implementation */
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64 FPCR rounding mode set (stub)")));
+	/* Track the rounding mode for FP→INT conversions.
+	 * On aarch64 we use the correct fcvt* variant instead of
+	 * changing the hardware FPCR register. */
+	aarch64_fp_rounding_mode = mode;
+	{
+		char buf[64];
+		snprintf(buf, sizeof(buf), "// FP rounding mode set to %d", mode);
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+	}
 }
 /*}}}*/
 
@@ -1119,8 +1134,16 @@ static void compose_fp_set_fround_aarch64 (tstate *ts, int mode)
  */
 static void compose_fp_init_aarch64 (tstate *ts)
 {
-	/* ARM64 FPU initialization - use default IEEE 754 settings */
+	/* ARM64 FPU initialization - use default IEEE 754 settings.
+	 * Also reset the FP stack simulation so each procedure starts clean. */
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// ARM64 FPU init (default IEEE 754)")));
+	aarch64_fp_stack_depth = 0;
+	aarch64_fp_stack_prec[0] = 0;
+	aarch64_fp_stack_prec[1] = 0;
+	aarch64_fp_stack_prec[2] = 0;
+	aarch64_fp_precision = 0;
+	aarch64_fp_rounding_mode = 0;  /* FPU_N = round to nearest */
+	aarch64_fp_had_fpint = 0;
 }
 /*}}}*/
 
@@ -2348,13 +2371,8 @@ static void compose_aarch64_longop (tstate *ts, int secondary_opcode)
  * the integer eval stack (old_a_reg etc.) are consumed by generating
  * INS_MOVE instructions into a scratch register (x16) that is then
  * referenced in the annotation text. */
-#define AARCH64_FP_STACK_SIZE 3
-static int aarch64_fp_stack_prec[AARCH64_FP_STACK_SIZE] = { 0, 0, 0 };
-static int aarch64_fp_stack_depth = 0;
-
-/* Legacy aliases kept for any external references */
+/* Legacy alias kept for any external references */
 static int aarch64_fp_accum_reg = REG_UNDEFINED;
-static int aarch64_fp_precision = 0;
 
 /* Push onto FP stack (shift existing down) */
 static void aarch64_fp_push (int prec)
@@ -2719,6 +2737,9 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			snprintf (buf, sizeof(buf), "\tfrintz\t%s, %s", r0, r0);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 		}
+		/* Mark that FPINT was used — FPSTNLI32 should truncate (fcvtzs).
+		 * Without FPINT, FPSTNLI32 should round to nearest (fcvtns). */
+		aarch64_fp_had_fpint = 1;
 		break;
 	/* IEEE floating point operations */
 	case I_FPLDNLSN:  /* 0x8e - Load non-local REAL32 onto FP stack */
@@ -2745,18 +2766,21 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		ts->stack->fs_depth++;
 		break;
 	case I_FPRTOI32:  /* 0x9d - Mark FA for conversion to INT32 */
-		/* The actual conversion happens in FPSTNLI32. No-op. */
+		/* The actual conversion happens in FPSTNLI32. No-op here. */
 		break;
 	case I_FPCHKERR:  /* 0x83 - Check for floating-point error */
 		/* On aarch64, FP exceptions are masked by default. No-op. */
 		break;
 	case I_FPSTNLI32:  /* 0x9e - Convert FA to INT32 and store */
 		/* Convert float in s0/d0 to int32, store to [old_a_reg].
-		 * Use INS_FIST64 with precision from FA to generate the correct
-		 * fcvtzs instruction.  Precision 32 = fcvtzs w17, s0.
-		 * Precision 64 = fcvtzs w17, d0.  Then str w17, [addr]. */
+		 * Encode FP precision and rounding mode in the constant arg:
+		 *   low 8 bits = precision (32 or 64)
+		 *   bits 8-15 = rounding mode (0=nearest, 3=truncate)
+		 * After conversion, reset rounding mode to default (nearest)
+		 * so subsequent ROUND operations work correctly. */
 		if (aarch64_fp_stack_depth >= 1) {
-			int prec = aarch64_fp_stack_prec[0];
+			int prec = aarch64_fp_stack_prec[0] | (aarch64_fp_rounding_mode << 8);
+			aarch64_fp_rounding_mode = 0;  /* reset to FPU_N after each conversion */
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)prec,
@@ -4562,17 +4586,30 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							fprintf (stream, "\tfmov\tx17, d0\n");
 							store_reg = "x17";
 						} else if (prec == 132) {
-							/* Store REAL32 bits: fmov w17, s0 */
+							/* Store REAL32 bits: fmov w17, s0.
+							 * Use x17 (64-bit) for the store so subsequent
+							 * 64-bit loads get zero-extended values. */
 							fprintf (stream, "\tfmov\tw17, s0\n");
-							store_reg = "w17";
-						} else if (prec == 64) {
-							/* Convert REAL64 to INT32: fcvtzs w17, d0 */
-							fprintf (stream, "\tfcvtzs\tw17, d0\n");
-							store_reg = "w17";
+							store_reg = "x17";
 						} else {
-							/* Convert REAL32 to INT32: fcvtzs w17, s0 */
-							fprintf (stream, "\tfcvtzs\tw17, s0\n");
-							store_reg = "w17";
+							/* Convert REAL32/REAL64 to INT32.
+							 * Decode rounding mode from high bits:
+							 *   low 8 bits = float precision (32 or 64)
+							 *   bits 8-15 = rounding mode
+							 * Select fcvt instruction accordingly. */
+							int fp_prec = prec & 0xFF;
+							int rmode = (prec >> 8) & 0xFF;
+							const char *fp_src = (fp_prec == 64) ? "d0" : "s0";
+							const char *cvt_insn;
+							switch (rmode) {
+								case 3: cvt_insn = "fcvtzs"; break; /* round toward zero */
+								case 1: cvt_insn = "fcvtps"; break; /* round up */
+								case 2: cvt_insn = "fcvtms"; break; /* round down */
+								default: cvt_insn = "fcvtns"; break; /* round to nearest */
+							}
+							fprintf (stream, "\t%s\tw17, %s\n", cvt_insn, fp_src);
+							fprintf (stream, "\tsxtw\tx17, w17\n");
+							store_reg = "x17";
 						}
 
 						if (mode == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
