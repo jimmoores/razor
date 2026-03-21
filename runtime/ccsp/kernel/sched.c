@@ -1263,6 +1263,12 @@ static WARM void clean_timer_queue (sched_t *sched)
 static HOT void trigger_alt_guard (sched_t *sched, word ptr)
 {
 	word *wptr = (word *)(((word) ptr) & (~1));
+	if ((word)wptr < 0x1000) {
+		BMESSAGE("BUG: trigger_alt_guard: ptr=0x%lx wptr=%p Iptr=???\n", (unsigned long)ptr, (void *)wptr);
+		BMESSAGE("  This means a channel word contains an invalid ALT marker.\n");
+		BMESSAGE("  Wptr should never be near zero.\n");
+		return;
+	}
 	word state, nstate;
 
 	do {

@@ -2759,7 +2759,15 @@ PUBLIC void mapalt (treenode * tptr)
 	treenode *reserved, *replvector, *type;
 	const int repls = countnestedalts (tptr, NESTED_REPLS);
 
-	type = newtypenode (S_ARRAY, LocnOf (tptr), newconstant (repls), newleafnode (S_INT, LocnOf (tptr)));
+	/* Each replicator value is saved/restored via I_STL/I_LDL which
+	 * operate on full workspace slots (one word each).  The element
+	 * type must therefore be word-sized so that the array occupies
+	 * exactly 'repls' slots.  On 32-bit, S_INT (4 bytes) = 1 slot.
+	 * On 64-bit with S_INT32, S_INT is only 4 bytes = half a slot,
+	 * causing the array to be undersized and writes to overrun into
+	 * adjacent workspace variables (e.g. channel input destinations). */
+	type = newtypenode (S_ARRAY, LocnOf (tptr), newconstant (repls),
+		newleafnode ((bytesperword > 4) ? S_INT64 : S_INT, LocnOf (tptr)));
 	SetARDim (type, repls);
 	DEBUG_MSG (("mapalt: nested repls is %d\n", repls));
 
