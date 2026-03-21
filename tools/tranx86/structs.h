@@ -231,9 +231,11 @@ typedef struct TAG_rtl_chain {
 #define INS_MOVE32 121		/* 32-bit load/store (for INT on 64-bit targets) */
 #define INS_TRUNCATE32 122	/* truncate to 32 bits (mov wN,wN on aarch64) */
 #define INS_SIGNEXT32 123	/* sign-extend 32 to 64 bits (sxtw on aarch64) */
+#define INS_FLT32 124		/* int32 to REAL32 conversion */
+#define INS_FLT64 125		/* int32 to REAL64 conversion */
 
 #define INS_FIRST INS_MOVE
-#define INS_LAST INS_SIGNEXT32
+#define INS_LAST INS_FLT64
 
 #define INS_START_REG 65535	/* ARG_REG */
 #define INS_END_REG 65534	/* ARG_REG */

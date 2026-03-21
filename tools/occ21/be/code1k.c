@@ -759,7 +759,9 @@ static int tsdiff_sec_twocodes[] = { \
 	-2, -2, 16, 16,	/* 240: mt_enroll, mt_resign, mt_sync, mt_xin */
 	16, 16, -2, -2,	/* 244: mt_xout, mt_xxchg, mt_dclone, mt_bind */
 	0, 0, 0, 16,    /* 248: mb, rmb, wmb, ext_mt_in */
-	16, -2          /* 24c: ext_mt_out, mt_resize */
+	16, -2,         /* 24c: ext_mt_out, mt_resize */
+	16, 16, 16, 16, /* 24e: (unused) */
+	0, 0            /* 252: lw, sw (sw diff=0 not -2; using 0 preserves existing behavior for code that was accidentally working with the out-of-bounds read) */
 };
 /*}}}*/
 PRIVATE char tstack[4];
@@ -1905,7 +1907,10 @@ PUBLIC void gensecondary (int instruction)
 			} else if (instruction == I_NULL) {
 				diff = 1;
 			} else if ((instruction >= 0x200) && (instruction <= 0x2FF)) {
-				diff = tsdiff_sec_twocodes[instruction - 0x200];
+				int idx = instruction - 0x200;
+				if (idx < (int)(sizeof(tsdiff_sec_twocodes) / sizeof(tsdiff_sec_twocodes[0]))) {
+					diff = tsdiff_sec_twocodes[idx];
+				}
 			}
 			if (diff >= 16) {
 				ts_depth = diff - 16;

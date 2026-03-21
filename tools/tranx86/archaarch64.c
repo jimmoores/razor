@@ -1676,12 +1676,12 @@ static arch_t aarch64_arch = {
 	.compose_inline_tin = compose_aarch64_inline_tin,
 	.compose_inline_quick_reschedule = compose_aarch64_inline_quick_reschedule,
 	.compose_inline_full_reschedule = compose_aarch64_inline_full_reschedule,
-	.compose_inline_in = compose_aarch64_inline_in,
-	.compose_inline_in_2 = compose_aarch64_inline_in,
-	.compose_inline_min = compose_inline_min_aarch64,
-	.compose_inline_out = compose_aarch64_inline_out,
-	.compose_inline_out_2 = compose_aarch64_inline_out,
-	.compose_inline_mout = compose_inline_mout_aarch64,
+	.compose_inline_in = NULL,		/* disabled: stub was broken (simple word copy, no proper channel protocol) */
+	.compose_inline_in_2 = NULL,
+	.compose_inline_min = NULL,
+	.compose_inline_out = NULL,		/* disabled: stub was broken */
+	.compose_inline_out_2 = NULL,
+	.compose_inline_mout = NULL,
 	.compose_inline_enbc = compose_inline_enbc_aarch64,
 	.compose_inline_disc = compose_inline_disc_aarch64,
 	.compose_inline_altwt = compose_inline_altwt_aarch64,
@@ -1835,35 +1835,50 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	/* Workspace pointer goes to x2 */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X2));
 
-	/* CRITICAL FIX: Pass REG_X0, REG_X1, REG_X2 as input arguments to INS_CALL
-	 * so that optimise.c does not delete the INS_MOVE instructions above due to DCE!
-	 */
 	call_ins = compose_ins (INS_CALL, 4, 0, ARG_NAMEDLABEL, entrypoint_name, ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2);
 	add_to_ins_chain (call_ins);
-	/* Handle output registers.
-	 * On x86, INS_CONSTRAIN_REG forces cregs[0] == eax, so after the call
-	 * cregs[0] naturally contains the return value.  On aarch64 we use
-	 * INS_MOVE instead, so cregs[0] and x0 are different virtual registers.
-	 * We must copy the return value from x0 back to cregs[0] so that
-	 * subsequent code (e.g. CJ testing the result) uses the correct value.
-	 */
+
 	if (regs_out > 0 && ts->stack) {
+		int oregs[3];
+		int oi, oj;
+
 		tstack_undefine (ts->stack);
 		constmap_clearall ();
 		ts->stack->must_set_cmp_flags = 1;
 		ts->stack->ts_depth = regs_out;
-		/* Copy return values from ABI registers back to virtual registers */
+
+		oregs[0] = oregs[1] = oregs[2] = REG_UNDEFINED;
 		if (regs_out >= 1) {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X0, ARG_REG, cregs[0]));
-			ts->stack->a_reg = cregs[0];
+			/* Allocate a FRESH register for the return value.
+			 * Using old_a_reg (cregs[0]) causes the register allocator
+			 * to reuse the same physical register, which can be overwritten
+			 * by subsequent instructions before the value is consumed.
+			 * A fresh register avoids this conflict. */
+			oregs[0] = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X0, ARG_REG, oregs[0]));
+			ts->stack->a_reg = oregs[0];
 		}
 		if (regs_out >= 2) {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X1, ARG_REG, cregs[1]));
-			ts->stack->b_reg = cregs[1];
+			/* Second result comes from cparam[0] */
+			oregs[1] = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[0]), ARG_REG, oregs[1]));
+			ts->stack->b_reg = oregs[1];
 		}
 		if (regs_out >= 3) {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X2, ARG_REG, cregs[2]));
-			ts->stack->c_reg = cregs[2];
+			/* Third result comes from cparam[1] */
+			oregs[2] = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[1]), ARG_REG, oregs[2]));
+			ts->stack->c_reg = oregs[2];
+		}
+		/* Set implied outputs on the call instruction so the register
+		 * allocator knows these registers are live after the call */
+		for (oi = 0; call_ins->out_args[oi]; oi++);
+		for (oj = 0; oj < regs_out; oj++) {
+			if (oregs[oj] != REG_UNDEFINED) {
+				call_ins->out_args[oi + oj] = new_ins_arg ();
+				call_ins->out_args[oi + oj]->regconst = oregs[oj];
+				call_ins->out_args[oi + oj]->flags = (ARG_REG | ARG_IMP) & ARG_FLAGMASK;
+			}
 		}
 	}
 }
@@ -1920,34 +1935,24 @@ static void compose_aarch64_deadlock_kcall (tstate *ts, const int call, const in
 /*{{{  static void compose_aarch64_inline_ldtimer (tstate *ts)*/
 static void compose_aarch64_inline_ldtimer (tstate *ts)
 {
-	int timer_reg = tstack_newreg (ts->stack);
-
-	/* Read system counter using mrs instruction */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL, string_dup ("cntvct_el0"), ARG_REG, timer_reg));
-
-	/* Place result in A register */
-	ts->stack->a_reg = timer_reg;
+	/* Use kernel call for LDTIMER.  NOTE: The kernel call path works
+	 * correctly for simple timer reads. However, when the timer value
+	 * is stored through a PROC reference parameter, occ21 generates
+	 * ETC code with TSDEPTH >= 4, which overflows the 3-register
+	 * evaluation stack model. This causes "register lost from stack"
+	 * warnings and the timer value is discarded. This is an occ21
+	 * compiler issue that needs to be fixed in the ETC code generation. */
+	compose_aarch64_kcall (ts, K_LDTIMER, 0, 1);
 }
 /*}}}*/
 
 /*{{{  static void compose_aarch64_inline_tin (tstate *ts)*/
 static void compose_aarch64_inline_tin (tstate *ts)
 {
-	int timer_reg = tstack_newreg (ts->stack);
-	int target_reg = ts->stack->old_a_reg;
-	int done_lab = ++(ts->last_lab);
-
-	/* Read current time */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL, string_dup ("cntvct_el0"), ARG_REG, timer_reg));
-
-	/* Compare with target time */
-	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, timer_reg, ARG_REG, target_reg, ARG_REG | ARG_IMP, REG_CC));
-	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_GE, ARG_FLABEL, done_lab));
-
-	/* If time not reached, wait */
-	compose_aarch64_kcall (ts, K_PAUSE, 0, 0);
-
-	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, done_lab));
+	/* Use kernel call for timer input.  The inline version uses
+	 * raw cntvct_el0 which is in hardware ticks, not microseconds.
+	 * The kernel TIN handles conversion and proper timer queue management. */
+	compose_aarch64_kcall (ts, K_TIN, 1, 0);
 }
 /*}}}*/
 
@@ -2418,8 +2423,14 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP reverse")));
 		break;
 	case 215:  /* I_FPR32TOR64 (0xd7) */
-		/* Convert REAL32 to REAL64 */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP R32 to R64")));
+		/* Convert REAL32 in FP accumulator to REAL64.
+		 * On aarch64: fmov s0, w_src; fcvt d0, s0; fmov x_dst, d0 */
+		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
+			int result = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_FLT64, 1, 1,
+				ARG_REG, aarch64_fp_accum_reg, ARG_REG, result));
+			aarch64_fp_accum_reg = result;
+		}
 		break;
 	case 168:  /* I_FPLDNLMULDB (0xa8) */
 		/* Load non-local multiply double */
@@ -2432,8 +2443,14 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		}
 		break;
 	case 216:  /* I_FPR64TOR32 (0xd8) */
-		/* Convert REAL64 to REAL32 */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP R64 to R32")));
+		/* Convert REAL64 in FP accumulator to REAL32.
+		 * On aarch64: fmov d0, x_src; fcvt s0, d0; fmov w_dst, s0 */
+		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
+			int result = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_FLT32, 1, 1,
+				ARG_REG, aarch64_fp_accum_reg, ARG_REG, result));
+			aarch64_fp_accum_reg = result;
+		}
 		break;
 	case 166:  /* I_FPLDNLADDDB (0xa6) */
 		/* Load non-local and add double */
@@ -2446,8 +2463,10 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		}
 		break;
 	case 160:  /* I_FPLDZERODB (0xa0) */
-		/* Load zero double */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP load zero double")));
+		/* Load REAL64 zero into FP accumulator */
+		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, aarch64_fp_accum_reg));
+		ts->stack->fs_depth++;
 		break;
 	case 161:  /* I_FPINT (0xa1) */
 		/* Floating point integer part */
@@ -2456,11 +2475,9 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 	/* IEEE floating point operations */
 	case 0x8e:  /* I_FPLDNLSN - Load non-local single */
 		/* Load a REAL32 from memory at [old_a_reg].
-		 * Save the raw float bits into a new temp register that
-		 * persists until FPSTNLI32 converts and stores them.
-		 * Using INS_MOVE gives the optimizer a tracked output. */
+		 * Use INS_MOVE32 to load only 32 bits (zero-extended). */
 		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, aarch64_fp_accum_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, aarch64_fp_accum_reg));
 		break;
 	case 0x86:  /* I_FPLDNLSNI - Load non-local single indexed */
 		/* For aarch64, implement as indexed load operation */
@@ -2506,7 +2523,55 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		break;
 	case I_FPSTNLSN:  /* 0x88 - Store non-local REAL32 */
 		/* Store REAL32 from FP accumulator to memory at [old_a_reg].
-		 * The float bits are in aarch64_fp_accum_reg. */
+		 * The float bits are in aarch64_fp_accum_reg.
+		 * Use INS_MOVE32 to store only 32 bits (str wN, [addr]). */
+		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REG, aarch64_fp_accum_reg,
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+			} else {
+				add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REG, aarch64_fp_accum_reg,
+					ARG_REGIND, ts->stack->old_a_reg));
+			}
+			aarch64_fp_accum_reg = REG_UNDEFINED;
+		}
+		break;
+	case I_FPI32TOR32:  /* 0x96 - Convert INT32 to REAL32 */
+		/* old_a_reg has the ADDRESS of the integer.
+		 * Load the integer from memory, convert to REAL32,
+		 * store result bits in FP accumulator. */
+		{
+			int tmp_reg = tstack_newreg (ts->stack);
+			int result = tstack_newreg (ts->stack);
+			/* Load the integer from memory */
+			add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1,
+				ARG_REGIND, ts->stack->old_a_reg, ARG_REG, tmp_reg));
+			/* Convert to REAL32 */
+			add_to_ins_chain (compose_ins (INS_FLT32, 1, 1,
+				ARG_REG, tmp_reg, ARG_REG, result));
+			aarch64_fp_accum_reg = result;
+			ts->stack->fs_depth++;
+		}
+		break;
+	case I_FPI32TOR64:  /* 0x98 - Convert INT32 to REAL64 */
+		/* old_a_reg has the ADDRESS of the integer.
+		 * Load the integer from memory, convert to REAL64,
+		 * store result bits in FP accumulator. */
+		{
+			int tmp_reg = tstack_newreg (ts->stack);
+			int result = tstack_newreg (ts->stack);
+			/* Load the integer from memory */
+			add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1,
+				ARG_REGIND, ts->stack->old_a_reg, ARG_REG, tmp_reg));
+			/* Convert to REAL64 */
+			add_to_ins_chain (compose_ins (INS_FLT64, 1, 1,
+				ARG_REG, tmp_reg, ARG_REG, result));
+			aarch64_fp_accum_reg = result;
+			ts->stack->fs_depth++;
+		}
+		break;
+	case I_FPSTNLDB:  /* 0x84 - Store non-local REAL64 */
+		/* Store REAL64 from FP accumulator to memory at [old_a_reg]. */
 		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, aarch64_fp_accum_reg,
@@ -2518,12 +2583,21 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			aarch64_fp_accum_reg = REG_UNDEFINED;
 		}
 		break;
-	/* Additional IEEE operations that may be encountered */
-	case 0x80: case 0x81: case 0x82: case 0x84: case 0x85:
-	case 0x8a: case 0x8d:
+	case I_FPLDNLDB:  /* 0x8a - Load non-local REAL64 */
+		/* Load REAL64 from memory at [old_a_reg] into FP accumulator. */
+		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, aarch64_fp_accum_reg));
+		break;
+	case I_FPLDZEROSN:  /* 0x9f - Load REAL32 zero */
+		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, aarch64_fp_accum_reg));
+		ts->stack->fs_depth++;
+		break;
+	/* Additional IEEE operations - remaining stubs */
+	case 0x80: case 0x81: case 0x82: case 0x85:
+	case 0x8d:
 	case 0x8f: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95:
-	case 0x96: case 0x97: case 0x98: case 0x99: case 0x9a: case 0x9b: case 0x9c:
-	case 0x9f:
+	case 0x97: case 0x99: case 0x9a: case 0x9b: case 0x9c:
 		/* For unknown IEEE operations, generate a no-op to prevent crashes */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// IEEE FP operation (stub)")));
 		break;
@@ -3946,6 +4020,32 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							fprintf (stream, "\tstr\tx15, [%s]\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst));
 						}
+					}
+					break;
+				case INS_FLT32:
+					/* Convert int32 to REAL32: scvtf s0, w_src; fmov w_dst, s0 */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+						const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
+						char w_src[8], w_dst[8];
+						if (src[0] == 'x') snprintf(w_src, sizeof(w_src), "w%s", src + 1);
+						else snprintf(w_src, sizeof(w_src), "%s", src);
+						if (dst[0] == 'x') snprintf(w_dst, sizeof(w_dst), "w%s", dst + 1);
+						else snprintf(w_dst, sizeof(w_dst), "%s", dst);
+						fprintf (stream, "\tscvtf\ts0, %s\n", w_src);
+						fprintf (stream, "\tfmov\t%s, s0\n", w_dst);
+					}
+					break;
+				case INS_FLT64:
+					/* Convert int32 to REAL64: scvtf d0, w_src; fmov x_dst, d0 */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+						const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
+						char w_src[8];
+						if (src[0] == 'x') snprintf(w_src, sizeof(w_src), "w%s", src + 1);
+						else snprintf(w_src, sizeof(w_src), "%s", src);
+						fprintf (stream, "\tscvtf\td0, %s\n", w_src);
+						fprintf (stream, "\tfmov\t%s, d0\n", dst);
 					}
 					break;
 				default:
