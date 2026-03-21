@@ -2329,274 +2329,640 @@ static void compose_aarch64_longop (tstate *ts, int secondary_opcode)
 /*}}}*/
 
 /*{{{  static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)*/
-/* Saved register from FPLDNLSN for use by FPSTNLI32 */
+/* FP stack simulation for aarch64.
+ * The transputer has a 3-deep FP stack (FA, FB, FC) separate from the
+ * integer eval stack.  On x86, this maps to the x87 FPU stack hardware.
+ * On aarch64, we use NEON/FP hardware registers directly:
+ *   FA (top)    = s0/d0 (REAL32/REAL64)
+ *   FB (second) = s1/d1
+ *   FC (third)  = s2/d2
+ * This avoids allocating virtual integer registers for FP values, which
+ * would cause "register muddled" errors in the register tracer since FP
+ * values live across basic blocks outside the integer eval stack.
+ *
+ * We track precision (32 or 64) for each FP stack slot so we know
+ * whether to use s-registers or d-registers in the emitted assembly.
+ *
+ * All FP operations are emitted as INS_ANNO text annotations containing
+ * the actual aarch64 assembly instructions.  The address operands from
+ * the integer eval stack (old_a_reg etc.) are consumed by generating
+ * INS_MOVE instructions into a scratch register (x16) that is then
+ * referenced in the annotation text. */
+#define AARCH64_FP_STACK_SIZE 3
+static int aarch64_fp_stack_prec[AARCH64_FP_STACK_SIZE] = { 0, 0, 0 };
+static int aarch64_fp_stack_depth = 0;
+
+/* Legacy aliases kept for any external references */
 static int aarch64_fp_accum_reg = REG_UNDEFINED;
+static int aarch64_fp_precision = 0;
+
+/* Push onto FP stack (shift existing down) */
+static void aarch64_fp_push (int prec)
+{
+	if (aarch64_fp_stack_depth < AARCH64_FP_STACK_SIZE) {
+		int i;
+		for (i = aarch64_fp_stack_depth; i > 0; i--) {
+			aarch64_fp_stack_prec[i] = aarch64_fp_stack_prec[i - 1];
+		}
+		aarch64_fp_stack_prec[0] = prec;
+		aarch64_fp_stack_depth++;
+	}
+	aarch64_fp_precision = aarch64_fp_stack_prec[0];
+}
+
+/* Pop from FP stack */
+static void aarch64_fp_pop (void)
+{
+	if (aarch64_fp_stack_depth > 0) {
+		int i;
+		for (i = 0; i < aarch64_fp_stack_depth - 1; i++) {
+			aarch64_fp_stack_prec[i] = aarch64_fp_stack_prec[i + 1];
+		}
+		aarch64_fp_stack_prec[aarch64_fp_stack_depth - 1] = 0;
+		aarch64_fp_stack_depth--;
+	}
+	aarch64_fp_precision = (aarch64_fp_stack_depth > 0) ? aarch64_fp_stack_prec[0] : 0;
+}
+
+/* Get FP register name for a given stack slot and precision */
+static const char *aarch64_fp_regname (int slot, int prec)
+{
+	static const char *s_regs[] = { "s0", "s1", "s2" };
+	static const char *d_regs[] = { "d0", "d1", "d2" };
+	if (slot < 0 || slot >= AARCH64_FP_STACK_SIZE) slot = 0;
+	return (prec == 64) ? d_regs[slot] : s_regs[slot];
+}
+
+/* Emit an FP stack push: move existing stack entries down in HW regs.
+ * If depth was 1, move s0->s1 (or d0->d1).
+ * If depth was 2, move s1->s2, s0->s1 (or d variants). */
+static void aarch64_fp_emit_push (tstate *ts)
+{
+	int i;
+	for (i = aarch64_fp_stack_depth - 1; i > 0; i--) {
+		/* Move slot i-1 to slot i */
+		char buf[128];
+		int p = aarch64_fp_stack_prec[i - 1];
+		/* After aarch64_fp_push, prec[i] has old prec[i-1] */
+		snprintf (buf, sizeof(buf), "\tfmov\t%s, %s",
+			aarch64_fp_regname (i, p),
+			aarch64_fp_regname (i - 1, p));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+	}
+}
+
+/* Emit FP stack pop: move entries up.  Called AFTER aarch64_fp_pop(). */
+static void aarch64_fp_emit_pop (tstate *ts)
+{
+	int i;
+	for (i = 0; i < aarch64_fp_stack_depth; i++) {
+		char buf[128];
+		int p = aarch64_fp_stack_prec[i];
+		snprintf (buf, sizeof(buf), "\tfmov\t%s, %s",
+			aarch64_fp_regname (i, p),
+			aarch64_fp_regname (i + 1, p));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+	}
+}
+
+/* Helper: emit a load from memory address in an integer register into
+ * the FP register at slot 0.  The address register is in old_a_reg
+ * (an eval stack register).  We emit an INS_MOVE to put the address
+ * into x16 (scratch), then an annotation to do the FP load. */
+static void aarch64_fp_emit_load_from_areg (tstate *ts, int addr_reg, int slot, int prec)
+{
+	char buf[128];
+	/* Move address to x16 scratch so we can reference it in annotation */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, addr_reg, ARG_REG, 16));
+	if (prec == 64) {
+		snprintf (buf, sizeof(buf), "\tldr\t%s, [x16]", aarch64_fp_regname (slot, 64));
+	} else {
+		snprintf (buf, sizeof(buf), "\tldr\t%s, [x16]", aarch64_fp_regname (slot, 32));
+	}
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+}
+
+/* Helper: emit a store from FP register at slot 0 to memory address
+ * in an integer register. */
+static void aarch64_fp_emit_store_to_areg (tstate *ts, int addr_reg, int slot, int prec)
+{
+	char buf[128];
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, addr_reg, ARG_REG, 16));
+	if (prec == 64) {
+		snprintf (buf, sizeof(buf), "\tstr\t%s, [x16]", aarch64_fp_regname (slot, 64));
+	} else {
+		snprintf (buf, sizeof(buf), "\tstr\t%s, [x16]", aarch64_fp_regname (slot, 32));
+	}
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+}
+
+/* Helper: emit store to workspace-relative address */
+static void aarch64_fp_emit_store_to_wptr (tstate *ts, int offset, int slot, int prec)
+{
+	char buf[128];
+	snprintf (buf, sizeof(buf), "\tstr\t%s, [x28, #%d]",
+		aarch64_fp_regname (slot, prec), offset);
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+}
+
+/* Helper: emit load from workspace-relative address */
+static void aarch64_fp_emit_load_from_wptr (tstate *ts, int offset, int slot, int prec)
+{
+	char buf[128];
+	snprintf (buf, sizeof(buf), "\tldr\t%s, [x28, #%d]",
+		aarch64_fp_regname (slot, prec), offset);
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+}
 
 static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 {
-	/* CRITICAL FIX: Validate stack state before FP operations */
+	/* Validate stack state before FP operations */
 	if (!ts || !ts->stack) {
 		fprintf (stderr, "aarch64_fpop: invalid tstate or stack\n");
 		return;
 	}
-	
+
 	switch (secondary_opcode) {
-	case I_FPADD:
-		add_to_ins_chain (compose_ins (INS_FADD, 0, 0));
-		if (ts->stack->fs_depth > 0) {
-			ts->stack->fs_depth--;
+	case I_FPADD:  /* 0x87 - FP addition: FA = FB + FA, pop one */
+		/* Operates entirely on the hardware FP stack (s0/d0, s1/d1).
+		 * No integer registers involved. */
+		if (aarch64_fp_stack_depth >= 2) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			const char *r1 = aarch64_fp_regname (1, prec);
+			char buf[128];
+			/* result = s1 + s0 -> s0 (or d1 + d0 -> d0) */
+			snprintf (buf, sizeof(buf), "\tfadd\t%s, %s, %s", r0, r1, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			/* Pop: shift s1 down to slot 1 etc */
+			aarch64_fp_pop ();
+		}
+		ts->stack->fs_depth--;
+		break;
+	case I_FPSUB:  /* 0x89 - FP subtraction: FA = FB - FA, pop one */
+		if (aarch64_fp_stack_depth >= 2) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			const char *r1 = aarch64_fp_regname (1, prec);
+			char buf[128];
+			snprintf (buf, sizeof(buf), "\tfsub\t%s, %s, %s", r0, r1, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			aarch64_fp_pop ();
+		}
+		ts->stack->fs_depth--;
+		break;
+	case I_FPMUL:  /* 0x8b - FP multiplication: FA = FB * FA, pop one */
+		if (aarch64_fp_stack_depth >= 2) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			const char *r1 = aarch64_fp_regname (1, prec);
+			char buf[128];
+			snprintf (buf, sizeof(buf), "\tfmul\t%s, %s, %s", r0, r1, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			aarch64_fp_pop ();
+		}
+		ts->stack->fs_depth--;
+		break;
+	case I_FPDIV:  /* 0x8c - FP division: FA = FB / FA, pop one */
+		if (aarch64_fp_stack_depth >= 2) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			const char *r1 = aarch64_fp_regname (1, prec);
+			char buf[128];
+			snprintf (buf, sizeof(buf), "\tfdiv\t%s, %s, %s", r0, r1, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			aarch64_fp_pop ();
+		}
+		ts->stack->fs_depth--;
+		break;
+	case I_FPSQRT:  /* 0xd3 - FP square root: FA = sqrt(FA) */
+		if (aarch64_fp_stack_depth >= 1) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			char buf[128];
+			snprintf (buf, sizeof(buf), "\tfsqrt\t%s, %s", r0, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 		}
 		break;
-	case I_FPSUB:
-		add_to_ins_chain (compose_ins (INS_FSUB, 0, 0));
-		if (ts->stack->fs_depth > 0) {
-			ts->stack->fs_depth--;
-		}
-		break;
-	case I_FPMUL:
-		add_to_ins_chain (compose_ins (INS_FMUL, 0, 0));
-		if (ts->stack->fs_depth > 0) {
-			ts->stack->fs_depth--;
-		}
-		break;
-	case I_FPDIV:
-		add_to_ins_chain (compose_ins (INS_FDIV, 0, 0));
-		if (ts->stack->fs_depth > 0) {
-			ts->stack->fs_depth--;
-		}
-		break;
-	case I_FPSQRT:
-		/* Square root of the value in the FP accumulator register */
-		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
-			int result = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_FSQRT, 1, 1,
-				ARG_REG, aarch64_fp_accum_reg,
-				ARG_REG, result));
-			aarch64_fp_accum_reg = result;
-		}
-		break;
-	/* Specific failing operations from the build log */
-	case 530:  /* I_FPPOP (0x212) */
-		/* Pop floating point stack */
+	case I_FPPOP:  /* 0x212 (530) - Pop FP stack */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP pop")));
+		aarch64_fp_pop ();
 		if (ts->stack->fs_depth > 0) {
 			ts->stack->fs_depth--;
 		}
 		break;
-	case 219:  /* I_FPABS (0xdb) */
-		/* Floating point absolute value */
-		add_to_ins_chain (compose_ins (INS_FABS, 0, 0));
+	case I_FPABS:  /* 0xdb (219) - FP absolute value: FA = |FA| */
+		if (aarch64_fp_stack_depth >= 1) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			char buf[128];
+			snprintf (buf, sizeof(buf), "\tfabs\t%s, %s", r0, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+		}
 		break;
-	case 209:  /* I_FPDIVBY2 (0xd1) */
-		/* Divide by 2 (shift right) */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP divide by 2")));
-		break;
-	case 210:  /* I_FPMULBY2 (0xd2) */
-		/* Multiply by 2 (shift left) */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP multiply by 2")));
-		break;
-	case 170:  /* I_FPLDNLADDSN (0xaa) */
-		/* Load non-local REAL32 and add to FP accumulator.
-		 * old_a_reg has the address (from LDLP).
-		 * Load the second float and add to the value in fp_accum_reg. */
-		{
-			int second_float = tstack_newreg (ts->stack);
-			/* Load second float operand from memory at [old_a_reg] */
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, second_float));
-			/* Emit FP add: INS_FLD32 with 2 inputs (both operands),
-			 * result goes into aarch64_fp_accum_reg.
-			 * The asm handler will emit: fmov s0, w_a; fmov s1, w_b;
-			 * fadd s0, s0, s1; fmov w_result, s0 */
-			{
-				int result = tstack_newreg (ts->stack);
-				add_to_ins_chain (compose_ins (INS_FADD, 2, 1,
-					ARG_REG, aarch64_fp_accum_reg,
-					ARG_REG, second_float,
-					ARG_REG, result));
-				aarch64_fp_accum_reg = result;
+	case I_FPDIVBY2:  /* 0xd1 (209) - Divide by 2 */
+		if (aarch64_fp_stack_depth >= 1) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			char buf[128];
+			/* Use s3/d3 as scratch for the constant 0.5 */
+			const char *rs = (prec == 64) ? "d3" : "s3";
+			if (prec == 64) {
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx16, #0x3fe0000000000000")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td3, x16")));
+			} else {
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tw16, #0x3f000000")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts3, w16")));
 			}
-			ts->stack->a_reg = aarch64_fp_accum_reg;
+			snprintf (buf, sizeof(buf), "\tfmul\t%s, %s, %s", r0, r0, rs);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 		}
 		break;
-	case 164:  /* I_FPREV (0xa4) */
-		/* Reverse floating point stack */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP reverse")));
-		break;
-	case 215:  /* I_FPR32TOR64 (0xd7) */
-		/* Convert REAL32 in FP accumulator to REAL64.
-		 * On aarch64: fmov s0, w_src; fcvt d0, s0; fmov x_dst, d0 */
-		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
-			int result = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_FLT64, 1, 1,
-				ARG_REG, aarch64_fp_accum_reg, ARG_REG, result));
-			aarch64_fp_accum_reg = result;
+	case I_FPMULBY2:  /* 0xd2 (210) - Multiply by 2 */
+		if (aarch64_fp_stack_depth >= 1) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			char buf[128];
+			/* fadd r0, r0, r0 is equivalent to multiply by 2 */
+			snprintf (buf, sizeof(buf), "\tfadd\t%s, %s, %s", r0, r0, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 		}
 		break;
-	case 168:  /* I_FPLDNLMULDB (0xa8) */
-		/* Load non-local multiply double */
-		if (ts->stack->old_a_reg != REG_UNDEFINED && ts->stack->old_b_reg != REG_UNDEFINED) {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins (INS_FMUL, 0, 0));
-			ts->stack->a_reg = ts->stack->old_b_reg;
-		} else {
-			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP load and multiply double")));
+	case I_FPLDNLADDSN:  /* 0xaa (170) - Load REAL32 and add to FA */
+		/* Save FA to s3, load new value via FLD32 into s0, then add. */
+		if (aarch64_fp_stack_depth >= 1) {
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts3, s0")));
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+			} else {
+				add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+					ARG_REGIND, ts->stack->old_a_reg));
+			}
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfadd\ts0, s3, s0")));
 		}
 		break;
-	case 216:  /* I_FPR64TOR32 (0xd8) */
-		/* Convert REAL64 in FP accumulator to REAL32.
-		 * On aarch64: fmov d0, x_src; fcvt s0, d0; fmov w_dst, s0 */
-		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
-			int result = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_FLT32, 1, 1,
-				ARG_REG, aarch64_fp_accum_reg, ARG_REG, result));
-			aarch64_fp_accum_reg = result;
+	case I_FPLDNLADDDB:  /* 0xa6 (166) - Load REAL64 and add to FA */
+		if (aarch64_fp_stack_depth >= 1) {
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td3, d0")));
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				char buf[128];
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
+					snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
+				} else {
+					snprintf (buf, sizeof(buf), "\tmov\tx17, #%d", offset);
+					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, x28, x17")));
+					snprintf (buf, sizeof(buf), "\tldr\td0, [x17]");
+				}
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			} else {
+				add_to_ins_chain (compose_ins (INS_FLD32, 2, 0,
+					ARG_REGIND, ts->stack->old_a_reg,
+					ARG_CONST, (intptr_t)64));
+			}
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfadd\td0, d3, d0")));
 		}
 		break;
-	case 166:  /* I_FPLDNLADDDB (0xa6) */
-		/* Load non-local and add double */
-		if (ts->stack->old_a_reg != REG_UNDEFINED && ts->stack->old_b_reg != REG_UNDEFINED) {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins (INS_FADD, 0, 0));
-			ts->stack->a_reg = ts->stack->old_b_reg;
-		} else {
-			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP load and add double")));
+	case I_FPLDNLMULSN:  /* 0xac - Load REAL32 and multiply with FA */
+		if (aarch64_fp_stack_depth >= 1) {
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts3, s0")));
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+			} else {
+				add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+					ARG_REGIND, ts->stack->old_a_reg));
+			}
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmul\ts0, s3, s0")));
 		}
 		break;
-	case 160:  /* I_FPLDZERODB (0xa0) */
-		/* Load REAL64 zero into FP accumulator */
-		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, aarch64_fp_accum_reg));
+	case I_FPLDNLMULDB:  /* 0xa8 (168) - Load REAL64 and multiply with FA */
+		if (aarch64_fp_stack_depth >= 1) {
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td3, d0")));
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				char buf[128];
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
+					snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
+				} else {
+					snprintf (buf, sizeof(buf), "\tmov\tx17, #%d", offset);
+					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, x28, x17")));
+					snprintf (buf, sizeof(buf), "\tldr\td0, [x17]");
+				}
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			} else {
+				add_to_ins_chain (compose_ins (INS_FLD32, 2, 0,
+					ARG_REGIND, ts->stack->old_a_reg,
+					ARG_CONST, (intptr_t)64));
+			}
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmul\td0, d3, d0")));
+		}
+		break;
+	case I_FPREV:  /* 0xa4 (164) - Reverse FA and FB */
+		if (aarch64_fp_stack_depth >= 2) {
+			int prec_a = aarch64_fp_stack_prec[0];
+			int prec_b = aarch64_fp_stack_prec[1];
+			int tmp;
+			/* Swap precision tracking */
+			tmp = aarch64_fp_stack_prec[0];
+			aarch64_fp_stack_prec[0] = aarch64_fp_stack_prec[1];
+			aarch64_fp_stack_prec[1] = tmp;
+			aarch64_fp_precision = aarch64_fp_stack_prec[0];
+			/* Emit swap using s3/d3 as temp */
+			if (prec_a == 64 && prec_b == 64) {
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td3, d0")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td0, d1")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td1, d3")));
+			} else if (prec_a == 32 && prec_b == 32) {
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts3, s0")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts0, s1")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts1, s3")));
+			} else {
+				/* Mixed precision - use d-registers to capture all bits */
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td3, d0")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td0, d1")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td1, d3")));
+			}
+		}
+		break;
+	case I_FPR32TOR64:  /* 0xd7 (215) - Convert REAL32 FA to REAL64 */
+		if (aarch64_fp_stack_depth >= 1) {
+			/* fcvt d0, s0 -- widen single to double */
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfcvt\td0, s0")));
+			aarch64_fp_stack_prec[0] = 64;
+			aarch64_fp_precision = 64;
+		}
+		break;
+	case I_FPR64TOR32:  /* 0xd8 (216) - Convert REAL64 FA to REAL32 */
+		if (aarch64_fp_stack_depth >= 1) {
+			/* fcvt s0, d0 -- narrow double to single */
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfcvt\ts0, d0")));
+			aarch64_fp_stack_prec[0] = 32;
+			aarch64_fp_precision = 32;
+		}
+		break;
+	case I_FPLDZERODB:  /* 0xa0 (160) - Load REAL64 zero */
+		/* Push zero onto FP stack */
+		aarch64_fp_push (64);
+		aarch64_fp_emit_push (ts);
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td0, xzr")));
 		ts->stack->fs_depth++;
 		break;
-	case 161:  /* I_FPINT (0xa1) */
-		/* Floating point integer part */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP integer part")));
-		break;
-	/* IEEE floating point operations */
-	case 0x8e:  /* I_FPLDNLSN - Load non-local single */
-		/* Load a REAL32 from memory at [old_a_reg].
-		 * Use INS_MOVE32 to load only 32 bits (zero-extended). */
-		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, aarch64_fp_accum_reg));
-		break;
-	case 0x86:  /* I_FPLDNLSNI - Load non-local single indexed */
-		/* For aarch64, implement as indexed load operation */
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-		ts->stack->a_reg = ts->stack->old_b_reg;
-		break;
-	case 0xac:  /* I_FPLDNLMULSN - Load non-local multiply single */
-		/* For aarch64, implement as load followed by multiply */
-		if (ts->stack->old_a_reg != REG_UNDEFINED && ts->stack->old_b_reg != REG_UNDEFINED) {
-			/* Load value from memory address in old_b_reg + offset in old_a_reg */
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-			/* Multiply with floating point stack top (simulated) */
-			add_to_ins_chain (compose_ins (INS_FMUL, 0, 0));
-			ts->stack->a_reg = ts->stack->old_b_reg;
-		} else {
-			/* Fallback: just load the value */
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+	case I_FPINT:  /* 0xa1 (161) - Integer part (truncate to integer, keep as float) */
+		if (aarch64_fp_stack_depth >= 1) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			char buf[128];
+			snprintf (buf, sizeof(buf), "\tfrintz\t%s, %s", r0, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 		}
 		break;
-	case I_FPRTOI32:  /* 0x9d - Convert REAL32 on FP stack to INT32 */
-		/* Float is in FP register s0.  Convert to int (round nearest).
-		 * The result stays on the FP stack (in s0 as int bits) until
-		 * FPSTNLI32 stores it.  Use INS_FRNDINT to signal conversion. */
-		add_to_ins_chain (compose_ins (INS_FRNDINT, 0, 0));
+	/* IEEE floating point operations */
+	case I_FPLDNLSN:  /* 0x8e - Load non-local REAL32 onto FP stack */
+		/* Push onto FP stack, then load from [old_a_reg] into s0.
+		 * The old_a_reg is consumed from the integer eval stack by tstack_setsec. */
+		aarch64_fp_push (32);
+		aarch64_fp_emit_push (ts);
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+		} else {
+			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+				ARG_REGIND, ts->stack->old_a_reg));
+		}
+		ts->stack->fs_depth++;
+		break;
+	case I_FPLDNLSNI:  /* 0x86 - Load non-local single indexed */
+		/* Two values consumed from integer stack: index (old_a_reg) and base (old_b_reg).
+		 * Load from [old_b_reg + old_a_reg]. */
+		aarch64_fp_push (32);
+		aarch64_fp_emit_push (ts);
+		add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+			ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, ts->stack->old_a_reg));
+		ts->stack->fs_depth++;
+		break;
+	case I_FPRTOI32:  /* 0x9d - Mark FA for conversion to INT32 */
+		/* The actual conversion happens in FPSTNLI32. No-op. */
 		break;
 	case I_FPCHKERR:  /* 0x83 - Check for floating-point error */
 		/* On aarch64, FP exceptions are masked by default. No-op. */
 		break;
-	case I_FPSTNLI32:  /* 0x9e - Store INT32 from FP conversion */
-		/* Convert float bits (in aarch64_fp_accum_reg from FPLDNLSN)
-		 * to integer and store to memory at [old_a_reg].
-		 * Use INS_FIST64 with the accum reg as input. The aarch64
-		 * asm handler emits: fmov s0, w_src; fcvtns x_tmp, s0;
-		 * str x_tmp, [addr]. */
-		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
+	case I_FPSTNLI32:  /* 0x9e - Convert FA to INT32 and store */
+		/* Convert float in s0/d0 to int32, store to [old_a_reg].
+		 * Use INS_FIST64 with precision from FA to generate the correct
+		 * fcvtzs instruction.  Precision 32 = fcvtzs w17, s0.
+		 * Precision 64 = fcvtzs w17, d0.  Then str w17, [addr]. */
+		if (aarch64_fp_stack_depth >= 1) {
+			int prec = aarch64_fp_stack_prec[0];
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1, ARG_REG, aarch64_fp_accum_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
-			} else {
-				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1, ARG_REG, aarch64_fp_accum_reg, ARG_REGIND, ts->stack->old_a_reg));
-			}
-			aarch64_fp_accum_reg = REG_UNDEFINED;
-		}
-		break;
-	case I_FPSTNLSN:  /* 0x88 - Store non-local REAL32 */
-		/* Store REAL32 from FP accumulator to memory at [old_a_reg].
-		 * The float bits are in aarch64_fp_accum_reg.
-		 * Use INS_MOVE32 to store only 32 bits (str wN, [addr]). */
-		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
-			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-				add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REG, aarch64_fp_accum_reg,
+				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
+					ARG_CONST, (intptr_t)prec,
 					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 			} else {
-				add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REG, aarch64_fp_accum_reg,
+				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
+					ARG_CONST, (intptr_t)prec,
 					ARG_REGIND, ts->stack->old_a_reg));
 			}
-			aarch64_fp_accum_reg = REG_UNDEFINED;
+			aarch64_fp_pop ();
+			aarch64_fp_emit_pop (ts);
+			if (ts->stack->fs_depth > 0) {
+				ts->stack->fs_depth--;
+			}
 		}
 		break;
-	case I_FPI32TOR32:  /* 0x96 - Convert INT32 to REAL32 */
-		/* old_a_reg has the ADDRESS of the integer.
-		 * Load the integer from memory, convert to REAL32,
-		 * store result bits in FP accumulator. */
-		{
-			int tmp_reg = tstack_newreg (ts->stack);
-			int result = tstack_newreg (ts->stack);
-			/* Load the integer from memory */
-			add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1,
-				ARG_REGIND, ts->stack->old_a_reg, ARG_REG, tmp_reg));
-			/* Convert to REAL32 */
-			add_to_ins_chain (compose_ins (INS_FLT32, 1, 1,
-				ARG_REG, tmp_reg, ARG_REG, result));
-			aarch64_fp_accum_reg = result;
-			ts->stack->fs_depth++;
-		}
-		break;
-	case I_FPI32TOR64:  /* 0x98 - Convert INT32 to REAL64 */
-		/* old_a_reg has the ADDRESS of the integer.
-		 * Load the integer from memory, convert to REAL64,
-		 * store result bits in FP accumulator. */
-		{
-			int tmp_reg = tstack_newreg (ts->stack);
-			int result = tstack_newreg (ts->stack);
-			/* Load the integer from memory */
-			add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1,
-				ARG_REGIND, ts->stack->old_a_reg, ARG_REG, tmp_reg));
-			/* Convert to REAL64 */
-			add_to_ins_chain (compose_ins (INS_FLT64, 1, 1,
-				ARG_REG, tmp_reg, ARG_REG, result));
-			aarch64_fp_accum_reg = result;
-			ts->stack->fs_depth++;
-		}
-		break;
-	case I_FPSTNLDB:  /* 0x84 - Store non-local REAL64 */
-		/* Store REAL64 from FP accumulator to memory at [old_a_reg]. */
-		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
+	case I_FPSTNLSN:  /* 0x88 - Store REAL32 from FA to memory */
+		/* Store s0 (REAL32 bits) to [old_a_reg].
+		 * Use INS_FIST64 with precision=132 to signal "store REAL32 bits".
+		 * The asm handler will emit: fmov w17, s0; str w17, [addr] */
+		if (aarch64_fp_stack_depth >= 1) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, aarch64_fp_accum_reg,
+				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
+					ARG_CONST, (intptr_t)132,
 					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 			} else {
-				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, aarch64_fp_accum_reg,
+				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
+					ARG_CONST, (intptr_t)132,
 					ARG_REGIND, ts->stack->old_a_reg));
 			}
-			aarch64_fp_accum_reg = REG_UNDEFINED;
+			aarch64_fp_pop ();
+			aarch64_fp_emit_pop (ts);
+			if (ts->stack->fs_depth > 0) {
+				ts->stack->fs_depth--;
+			}
 		}
 		break;
-	case I_FPLDNLDB:  /* 0x8a - Load non-local REAL64 */
-		/* Load REAL64 from memory at [old_a_reg] into FP accumulator. */
-		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, aarch64_fp_accum_reg));
+	case I_FPI32TOR32:  /* 0x96 - Convert INT32 to REAL32, push onto FP stack */
+		/* old_a_reg has the ADDRESS of the integer.
+		 * Use FLD32 to load from [old_a_reg] into s0, then INS_FLT32
+		 * with 0 args to signal "convert s0 int bits to float in s0". */
+		aarch64_fp_push (32);
+		aarch64_fp_emit_push (ts);
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+		} else {
+			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+				ARG_REGIND, ts->stack->old_a_reg));
+		}
+		/* FLD32 loaded int32 into s0 (as bit pattern).
+		 * Now convert: scvtf s0, w17 where w17 has the loaded int value.
+		 * Actually, FLD32 loaded into s0 via ldr s0.  We need the int
+		 * value in a w-register for scvtf.  Use fmov w17, s0; scvtf s0, w17 */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\tw17, s0")));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tscvtf\ts0, w17")));
+		ts->stack->fs_depth++;
 		break;
-	case I_FPLDZEROSN:  /* 0x9f - Load REAL32 zero */
-		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, aarch64_fp_accum_reg));
+	case I_FPI32TOR64:  /* 0x98 - Convert INT32 to REAL64, push onto FP stack */
+		aarch64_fp_push (64);
+		aarch64_fp_emit_push (ts);
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+		} else {
+			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
+				ARG_REGIND, ts->stack->old_a_reg));
+		}
+		/* FLD32 loaded int32 into s0.  Convert to REAL64 in d0. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\tw17, s0")));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tscvtf\td0, w17")));
+		ts->stack->fs_depth++;
+		break;
+	case I_FPSTNLDB:  /* 0x84 - Store REAL64 from FA to memory */
+		/* Store d0 (REAL64 bits) to [old_a_reg].
+		 * Use INS_FIST64 with precision=164 to signal "store REAL64 bits".
+		 * The asm handler will emit: fmov x17, d0; str x17, [addr] */
+		if (aarch64_fp_stack_depth >= 1) {
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
+					ARG_CONST, (intptr_t)164,
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+			} else {
+				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
+					ARG_CONST, (intptr_t)164,
+					ARG_REGIND, ts->stack->old_a_reg));
+			}
+			aarch64_fp_pop ();
+			aarch64_fp_emit_pop (ts);
+			if (ts->stack->fs_depth > 0) {
+				ts->stack->fs_depth--;
+			}
+		}
+		break;
+	case I_FPLDNLDB:  /* 0x8a - Load REAL64 from memory onto FP stack */
+		/* Load 64-bit float from [old_a_reg] into d0.
+		 * Use ldr d0, [addr] directly via annotation after resolving address. */
+		aarch64_fp_push (64);
+		aarch64_fp_emit_push (ts);
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			char buf[128];
+			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+			if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
+				snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			} else {
+				/* Large offset: use x17 scratch */
+				snprintf (buf, sizeof(buf), "\tmov\tx17, #%d", offset);
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, x28, x17")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\td0, [x17]")));
+			}
+		} else {
+			/* Address in a virtual register.  Use FLD32 to get the register
+			 * resolved by the register allocator (loads into s0), but we need
+			 * 64-bit.  Instead, emit INS_MOVE to load the address into a
+			 * scratch reg, and then use an annotation.
+			 * Problem: we don't know the physical register.
+			 * Workaround: use INS_FLD32 which loads 32-bit from [addr].
+			 * For 64-bit, we need ldr d0, [addr].
+			 * The FLD32 asm handler references the input register by its
+			 * allocated physical name.  We need a similar handler for 64-bit.
+			 * Let's repurpose INS_FLD32 with a flag for 64-bit... complex.
+			 * Simplest: load the address value into x17, then ldr d0, [x17]. */
+			int scratch = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+				ARG_REG, ts->stack->old_a_reg, ARG_REG, scratch));
+			/* The scratch register consumed old_a_reg.  But we still
+			 * don't know which physical register scratch maps to.
+			 * This approach won't work cleanly.
+			 *
+			 * Alternative: load 64-bit value via INS_MOVE into scratch,
+			 * then emit an annotation to fmov d0, xN.  But we don't
+			 * know xN.
+			 *
+			 * Simplest correct approach: do a full 64-bit integer load
+			 * via the INS_MOVE path, let register allocator handle it,
+			 * then at asm time in INS_MOVE handler, we get the right
+			 * physical register.  Then annotate fmov d0, xN.
+			 * But the annotation can't reference the allocated register.
+			 *
+			 * OK, let's just do it as two 32-bit loads into s0 and s1,
+			 * then combine... no, that's wrong.
+			 *
+			 * Final approach: use FLD32 but have the asm handler check
+			 * for a precision flag to do ldr d0 instead of ldr s0. */
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FPLDNLDB from non-local ptr - using FLD32 path")));
+			/* Use FLD32 with an extra ARG_CONST 64 to signal 64-bit load. */
+			add_to_ins_chain (compose_ins (INS_FLD32, 2, 0,
+				ARG_REGIND, ts->stack->old_a_reg,
+				ARG_CONST, (intptr_t)64));
+		}
+		ts->stack->fs_depth++;
+		break;
+	case I_FPLDZEROSN:  /* 0x9f - Load REAL32 zero onto FP stack */
+		aarch64_fp_push (32);
+		aarch64_fp_emit_push (ts);
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts0, wzr")));
 		ts->stack->fs_depth++;
 		break;
 	/* Additional IEEE operations - remaining stubs */
+	case I_FPEQ:  /* 0x95 - FP equal: test FA == FB */
+	case I_FPGT:  /* 0x94 - FP greater than: test FB > FA */
+	case I_FPORDERED:  /* 0x92 - FP ordered: test FA and FB not NaN */
+		/* Compare top two FP stack items, set condition flags.
+		 * On the transputer, these produce a boolean on the integer stack.
+		 * However, the occ21 compiler generates CJ (conditional jump)
+		 * immediately after, which reads condition flags directly.
+		 * So we just need to emit fcmp and set appropriate flags. */
+		/* FP comparison produces an integer boolean result on the eval stack.
+		 * CJ (conditional jump) tests A-reg: jumps if zero (FALSE).
+		 * So FPEQ must push 1 (TRUE) if equal, 0 (FALSE) if not.
+		 * We use fcmp + cset to produce the boolean value. */
+		{
+			int result_reg = tstack_newreg (ts->stack);
+			if (aarch64_fp_stack_depth >= 2) {
+				int prec = aarch64_fp_stack_prec[0];
+				const char *r0 = aarch64_fp_regname (0, prec);
+				const char *r1 = aarch64_fp_regname (1, prec);
+				char buf[128];
+				if (secondary_opcode == I_FPGT) {
+					snprintf (buf, sizeof(buf), "\tfcmp\t%s, %s", r1, r0);
+				} else {
+					snprintf (buf, sizeof(buf), "\tfcmp\t%s, %s", r0, r1);
+				}
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			}
+			/* Generate cset to capture the comparison result as 0/1 */
+			if (secondary_opcode == I_FPEQ) {
+				add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_E, ARG_REG, result_reg));
+			} else if (secondary_opcode == I_FPGT) {
+				add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_GT, ARG_REG, result_reg));
+			} else {
+				/* FPORDERED: VC (no overflow = ordered) */
+				add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_NO, ARG_REG, result_reg));
+			}
+			ts->stack->a_reg = result_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+		}
+		break;
+	/* Remaining stub operations */
 	case 0x80: case 0x81: case 0x82: case 0x85:
 	case 0x8d:
-	case 0x8f: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95:
+	case 0x8f: case 0x90: case 0x91: case 0x93:
 	case 0x97: case 0x99: case 0x9a: case 0x9b: case 0x9c:
 		/* For unknown IEEE operations, generate a no-op to prevent crashes */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// IEEE FP operation (stub)")));
@@ -3760,13 +4126,30 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_TEXT) {
 						const char *text = (const char *)ins->in_args[0]->regconst;
 						/* Check if text is already a comment or a real instruction */
-						if (text[0] == '/' || strncmp(text, "dmb", 3) == 0 || strncmp(text, "dsb", 3) == 0 || strncmp(text, "isb", 3) == 0
-						    || strncmp(text, "fmov", 4) == 0 || strncmp(text, "fcvt", 4) == 0
-						    || strncmp(text, "ldr s", 5) == 0 || strncmp(text, "ldr d", 5) == 0
-						    || strncmp(text, "str s", 5) == 0 || strncmp(text, "str d", 5) == 0
-						    || strncmp(text, "str x15", 7) == 0
-						    || strncmp(text, "scvtf", 5) == 0) {
-							fprintf (stream, "\t%s\n", text);
+						/* Skip leading whitespace for passthrough matching */
+						const char *p = text;
+						while (*p == '\t' || *p == ' ') p++;
+						if (text[0] == '/' || text[0] == '\t'
+						    || strncmp(p, "dmb", 3) == 0 || strncmp(p, "dsb", 3) == 0 || strncmp(p, "isb", 3) == 0
+						    || strncmp(p, "fmov", 4) == 0 || strncmp(p, "fcvt", 4) == 0
+						    || strncmp(p, "fadd", 4) == 0 || strncmp(p, "fsub", 4) == 0
+						    || strncmp(p, "fmul", 4) == 0 || strncmp(p, "fdiv", 4) == 0
+						    || strncmp(p, "fsqrt", 5) == 0 || strncmp(p, "fabs", 4) == 0
+						    || strncmp(p, "fneg", 4) == 0 || strncmp(p, "fcmp", 4) == 0
+						    || strncmp(p, "frintz", 6) == 0 || strncmp(p, "frintx", 6) == 0
+						    || strncmp(p, "frintn", 6) == 0
+						    || strncmp(p, "ldr s", 5) == 0 || strncmp(p, "ldr d", 5) == 0
+						    || strncmp(p, "str s", 5) == 0 || strncmp(p, "str d", 5) == 0
+						    || strncmp(p, "str w1", 6) == 0 || strncmp(p, "str x1", 6) == 0
+						    || strncmp(p, "ldr w1", 6) == 0 || strncmp(p, "ldr x1", 6) == 0
+						    || strncmp(p, "scvtf", 5) == 0 || strncmp(p, "fcvtzs", 6) == 0
+						    || strncmp(p, "fcvtns", 6) == 0) {
+							/* Emit as actual instruction - text may already have leading tab */
+							if (text[0] == '\t') {
+								fprintf (stream, "%s\n", text);
+							} else {
+								fprintf (stream, "\t%s\n", text);
+							}
 						} else {
 							fprintf (stream, "\t// %s\n", text);
 						}
@@ -3935,117 +4318,321 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					}
 					break;
 				case INS_FLD32:
-					/* Load 32-bit float from memory into FP register s0 */
+					/* Load float from memory into FP register s0 (REAL32) or d0 (REAL64).
+					 * If in_args[1] is ARG_CONST 64, load as REAL64 (ldr d0).
+					 * Otherwise load as REAL32 (ldr s0). */
 					if (ins->in_args[0]) {
 						int mode = ins->in_args[0]->flags & ARG_MODEMASK;
+						int is_64 = 0;
+						const char *fpreg = "s0";
+						int align = 4;
+						long max_scaled = 16380;
+						if (ins->in_args[1] && (ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST
+						    && ins->in_args[1]->regconst == 64) {
+							is_64 = 1;
+							fpreg = "d0";
+							align = 8;
+							max_scaled = 32760;
+						}
 						if (mode == ARG_REGIND && (ins->in_args[0]->flags & ARG_DISP)) {
-							fprintf (stream, "\tldr\ts0, [%s, #%ld]\n",
-								aarch64_get_register_name (ins->in_args[0]->regconst),
-								(long)ins->in_args[0]->disp);
+							long disp = (long)ins->in_args[0]->disp;
+							const char *base = aarch64_get_register_name (ins->in_args[0]->regconst);
+							if (disp >= 0 && disp <= max_scaled && (disp % align) == 0) {
+								fprintf (stream, "\tldr\t%s, [%s, #%ld]\n", fpreg, base, disp);
+							} else if (disp >= -256 && disp <= 255) {
+								fprintf (stream, "\tldur\t%s, [%s, #%ld]\n", fpreg, base, disp);
+							} else {
+								aarch64_emit_large_immediate (stream, disp, "x17");
+								fprintf (stream, "\tadd\tx17, %s, x17\n", base);
+								fprintf (stream, "\tldr\t%s, [x17]\n", fpreg);
+							}
 						} else if (mode == ARG_REGIND) {
-							fprintf (stream, "\tldr\ts0, [%s]\n",
+							fprintf (stream, "\tldr\t%s, [%s]\n", fpreg,
 								aarch64_get_register_name (ins->in_args[0]->regconst));
 						}
 					}
 					break;
 				case INS_FSQRT:
-					/* Float square root on FP accumulator.
-					 * The value is in an integer register (fp_accum_reg).
-					 * Move to s0, compute sqrt, move back. */
+					/* Float square root: in_args[0]=src reg, in_args[1]=precision (ARG_CONST),
+					 * out_args[0]=dst reg.  Precision 64 uses d-registers, 32 uses s-registers. */
 					if (ins->in_args[0] && ins->out_args[0]) {
-						const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
-						const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
-						char ws[8], wd[8];
-						if (src[0] == 'x') snprintf(ws, sizeof(ws), "w%s", src + 1);
-						else snprintf(ws, sizeof(ws), "%s", src);
-						if (dst[0] == 'x') snprintf(wd, sizeof(wd), "w%s", dst + 1);
-						else snprintf(wd, sizeof(wd), "%s", dst);
-						fprintf (stream, "\tfmov\ts0, %s\n", ws);
-						fprintf (stream, "\tfsqrt\ts0, s0\n");
-						fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						int prec = 32;
+						if (ins->in_args[1] && (ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
+							prec = (int)ins->in_args[1]->regconst;
+						}
+						if (prec == 64) {
+							const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+							const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\td0, %s\n", src);
+							fprintf (stream, "\tfsqrt\td0, d0\n");
+							fprintf (stream, "\tfmov\t%s, d0\n", dst);
+						} else {
+							char ws[8], wd[8];
+							snprintf(ws, sizeof(ws), "w%ld", (long)ins->in_args[0]->regconst);
+							snprintf(wd, sizeof(wd), "w%ld", (long)ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\ts0, %s\n", ws);
+							fprintf (stream, "\tfsqrt\ts0, s0\n");
+							fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						}
+					}
+					break;
+				case INS_FABS:
+					/* Float absolute value: in_args[0]=src, in_args[1]=precision (ARG_CONST),
+					 * out_args[0]=dst. */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						int prec = 32;
+						if (ins->in_args[1] && (ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
+							prec = (int)ins->in_args[1]->regconst;
+						}
+						if (prec == 64) {
+							const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+							const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\td0, %s\n", src);
+							fprintf (stream, "\tfabs\td0, d0\n");
+							fprintf (stream, "\tfmov\t%s, d0\n", dst);
+						} else {
+							char ws[8], wd[8];
+							snprintf(ws, sizeof(ws), "w%ld", (long)ins->in_args[0]->regconst);
+							snprintf(wd, sizeof(wd), "w%ld", (long)ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\ts0, %s\n", ws);
+							fprintf (stream, "\tfabs\ts0, s0\n");
+							fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						}
 					}
 					break;
 				case INS_FADD:
-					/* Float addition: in_args[0] and in_args[1] are
-					 * integer registers containing IEEE 754 float bits.
-					 * out_args[0] is the result register.
-					 * Emit: fmov s0, w_a; fmov s1, w_b; fadd s0, s0, s1; fmov w_result, s0 */
+					/* Float addition: in_args[0]=src1, in_args[1]=src2,
+					 * in_args[2]=precision (ARG_CONST, 32 or 64),
+					 * out_args[0]=dst.
+					 * For REAL64: fmov d0, x_a; fmov d1, x_b; fadd d0, d0, d1; fmov x_dst, d0
+					 * For REAL32: fmov s0, w_a; fmov s1, w_b; fadd s0, s0, s1; fmov w_dst, s0 */
 					if (ins->in_args[0] && ins->in_args[1] && ins->out_args[0]) {
-						const char *ra = aarch64_get_register_name (ins->in_args[0]->regconst);
-						const char *rb = aarch64_get_register_name (ins->in_args[1]->regconst);
-						const char *rd = aarch64_get_register_name (ins->out_args[0]->regconst);
-						char wa[8], wb[8], wd[8];
-						if (ra[0] == 'x') snprintf(wa, sizeof(wa), "w%s", ra + 1);
-						else snprintf(wa, sizeof(wa), "%s", ra);
-						if (rb[0] == 'x') snprintf(wb, sizeof(wb), "w%s", rb + 1);
-						else snprintf(wb, sizeof(wb), "%s", rb);
-						if (rd[0] == 'x') snprintf(wd, sizeof(wd), "w%s", rd + 1);
-						else snprintf(wd, sizeof(wd), "%s", rd);
-						fprintf (stream, "\tfmov\ts0, %s\n", wa);
-						fprintf (stream, "\tfmov\ts1, %s\n", wb);
-						fprintf (stream, "\tfadd\ts0, s0, s1\n");
-						fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						int prec = 32;
+						if (ins->in_args[2] && (ins->in_args[2]->flags & ARG_MODEMASK) == ARG_CONST) {
+							prec = (int)ins->in_args[2]->regconst;
+						}
+						if (prec == 64) {
+							const char *ra = aarch64_get_register_name (ins->in_args[0]->regconst);
+							const char *rb = aarch64_get_register_name (ins->in_args[1]->regconst);
+							const char *rd = aarch64_get_register_name (ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\td0, %s\n", ra);
+							fprintf (stream, "\tfmov\td1, %s\n", rb);
+							fprintf (stream, "\tfadd\td0, d0, d1\n");
+							fprintf (stream, "\tfmov\t%s, d0\n", rd);
+						} else {
+							char wa[8], wb[8], wd[8];
+							snprintf(wa, sizeof(wa), "w%ld", (long)ins->in_args[0]->regconst);
+							snprintf(wb, sizeof(wb), "w%ld", (long)ins->in_args[1]->regconst);
+							snprintf(wd, sizeof(wd), "w%ld", (long)ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\ts0, %s\n", wa);
+							fprintf (stream, "\tfmov\ts1, %s\n", wb);
+							fprintf (stream, "\tfadd\ts0, s0, s1\n");
+							fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						}
+					}
+					break;
+				case INS_FSUB:
+					/* Float subtraction: same layout as INS_FADD. */
+					if (ins->in_args[0] && ins->in_args[1] && ins->out_args[0]) {
+						int prec = 32;
+						if (ins->in_args[2] && (ins->in_args[2]->flags & ARG_MODEMASK) == ARG_CONST) {
+							prec = (int)ins->in_args[2]->regconst;
+						}
+						if (prec == 64) {
+							const char *ra = aarch64_get_register_name (ins->in_args[0]->regconst);
+							const char *rb = aarch64_get_register_name (ins->in_args[1]->regconst);
+							const char *rd = aarch64_get_register_name (ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\td0, %s\n", ra);
+							fprintf (stream, "\tfmov\td1, %s\n", rb);
+							fprintf (stream, "\tfsub\td0, d0, d1\n");
+							fprintf (stream, "\tfmov\t%s, d0\n", rd);
+						} else {
+							char wa[8], wb[8], wd[8];
+							snprintf(wa, sizeof(wa), "w%ld", (long)ins->in_args[0]->regconst);
+							snprintf(wb, sizeof(wb), "w%ld", (long)ins->in_args[1]->regconst);
+							snprintf(wd, sizeof(wd), "w%ld", (long)ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\ts0, %s\n", wa);
+							fprintf (stream, "\tfmov\ts1, %s\n", wb);
+							fprintf (stream, "\tfsub\ts0, s0, s1\n");
+							fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						}
+					}
+					break;
+				case INS_FMUL:
+					/* Float multiplication: same layout as INS_FADD. */
+					if (ins->in_args[0] && ins->in_args[1] && ins->out_args[0]) {
+						int prec = 32;
+						if (ins->in_args[2] && (ins->in_args[2]->flags & ARG_MODEMASK) == ARG_CONST) {
+							prec = (int)ins->in_args[2]->regconst;
+						}
+						if (prec == 64) {
+							const char *ra = aarch64_get_register_name (ins->in_args[0]->regconst);
+							const char *rb = aarch64_get_register_name (ins->in_args[1]->regconst);
+							const char *rd = aarch64_get_register_name (ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\td0, %s\n", ra);
+							fprintf (stream, "\tfmov\td1, %s\n", rb);
+							fprintf (stream, "\tfmul\td0, d0, d1\n");
+							fprintf (stream, "\tfmov\t%s, d0\n", rd);
+						} else {
+							char wa[8], wb[8], wd[8];
+							snprintf(wa, sizeof(wa), "w%ld", (long)ins->in_args[0]->regconst);
+							snprintf(wb, sizeof(wb), "w%ld", (long)ins->in_args[1]->regconst);
+							snprintf(wd, sizeof(wd), "w%ld", (long)ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\ts0, %s\n", wa);
+							fprintf (stream, "\tfmov\ts1, %s\n", wb);
+							fprintf (stream, "\tfmul\ts0, s0, s1\n");
+							fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						}
+					}
+					break;
+				case INS_FDIV:
+					/* Float division: same layout as INS_FADD. */
+					if (ins->in_args[0] && ins->in_args[1] && ins->out_args[0]) {
+						int prec = 32;
+						if (ins->in_args[2] && (ins->in_args[2]->flags & ARG_MODEMASK) == ARG_CONST) {
+							prec = (int)ins->in_args[2]->regconst;
+						}
+						if (prec == 64) {
+							const char *ra = aarch64_get_register_name (ins->in_args[0]->regconst);
+							const char *rb = aarch64_get_register_name (ins->in_args[1]->regconst);
+							const char *rd = aarch64_get_register_name (ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\td0, %s\n", ra);
+							fprintf (stream, "\tfmov\td1, %s\n", rb);
+							fprintf (stream, "\tfdiv\td0, d0, d1\n");
+							fprintf (stream, "\tfmov\t%s, d0\n", rd);
+						} else {
+							char wa[8], wb[8], wd[8];
+							snprintf(wa, sizeof(wa), "w%ld", (long)ins->in_args[0]->regconst);
+							snprintf(wb, sizeof(wb), "w%ld", (long)ins->in_args[1]->regconst);
+							snprintf(wd, sizeof(wd), "w%ld", (long)ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\ts0, %s\n", wa);
+							fprintf (stream, "\tfmov\ts1, %s\n", wb);
+							fprintf (stream, "\tfdiv\ts0, s0, s1\n");
+							fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						}
 					}
 					break;
 				case INS_FRNDINT:
-					/* On aarch64, FRNDINT is used as a signal that the
-					 * float in s0 should be converted to integer.
-					 * The actual conversion is deferred to INS_FIST64. */
+					/* Floating point integer part (truncate toward zero).
+					 * in_args[0]=src reg, in_args[1]=precision (ARG_CONST),
+					 * out_args[0]=dst reg.
+					 * If no args (legacy), this is a no-op signal for INS_FIST64. */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						int prec = 32;
+						if (ins->in_args[1] && (ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
+							prec = (int)ins->in_args[1]->regconst;
+						}
+						if (prec == 64) {
+							const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+							const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\td0, %s\n", src);
+							fprintf (stream, "\tfrintz\td0, d0\n");
+							fprintf (stream, "\tfmov\t%s, d0\n", dst);
+						} else {
+							char ws[8], wd[8];
+							snprintf(ws, sizeof(ws), "w%ld", (long)ins->in_args[0]->regconst);
+							snprintf(wd, sizeof(wd), "w%ld", (long)ins->out_args[0]->regconst);
+							fprintf (stream, "\tfmov\ts0, %s\n", ws);
+							fprintf (stream, "\tfrintz\ts0, s0\n");
+							fprintf (stream, "\tfmov\t%s, s0\n", wd);
+						}
+					}
+					/* else: legacy no-arg form, no-op (conversion deferred to FIST64) */
 					break;
 				case INS_FIST64:
-					/* Convert float bits to signed int and store.
-					 * If in_args[0] has the source register (float bits),
-					 * emit: fmov s0, w_src; fcvtns x15, s0; str x15, [addr] */
+					/* FP store operations.  The precision in in_args[0] (ARG_CONST)
+					 * determines the mode:
+					 *   32: convert s0 to INT32 and store (fcvtzs w17, s0; str w17)
+					 *   64: convert d0 to INT32 and store (fcvtzs w17, d0; str w17)
+					 *  132: store s0 bits as REAL32 (fmov w17, s0; str w17)
+					 *  164: store d0 bits as REAL64 (fmov x17, d0; str x17)
+					 * out_args[0] = destination memory address. */
 					if (ins->out_args[0]) {
-						const char *src_reg = NULL;
 						int mode = ins->out_args[0]->flags & ARG_MODEMASK;
+						int prec = 32;
+						const char *store_reg = "w17";
+						const char *store_op = "str";
 
-						/* Get source register with float bits */
-						if (ins->in_args[0] && ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REG)) {
-							src_reg = aarch64_get_register_name (ins->in_args[0]->regconst);
+						if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
+							prec = (int)ins->in_args[0]->regconst;
 						}
-						/* Move integer bits to float register, convert, store */
-						if (src_reg) {
-							char w_src[8];
-							if (src_reg[0] == 'x') snprintf(w_src, sizeof(w_src), "w%s", src_reg + 1);
-							else snprintf(w_src, sizeof(w_src), "%s", src_reg);
-							fprintf (stream, "\tfmov\ts0, %s\n", w_src);
+
+						if (prec == 164) {
+							/* Store REAL64 bits: fmov x17, d0 */
+							fprintf (stream, "\tfmov\tx17, d0\n");
+							store_reg = "x17";
+						} else if (prec == 132) {
+							/* Store REAL32 bits: fmov w17, s0 */
+							fprintf (stream, "\tfmov\tw17, s0\n");
+							store_reg = "w17";
+						} else if (prec == 64) {
+							/* Convert REAL64 to INT32: fcvtzs w17, d0 */
+							fprintf (stream, "\tfcvtzs\tw17, d0\n");
+							store_reg = "w17";
+						} else {
+							/* Convert REAL32 to INT32: fcvtzs w17, s0 */
+							fprintf (stream, "\tfcvtzs\tw17, s0\n");
+							store_reg = "w17";
 						}
-						fprintf (stream, "\tfcvtns\tx15, s0\n");
+
 						if (mode == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
-							aarch64_emit_mem_op (stream, "str", "x15",
+							aarch64_emit_mem_op (stream, store_op, store_reg,
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								(long)ins->out_args[0]->disp);
 						} else if (mode == ARG_REGIND) {
-							fprintf (stream, "\tstr\tx15, [%s]\n",
+							fprintf (stream, "\tstr\t%s, [%s]\n", store_reg,
 								aarch64_get_register_name (ins->out_args[0]->regconst));
 						}
 					}
 					break;
 				case INS_FLT32:
-					/* Convert int32 to REAL32: scvtf s0, w_src; fmov w_dst, s0 */
+					/* INT32->REAL32: scvtf s0, w_src; fmov w_dst, s0
+					 * REAL64->REAL32 (if in_args[1] is ARG_CONST 64):
+					 *   fmov d0, x_src; fcvt s0, d0; fmov w_dst, s0 */
 					if (ins->in_args[0] && ins->out_args[0]) {
-						const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
-						const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
-						char w_src[8], w_dst[8];
-						if (src[0] == 'x') snprintf(w_src, sizeof(w_src), "w%s", src + 1);
-						else snprintf(w_src, sizeof(w_src), "%s", src);
-						if (dst[0] == 'x') snprintf(w_dst, sizeof(w_dst), "w%s", dst + 1);
-						else snprintf(w_dst, sizeof(w_dst), "%s", dst);
-						fprintf (stream, "\tscvtf\ts0, %s\n", w_src);
-						fprintf (stream, "\tfmov\t%s, s0\n", w_dst);
+						int src_prec = 0;
+						char w_dst[8];
+						snprintf(w_dst, sizeof(w_dst), "w%ld", (long)ins->out_args[0]->regconst);
+						if (ins->in_args[1] && (ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
+							src_prec = (int)ins->in_args[1]->regconst;
+						}
+						if (src_prec == 64) {
+							/* Source is REAL64 float bits in x-register */
+							const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+							fprintf (stream, "\tfmov\td0, %s\n", src);
+							fprintf (stream, "\tfcvt\ts0, d0\n");
+							fprintf (stream, "\tfmov\t%s, s0\n", w_dst);
+						} else {
+							/* Source is INT32 in w-register */
+							char w_src[8];
+							snprintf(w_src, sizeof(w_src), "w%ld", (long)ins->in_args[0]->regconst);
+							fprintf (stream, "\tscvtf\ts0, %s\n", w_src);
+							fprintf (stream, "\tfmov\t%s, s0\n", w_dst);
+						}
 					}
 					break;
 				case INS_FLT64:
-					/* Convert int32 to REAL64: scvtf d0, w_src; fmov x_dst, d0 */
+					/* INT32->REAL64: scvtf d0, w_src; fmov x_dst, d0
+					 * REAL32->REAL64 (if in_args[1] is ARG_CONST 32):
+					 *   fmov s0, w_src; fcvt d0, s0; fmov x_dst, d0 */
 					if (ins->in_args[0] && ins->out_args[0]) {
-						const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+						int src_prec = 0;
 						const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
 						char w_src[8];
-						if (src[0] == 'x') snprintf(w_src, sizeof(w_src), "w%s", src + 1);
-						else snprintf(w_src, sizeof(w_src), "%s", src);
-						fprintf (stream, "\tscvtf\td0, %s\n", w_src);
-						fprintf (stream, "\tfmov\t%s, d0\n", dst);
+						snprintf(w_src, sizeof(w_src), "w%ld", (long)ins->in_args[0]->regconst);
+						if (ins->in_args[1] && (ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
+							src_prec = (int)ins->in_args[1]->regconst;
+						}
+						if (src_prec == 32) {
+							/* Source is REAL32 float bits - widen to REAL64 */
+							fprintf (stream, "\tfmov\ts0, %s\n", w_src);
+							fprintf (stream, "\tfcvt\td0, s0\n");
+							fprintf (stream, "\tfmov\t%s, d0\n", dst);
+						} else {
+							/* Source is INT32 - convert to REAL64 */
+							fprintf (stream, "\tscvtf\td0, %s\n", w_src);
+							fprintf (stream, "\tfmov\t%s, d0\n", dst);
+						}
 					}
 					break;
 				default:
