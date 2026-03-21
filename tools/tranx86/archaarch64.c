@@ -2788,12 +2788,22 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						long const_val = (long)ins->in_args[0]->regconst;
 						int is_mem_dest = ((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REGIND);
 						const char *dest_reg = is_mem_dest ? "x16" : aarch64_get_register_name(ins->out_args[0]->regconst);
-						
+
 						/* ARM64 can only encode 16-bit immediates in mov instruction */
 						if (const_val >= 0 && const_val <= 65535) {
 							fprintf (stream, "\tmov\t%s, #%ld\n", dest_reg, const_val);
 						} else {
-							/* For large constants, use movz/movk sequence */
+							/* For large constants, use movz/movk sequence.
+							 * On 64-bit with 32-bit INTs, constants pass
+							 * through va_arg(ap, int) which sign-extends
+							 * 32-bit values to 64-bit.  Negative values
+							 * (like -1 = 0xFFFFFFFFFFFFFFFF) are correct
+							 * when sign-extended.  But MOSTNEG INT32
+							 * (0x80000000) gets sign-extended to
+							 * 0xFFFFFFFF80000000 which is wrong for CWORD
+							 * range checks.  Detect this case: if the value
+							 * looks like a sign-extended 32-bit value, use
+							 * w-register movz/movk to get zero-extension. */
 							unsigned long uval = (unsigned long)const_val;
 							fprintf (stream, "\tmovz\t%s, #%lu\n", dest_reg, uval & 0xFFFF);
 							if (uval > 0xFFFF) {
@@ -3628,20 +3638,20 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 
-					/* Always use 32-bit w-register comparison.  On 64-bit
-					 * with 32-bit INTs, workspace slots are 8 bytes but
-					 * INT values only occupy the lower 4 bytes.  The upper
-					 * 4 bytes may contain stale data.  Using 32-bit cmp
-					 * ignores these stale bits.  Channel word comparisons
-					 * (which need 64-bit) are handled directly in the
-					 * inline ALT functions using explicit fprintf. */
-					{
+					/* When a constant is involved, use 32-bit w-register
+					 * comparison for INT32 compatibility (upper bits may
+					 * be stale).  For reg-reg comparisons, use 64-bit
+					 * x-registers because some checks (like CWORD) rely
+					 * on sign-extension behavior in the upper bits. */
+					if (is_const0 || is_const1) {
 						char w0[8], w1[8];
 						if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
 						else snprintf(w0, sizeof(w0), "%s", op0_reg);
 						if (op1_reg[0] == 'x') snprintf(w1, sizeof(w1), "w%s", op1_reg + 1);
 						else snprintf(w1, sizeof(w1), "%s", op1_reg);
 						fprintf (stream, "\tcmp\t%s, %s\n", w1, w0);
+					} else {
+						fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
 					}
 					break;
 
@@ -4131,6 +4141,7 @@ static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, cons
 static void aarch64_emit_large_immediate (FILE *stream, long value, const char *temp_reg)
 {
 	unsigned long uval = (unsigned long)value;
+	if (uval > 0xFFFFFFFFUL) fprintf(stderr, "DBG: large_imm=0x%lx\n", uval);
 	fprintf (stream, "\tmovz\t%s, #%lu\n", temp_reg, uval & 0xFFFF);
 	if (uval > 0xFFFF) {
 		fprintf (stream, "\tmovk\t%s, #%lu, lsl #16\n", temp_reg, (uval >> 16) & 0xFFFF);

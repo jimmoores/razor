@@ -4250,10 +4250,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*{{{  I_MINT -- generate MOSTNEG INT*/
 	case I_MINT:
 		{
-			/* occam INT is always 32-bit; MOSTNEG INT = 0x80000000.
-			 * Use unsigned cast to avoid sign-extension on 64-bit hosts,
-			 * keeping the value as 0x0000000080000000 (consistent with
-			 * the zero-extended INT representation from INS_TRUNCATE32). */
+			/* occam INT is always 32-bit; MOSTNEG INT = 0x80000000. */
 			intptr_t most_neg = (intptr_t)(unsigned int)0x80000000;
 			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, most_neg, ARG_REG, ts->stack->a_reg);
 			constmap_new (ts->stack->a_reg, VALUE_CONST, most_neg, tmp_ins);
@@ -4865,6 +4862,16 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
 		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 		add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		/* On 64-bit with 32-bit INTs, MINT loads MOSTNEG as a
+		 * sign-extended 64-bit value (0xFFFFFFFF80000000).  The
+		 * ADD and SHL above produce 64-bit results that differ from
+		 * the expected 32-bit wraparound behavior.  Zero-extend
+		 * both operands to 32 bits before the range check so the
+		 * unsigned comparison works correctly. */
+		if (BytesPerWord > 4) {
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		}
 		translate_range_check (ts, 0, arch, REOP_CWORD);
 		ts->stack->a_reg = tmp_reg;
 		constmap_remove (ts->stack->a_reg);

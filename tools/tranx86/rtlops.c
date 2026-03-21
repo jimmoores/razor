@@ -1690,8 +1690,8 @@ ins_chain *compose_ins_ex (int etc_ins, int ins, int ops_in, int ops_out, ...)
 			}
 			tmp_ins->in_args[i_in]->flags = flag;
 			switch (flag & ARG_MODEMASK) {
-			case ARG_REG:
 			case ARG_CONST:
+			case ARG_REG:
 			case ARG_REGIND:
 			case ARG_COND:
 			case ARG_LABEL:
