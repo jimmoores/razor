@@ -2324,6 +2324,9 @@ static void compose_aarch64_longop (tstate *ts, int secondary_opcode)
 /*}}}*/
 
 /*{{{  static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)*/
+/* Saved register from FPLDNLSN for use by FPSTNLI32 */
+static int aarch64_fp_accum_reg = REG_UNDEFINED;
+
 static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 {
 	/* CRITICAL FIX: Validate stack state before FP operations */
@@ -2358,7 +2361,14 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		}
 		break;
 	case I_FPSQRT:
-		add_to_ins_chain (compose_ins (INS_FSQRT, 0, 0));
+		/* Square root of the value in the FP accumulator register */
+		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
+			int result = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_FSQRT, 1, 1,
+				ARG_REG, aarch64_fp_accum_reg,
+				ARG_REG, result));
+			aarch64_fp_accum_reg = result;
+		}
 		break;
 	/* Specific failing operations from the build log */
 	case 530:  /* I_FPPOP (0x212) */
@@ -2381,13 +2391,26 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP multiply by 2")));
 		break;
 	case 170:  /* I_FPLDNLADDSN (0xaa) */
-		/* Load non-local and add single */
-		if (ts->stack->old_a_reg != REG_UNDEFINED && ts->stack->old_b_reg != REG_UNDEFINED) {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins (INS_FADD, 0, 0));
-			ts->stack->a_reg = ts->stack->old_b_reg;
-		} else {
-			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FP load and add")));
+		/* Load non-local REAL32 and add to FP accumulator.
+		 * old_a_reg has the address (from LDLP).
+		 * Load the second float and add to the value in fp_accum_reg. */
+		{
+			int second_float = tstack_newreg (ts->stack);
+			/* Load second float operand from memory at [old_a_reg] */
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, second_float));
+			/* Emit FP add: INS_FLD32 with 2 inputs (both operands),
+			 * result goes into aarch64_fp_accum_reg.
+			 * The asm handler will emit: fmov s0, w_a; fmov s1, w_b;
+			 * fadd s0, s0, s1; fmov w_result, s0 */
+			{
+				int result = tstack_newreg (ts->stack);
+				add_to_ins_chain (compose_ins (INS_FADD, 2, 1,
+					ARG_REG, aarch64_fp_accum_reg,
+					ARG_REG, second_float,
+					ARG_REG, result));
+				aarch64_fp_accum_reg = result;
+			}
+			ts->stack->a_reg = aarch64_fp_accum_reg;
 		}
 		break;
 	case 164:  /* I_FPREV (0xa4) */
@@ -2432,8 +2455,12 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		break;
 	/* IEEE floating point operations */
 	case 0x8e:  /* I_FPLDNLSN - Load non-local single */
-		/* For aarch64, implement as a simple load operation */
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		/* Load a REAL32 from memory at [old_a_reg].
+		 * Save the raw float bits into a new temp register that
+		 * persists until FPSTNLI32 converts and stores them.
+		 * Using INS_MOVE gives the optimizer a tracked output. */
+		aarch64_fp_accum_reg = tstack_newreg (ts->stack);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, aarch64_fp_accum_reg));
 		break;
 	case 0x86:  /* I_FPLDNLSNI - Load non-local single indexed */
 		/* For aarch64, implement as indexed load operation */
@@ -2453,12 +2480,50 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 		}
 		break;
-	/* Additional IEEE operations that may be encountered (excluding already defined ones) */
-	case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85:
-	case 0x88: case 0x8a: case 0x8d:
+	case I_FPRTOI32:  /* 0x9d - Convert REAL32 on FP stack to INT32 */
+		/* Float is in FP register s0.  Convert to int (round nearest).
+		 * The result stays on the FP stack (in s0 as int bits) until
+		 * FPSTNLI32 stores it.  Use INS_FRNDINT to signal conversion. */
+		add_to_ins_chain (compose_ins (INS_FRNDINT, 0, 0));
+		break;
+	case I_FPCHKERR:  /* 0x83 - Check for floating-point error */
+		/* On aarch64, FP exceptions are masked by default. No-op. */
+		break;
+	case I_FPSTNLI32:  /* 0x9e - Store INT32 from FP conversion */
+		/* Convert float bits (in aarch64_fp_accum_reg from FPLDNLSN)
+		 * to integer and store to memory at [old_a_reg].
+		 * Use INS_FIST64 with the accum reg as input. The aarch64
+		 * asm handler emits: fmov s0, w_src; fcvtns x_tmp, s0;
+		 * str x_tmp, [addr]. */
+		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1, ARG_REG, aarch64_fp_accum_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+			} else {
+				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1, ARG_REG, aarch64_fp_accum_reg, ARG_REGIND, ts->stack->old_a_reg));
+			}
+			aarch64_fp_accum_reg = REG_UNDEFINED;
+		}
+		break;
+	case I_FPSTNLSN:  /* 0x88 - Store non-local REAL32 */
+		/* Store REAL32 from FP accumulator to memory at [old_a_reg].
+		 * The float bits are in aarch64_fp_accum_reg. */
+		if (aarch64_fp_accum_reg != REG_UNDEFINED) {
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, aarch64_fp_accum_reg,
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+			} else {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, aarch64_fp_accum_reg,
+					ARG_REGIND, ts->stack->old_a_reg));
+			}
+			aarch64_fp_accum_reg = REG_UNDEFINED;
+		}
+		break;
+	/* Additional IEEE operations that may be encountered */
+	case 0x80: case 0x81: case 0x82: case 0x84: case 0x85:
+	case 0x8a: case 0x8d:
 	case 0x8f: case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95:
 	case 0x96: case 0x97: case 0x98: case 0x99: case 0x9a: case 0x9b: case 0x9c:
-	case 0x9d: case 0x9e: case 0x9f:
+	case 0x9f:
 		/* For unknown IEEE operations, generate a no-op to prevent crashes */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// IEEE FP operation (stub)")));
 		break;
@@ -3611,7 +3676,12 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_TEXT) {
 						const char *text = (const char *)ins->in_args[0]->regconst;
 						/* Check if text is already a comment or a real instruction */
-						if (text[0] == '/' || strncmp(text, "dmb", 3) == 0 || strncmp(text, "dsb", 3) == 0 || strncmp(text, "isb", 3) == 0) {
+						if (text[0] == '/' || strncmp(text, "dmb", 3) == 0 || strncmp(text, "dsb", 3) == 0 || strncmp(text, "isb", 3) == 0
+						    || strncmp(text, "fmov", 4) == 0 || strncmp(text, "fcvt", 4) == 0
+						    || strncmp(text, "ldr s", 5) == 0 || strncmp(text, "ldr d", 5) == 0
+						    || strncmp(text, "str s", 5) == 0 || strncmp(text, "str d", 5) == 0
+						    || strncmp(text, "str x15", 7) == 0
+						    || strncmp(text, "scvtf", 5) == 0) {
 							fprintf (stream, "\t%s\n", text);
 						} else {
 							fprintf (stream, "\t// %s\n", text);
@@ -3778,6 +3848,94 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						else
 							lab = (long)ins->in_args[0]->regconst;
 						fprintf(stream, "\t.quad\tL%ld\n", lab);
+					}
+					break;
+				case INS_FLD32:
+					/* Load 32-bit float from memory into FP register s0 */
+					if (ins->in_args[0]) {
+						int mode = ins->in_args[0]->flags & ARG_MODEMASK;
+						if (mode == ARG_REGIND && (ins->in_args[0]->flags & ARG_DISP)) {
+							fprintf (stream, "\tldr\ts0, [%s, #%ld]\n",
+								aarch64_get_register_name (ins->in_args[0]->regconst),
+								(long)ins->in_args[0]->disp);
+						} else if (mode == ARG_REGIND) {
+							fprintf (stream, "\tldr\ts0, [%s]\n",
+								aarch64_get_register_name (ins->in_args[0]->regconst));
+						}
+					}
+					break;
+				case INS_FSQRT:
+					/* Float square root on FP accumulator.
+					 * The value is in an integer register (fp_accum_reg).
+					 * Move to s0, compute sqrt, move back. */
+					if (ins->in_args[0] && ins->out_args[0]) {
+						const char *src = aarch64_get_register_name (ins->in_args[0]->regconst);
+						const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
+						char ws[8], wd[8];
+						if (src[0] == 'x') snprintf(ws, sizeof(ws), "w%s", src + 1);
+						else snprintf(ws, sizeof(ws), "%s", src);
+						if (dst[0] == 'x') snprintf(wd, sizeof(wd), "w%s", dst + 1);
+						else snprintf(wd, sizeof(wd), "%s", dst);
+						fprintf (stream, "\tfmov\ts0, %s\n", ws);
+						fprintf (stream, "\tfsqrt\ts0, s0\n");
+						fprintf (stream, "\tfmov\t%s, s0\n", wd);
+					}
+					break;
+				case INS_FADD:
+					/* Float addition: in_args[0] and in_args[1] are
+					 * integer registers containing IEEE 754 float bits.
+					 * out_args[0] is the result register.
+					 * Emit: fmov s0, w_a; fmov s1, w_b; fadd s0, s0, s1; fmov w_result, s0 */
+					if (ins->in_args[0] && ins->in_args[1] && ins->out_args[0]) {
+						const char *ra = aarch64_get_register_name (ins->in_args[0]->regconst);
+						const char *rb = aarch64_get_register_name (ins->in_args[1]->regconst);
+						const char *rd = aarch64_get_register_name (ins->out_args[0]->regconst);
+						char wa[8], wb[8], wd[8];
+						if (ra[0] == 'x') snprintf(wa, sizeof(wa), "w%s", ra + 1);
+						else snprintf(wa, sizeof(wa), "%s", ra);
+						if (rb[0] == 'x') snprintf(wb, sizeof(wb), "w%s", rb + 1);
+						else snprintf(wb, sizeof(wb), "%s", rb);
+						if (rd[0] == 'x') snprintf(wd, sizeof(wd), "w%s", rd + 1);
+						else snprintf(wd, sizeof(wd), "%s", rd);
+						fprintf (stream, "\tfmov\ts0, %s\n", wa);
+						fprintf (stream, "\tfmov\ts1, %s\n", wb);
+						fprintf (stream, "\tfadd\ts0, s0, s1\n");
+						fprintf (stream, "\tfmov\t%s, s0\n", wd);
+					}
+					break;
+				case INS_FRNDINT:
+					/* On aarch64, FRNDINT is used as a signal that the
+					 * float in s0 should be converted to integer.
+					 * The actual conversion is deferred to INS_FIST64. */
+					break;
+				case INS_FIST64:
+					/* Convert float bits to signed int and store.
+					 * If in_args[0] has the source register (float bits),
+					 * emit: fmov s0, w_src; fcvtns x15, s0; str x15, [addr] */
+					if (ins->out_args[0]) {
+						const char *src_reg = NULL;
+						int mode = ins->out_args[0]->flags & ARG_MODEMASK;
+
+						/* Get source register with float bits */
+						if (ins->in_args[0] && ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REG)) {
+							src_reg = aarch64_get_register_name (ins->in_args[0]->regconst);
+						}
+						/* Move integer bits to float register, convert, store */
+						if (src_reg) {
+							char w_src[8];
+							if (src_reg[0] == 'x') snprintf(w_src, sizeof(w_src), "w%s", src_reg + 1);
+							else snprintf(w_src, sizeof(w_src), "%s", src_reg);
+							fprintf (stream, "\tfmov\ts0, %s\n", w_src);
+						}
+						fprintf (stream, "\tfcvtns\tx15, s0\n");
+						if (mode == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
+							aarch64_emit_mem_op (stream, "str", "x15",
+								aarch64_get_register_name (ins->out_args[0]->regconst),
+								(long)ins->out_args[0]->disp);
+						} else if (mode == ARG_REGIND) {
+							fprintf (stream, "\tstr\tx15, [%s]\n",
+								aarch64_get_register_name (ins->out_args[0]->regconst));
+						}
 					}
 					break;
 				default:
