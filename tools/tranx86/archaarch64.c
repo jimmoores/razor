@@ -2443,6 +2443,24 @@ static void aarch64_fp_emit_pop (tstate *ts)
 	}
 }
 
+/* Emit register shifts after a binary arithmetic op that consumed slot 1.
+ * After fadd/fsub/fmul/fdiv d0, d1, d0, slot 1 is consumed.
+ * If there was a value in slot 2 (old depth was 3), move it to slot 1. */
+static void aarch64_fp_emit_arith_pop (tstate *ts)
+{
+	/* aarch64_fp_pop() was already called, so stack_depth reflects the new depth.
+	 * If new depth >= 2, we need to shift slot 2 (now at slot depth) down to slot 1. */
+	if (aarch64_fp_stack_depth >= 2) {
+		/* The old slot 2 value needs to move to slot 1 */
+		int prec = aarch64_fp_stack_prec[1]; /* precision of what's now in slot 1 (was slot 2) */
+		char buf[128];
+		snprintf (buf, sizeof(buf), "\tfmov\t%s, %s",
+			aarch64_fp_regname (1, prec),
+			aarch64_fp_regname (2, prec));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+	}
+}
+
 /* Helper: emit a load from memory address in an integer register into
  * the FP register at slot 0.  The address register is in old_a_reg
  * (an eval stack register).  We emit an INS_MOVE to put the address
@@ -2512,8 +2530,8 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			/* result = s1 + s0 -> s0 (or d1 + d0 -> d0) */
 			snprintf (buf, sizeof(buf), "\tfadd\t%s, %s, %s", r0, r1, r0);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
-			/* Pop: shift s1 down to slot 1 etc */
 			aarch64_fp_pop ();
+			aarch64_fp_emit_arith_pop (ts);
 		}
 		ts->stack->fs_depth--;
 		break;
@@ -2526,6 +2544,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			snprintf (buf, sizeof(buf), "\tfsub\t%s, %s, %s", r0, r1, r0);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 			aarch64_fp_pop ();
+			aarch64_fp_emit_arith_pop (ts);
 		}
 		ts->stack->fs_depth--;
 		break;
@@ -2538,6 +2557,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			snprintf (buf, sizeof(buf), "\tfmul\t%s, %s, %s", r0, r1, r0);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 			aarch64_fp_pop ();
+			aarch64_fp_emit_arith_pop (ts);
 		}
 		ts->stack->fs_depth--;
 		break;
@@ -2550,6 +2570,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			snprintf (buf, sizeof(buf), "\tfdiv\t%s, %s, %s", r0, r1, r0);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 			aarch64_fp_pop ();
+			aarch64_fp_emit_arith_pop (ts);
 		}
 		ts->stack->fs_depth--;
 		break;
@@ -2716,8 +2737,20 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		break;
 	case I_FPR64TOR32:  /* 0xd8 (216) - Convert REAL64 FA to REAL32 */
 		if (aarch64_fp_stack_depth >= 1) {
-			/* fcvt s0, d0 -- narrow double to single */
-			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfcvt\ts0, d0")));
+			/* fcvt s0, d0 uses FPCR rounding mode.
+			 * For TRUNC (mode 3), set FPCR to round-toward-zero.
+			 * For ROUND (mode 0), use default round-to-nearest. */
+			if (aarch64_fp_rounding_mode == 3) {
+				/* Save FPCR, set round-to-zero (bits 23:22 = 11), convert, restore */
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmrs\tx17, fpcr")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx16, #0xC00000")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\torr\tx16, x17, x16")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmsr\tfpcr, x16")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfcvt\ts0, d0")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmsr\tfpcr, x17")));
+			} else {
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfcvt\ts0, d0")));
+			}
 			aarch64_fp_stack_prec[0] = 32;
 			aarch64_fp_precision = 32;
 		}
@@ -2982,6 +3015,35 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			ts->stack->must_set_cmp_flags = 1;
 			constmap_clearall ();
 		}
+		break;
+	case I_FPREM:  /* 0xcf - FP remainder: result = FB REM FA, pop one */
+		/* On the transputer, FPREM computes FB REM FA (not FA REM FB).
+		 * For occam `a \ b`, FB=a (dividend) and FA=b (divisor).
+		 * Compute: rem = FB - round_nearest(FB/FA) * FA
+		 * FA is in d0/s0, FB is in d1/s1.
+		 * Use d3/s3 as scratch. Result goes in d0/s0. */
+		if (aarch64_fp_stack_depth >= 2) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			const char *r1 = aarch64_fp_regname (1, prec);
+			const char *r3 = (prec == 64) ? "d3" : "s3";
+			char buf[128];
+			/* d3 = FB / FA */
+			snprintf (buf, sizeof(buf), "\tfdiv\t%s, %s, %s", r3, r1, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			/* d3 = round_nearest(FB / FA) -- IEEE 754 remainder */
+			snprintf (buf, sizeof(buf), "\tfrintn\t%s, %s", r3, r3);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			/* d3 = round(FB/FA) * FA */
+			snprintf (buf, sizeof(buf), "\tfmul\t%s, %s, %s", r3, r3, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			/* d0 = FB - round(FB/FA)*FA = remainder */
+			snprintf (buf, sizeof(buf), "\tfsub\t%s, %s, %s", r0, r1, r3);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			aarch64_fp_pop ();
+			aarch64_fp_emit_arith_pop (ts);
+		}
+		if (ts->stack->fs_depth > 0) ts->stack->fs_depth--;
 		break;
 	/* Remaining stub operations */
 	case 0x80: case 0x81: case 0x82: case 0x85:
@@ -4160,14 +4222,17 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						    || strncmp(p, "fmul", 4) == 0 || strncmp(p, "fdiv", 4) == 0
 						    || strncmp(p, "fsqrt", 5) == 0 || strncmp(p, "fabs", 4) == 0
 						    || strncmp(p, "fneg", 4) == 0 || strncmp(p, "fcmp", 4) == 0
-						    || strncmp(p, "frintz", 6) == 0 || strncmp(p, "frintx", 6) == 0
-						    || strncmp(p, "frintn", 6) == 0
+						    || strncmp(p, "frint", 5) == 0  /* frintz, frintx, frintn, etc */
 						    || strncmp(p, "ldr s", 5) == 0 || strncmp(p, "ldr d", 5) == 0
 						    || strncmp(p, "str s", 5) == 0 || strncmp(p, "str d", 5) == 0
 						    || strncmp(p, "str w1", 6) == 0 || strncmp(p, "str x1", 6) == 0
 						    || strncmp(p, "ldr w1", 6) == 0 || strncmp(p, "ldr x1", 6) == 0
 						    || strncmp(p, "scvtf", 5) == 0 || strncmp(p, "fcvtzs", 6) == 0
-						    || strncmp(p, "fcvtns", 6) == 0) {
+						    || strncmp(p, "fcvtns", 6) == 0 || strncmp(p, "fcvtps", 6) == 0
+						    || strncmp(p, "fcvtms", 6) == 0
+						    || strncmp(p, "mrs", 3) == 0 || strncmp(p, "msr", 3) == 0
+						    || strncmp(p, "orr", 3) == 0 || strncmp(p, "bic", 3) == 0
+						    || strncmp(p, "mov x1", 6) == 0 || strncmp(p, "add x1", 6) == 0) {
 							/* Emit as actual instruction - text may already have leading tab */
 							if (text[0] == '\t') {
 								fprintf (stream, "%s\n", text);
