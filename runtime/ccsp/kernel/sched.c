@@ -2499,8 +2499,8 @@ static INLINE word *sem_dequeue (ccsp_sem_t *sem) {
 	}
 }
 /*}}}*/
-/*{{{  static INLINE void sem_claim (sched_t *sched, word *Wptr, unsigned int return_address, ccsp_sem_t *sem)*/
-static INLINE void sem_claim (sched_t *sched, word *Wptr, unsigned int return_address, ccsp_sem_t *sem)
+/*{{{  static INLINE void sem_claim (sched_t *sched, word *Wptr, word return_address, ccsp_sem_t *sem)*/
+static INLINE void sem_claim (sched_t *sched, word *Wptr, word return_address, ccsp_sem_t *sem)
 {
 	word *ptr, val;
 
@@ -4170,7 +4170,7 @@ K_CALL_DEFINE_2_1 (X_fmul)
  */
 K_CALL_DEFINE_2_0 (Y_startp)
 {
-	unsigned int start_offset;
+	word start_offset;
 	word *workspace;
 
 	K_CALL_PARAMS_2 (workspace, start_offset);
@@ -5393,7 +5393,7 @@ K_CALL_DEFINE_2_1 (X_enbc)
  */
 K_CALL_DEFINE_2_0 (Y_enbc2)
 {
-	unsigned int process_address;
+	word process_address;
 	word **channel_address;
 
 	K_CALL_PARAMS_2 (process_address, channel_address);
@@ -5416,7 +5416,7 @@ K_CALL_DEFINE_2_0 (Y_enbc2)
  */
 K_CALL_DEFINE_3_1 (Y_enbc3)
 {
-	unsigned int process_address;
+	word process_address;
 	word **channel_address, guard;
 
 	K_CALL_PARAMS_3 (process_address, guard, channel_address);
@@ -5505,7 +5505,7 @@ K_CALL_DEFINE_1_1 (X_enbs)
  */
 K_CALL_DEFINE_1_0 (Y_enbs2)
 {
-	unsigned int process_address;
+	word process_address;
 
 	K_CALL_PARAMS_1 (process_address);
 	ENTRY_TRACE (X_enbs2, "%p", process_address);
@@ -5527,7 +5527,7 @@ K_CALL_DEFINE_1_0 (Y_enbs2)
  */
 K_CALL_DEFINE_2_1 (Y_enbs3)
 {
-	unsigned int process_address;
+	word process_address;
 	word guard;
 
 	K_CALL_PARAMS_2 (process_address, guard);
@@ -5635,7 +5635,7 @@ K_CALL_DEFINE_2_1 (X_enbt)
  */
 K_CALL_DEFINE_2_0 (Y_enbt2)
 {
-	unsigned int process_address;
+	word process_address;
 	Time timeout;
 
 	K_CALL_PARAMS_2 (process_address, timeout);
@@ -5658,7 +5658,7 @@ K_CALL_DEFINE_2_0 (Y_enbt2)
  */
 K_CALL_DEFINE_3_1 (Y_enbt3)
 {
-	unsigned int process_address;
+	word process_address;
 	Time timeout;
 	word guard;
 
@@ -5730,7 +5730,7 @@ static INLINE word kernel_disc (word *Wptr, word process_address, word **channel
  */
 K_CALL_DEFINE_3_1 (X_disc)
 {
-	unsigned int process_address;
+	word process_address;
 	word **channel_address, guard;
 
 	K_CALL_PARAMS_3 (process_address, guard, channel_address);
@@ -5775,7 +5775,7 @@ K_CALL_DEFINE_2_1 (X_cdisc)
  */
 K_CALL_DEFINE_3_1 (X_ndisc)
 {
-	unsigned int process_address;
+	word process_address;
 	word **channel_address, guard;
 
 	K_CALL_PARAMS_3 (process_address, guard, channel_address);
@@ -5800,7 +5800,7 @@ K_CALL_DEFINE_3_1 (X_ndisc)
  */
 K_CALL_DEFINE_2_1 (X_diss)
 {
-	unsigned int process_address;
+	word process_address;
 	word fired, guard;
 
 	K_CALL_PARAMS_2 (process_address, guard);
@@ -5854,7 +5854,7 @@ K_CALL_DEFINE_1_1 (X_cdiss)
  */
 K_CALL_DEFINE_2_1 (X_ndiss)
 {
-	unsigned int fired, guard, process_address;
+	word fired, guard, process_address;
 
 	K_CALL_PARAMS_2 (process_address, guard);
 	ENTRY_TRACE (X_ndiss, "%p, %d", (void *)process_address, guard);
@@ -5921,7 +5921,7 @@ static INLINE word kernel_dist (word *Wptr, sched_t *sched, word process_address
  */
 K_CALL_DEFINE_3_1 (X_dist)
 {
-	unsigned int process_address;
+	word process_address;
 	Time timeout;
 	word guard;
 	
@@ -5967,7 +5967,7 @@ K_CALL_DEFINE_2_1 (X_cdist)
  */
 K_CALL_DEFINE_3_1 (X_ndist)
 {
-	unsigned int process_address;
+	word process_address;
 	Time timeout;
 	word guard;
 
@@ -6369,7 +6369,7 @@ K_CALL_DEFINE_0_0 (Y_dynproc_exit)
  */
 K_CALL_DEFINE_2_0 (X_ldwsmap)
 {
-	unsigned int code_offset, process_address;
+	word code_offset, process_address;
 	
 	K_CALL_PARAMS_2 (process_address, code_offset);
 
@@ -6392,7 +6392,7 @@ K_CALL_DEFINE_2_0 (X_ldwsmap)
  */
 K_CALL_DEFINE_2_0 (X_ulwsmap)
 {
-	unsigned int code_offset, process_address;
+	word code_offset, process_address;
 	
 	K_CALL_PARAMS_2 (process_address, code_offset);
 
@@ -6415,7 +6415,7 @@ K_CALL_DEFINE_2_0 (X_ulwsmap)
  */
 K_CALL_DEFINE_1_0 (X_rmwsmap)
 {
-	unsigned int process_address;
+	word process_address;
 	
 	K_CALL_PARAMS_1 (process_address);
 
@@ -6438,7 +6438,7 @@ K_CALL_DEFINE_1_0 (X_rmwsmap)
  */
 K_CALL_DEFINE_1_1 (X_mppclone)
 {
-	unsigned int process_address;
+	word process_address;
 
 	K_CALL_PARAMS_1 (process_address);
 
