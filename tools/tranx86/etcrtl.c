@@ -5011,6 +5011,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_LADD -- long addition*/
 	case I_LADD:
 		arch->compose_longop (ts, I_LADD);
+		constmap_remove (ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 0;
 		generate_overflow_code (ts, PMOP_LADD, arch);
 		break;
@@ -5018,6 +5019,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_LSUB -- long subtraction*/
 	case I_LSUB:
 		arch->compose_longop (ts, I_LSUB);
+		constmap_remove (ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 0;
 		generate_overflow_code (ts, PMOP_LSUB, arch);
 		break;
@@ -5025,18 +5027,21 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_LSUM -- long addition (without overflow checking)*/
 	case I_LSUM:
 		arch->compose_longop (ts, I_LSUM);
+		constmap_remove (ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 0;
 		break;
 		/*}}}*/
 		/*{{{  I_LDIFF -- long subtraction (without overflow checking)*/
 	case I_LDIFF:
 		arch->compose_longop (ts, I_LDIFF);
+		constmap_remove (ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 0;
 		break;
 		/*}}}*/
 		/*{{{  I_LMUM -- long multiplication*/
 	case I_LMUL:
 		arch->compose_longop (ts, I_LMUL);
+		constmap_remove (ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 0;
 		break;
 		/*}}}*/
@@ -5044,6 +5049,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 	case I_LSHL:
 	case I_LSHR:
 		arch->compose_longop (ts, sec);
+		constmap_remove (ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 1;
 		break;
 		/*}}}*/
@@ -5063,6 +5069,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
 		} /* else if the following division overflows, #DE exception is raised */
 		arch->compose_longop (ts, I_LDIV);
+		constmap_remove (ts->stack->a_reg);
 		ts->stack->must_set_cmp_flags = 0;
 		break;
 		/*}}}*/
