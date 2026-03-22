@@ -622,7 +622,7 @@ PUBLIC BOOL isconversion (treenode * tptr)
 PUBLIC BOOL needtemptoload (const int opdmode, treenode * const opd)
 {
 	if (opdmode == P_EXP) {
-		if (has_fpu_core && ((ntypeof (opd) == S_REAL32 && !isaddressable (opd)) || (isconversion (opd) && isreal (ntypeof (OpOf (opd))))))
+		if (has_fpu_core && ((isreal (ntypeof (opd)) && !isaddressable (opd)) || (isconversion (opd) && isreal (ntypeof (OpOf (opd))))))
 			return TRUE;
 		if (use_shortintops)	/* T9000 shorts 17/7/91 */
 			return FALSE;

@@ -4404,7 +4404,7 @@ printtreenl (stderr, 4, sourcetype);
 				check_aligned (source, (int) b) && check_aligned (dest, (int) b)))) {
 			/*{{{  can be optimised to a load and a store */
 
-			const int size_tag = (b == 1) ? S_BYTE : (b == 2) ? S_INT16 : targetintsize;
+			const int size_tag = (b == 1) ? S_BYTE : (b == 2) ? S_INT16 : (b == 8) ? S_INT64 : targetintsize;
 			tload2regs (destmode, dest, sourcemode, source, FALSE, FALSE);
 
 			/* no need to sign extend, cos we're just about to store it */

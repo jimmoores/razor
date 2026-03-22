@@ -1192,7 +1192,7 @@ PUBLIC BOOL istargetintsize (int type)
 	if ((type == S_REAL32) && ((targetintsize == S_INT32) || (targetintsize == S_UINT32)))
 		return TRUE;
 	/* On 64-bit targets, INT64/UINT64/REAL64 are word-sized (same as INT). */
-	if (bytesperword == 8 && (type == S_INT64 || type == S_UINT64 || type == S_REAL64))
+	if (bytesperword == 8 && (type == S_INT64 || type == S_UINT64))
 		return TRUE;
 	return FALSE;
 }
@@ -1239,6 +1239,8 @@ PUBLIC BOOL fitsinregister (int type)
  *****************************************************************************/
 PUBLIC BOOL fitsinword (const int type)
 {
+	if (bytesperword == 8 && type == S_REAL64)
+		return TRUE;
 	return (istargetintsize (type) || isshorttype (type));
 }
 
