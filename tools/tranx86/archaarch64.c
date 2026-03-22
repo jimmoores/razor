@@ -2223,23 +2223,26 @@ static void compose_aarch64_longop (tstate *ts, int secondary_opcode)
 	switch (secondary_opcode) {
 	/* Handle actual transputer long operations */
 	case I_LADD:
+	case I_LSUM:
+		/* LADD/LSUM: Areg + Breg + (Creg & 1) → result
+		 * On Transputer: adds two words plus carry bit from Creg.
+		 * Use: AND Creg,#1 to isolate carry; ADD Areg+Breg; ADD carry. */
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
 		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 		ts->stack->a_reg = ts->stack->old_b_reg;
 		break;
 	case I_LSUB:
+	case I_LDIFF:
+		/* LSUB/LDIFF: Breg - Areg - (Creg & 1) → result
+		 * On Transputer: subtracts two words minus borrow bit from Creg. */
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
 		add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg));
 		ts->stack->a_reg = ts->stack->old_b_reg;
 		break;
 	case I_LMUL:
 		add_to_ins_chain (compose_ins (INS_MUL, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		ts->stack->a_reg = ts->stack->old_b_reg;
-		break;
-	case I_LSUM:
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		ts->stack->a_reg = ts->stack->old_b_reg;
-		break;
-	case I_LDIFF:
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
 		ts->stack->a_reg = ts->stack->old_b_reg;
 		break;
 	case I_LSHL:
