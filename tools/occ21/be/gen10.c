@@ -1880,8 +1880,8 @@ fprintf (stderr, "gen10: mapoutputitem: *outputitem looks complex!\n");
 			}
 			mapioop (I_EXTOUT, usecall);
 
-		} else if (!useout && istargetintsize (t)) {		/* bug 1203 12/3/91 */
-			/*{{{  outword */
+		} else if (!useout && istargetintsize (t) && (bytesinscalar (t) >= bytesperword)) {		/* bug 1203 12/3/91 */
+			/*{{{  outword -- only if type is actually word-sized (not on 64-bit with 32-bit INT) */
 			mapload2regs (channelmode, channel, outputitemmode, outputitem);
 			mapioop (I_OUTWORD, usecall);
 			/*}}} */
@@ -3241,8 +3241,8 @@ fprintf (stderr, "toutputitem: MOBILE output on MOBILE channel.  isdynmobilebarr
 					genindirect (INDIR_BREG);
 				}
 				tioop (I_EXTOUT, usecall);
-			} else if (!useout && istargetintsize (t)) {	/* bug 1203 12/3/91 */
-				/*{{{  ldptr channel; ld outputitem; outword */
+			} else if (!useout && istargetintsize (t) && (bytesinscalar (t) >= bytesperword)) {	/* bug 1203 12/3/91 */
+				/*{{{  ldptr channel; ld outputitem; outword -- only if type is actually word-sized */
 				tload2regs (channelmode, channel, outputitemmode, outputitem, FALSE, TRUE);
 				checkerror ();	/* bug 1202 11/3/91 */
 				if (indirect) {

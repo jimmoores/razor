@@ -4664,8 +4664,24 @@ static INLINE void kernel_chan_io_static (word flags, byte *src, byte *dst, unsi
 {
 	switch (count) {
 		case 1:
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
+			/* On 64-bit, zero the full word before writing the byte.
+			 * This prevents stale upper bits in workspace slots from
+			 * corrupting subsequent range checks (CSUB0, CCNT1).
+			 * Variant protocol tags are received as 1-byte values
+			 * into word-aligned workspace slots. */
+			*((word *)dst) = (word)*((byte *)src);
+#else
 			*((byte *)dst) = *((byte *)src);
+#endif
 			break;
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
+		case 4:
+			/* On 64-bit, zero-extend 32-bit INT values to full word.
+			 * On 32-bit, this case is handled by case sizeof(word). */
+			*((word *)dst) = (word)*((unsigned int *)src);
+			break;
+#endif
 		case (sizeof(word)):
 			*((word *)dst) = *((word *)src);
 			break;

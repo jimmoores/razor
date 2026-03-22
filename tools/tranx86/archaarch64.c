@@ -4253,21 +4253,13 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 
-					/* When a constant is involved, use 32-bit w-register
-					 * comparison for INT32 compatibility (upper bits may
-					 * be stale).  For reg-reg comparisons, use 64-bit
-					 * x-registers because some checks (like CWORD) rely
-					 * on sign-extension behavior in the upper bits. */
-					if (is_const0 || is_const1) {
-						char w0[8], w1[8];
-						if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
-						else snprintf(w0, sizeof(w0), "%s", op0_reg);
-						if (op1_reg[0] == 'x') snprintf(w1, sizeof(w1), "w%s", op1_reg + 1);
-						else snprintf(w1, sizeof(w1), "%s", op1_reg);
-						fprintf (stream, "\tcmp\t%s, %s\n", w1, w0);
-					} else {
-						fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
-					}
+					/* Use 64-bit comparison for reg-reg CMP.  The CWORD
+					 * range check relies on 64-bit values (MOSTNEG<<1
+					 * = 0x100000000).  CSUB0/CCNT1 range checks work
+					 * because kernel_chan_io_static zero-extends sub-word
+					 * values (1-byte tags, 4-byte INTs) to full words
+					 * when writing to workspace slots. */
+					fprintf (stream, "\tcmp\t%s, %s\n", op1_reg, op0_reg);
 					break;
 
 				case INS_SETCC:
