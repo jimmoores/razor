@@ -2663,7 +2663,7 @@ PUBLIC void genloadconstant (const INT32 c)
 		switch (constformat_of_const (targetintsize, c, 0)) {
 		case constformat_mint32_ldnlp:
 			gensecondary (I_MINT);
-			genprimary (I_LDNLP, (INT32) ((BIT32) c - (BIT32) MOSTNEG_INT32) / 4 /*bytesperword */ );
+			genprimary (I_LDNLP, (INT32) ((BIT32) c - (BIT32) MOSTNEG_INT32) / bytesperword);
 			break;
 		case constformat_mint32_adc:
 			gensecondary (I_MINT);
@@ -2675,7 +2675,7 @@ PUBLIC void genloadconstant (const INT32 c)
 			break;
 		case constformat_ldinf_ldnlp:
 			gensecondary (I_LDINF);
-			genprimary (I_LDNLP, (INT32) ((BIT32) c - (BIT32) INFINITY) / 4 /*bytesperword */ );
+			genprimary (I_LDNLP, (INT32) ((BIT32) c - (BIT32) INFINITY) / bytesperword);
 			break;
 		case constformat_ldinf_adc:
 			gensecondary (I_LDINF);
@@ -2683,7 +2683,7 @@ PUBLIC void genloadconstant (const INT32 c)
 			break;
 		case constformat_mint16_ldnlp:
 			gensecondary (I_MINT);
-			genprimary (I_LDNLP, (INT32) ((BIT32) c - (BIT32) MOSTNEG_INT16) / 2 /*bytesperword */ );
+			genprimary (I_LDNLP, (INT32) ((BIT32) c - (BIT32) MOSTNEG_INT16) / bytesperword);
 			break;
 		case constformat_mint16_adc:
 			gensecondary (I_MINT);

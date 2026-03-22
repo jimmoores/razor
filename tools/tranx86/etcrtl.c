@@ -537,8 +537,13 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					ts->casetable_label = ++(ts->last_lab);
 					ts->stack->old_a_reg = ts->stack->a_reg;
 					tmp_reg = tstack_newreg (ts->stack);
+#if (BytesPerWord > 4)
+					/* On 64-bit, the CASE selector (a_reg) may have stale
+					 * upper 32 bits.  Zero-extend before using as table index. */
+					add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+#endif
 					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, ts->casetable_label, ARG_REG, tmp_reg));
-					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGINDSIB, 4, ts->stack->a_reg, tmp_reg, ARG_REG, ts->stack->a_reg));
+					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGINDSIB, BytesPerWord, ts->stack->a_reg, tmp_reg, ARG_REG, ts->stack->a_reg));
 					add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->a_reg, ARG_REG, tmp_reg, ARG_REG, tmp_reg));
 					add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_REG | ARG_IND, tmp_reg));
 					add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, ts->casetable_label));

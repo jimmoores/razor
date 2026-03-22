@@ -2130,7 +2130,7 @@ PUBLIC constformat_t constformat_of_const (const int type, const INT32 lo, const
 
 	if (istargetintsize (type)) {
 		if (targetintsize == S_INT32) {
-			if ((lo <= LDNLPNEG_INT32) && ((lo & 0x3) /*(lo % bytesperword) */  == 0)
+			if ((lo <= LDNLPNEG_INT32) && ((lo & (bytesperword - 1)) == 0)
 			    && !T9000_alpha_badmint (&tx_global))
 				return constformat_mint32_ldnlp;
 			if (!T9000_instruction_timings || opt_space) {	/* bug 1371 15/8/91 */
@@ -2141,7 +2141,7 @@ PUBLIC constformat_t constformat_of_const (const int type, const INT32 lo, const
 					return constformat_mint32_not;
 				}
 				if (has_fp_support) {
-					if ((lo >= LDINF_NEG_WORD) && (lo <= LDINF_POS_WORD) && ((lo & 0x3) == 0)) {
+					if ((lo >= LDINF_NEG_WORD) && (lo <= LDINF_POS_WORD) && ((lo & (bytesperword - 1)) == 0)) {
 						return constformat_ldinf_ldnlp;
 					}
 					if ((lo >= LDINF_NEG_BYTE) && (lo <= LDINF_POS_BYTE)) {

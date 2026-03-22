@@ -3397,7 +3397,30 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						fprintf (stream, "\t// INVALID MOVE: missing arguments\n");
 						break;
 					}
-					
+
+					/* Handle ARG_REGINDSIB: scaled-index-base memory load.
+					 * Used for CASE jump tables: load offset from [base + index * scale].
+					 * x86 does this with SIB addressing; on aarch64 we compute
+					 * the address manually and do a load. */
+					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGINDSIB) {
+						ins_sib_arg *sib = (ins_sib_arg *)ins->in_args[0]->regconst;
+						const char *dst_reg = aarch64_get_register_name(ins->out_args[0]->regconst);
+						const char *idx_reg = aarch64_get_register_name(sib->index);
+						const char *base_reg = aarch64_get_register_name(sib->base);
+						int shift = 0;
+						/* Compute shift from scale: scale 1→0, 2→1, 4→2, 8→3 */
+						switch (sib->scale) {
+							case 1: shift = 0; break;
+							case 2: shift = 1; break;
+							case 4: shift = 2; break;
+							case 8: shift = 3; break;
+							default: shift = 3; break;
+						}
+						/* Load from [base + index << shift] */
+						fprintf(stream, "\tldr\t%s, [%s, %s, lsl #%d]\n", dst_reg, base_reg, idx_reg, shift);
+						break;
+					}
+
 					/* Handle ARG_CONST source first so it doesn't get treated as a register store */
 					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
 						long const_val = (long)ins->in_args[0]->regconst;
@@ -4155,6 +4178,9 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_BLABEL) {
 							fprintf (stream, "\tb\t%ldb\n", (long)ins->in_args[0]->regconst);
 						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {
+							fprintf (stream, "\tbr\t%s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
+						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REG && (ins->in_args[0]->flags & ARG_IND)) {
+							/* Indirect jump through register (used by CASE tables) */
 							fprintf (stream, "\tbr\t%s\n", aarch64_get_register_name (ins->in_args[0]->regconst));
 						}
 					}
