@@ -148,7 +148,7 @@ PRIVATE void tjumptable (const int low, const int high, const BOOL nomorejumptab
 		}
 	}
 #endif
-	if ((numcases <= DELTA) || isquadlength (selectortype)) {
+	if ((numcases <= DELTA) || isquadlength (selectortype) || (bytesperword == 8 && (selectortype == S_INT64 || selectortype == S_UINT64))) {
 		/* bug INSdi02177 */
 		/*{{{  too few cases - output jumps */
 		int i;
@@ -477,6 +477,21 @@ PUBLIC void mapcase (treenode * tptr)
 	}
 	if (nodetypeoftag (TagOf (selector_exp)) == NAMENODE)	/* bug INSdi01959 06/04/93 */
 		upusecount (selector_exp, 4);
+
+	/* Map the case constants so they get added to the constant table if necessary */
+	{
+		treenode *slist;
+		for (slist = selectionlist; !EndOfList (slist); slist = NextItem (slist)) {
+			treenode *thisselection = skipspecifications (ThisItem (slist));
+			treenode *v = CondGuardOf (thisselection);
+			if (TagOf (v) != S_ELSE) {
+				for (; !EndOfList (v); v = NextItem (v)) {
+					mapexp (ThisItemAddr (v));
+				}
+			}
+		}
+	}
+
 	mapconstruction (selectionlist, mapprocess);
 }
 

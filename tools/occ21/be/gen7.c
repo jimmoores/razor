@@ -115,8 +115,20 @@ trelop (const int op, int type, treenode * left, treenode * right, const BOOL se
 				   is two cycles quicker.
 				 */
 				/*}}} */
-				if (isconstexpnd (left) && !isinconstanttable (left) && (genbool || sense || LoValOf (left) == 0))
-					/* constant, but not in a table */
+				if (bytesperword == 8 && (type == S_INT64 || type == S_UINT64)) {
+					tdop (S_XOR, type, left, right, regs, TRUE, FALSE);
+					/* must have at least one EQC to convert expr to Boolean */
+					if (!sense)
+					{
+						if (genbool) {	/* Result must be a genuine Boolean */
+							genprimary (I_EQC, 0);
+							genboolinvert ();
+						}
+					}
+					else
+						genprimary (I_EQC, 0);
+				}
+				else if (isconstexpnd (left) && !isinconstanttable (left) && (genbool || sense || LoValOf (left) == 0))
 					/*{{{  right; eqc left */
 				{
 					texp (right, regs);

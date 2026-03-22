@@ -370,8 +370,9 @@ PUBLIC void mapexplist (treenode * tptr)
 /*{{{  PRIVATE void mapconstant */
 PRIVATE void mapconstant (treenode * t)
 {
-	if (shouldbeinconstanttable (t))
+	if (shouldbeinconstanttable (t)) {
 		placeintable (t);
+	}
 }
 
 /*}}}*/

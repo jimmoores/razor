@@ -509,7 +509,7 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 				case NOTPROCESS:
 					glob_in_icount++;
 					tstack_setprim (ts->stack, I_LDC, arch);
-					tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, NOT_PROCESS, ARG_REG, ts->stack->a_reg);
+					tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) NOT_PROCESS, ARG_REG, ts->stack->a_reg);
 					constmap_new (ts->stack->a_reg, VALUE_CONST, NOT_PROCESS, tmp_ins);
 					add_to_ins_chain (tmp_ins);
 					ts->stack->must_set_cmp_flags = 0;
@@ -631,11 +631,11 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						tmp_reg = tstack_newreg (ts->stack);
 						tstack_setprim (ts->stack, I_STL, arch);
 						
-						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));				/* sem-val = 1 ? */
+						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) 1, ARG_REGIND, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));				/* sem-val = 1 ? */
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 5));					/* jump if yes */
 						/* semaphore busy, join the queue */
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_LINK));			/* Wptr[Link] = null */
-						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));				/* sem-fptr = null ? */
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_LINK));			/* Wptr[Link] = null */
+						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) 0, ARG_REGIND, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));				/* sem-fptr = null ? */
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 6));					/* jump if yes */
 						/* just bung on the end */
 						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, (1 << WSH), ARG_REG, tmp_reg));	/* tmp = sem-bptr */
@@ -645,7 +645,7 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 
 						/* this here because it fits nicely: set sem-val to 0 */
 						add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 5));
-						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, 0xfffffffe, ARG_REGIND, ts->stack->old_a_reg, ARG_REGIND, ts->stack->old_a_reg));	/* sem-val = 0 */
+						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) 0xfffffffe, ARG_REGIND, ts->stack->old_a_reg, ARG_REGIND, ts->stack->old_a_reg));	/* sem-val = 0 */
 						add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_FLABEL, 8));
 
 						/* nothing here yet, set both fptr and bptr */
@@ -677,7 +677,7 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						tmp_reg = tstack_newreg (ts->stack);
 						tstack_setprim (ts->stack, I_STL, arch);
 						
-						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));				/* sem-fptr = null ? */
+						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) 0, ARG_REGIND, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));				/* sem-fptr = null ? */
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 5));					/* jump if yes (no-one to wake) */
 
 						/* other processes here, pick one of the queue and schedule it */
@@ -698,7 +698,7 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_FLABEL, 6));
 
 						add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 5));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 1, ARG_REGIND, ts->stack->old_a_reg));			/* sem-val = 1 */
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 1, ARG_REGIND, ts->stack->old_a_reg));			/* sem-val = 1 */
 						add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 6));
 					}
 					ts->stack->must_set_cmp_flags = 0;
@@ -959,9 +959,9 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 							int x;
 
 							x = (0xfb00 << 16) + (ts->line_pending & 0xffff);
-							add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_CONST, x));
+							add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_CONST, (intptr_t) x));
 							x = ((ts->file_pending & 0xffff) << 16) + (ts->proc_pending & 0xffff);
-							add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_CONST, x));
+							add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_CONST, (intptr_t) x));
 							add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_LABEL | ARG_ISCONST, ts->filename_label));
 							add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_LABEL | ARG_ISCONST, ts->procedure_label));
 							ts->stack_drift += 4;
@@ -1206,7 +1206,7 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
 					}
 					set_line_pending (ts, y_opd);
-					add_to_ins_chain (compose_ins (INS_SOURCELINE, 1, 0, ARG_CONST, y_opd));
+					add_to_ins_chain (compose_ins (INS_SOURCELINE, 1, 0, ARG_CONST, (intptr_t) y_opd));
 					if (options.debug_options & DEBUG_INSERT) {
 						arch->compose_debug_insert (ts, 0);
 					}
@@ -1219,7 +1219,7 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
 					}
 					set_line_pending (ts, y_opd);
-					add_to_ins_chain (compose_ins (INS_SOURCELINE, 1, 0, ARG_CONST, y_opd));
+					add_to_ins_chain (compose_ins (INS_SOURCELINE, 1, 0, ARG_CONST, (intptr_t) y_opd));
 					if (options.debug_options & DEBUG_INSERT) {
 						arch->compose_debug_insert (ts, 0);
 					}
@@ -1303,7 +1303,7 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					}
 					deferred_cond (ts);
 					ts->stack->old_a_reg = ts->stack->a_reg;
-					add_to_ins_chain (compose_ins (INS_SHR, 2, 2, ARG_CONST, y_opd, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+					add_to_ins_chain (compose_ins (INS_SHR, 2, 2, ARG_CONST, (intptr_t) y_opd, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 					constmap_remove (ts->stack->old_a_reg);
 					break;
 					/*}}}*/
@@ -1323,9 +1323,9 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					 * upper bits before shifting to prevent the stale
 					 * data from corrupting the address calculation. */
 					if (BytesPerWord > 4) {
-						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 					}
-					add_to_ins_chain (compose_ins (INS_SHL, 2, 2, ARG_CONST, y_opd, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+					add_to_ins_chain (compose_ins (INS_SHL, 2, 2, ARG_CONST, (intptr_t) y_opd, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 					if (constmap_typeof (ts->stack->old_a_reg) == VALUE_CONST) {
 						constmap_modregconst (ts->stack->old_a_reg, constmap_regconst(ts->stack->old_a_reg) << y_opd);
 					} else {
@@ -1893,13 +1893,13 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 								add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, (i - 3) << WSH));
 								break;
 							case VALUE_CONST:
-								add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (tmp_reg),
+								add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) constmap_regconst (tmp_reg),
 									ARG_REGIND | ARG_DISP, REG_WPTR, (i - 3) << WSH));
 								break;
 							}
 						}
 					}
-					add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, -4 << WSH, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+					add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) -4 << WSH, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 					tstack_setprim (ts->stack, I_CALL, arch);
 					if ((ts->magic_pending & TS_MAGIC_DOSUBCODEMAP) && ts->cpinfo) {
 						/* add to current if here */
@@ -2414,7 +2414,7 @@ fprintf (stderr, "setting ts->ws_adjust = %d\n", ts->ws_adjust);
 		add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, ts->flushscreenpoint));
 		/* we got here via a regular PROC return, so Wptr has been adjusted -- better refix (pretending to be the top-level PROC) */
 		/* frmb: the required offset is now stored in ts->ws_adjust */
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_CONST, ts->ws_adjust, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_CONST, (intptr_t) ts->ws_adjust, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 
 		/*{{{  code for FORK synchronisation*/
 		if ((set_ifacetype != TLP_INVALID) && (set_ifacetype & TLP_FORK_BARRIER) && !(set_ifacetype & TLP_FORK_NOWAIT)) {
@@ -2487,12 +2487,12 @@ fprintf (stderr, "setting ts->ws_adjust = %d\n", ts->ws_adjust);
 			arch->compose_kcall (ts, K_OUT8, 2, 0);
 		}
 		/* fixup Wptr again */
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 16, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) 16, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 		/* do scheduler! */
 		if (options.kernel_interface & KRNLIFACE_MP) {
 			arch->compose_kcall (ts, K_SHUTDOWN, 0, 0);
 		} else {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 1, ARG_NAMEDLABEL, string_dup ("&occam_finished")));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 1, ARG_NAMEDLABEL, string_dup ("&occam_finished")));
 			add_to_ins_chain (arch->compose_kjump (ts, INS_JUMP, 0, kif_entry (K_OCCSCHEDULER)));
 		}
 		flush_ins_chain ();
@@ -3197,7 +3197,7 @@ static void deferred_cond (tstate *ts)
 	if (ts->cond != CC_NONE) {
 		add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, ts->cond, ARG_REG, ts->stack->a_reg));
 		constmap_remove (ts->stack->a_reg);
-		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) 1, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
 		ts->cond = CC_NONE;
 	}
 	return;
@@ -3300,7 +3300,7 @@ static void generate_range_code (tstate *ts, int rcode, arch_t *arch)
 
 	if (0 /* Hardcoded disable: AArch64 and non-inline schedulers do not support Wptr corruption */) {
 		/* flag an error on Wptr */
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 1, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR, ARG_REG | ARG_IMP, REG_CC));
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) 1, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR, ARG_REG | ARG_IMP, REG_CC));
 		/* jump if no overflow */
 		compose_cond_jump (ts, CC_NO, thislab);
 	}
@@ -3330,8 +3330,8 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 		tstack_setprim (ts->stack, prim, arch);
 		switch (prim) {
 		case I_LDC:
-			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, operand, ARG_REG, ts->stack->a_reg);
-			constmap_new (ts->stack->a_reg, VALUE_CONST, operand, tmp_ins);
+			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)operand, ARG_REG, ts->stack->a_reg);
+			constmap_new (ts->stack->a_reg, VALUE_CONST, (intptr_t)operand, tmp_ins);
 			add_to_ins_chain (tmp_ins);
 			ts->stack->must_set_cmp_flags = 1;
 			break;
@@ -3366,7 +3366,7 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 		case I_STL:
 			switch (constmap_typeof (ts->stack->old_a_reg)) {
 			case VALUE_CONST:
-				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP, REG_WPTR, operand << WSH));
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP, REG_WPTR, operand << WSH));
 				break;
 			case VALUE_LABADDR:
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP, REG_WPTR, operand << WSH));
@@ -3382,7 +3382,7 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 		case I_STNL:
 			switch (constmap_typeof (ts->stack->old_b_reg)) {
 			case VALUE_CONST:
-				add_to_ins_chain (compose_ins_ex (EtcPrimary (I_STNL), INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (ts->stack->old_b_reg), ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, operand << WSH));
+				add_to_ins_chain (compose_ins_ex (EtcPrimary (I_STNL), INS_MOVE, 1, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_b_reg), ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, operand << WSH));
 				break;
 			default:
 				add_to_ins_chain (compose_ins_ex (EtcPrimary (I_STNL), INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, operand << WSH));
@@ -3403,10 +3403,10 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 			} else {
 				switch (constmap_typeof (ts->stack->a_reg)) {
 				default:
-					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, operand, ARG_REG, ts->stack->a_reg, ARG_REG | ARG_IMP, REG_CC));
+					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)operand, ARG_REG, ts->stack->a_reg, ARG_REG | ARG_IMP, REG_CC));
 					break;
 				case VALUE_LOCAL:
-					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, operand, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (ts->stack->a_reg) << WSH), ARG_REG | ARG_IMP, REG_CC));
+					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)operand, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (ts->stack->a_reg) << WSH), ARG_REG | ARG_IMP, REG_CC));
 					break;
 				}
 				ts->cond = CC_Z;
@@ -3427,7 +3427,7 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 					generate_overflowed_code (ts, PMOP_ADC, arch);
 				} else {
 					/* safe */
-					tmp_ins = compose_ins_ex (EtcPrimary (I_ADC), INS_MOVE, 1, 1, ARG_CONST, newconst, ARG_REG, ts->stack->a_reg);
+					tmp_ins = compose_ins_ex (EtcPrimary (I_ADC), INS_MOVE, 1, 1, ARG_CONST, (intptr_t) newconst, ARG_REG, ts->stack->a_reg);
 					add_to_ins_chain (tmp_ins);
 					constmap_new (ts->stack->a_reg, VALUE_CONST, newconst, tmp_ins);
 				}
@@ -3436,9 +3436,9 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 				ts->magic_pending |= TS_MAGIC_UNCHECKED;
 			} else {
 				if (ts->magic_pending & TS_MAGIC_UNCHECKED) {
-					add_to_ins_chain (compose_ins_ex (EtcPrimary (I_ADC), INS_ADD, 2, 1, ARG_CONST, operand, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+					add_to_ins_chain (compose_ins_ex (EtcPrimary (I_ADC), INS_ADD, 2, 1, ARG_CONST, (intptr_t) operand, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
 				} else {
-					add_to_ins_chain (compose_ins_ex (EtcPrimary (I_ADC), INS_ADD, 2, 2, ARG_CONST, operand, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg, ARG_REG | ARG_IMP, REG_CC));
+					add_to_ins_chain (compose_ins_ex (EtcPrimary (I_ADC), INS_ADD, 2, 2, ARG_CONST, (intptr_t) operand, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg, ARG_REG | ARG_IMP, REG_CC));
 				}
 				constmap_remove (ts->stack->a_reg);
 			}
@@ -3451,7 +3451,7 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 			ts->stack->must_set_cmp_flags = 0;
 			break;
 		case I_AJW:
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, operand << WSH, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) operand << WSH, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 			constmap_clearall ();
 			break;
 		case I_J:
@@ -3851,7 +3851,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-word) %d --> [%d]\n", ts->stack->old_b_r
 		tstack_setsec (ts->stack, I_NMWALT, arch);
 
 		arch->compose_kcall (ts, K_MWALT, 0, 0);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, Z_ENABLING, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) Z_ENABLING, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
 		break;
 		/*}}}*/
 		/*{{{  I_NWALTEND -- NOCC multiway sync ALT end*/
@@ -4258,7 +4258,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		{
 			/* occam INT is always 32-bit; MOSTNEG INT = 0x80000000. */
 			intptr_t most_neg = (intptr_t)(unsigned int)0x80000000;
-			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, most_neg, ARG_REG, ts->stack->a_reg);
+			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) most_neg, ARG_REG, ts->stack->a_reg);
 			constmap_new (ts->stack->a_reg, VALUE_CONST, most_neg, tmp_ins);
 			add_to_ins_chain (tmp_ins);
 		}
@@ -4266,7 +4266,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*}}}*/
 		/*{{{  I_NULL -- generate NULL (zero)*/
 	case I_NULL:
-		tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->a_reg);
+		tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 0, ARG_REG, ts->stack->a_reg);
 		constmap_new (ts->stack->a_reg, VALUE_CONST, 0, tmp_ins);
 		add_to_ins_chain (tmp_ins);
 		ts->stack->must_set_cmp_flags = 1;
@@ -4376,7 +4376,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 	case I_TESTERR:
 		add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_NO, ARG_REG, ts->stack->a_reg));
 		constmap_remove (ts->stack->a_reg);
-		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) 1, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
 		break;
 		/*}}}*/
 		/*{{{  I_BSUB -- byte index*/
@@ -4390,7 +4390,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 			ts->stack->a_reg = ts->stack->old_a_reg;
 			switch (constmap_typeof (ts->stack->old_b_reg)) {
 			case VALUE_CONST:
-				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
+				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
 				break;
 			case VALUE_LABADDR:
 				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
@@ -4409,7 +4409,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 #if 1
 		switch (constmap_typeof (ts->stack->old_a_reg)) {	/* base expression */
 		case VALUE_LOCAL:
-			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, WShift, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) WShift, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 			ts->stack->a_reg = ts->stack->old_b_reg;
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH,
 						ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->a_reg));
@@ -4417,7 +4417,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		default:
 			/* areg' = areg, breg' = creg, creg' = undefined */
 			ts->stack->a_reg = ts->stack->old_a_reg;
-			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, WShift, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) WShift, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
 			break;
 		}
@@ -4439,15 +4439,15 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*}}}*/
 		/*{{{  I_BCNT -- bytes in words*/
 	case I_BCNT:
-		add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, WSH, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+		add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) WSH, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
 		constmap_remove (ts->stack->a_reg);
 		break;
 		/*}}}*/
 		/*{{{  I_WCNT -- words in bytes, and remainder*/
 	case I_WCNT:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
-		add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_CONST, WSH, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
-		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, 3, ARG_REG, ts->stack->b_reg, ARG_REG, ts->stack->b_reg));
+		add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_CONST, (intptr_t) WSH, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) 3, ARG_REG, ts->stack->b_reg, ARG_REG, ts->stack->b_reg));
 		constmap_remove (ts->stack->a_reg);
 		constmap_remove (ts->stack->b_reg);
 		ts->stack->must_set_cmp_flags = 0;
@@ -4516,7 +4516,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*{{{  I_LB -- load byte*/
 	case I_LB:
 		/* add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REGIND, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
-		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, 0xff, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg)); */
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) 0xff, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg)); */
 		if (ts->magic_pending & TS_MAGIC_IOSPACE) {
 #if 0
 fprintf (stderr, "MAGIC IOSPACE! (load-byte) [%d] --> %d\n", ts->stack->old_a_reg, ts->stack->a_reg);
@@ -4730,7 +4730,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		switch (constmap_typeof (ts->stack->old_a_reg)) {
 		default:
 			/* do comparison */
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 32, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) 32, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, this_lab));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, this_lab2));
 			/* For SHR on 64-bit: truncate value to 32 bits before shifting */
@@ -4768,7 +4768,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				arch->compose_kcall (ts, K_BRANGERR, 0, -1);
 			}
 			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab2));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->a_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 0, ARG_REG, ts->stack->a_reg));
 			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab3));
 			break;
 		case VALUE_CONST:
@@ -4782,7 +4782,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				}
 			} else if (c_val == 32) {
 				/* clear to zero (L1) */
-				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->a_reg));
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 0, ARG_REG, ts->stack->a_reg));
 			} else {
 				/* For SHR on 64-bit: truncate value to 32 bits before shifting */
 				if (sec == I_SHR) {
@@ -4825,7 +4825,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				break;
 			case VALUE_CONST:
 				/* invert condition */
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)(int32_t)constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 				ts->cond = CC_LT;
 				break;
 			}
@@ -4833,10 +4833,10 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		case VALUE_CONST:
 			switch (constmap_typeof (ts->stack->old_b_reg)) {
 			default:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_a_reg), ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)(int32_t)constmap_regconst (ts->stack->old_a_reg), ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 				break;
 			case VALUE_LOCAL:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_a_reg),
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)(int32_t)constmap_regconst (ts->stack->old_a_reg),
 					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				break;
 			}
@@ -4847,7 +4847,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 				break;
 			case VALUE_CONST:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_b_reg),
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_b_reg),
 					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				ts->cond = CC_LT;
 			}
@@ -4900,7 +4900,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				 * zero-extend BOTH results before the comparison. */
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
 				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-				add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+				add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 				/* Zero-extend both to 32 bits before unsigned compare.
 				 * On 64-bit, MOSTNEG << 1 = 0xFFFFFFFF00000000 (sign-
 				 * extended) but should wrap to 0x100000000.  After
@@ -4921,7 +4921,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				{
 					int oklab2;
 					/* Undo the SHL - restore old_a to MOSTNEG */
-					add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+					add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_CONST, (intptr_t) 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 					/* old_a = MOSTNEG_INT32 (-2^31, sign-extended to 64-bit).
 					 * Check: value >= MOSTNEG (signed).
 					 * old_b was clobbered by ADD. Use tmp_reg (saved original). */
@@ -4942,7 +4942,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 					/* Check: value <= MOSTPOS_INT32 (2^31 - 1).
 					 * MOSTPOS = ~MOSTNEG = NOT(old_a).
 					 * Compute NOT of old_a: XOR with -1. */
-					add_to_ins_chain (compose_ins (INS_XOR, 2, 1, ARG_CONST, -1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+					add_to_ins_chain (compose_ins (INS_XOR, 2, 1, ARG_CONST, (intptr_t) -1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 					/* old_a = MOSTPOS_INT32 (0x7FFFFFFF, sign-ext to 0x000000007FFFFFFF) */
 					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, tmp_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 					oklab2 = ++(ts->last_lab);
@@ -4969,11 +4969,11 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			 * With zero-extended MOSTNEG, the algorithm works because
 			 * MOSTNEG<<1 doesn't wrap in 64-bit. */
 			if (BytesPerWord > 4) {
-				add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+				add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 			translate_range_check (ts, 0, arch, REOP_CWORD);
 			ts->stack->a_reg = tmp_reg;
 			constmap_remove (ts->stack->a_reg);
@@ -4986,7 +4986,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		if (!options.disable_checking) {
 			if (0 /* disabled Wptr corruption */) {
 				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_INC, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CMP, 2, 1, ARG_CONST, 2, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CMP, 2, 1, ARG_CONST, (intptr_t) 2, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 				ts->last_lab += 2;
 				this_lab = ts->last_lab - 1;
 				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CJUMP, 2, 0, ARG_COND, CC_AE, ARG_LABEL, this_lab));
@@ -5358,7 +5358,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			}
 			this_lab = ++(ts->last_lab);
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, this_lab));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, Z_READY, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) Z_READY, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
 			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
 			ts->stack->must_set_cmp_flags = 1;
 		}
@@ -5457,7 +5457,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 					} else {
 						this_lab = ++(ts->last_lab);
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, this_lab));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, Z_READY, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) Z_READY, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
 						if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LABADDR) {
 							add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_LABEL, constmap_regconst (ts->stack->old_a_reg)));
 						} else {
@@ -5546,9 +5546,9 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 
 		if (options.debug_options & DEBUG_RANGESTOP) {
 			x = (0xfb00 << 16) + (ts->line_pending & 0xffff);
-			add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_CONST, x));
+			add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_CONST, (intptr_t) x));
 			x = ((ts->file_pending & 0xffff) << 16) + (ts->proc_pending & 0xffff);
-			add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_CONST, x));
+			add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_CONST, (intptr_t) x));
 			add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_LABEL | ARG_ISCONST, ts->filename_label));
 			add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_LABEL | ARG_ISCONST, ts->procedure_label));
 			ts->stack_drift += 4;
@@ -5595,9 +5595,9 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			fprintf (stderr, "%s: warning: not translatable %d\n", progname, sec);
 		} else if (options.kernel_interface & (KRNLIFACE_NEWCCSP | KRNLIFACE_RMOX)) {
 			/* Bptr is now in REG_BPTR */
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NZ, ARG_FLABEL, 0));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 0, ARG_REG, ts->stack->old_a_reg));
 			add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_BPTR));
 		} else if ((options.inline_options & INLINE_SCHEDULER) && arch->compose_inline_stlx) {
@@ -5613,9 +5613,9 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			fprintf (stderr, "%s: warning: not translatable %d\n", progname, sec);
 		} else if (options.kernel_interface & (KRNLIFACE_NEWCCSP | KRNLIFACE_RMOX)) {
 			/* Fptr is now in REG_FPTR */
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NZ, ARG_FLABEL, 0));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 0, ARG_REG, ts->stack->old_a_reg));
 			add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_FPTR));
 		} else if ((options.inline_options & INLINE_SCHEDULER) && arch->compose_inline_stlx) {
@@ -5662,7 +5662,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		if (options.kernel_interface & KRNLIFACE_MP) {
 			arch->compose_kcall (ts, K_ALT, 0, 0);
 		} else {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, Z_ENABLING, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) Z_ENABLING, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
 		}
 		break;
 		/*}}}*/
@@ -5700,14 +5700,14 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		if (options.kernel_interface & KRNLIFACE_MP) {
 			arch->compose_kcall (ts, K_TALT, 0, 0);
 		} else {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, Z_ENABLING, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, Z_TIMENOTSET, ARG_REGIND | ARG_DISP, REG_WPTR, W_TLINK));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) Z_ENABLING, ARG_REGIND | ARG_DISP, REG_WPTR, W_STATUS));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) Z_TIMENOTSET, ARG_REGIND | ARG_DISP, REG_WPTR, W_TLINK));
 		}
 		break;
 		/*}}}*/
 		/*{{{  I_LDINF -- load infinity*/
 	case I_LDINF:
-		tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, CONST_INFINITY, ARG_REG, ts->stack->a_reg);
+		tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) CONST_INFINITY, ARG_REG, ts->stack->a_reg);
 		constmap_new (ts->stack->a_reg, VALUE_CONST, (signed int)CONST_INFINITY, tmp_ins);
 		add_to_ins_chain (tmp_ins);
 		break;
@@ -5730,9 +5730,9 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 	case I_FMUL:
 		if (options.debug_options & DEBUG_OVERFLOW) {
 			this_lab = ++(ts->last_lab);
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NE, ARG_LABEL, this_lab));
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) (WSH == 3) ? (intptr_t)0x8000000000000000ULL : (intptr_t)0x80000000, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NE, ARG_LABEL, this_lab));
 			arch->compose_overflow_jumpcode (ts, PMOP_FMUL);
 			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
@@ -5850,7 +5850,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		if (1) {
 			/* CGR FIXME: I'm pretty sure this is wrong, will fix when I have code
 			 * that generates these instructions */
-			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, WShift, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) WShift, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REGIND, ts->stack->old_b_reg));
 			tstack_undefine (ts->stack);
@@ -6035,9 +6035,9 @@ static void generate_constmapped_21instr (tstate *ts, int etc_instr, int instr, 
 		break;
 	case VALUE_CONST:
 		if (usecc) {
-			add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_CONST, constmap_regconst (src_reg1), ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_CONST, (intptr_t) constmap_regconst (src_reg1), ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
 		} else {
-			add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 1, ARG_CONST, constmap_regconst (src_reg1), ARG_REG, src_reg2, ARG_REG, dst_reg));
+			add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (src_reg1), ARG_REG, src_reg2, ARG_REG, dst_reg));
 		}
 		break;
 	case VALUE_LOCAL:
@@ -6154,7 +6154,7 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 				break;
 			case VALUE_CONST:
 				/* invert comparison */
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_a_reg), ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_a_reg), ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_B, ARG_LABEL, thislab));
 				break;
 			case VALUE_LOCAL:
@@ -6167,7 +6167,7 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 			switch (constmap_typeof (ts->stack->old_a_reg)) {
 			case VALUE_CONST:
 				/* invert comparison */
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_a_reg),
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_a_reg),
 					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_B, ARG_LABEL, thislab));
 				break;
@@ -6180,11 +6180,11 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 		case VALUE_CONST:
 			switch (constmap_typeof (ts->stack->old_a_reg)) {
 			default:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, thislab));
 				break;
 			case VALUE_LOCAL:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_b_reg),
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_b_reg),
 					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, thislab));
 				break;

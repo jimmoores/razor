@@ -2128,6 +2128,16 @@ PUBLIC constformat_t constformat_of_const (const int type, const INT32 lo, const
 		: T9000_instruction_timings ? CONST_MAX_BYTES_T9000	/* bug 1371 15/8/91 */
 		: CONST_MAX_BYTES;
 
+	if (bytesperword == 8 && (type == S_INT64 || type == S_UINT64 || type == S_REAL64)) {
+		/* On 64-bit targets, 64-bit types are single words (not double length),
+		 * but the LDC instruction operand is only 32 bits (and gets sign-extended).
+		 * If the 64-bit constant cannot be represented by a 32-bit sign-extended value,
+		 * we MUST put it in the constant table. */
+		if (hi != ((lo & 0x80000000) ? -1 : 0)) {
+			return constformat_table;
+		}
+	}
+
 	if (istargetintsize (type)) {
 		if (targetintsize == S_INT32) {
 			if ((lo <= LDNLPNEG_INT32) && ((lo & (bytesperword - 1)) == 0)
@@ -2162,11 +2172,23 @@ PUBLIC constformat_t constformat_of_const (const int type, const INT32 lo, const
 			return constformat_table;
 		}
 	} else if (isdoublelength (type)) {
-		if (((lo != MOSTNEG_INT32) && (ilength (lo) > const_max_bytes))
-				|| ((bytesperword > 2) &&	/* added 16/7/91 for bug 1195 - CON */
-				(hi != MOSTNEG_INT32) && (ilength (hi) > const_max_bytes))) {
-			return constformat_table;
-		}
+	        if (((lo != MOSTNEG_INT32) && (ilength (lo) > const_max_bytes))
+	                        || ((bytesperword > 2) &&       /* added 16/7/91 for bug 1195 - CON */
+	                        (hi != MOSTNEG_INT32) && (ilength (hi) > const_max_bytes))) {
+	                return constformat_table;
+	        }
+	} else if (bytesperword == 8 && (type == S_INT64 || type == S_UINT64 || type == S_REAL64)) {
+	        /* On 64-bit targets, 64-bit types are single words (not double length),
+	         * but the LDC instruction operand is only 32 bits (and gets sign-extended).
+	         * If the 64-bit constant cannot be represented by a 32-bit sign-extended value,
+	         * we MUST put it in the constant table. */
+	        if (hi != ((lo & 0x80000000) ? -1 : 0)) {
+	                return constformat_table;
+	        }
+	        /* Even if it fits in 32 bits, if it takes too many instruction bytes to build, put it in the table */
+	        if (ilength (lo) > const_max_bytes) {
+	                return constformat_table;
+	        }
 	}
 
 	return constformat_ldc;

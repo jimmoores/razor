@@ -4254,8 +4254,10 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 
 					if (is_const1) {
 						long val = (long)ins->in_args[1]->regconst;
-						if (val >= 0 && val <= 4095 && strcmp(op0_reg, "x17") != 0) {
-							/* Small immediate: use 32-bit cmp for INT semantics */
+						if (val == 0) {
+							fprintf (stream, "\tcmp\t%s, #0\n", op0_reg);
+							break;
+						} else if (val > 0 && val <= 4095 && strcmp(op0_reg, "x17") != 0) {
 							char w0[8];
 							if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
 							else snprintf(w0, sizeof(w0), "%s", op0_reg);
@@ -4279,12 +4281,16 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 
-					/* When a constant is involved, use 32-bit w-register
-					 * comparison for INT32 compatibility (upper bits may
-					 * be stale).  For reg-reg comparisons, use 64-bit
-					 * x-registers because some checks (like CWORD) rely
-					 * on sign-extension behavior in the upper bits. */
-					if (is_const0 || is_const1) {
+					/* When a constant is involved, normally we'd use 32-bit w-register
+					 * comparison for INT32 compatibility. But since we now zero-extend
+					 * I_EQC constants, and INT32 variables are already zero-extended,
+					 * we can safely use 64-bit x-registers everywhere.
+					 * WAIT! INT16 variables are SIGN-extended! So I_EQC constants for INT16
+					 * will not match! We MUST use w-registers for non-zero constants to
+					 * ignore the upper 32-bits so INT16 and INT32 match.
+					 * But for 0, 64-bit comparison is always safe and required for INT64. */
+					if ((is_const0 && (long)ins->in_args[0]->regconst != 0) || 
+					    (is_const1 && (long)ins->in_args[1]->regconst != 0)) {
 						char w0[8], w1[8];
 						if (op0_reg[0] == 'x') snprintf(w0, sizeof(w0), "w%s", op0_reg + 1);
 						else snprintf(w0, sizeof(w0), "%s", op0_reg);

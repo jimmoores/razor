@@ -1691,6 +1691,8 @@ ins_chain *compose_ins_ex (int etc_ins, int ins, int ops_in, int ops_out, ...)
 			tmp_ins->in_args[i_in]->flags = flag;
 			switch (flag & ARG_MODEMASK) {
 			case ARG_CONST:
+			        tmp_ins->in_args[i_in]->regconst = va_arg (ap, intptr_t);
+			        break;
 			case ARG_REG:
 			case ARG_REGIND:
 			case ARG_COND:
@@ -1698,9 +1700,8 @@ ins_chain *compose_ins_ex (int etc_ins, int ins, int ops_in, int ops_out, ...)
 			case ARG_FREG:
 			case ARG_FLABEL:
 			case ARG_BLABEL:
-				tmp_ins->in_args[i_in]->regconst = va_arg (ap, int);
-				break;
-			case ARG_NAMEDLABEL:
+			        tmp_ins->in_args[i_in]->regconst = va_arg (ap, int);
+			        break;			case ARG_NAMEDLABEL:
 			case ARG_TEXT:
 				tmp_ins->in_args[i_in]->regconst = (intptr_t)va_arg (ap, char *);
 				break;
@@ -1801,6 +1802,8 @@ ins_arg *compose_ins_arg (int argtype, ...)
 		va_start (ap, argtype);
 		switch (flag & ARG_MODEMASK) {
 		case ARG_CONST:
+			tmp_arg->regconst = va_arg (ap, intptr_t);
+			break;
 		case ARG_REG:
 		case ARG_REGIND:
 		case ARG_COND:
