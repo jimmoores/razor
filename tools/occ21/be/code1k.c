@@ -761,7 +761,7 @@ static int tsdiff_sec_twocodes[] = { \
 	0, 0, 0, 16,    /* 248: mb, rmb, wmb, ext_mt_in */
 	16, -2,         /* 24c: ext_mt_out, mt_resize */
 	16, 16, 16, 16, /* 24e: (unused) */
-	0, 0            /* 252: lw, sw (sw diff=0 not -2; using 0 preserves existing behavior for code that was accidentally working with the out-of-bounds read) */
+	0, -2           /* 252: lw, sw */
 };
 /*}}}*/
 PRIVATE char tstack[4];
