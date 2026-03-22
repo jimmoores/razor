@@ -1198,7 +1198,7 @@ fprintf (stderr, "mapinstance: found SIZE'd dynamic mobile array in parameters.\
 			}
 			/*}}} */
 			/*{{{  evaluate non-register parameters containing function calls to param slots */
-			for (i = nparams - 1; i >= MAXREGS; i--) {
+			for (i = MAXREGS; i < nparams; i++) {
 				paraminfo_t *const paraminfoptr = &(paramtable[i]);
 				if (paraminfoptr->pnestedfunctions) {
 					const int next_slot = i + 1 - MAXREGS;	/* bug 1064 6/12/90 */
@@ -1227,7 +1227,7 @@ fprintf (stderr, "mapinstance: found SIZE'd dynamic mobile array in parameters.\
 			/* Inside an ALT guard, all parameters are stored below normal workspace */
 			/*}}} */
 			/*{{{  evaluate all non-register parameters to parameter slots */
-			for (i = nparams - 1; i >= MAXREGS; i--) {
+			for (i = MAXREGS; i < nparams; i++) {
 				paraminfo_t *const paraminfoptr = &(paramtable[i]);
 				if (paraminfoptr->pmode == P_TEMP) {
 					/*  Move any parameters evaluated to temporaries to their real slot */
@@ -1334,12 +1334,15 @@ PRIVATE void tparamexpopd (const int opdmode, treenode * const opd, const BOOL c
 {
 	gencomment0 ("{{{  parameter");
 	if (has_fpu_core && opdmode == P_EXP && isreal (ntypeof (opd))
-			&& !isaddressable (opd)) {	/* bug TS/1196 15/12/92 - take this out; go via the integer stack */
+	                && !isaddressable (opd)) {      /* bug TS/1196 15/12/92 - take this out; go via the integer stack */
 
-		tfpexp (opd, MANY_REGS, MANY_REGS);
-		genprimary (I_LDLP, paramslot);
-		gensecondary (I_FPSTNLSN);
-	} else {
+	        tfpexp (opd, MANY_REGS, MANY_REGS);
+	        genprimary (I_LDLP, paramslot);
+	        if (ntypeof (opd) == S_REAL64) {
+	                gensecondary (I_FPSTNLDB);
+	        } else {
+	                gensecondary (I_FPSTNLSN);
+	        }	} else {
 		if (!copy || ((TagOf (opd) == T_PREEVALTEMP) && (TagOf (NDeclOf (opd)) == S_HIDDEN_PARAM))) {
 			texpopd_main (opdmode, opd, MANY_REGS, FALSE);
 			genprimary (I_STL, paramslot);
@@ -2265,145 +2268,157 @@ printtreenl (stderr, 4, *(paramtable[i].pparamexp));
 	}
 	/* modified 6/12/90 to ensure that these are done in the same order as
 	   they were done while mapping - bug 1064 6/12/90 */
-	for (i = nparams - 1; i >= MAXREGS; i--) {	/* non register params */
+	for (i = MAXREGS; i < nparams; i++) {	/* non register params */
 		tpreevaltemp (&(paramtable[i]), &(paramtable[i - 1]));
 	}
 	/*}}} */
 	/*{{{  evaluate non-register parameters containing function calls to param slots */
 	for (pass = 0; pass < 4; pass++) {
-		for (i = nparams - 1; i >= 0; i--) {
-			paraminfo_t *const paraminfoptr = &(paramtable[i]);
-			int slot;
+		if (pass == 2) {
+			for (i = 0; i < nparams; i++) {
+				paraminfo_t *const paraminfoptr = &(paramtable[i]);
+				int slot;
 
-			/*{{{  calculate or load slot*/
-			if (pass == 0) {
-				slot = i - ((nparams > REG_PARAMS) ? nparams : REG_PARAMS);
-
-				if (ptype & PROC_FORKED) {
-					/* slot = ((1 - MIN_FORK_SLOTS) - nparams) + i; */
-					slot += (alloc_ws_slots - MIN_FORK_SLOTS);
-				} else if (ptype & PROC_DYNCALL) {
-					slot += (1 - MIN_DYNCALL_SLOTS);
-				} else if (ptype & PROC_REC) {
-					slot += (1 - MIN_RECURSIVE_SLOTS);
-				} else if (ptype & PROC_MPA) {
-					slot += (1 - MIN_MPA_SLOTS);
-				} else {
-					slot = i - REG_PARAMS;
-				}
-
-				switch (TagOf (*(paraminfoptr->pparamexp))) {
-					case S_PARAM_VSP: 
-						vsp_param_slot = slot; 
-						break;
-					case S_PARAM_MSP: 
-						msp_param_slot = slot; 
-						break;
-					case S_PARAM_FB:
-						fb_param_slot = slot;
-						break;
-					default: 
-						if (paraminfoptr->forkbarrier) {
-							fb_param_slot = slot;
-						}
-						break;
-				}
-
-				paraminfoptr->pslot = slot;
-			} else {
+				/*{{{  calculate or load slot*/
 				slot = paraminfoptr->pslot;
-			}
-			/*}}}*/
+				/*}}}*/
 
-			if ((ptype == PROC_NONE) && (i < REG_PARAMS)) {
-				continue;
-			}
-			
-			if ((pass == 1) && !paraminfoptr->pevaluated && paraminfoptr->pnestedfunctions) {
-				DEBUG_MSG (("tinstance: doing param %d (nestedfunctions)\n", i));
-				if (ptype != PROC_NONE) {
-					trecparamexpopd (
-						paraminfoptr->pmode, 
-						*(paraminfoptr->pparamexp),
-						paraminfoptr->pclone,
-						slot, 
-						ptype, 
-						paraminfoptr->pformaltype, 
-						paraminfoptr->pvalparam,
-						paraminfoptr->need_deref
-					);
-				} else {
-					tparamexpopd (
-						paraminfoptr->pmode,
-						*(paraminfoptr->pparamexp),
-						paraminfoptr->pclone,
-						slot
-					);
+				if ((ptype == PROC_NONE) && (i < REG_PARAMS)) {
+					continue;
 				}
-				paraminfoptr->pevaluated = TRUE;
-			} else if ((pass == 2) && (!paraminfoptr->pevaluated || (paraminfoptr->pmode == P_TEMP))) {
-				treenode *exp = *(paraminfoptr->pparamexp);
+				
+				if ((!paraminfoptr->pevaluated || (paraminfoptr->pmode == P_TEMP))) {
+					treenode *exp = *(paraminfoptr->pparamexp);
 
-				DEBUG_MSG (("tinstance: doing param %d\n", i));
-#if 0
-fprintf (stderr, "tinstance: evaluating non-register param %d, exp = ", i);
-printtreenl (stderr, 4, exp);
-gencomment1 ("gen non-register param %d..", i);
-#endif
-				paraminfoptr->pmode = simplify (paraminfoptr->pmode, exp);	/* bug 1000 3/10/90 */
-				if (ptype != PROC_NONE) {
-					trecparamexpopd (
-						paraminfoptr->pmode,
-						exp,
-						paraminfoptr->pclone,
-						slot,
-						ptype,
-						paraminfoptr->pformaltype,
-						paraminfoptr->pvalparam,
-						paraminfoptr->need_deref
-					);
-				} else {
-					tparamexpopd (
-						paraminfoptr->pmode, 
-						exp,
-						paraminfoptr->pclone, 
-						slot
-					);
-				}
-				paraminfoptr->pevaluated = TRUE;
-			} else if ((pass == 3) && (ptype & PROC_FORKED)) {
-				treenode *exp = *(paraminfoptr->pparamexp);
-				BOOL cloned = paraminfoptr->pclone;
-				#ifdef MOBILES
-				/*{{{  if we're passing a MOBILE as a parameter to a FORKed thing, clear the local reference (dynamic MOBILEs)*/
-				if (isdynmobilechantype (exp) && !cloned) {
-					gencleardynchantype (exp);
-					mparam_offsets[i] = slot;
-				} else if (isdynmobilechantype (exp)) {
-					/* stays local, cleaned up through pclone_list */
-					mparam_offsets[i] = slot;
-				} else if (isdynmobilebarrier (exp)) {
-					/* process has already been enrolled on the barrier -- just remember it here */
-					mparam_offsets[i] = slot;
-				} else if (isdynmobileproctype (exp) && !cloned) {
-					gencleardynproctype (exp);
-					mparam_offsets[i] = slot;
-				} else if (isdynmobilearray (exp) && isdynmobilearraytype (paraminfoptr->pformaltype)) {
-					/* Check for cloning in the next parameter, 
-					 * the hidden real pointer to the array.
-					 */
-					if (!paramtable[i+1].pclone) {
-						gencleardynarray (exp, FALSE);
-						mparam_offsets[i] = slot;
+					DEBUG_MSG (("tinstance: doing param %d\n", i));
+					paraminfoptr->pmode = simplify (paraminfoptr->pmode, exp);	/* bug 1000 3/10/90 */
+					if (ptype != PROC_NONE) {
+						trecparamexpopd (
+							paraminfoptr->pmode,
+							exp,
+							paraminfoptr->pclone,
+							slot,
+							ptype,
+							paraminfoptr->pformaltype,
+							paraminfoptr->pvalparam,
+							paraminfoptr->need_deref
+						);
+					} else {
+						tparamexpopd (
+							paraminfoptr->pmode, 
+							exp,
+							paraminfoptr->pclone, 
+							slot
+						);
 					}
-				} else if (isdynmobilearray (exp)) {
-					/* skip */
-				} else if (ismobile (exp)) {
-					/* CGR FIXME: xxx */
-					generr (GEN_NO_FMPARAM);
+					paraminfoptr->pevaluated = TRUE;
+				}
+			}
+		} else {
+			for (i = nparams - 1; i >= 0; i--) {
+				paraminfo_t *const paraminfoptr = &(paramtable[i]);
+				int slot;
+
+				/*{{{  calculate or load slot*/
+				if (pass == 0) {
+					slot = i - ((nparams > REG_PARAMS) ? nparams : REG_PARAMS);
+
+					if (ptype & PROC_FORKED) {
+						/* slot = ((1 - MIN_FORK_SLOTS) - nparams) + i; */
+						slot += (alloc_ws_slots - MIN_FORK_SLOTS);
+					} else if (ptype & PROC_DYNCALL) {
+						slot += (1 - MIN_DYNCALL_SLOTS);
+					} else if (ptype & PROC_REC) {
+						slot += (1 - MIN_RECURSIVE_SLOTS);
+					} else if (ptype & PROC_MPA) {
+						slot += (1 - MIN_MPA_SLOTS);
+					} else {
+						slot = i - REG_PARAMS;
+					}
+
+					switch (TagOf (*(paraminfoptr->pparamexp))) {
+						case S_PARAM_VSP: 
+							vsp_param_slot = slot; 
+							break;
+						case S_PARAM_MSP: 
+							msp_param_slot = slot; 
+							break;
+						case S_PARAM_FB:
+							fb_param_slot = slot;
+							break;
+						default: 
+							if (paraminfoptr->forkbarrier) {
+								fb_param_slot = slot;
+							}
+							break;
+					}
+
+					paraminfoptr->pslot = slot;
+				} else {
+					slot = paraminfoptr->pslot;
 				}
 				/*}}}*/
-				#endif
+
+				if ((ptype == PROC_NONE) && (i < REG_PARAMS)) {
+					continue;
+				}
+				
+				if ((pass == 1) && !paraminfoptr->pevaluated && paraminfoptr->pnestedfunctions) {
+					DEBUG_MSG (("tinstance: doing param %d (nestedfunctions)\n", i));
+					if (ptype != PROC_NONE) {
+						trecparamexpopd (
+							paraminfoptr->pmode, 
+							*(paraminfoptr->pparamexp),
+							paraminfoptr->pclone,
+							slot, 
+							ptype, 
+							paraminfoptr->pformaltype, 
+							paraminfoptr->pvalparam,
+							paraminfoptr->need_deref
+						);
+					} else {
+						tparamexpopd (
+							paraminfoptr->pmode,
+							*(paraminfoptr->pparamexp),
+							paraminfoptr->pclone,
+							slot
+						);
+					}
+					paraminfoptr->pevaluated = TRUE;
+				} else if ((pass == 3) && (ptype & PROC_FORKED)) {
+					treenode *exp = *(paraminfoptr->pparamexp);
+					BOOL cloned = paraminfoptr->pclone;
+					#ifdef MOBILES
+					/*{{{  if we're passing a MOBILE as a parameter to a FORKed thing, clear the local reference (dynamic MOBILEs)*/
+					if (isdynmobilechantype (exp) && !cloned) {
+						gencleardynchantype (exp);
+						mparam_offsets[i] = slot;
+					} else if (isdynmobilechantype (exp)) {
+						/* stays local, cleaned up through pclone_list */
+						mparam_offsets[i] = slot;
+					} else if (isdynmobilebarrier (exp)) {
+						/* process has already been enrolled on the barrier -- just remember it here */
+						mparam_offsets[i] = slot;
+					} else if (isdynmobileproctype (exp) && !cloned) {
+						gencleardynproctype (exp);
+						mparam_offsets[i] = slot;
+					} else if (isdynmobilearray (exp) && isdynmobilearraytype (paraminfoptr->pformaltype)) {
+						/* Check for cloning in the next parameter, 
+						 * the hidden real pointer to the array.
+						 */
+						if (!paramtable[i+1].pclone) {
+							gencleardynarray (exp, FALSE);
+							mparam_offsets[i] = slot;
+						}
+					} else if (isdynmobilearray (exp)) {
+						/* skip */
+					} else if (ismobile (exp)) {
+						/* CGR FIXME: xxx */
+						generr (GEN_NO_FMPARAM);
+					}
+					/*}}}*/
+					#endif
+				}
 			}
 		}
 	}

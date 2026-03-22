@@ -318,12 +318,11 @@ rtl_chain *etc_to_rtl (etc_chain *etc_code, arch_t *arch)
 	arch->compose_reset_fregs (ts);
 
 	while (etc_code /* && !ts->end_of_module */) {
-		ins_chain **savedheadptr = ptr_add_to_ins_chain ();
+	        ins_chain **savedheadptr = ptr_add_to_ins_chain ();
 
-		x_fn = etc_code->fn;
-		x_opd = etc_code->opd;
-		if (x_fn < I_OPR) {
-			/*{{{  primary instruction*/
+	        x_fn = etc_code->fn;
+	        x_opd = etc_code->opd;
+	        if (x_fn < I_OPR) {			/*{{{  primary instruction*/
 			if (options.annotate_output) {
 				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_of_primary (ts->stack, x_fn, x_opd)));
 			}
@@ -1280,16 +1279,16 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					/*}}}*/
 					/*{{{  REALRESULT*/
 				case REALRESULT:
-					glob_in_icount++;
-					if (options.annotate_output) {
-						sprintf (sbuffer, ".REALRESULT %d [tsd=%d,%d]", y_opd, ts->stack->old_ts_depth, ts->stack->old_fs_depth);
-						add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
-					}
-					/* suppresion of reset_fregs means fix depth */
-					// ts->stack->fs_depth = y_opd;
-					ts->stack->fs_depth = 1;
-					break;
-					/*}}}*/
+				        glob_in_icount++;
+				        if (options.annotate_output) {
+				                sprintf (sbuffer, ".REALRESULT %d [tsd=%d,%d]", y_opd, ts->stack->old_ts_depth, ts->stack->old_fs_depth);
+				                add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuffer)));
+				        }
+				        /* suppresion of reset_fregs means fix depth */
+				        // ts->stack->fs_depth = y_opd;
+				        ts->stack->fpu_mode = y_opd; /* save precision for backend */
+				        ts->stack->fs_depth = 1;
+				        break;					/*}}}*/
 					/*{{{  SRLIMM*/
 				case SRLIMM:
 					glob_in_icount++;
@@ -1510,12 +1509,14 @@ fprintf (stderr, "setting ts->ws_size = %d\n", y_opd);
 					add_to_rtl_chain (trtl);
 				}
 				/* not needed anymore -- caller puts return address in for us */
-					/* pop return address into Wptr[0] */
-					/* add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REGIND, REG_WPTR)); */
+				        /* pop return address into Wptr[0] */
+				        /* add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REGIND, REG_WPTR)); */
 				/* reset FPU */
 				arch->compose_reset_fregs (ts);
-				ts->supress_debug_insert = 0;
-				
+				tstack_fpclear (ts->stack, arch);
+				ts->stack->fs_depth = 0;
+				ts->stack->ts_depth = 0;
+				ts->supress_debug_insert = 0;				
 				/* mark as processing this PROC */
 				{
 					procinf *pitmp = procinf_findbyname (etc_code->o_bytes, etc_code->o_len);

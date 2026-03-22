@@ -218,6 +218,7 @@ static int aarch64_code_to_asm (rtl_chain *rtl_code, char *filename);
 static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream);
 static char *aarch64_get_register_name (int reg);
 /* Helper function declarations */
+static void aarch64_fp_push(int prec);
 static const char *aarch64_get_label_prefix(int flags);
 static void aarch64_emit_symbol_addr (FILE *stream, const char *dst_reg, const char *symbol);
 static int aarch64_sets_flags (ins_chain *ins);
@@ -258,10 +259,13 @@ static void compose_iospace_write_aarch64 (tstate *ts, int portreg, int addrreg,
 
 /* Stub functions for missing architecture functions */
 static void aarch64_compose_reset_fregs (tstate *ts) {
-	/* Initialize aarch64 floating point unit */
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// aarch64 FPU reset")));
+        /* Initialize aarch64 floating point unit */
+        add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// aarch64 FPU reset")));
+        aarch64_fp_stack_depth = 0;
+        aarch64_fp_stack_prec[0] = 0;
+        aarch64_fp_stack_prec[1] = 0;
+        aarch64_fp_stack_prec[2] = 0;
 }
-
 /*{{{  static void compose_pre_enbc_aarch64 (tstate *ts)*/
 /*
  * areg has process address/label, breg has the guard, creg has the channel
@@ -2191,14 +2195,25 @@ static int compose_aarch64_widenword (tstate *ts)
 /*{{{  static void compose_aarch64_longop (tstate *ts, int secondary_opcode)*/
 static void compose_aarch64_longop (tstate *ts, int secondary_opcode)
 {
-	/* CRITICAL FIX: Validate stack state before operations */
-	if (!ts || !ts->stack) {
-		fprintf (stderr, "aarch64_longop: invalid tstate or stack\n");
-		return;
-	}
-	
-	/* Ensure we have valid registers */
-	if (ts->stack->old_a_reg == REG_UNDEFINED || ts->stack->old_a_reg == (int)0x80000000) {
+        /* CRITICAL FIX: Validate stack state before operations */
+        if (!ts || !ts->stack) {
+                fprintf (stderr, "aarch64_longop: invalid tstate or stack\n");
+                return;
+        }
+
+        /* Sync the architecture-specific FP stack depth with the generic tracker.
+         * This handles cases like .REALRESULT where the generic tracker is updated
+         * but the architecture backend is not explicitly told to push. */
+        if (aarch64_fp_stack_depth > ts->stack->fs_depth) {
+                aarch64_fp_stack_depth = ts->stack->fs_depth;
+        }
+        if (aarch64_fp_stack_depth < ts->stack->fs_depth) {
+                while (aarch64_fp_stack_depth < ts->stack->fs_depth) {
+                        aarch64_fp_push(ts->stack->fpu_mode == 2 ? 64 : 32);
+                }
+        }
+
+        /* Ensure we have valid registers */	if (ts->stack->old_a_reg == REG_UNDEFINED || ts->stack->old_a_reg == (int)0x80000000) {
 		ts->stack->old_a_reg = tstack_newreg (ts->stack);
 	}
 	if (ts->stack->old_b_reg == REG_UNDEFINED || ts->stack->old_b_reg == (int)0x80000000) {
@@ -2512,14 +2527,25 @@ static void aarch64_fp_emit_load_from_wptr (tstate *ts, int offset, int slot, in
 
 static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 {
-	/* Validate stack state before FP operations */
-	if (!ts || !ts->stack) {
-		fprintf (stderr, "aarch64_fpop: invalid tstate or stack\n");
-		return;
-	}
+        /* Validate stack state before FP operations */
+        if (!ts || !ts->stack) {
+                fprintf (stderr, "aarch64_fpop: invalid tstate or stack\n");
+                return;
+        }
 
-	switch (secondary_opcode) {
-	case I_FPADD:  /* 0x87 - FP addition: FA = FB + FA, pop one */
+        /* Sync the architecture-specific FP stack depth with the generic tracker.
+         * This handles cases like .REALRESULT where the generic tracker is updated
+         * but the architecture backend is not explicitly told to push. */
+        if (aarch64_fp_stack_depth > ts->stack->fs_depth) {
+                aarch64_fp_stack_depth = ts->stack->fs_depth;
+        }
+        if (aarch64_fp_stack_depth < ts->stack->fs_depth) {
+                while (aarch64_fp_stack_depth < ts->stack->fs_depth) {
+                        aarch64_fp_push(ts->stack->fpu_mode == 2 ? 64 : 32);
+                }
+        }
+
+        switch (secondary_opcode) {	case I_FPADD:  /* 0x87 - FP addition: FA = FB + FA, pop one */
 		/* Operates entirely on the hardware FP stack (s0/d0, s1/d1).
 		 * No integer registers involved. */
 		if (aarch64_fp_stack_depth >= 2) {
@@ -2847,11 +2873,10 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		}
 		break;
 	case I_FPSTNLSN:  /* 0x88 - Store REAL32 from FA to memory */
-		/* Store s0 (REAL32 bits) to [old_a_reg].
-		 * Use INS_FIST64 with precision=132 to signal "store REAL32 bits".
-		 * The asm handler will emit: fmov w17, s0; str w17, [addr] */
-		if (aarch64_fp_stack_depth >= 1) {
-			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+	        /* Store s0 (REAL32 bits) to [old_a_reg].
+	         * Use INS_FIST64 with precision=132 to signal "store REAL32 bits".
+	         * The asm handler will emit: fmov w17, s0; str w17, [addr] */
+	        if (aarch64_fp_stack_depth >= 1) {			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)132,
 					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
@@ -3026,10 +3051,17 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 				/* FPORDERED: VC (no overflow = ordered) */
 				add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_NO, ARG_REG, result_reg));
 			}
+			aarch64_fp_pop();
+			aarch64_fp_pop();
 			ts->stack->a_reg = result_reg;
 			ts->stack->ts_depth = 1;
 			ts->stack->must_set_cmp_flags = 1;
 			constmap_clearall ();
+			if (ts->stack->fs_depth > 1) {
+				ts->stack->fs_depth -= 2;
+			} else {
+				ts->stack->fs_depth = 0;
+			}
 		}
 		break;
 	case I_FPREM:  /* 0xcf - FP remainder: result = FB REM FA, pop one */
@@ -4704,37 +4736,37 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 
 						if (prec == 164) {
-							/* Store REAL64 bits: fmov x17, d0 */
-							fprintf (stream, "\tfmov\tx17, d0\n");
-							store_reg = "x17";
+						        /* Store REAL64 bits: fmov x17, d0 */
+						        fprintf (stream, "\tfmov\tx17, d0\n");
+						        store_reg = "x17";
 						} else if (prec == 132) {
-							/* Store REAL32 bits: fmov w17, s0.
-							 * Use x17 (64-bit) for the store so subsequent
-							 * 64-bit loads get zero-extended values. */
-							fprintf (stream, "\tfmov\tw17, s0\n");
-							store_reg = "x17";
+						        /* Store REAL32 bits: fmov w17, s0. */
+						        fprintf (stream, "\tfmov\tw17, s0\n");
+						        if (ins->out_args[0]->flags & ARG_DISP) {
+						                store_reg = "x17";
+						        } else {
+						                store_reg = "w17";
+						        }
 						} else {
-							/* Convert REAL32/REAL64 to INT32.
-							 * Decode rounding mode from high bits:
-							 *   low 8 bits = float precision (32 or 64)
-							 *   bits 8-15 = rounding mode
-							 * Select fcvt instruction accordingly. */
-							int fp_prec = prec & 0xFF;
-							int rmode = (prec >> 8) & 0xFF;
-							const char *fp_src = (fp_prec == 64) ? "d0" : "s0";
-							const char *cvt_insn;
-							switch (rmode) {
-								case 3: cvt_insn = "fcvtzs"; break; /* round toward zero */
-								case 1: cvt_insn = "fcvtps"; break; /* round up */
-								case 2: cvt_insn = "fcvtms"; break; /* round down */
-								default: cvt_insn = "fcvtns"; break; /* round to nearest */
-							}
-							fprintf (stream, "\t%s\tw17, %s\n", cvt_insn, fp_src);
-							fprintf (stream, "\tsxtw\tx17, w17\n");
-							store_reg = "x17";
-						}
-
-						if (mode == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
+						        /* Convert REAL32/REAL64 to INT32. */
+						        int fp_prec = prec & 0xFF;
+						        int rmode = (prec >> 8) & 0xFF;
+						        const char *fp_src = (fp_prec == 64) ? "d0" : "s0";
+						        const char *cvt_insn;
+						        switch (rmode) {
+						                case 3: cvt_insn = "fcvtzs"; break; /* round toward zero */
+						                case 1: cvt_insn = "fcvtps"; break; /* round up */
+						                case 2: cvt_insn = "fcvtms"; break; /* round down */
+						                default: cvt_insn = "fcvtns"; break; /* round to nearest */
+						        }
+						        fprintf (stream, "\t%s\tw17, %s\n", cvt_insn, fp_src);
+						        if (ins->out_args[0]->flags & ARG_DISP) {
+						                fprintf (stream, "\tsxtw\tx17, w17\n");
+						                store_reg = "x17";
+						        } else {
+						                store_reg = "w17";
+						        }
+						}						if (mode == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
 							aarch64_emit_mem_op (stream, store_op, store_reg,
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								(long)ins->out_args[0]->disp);
