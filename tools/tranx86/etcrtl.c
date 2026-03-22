@@ -6107,6 +6107,38 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 			}
 		}
 	} else {
+#if (BytesPerWord > 4)
+		/* On 64-bit with 32-bit INT, workspace slots may contain
+		 * stale upper 32 bits from prior pointer storage or sub-word
+		 * channel I/O (I_IN8 writes 1 byte, I_IN32 writes 4 bytes
+		 * into 8-byte slots).  CSUB0 is an unsigned range check on
+		 * INT values, so we must zero-extend all operands to 64 bits
+		 * before comparison.
+		 *
+		 * For VALUE_LOCAL operands (workspace-resident), load them
+		 * into their register and truncate to 32 bits.  This converts
+		 * them to regular register values so the default reg-reg CMP
+		 * path handles them.  For register operands, just truncate
+		 * in place.  Constants don't need truncation. */
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCAL) {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH,
+				ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			constmap_remove (ts->stack->old_a_reg);
+		} else if (constmap_typeof (ts->stack->old_a_reg) != VALUE_CONST) {
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		}
+		if (constmap_typeof (ts->stack->old_b_reg) == VALUE_LOCAL) {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH,
+				ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			constmap_remove (ts->stack->old_b_reg);
+		} else if (constmap_typeof (ts->stack->old_b_reg) != VALUE_CONST) {
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		}
+#endif
 		/* generate check */
 		switch (constmap_typeof (ts->stack->old_b_reg)) {
 		default:
@@ -6188,6 +6220,16 @@ static void translate_range_check (tstate *ts, int lwb, arch_t *arch, int ecode)
 		fprintf (stderr, "%s: warning: range-check argument not 0/1.  Setting to 0\n", progname);
 		lwb = 0;
 	}
+#if (BytesPerWord > 4)
+	/* On 64-bit with 32-bit INT, zero-extend operands before the
+	 * unsigned comparison.  See translate_csub0 for full explanation.
+	 * Skip for CWORD which intentionally uses 64-bit values
+	 * (MOSTNEG<<1 = 0x100000000). */
+	if (ecode != REOP_CWORD) {
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+	}
+#endif
 	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 	thislab = ++(ts->last_lab);
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, thislab));
