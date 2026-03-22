@@ -2847,14 +2847,19 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		/* On aarch64, FP exceptions are masked by default. No-op. */
 		break;
 	case I_FPSTNLI32:  /* 0x9e - Convert FA to INT32 and store */
-		/* Convert float in s0/d0 to int32, store to [old_a_reg].
+	case I_FPSTNLI64:  /* 0xae - Convert FA to INT64 and store */
+		/* Convert float in s0/d0 to int32/int64, store to [old_a_reg].
 		 * Encode FP precision and rounding mode in the constant arg:
 		 *   low 8 bits = precision (32 or 64)
 		 *   bits 8-15 = rounding mode (0=nearest, 3=truncate)
+		 *   bit 16 = 64-bit destination
 		 * After conversion, reset rounding mode to default (nearest)
 		 * so subsequent ROUND operations work correctly. */
 		if (aarch64_fp_stack_depth >= 1) {
 			int prec = aarch64_fp_stack_prec[0] | (aarch64_fp_rounding_mode << 8);
+			if (secondary_opcode == I_FPSTNLI64) {
+				prec |= (1 << 16);
+			}
 			aarch64_fp_rounding_mode = 0;  /* reset to FPU_N after each conversion */
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
@@ -4780,26 +4785,32 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						                store_reg = "w17";
 						        }
 						} else {
-						        /* Convert REAL32/REAL64 to INT32. */
-						        int fp_prec = prec & 0xFF;
-						        int rmode = (prec >> 8) & 0xFF;
-						        const char *fp_src = (fp_prec == 64) ? "d0" : "s0";
-						        const char *cvt_insn;
-						        switch (rmode) {
-						                case 3: cvt_insn = "fcvtzs"; break; /* round toward zero */
-						                case 1: cvt_insn = "fcvtps"; break; /* round up */
-						                case 2: cvt_insn = "fcvtms"; break; /* round down */
-						                default: cvt_insn = "fcvtns"; break; /* round to nearest */
-						        }
-						        fprintf (stream, "\t%s\tw17, %s\n", cvt_insn, fp_src);
-						        if (ins->out_args[0]->flags & ARG_DISP) {
-						                fprintf (stream, "\tsxtw\tx17, w17\n");
-						                store_reg = "x17";
-						        } else {
-						                store_reg = "w17";
-						        }
-						}						if (mode == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {
-							aarch64_emit_mem_op (stream, store_op, store_reg,
+							/* Convert REAL32/REAL64 to INT32 or INT64. */
+							int fp_prec = prec & 0xFF;
+							int rmode = (prec >> 8) & 0xFF;
+							int is_int64 = (prec & 0x10000) != 0;
+							const char *fp_src = (fp_prec == 64) ? "d0" : "s0";
+							const char *cvt_insn;
+							switch (rmode) {
+								case 3: cvt_insn = "fcvtzs"; break; /* round toward zero */
+								case 1: cvt_insn = "fcvtps"; break; /* round up */
+								case 2: cvt_insn = "fcvtms"; break; /* round down */
+								default: cvt_insn = "fcvtns"; break; /* round to nearest */
+							}
+
+							if (is_int64) {
+								fprintf (stream, "\t%s\tx17, %s\n", cvt_insn, fp_src);
+								store_reg = "x17";
+							} else {
+								fprintf (stream, "\t%s\tw17, %s\n", cvt_insn, fp_src);
+								if (ins->out_args[0]->flags & ARG_DISP) {
+									fprintf (stream, "\tsxtw\tx17, w17\n");
+									store_reg = "x17";
+								} else {
+									store_reg = "w17";
+								}
+							}
+						}						if (mode == ARG_REGIND && (ins->out_args[0]->flags & ARG_DISP)) {							aarch64_emit_mem_op (stream, store_op, store_reg,
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								(long)ins->out_args[0]->disp);
 						} else if (mode == ARG_REGIND) {

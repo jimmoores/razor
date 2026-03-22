@@ -267,6 +267,7 @@
 #define I_FPENTRY     0xAB
 #define I_FPLDNLMULSN 0xAC
 #define I_ENBS3       0xAD
+#define I_FPSTNLI64   0xAE
 
 /*}}}*/
 /*{{{  Bx */

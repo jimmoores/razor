@@ -5784,6 +5784,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 	case I_FPSTNLDB:
 	case I_FPSTNLSN:
 	case I_FPSTNLI32:
+	case I_FPSTNLI64:
 	case I_FPLDZEROSN:
 	case I_FPLDZERODB:
 	case I_FPADD:

@@ -4728,7 +4728,11 @@ fprintf (stderr, "  gen11: tsimpleassign: istargetintsize (type) == TRUE\n");
 				loadopd (destmode, dest, 0);	/*      ldp   dest   */
 			}
 			checkerror ();
-			gensecondary (I_FPSTNLI32);	/*      fpstnli32    */
+			if (bytesperword == 8 && (type == S_INT64 || type == S_UINT64)) {
+				gensecondary (I_FPSTNLI64);
+			} else {
+				gensecondary (I_FPSTNLI32);	/*	fpstnli32    */
+			}
 			/*}}} */
 		} else if (preeval (destmode, dest)) {
 			/*{{{  ldptr dest; stl temp; source; ldl temp; stnl */

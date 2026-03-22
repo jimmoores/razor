@@ -942,6 +942,9 @@ static int dump_secondary (int esfunc, char *buffer)
 	case I_FPSTNLI32:
 		sprintf (buffer, "\tFPSTNLI32");
 		break;
+	case I_FPSTNLI64:
+		sprintf (buffer, "\tFPSTNLI64");
+		break;
 	case I_FPLDZEROSN:
 		sprintf (buffer, "\tFPLDZEROSN");
 		break;

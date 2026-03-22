@@ -240,8 +240,8 @@
 #define I_FPLDNLADDSN	0xaa
 #define I_FPENTRY	0xab
 #define I_FPLDNLMULSN	0xac
-#define I_ENBS3		0xad
-/*      I_MISSING       0xae */
+#define I_ENBS3         0xad
+#define I_FPSTNLI64     0xae
 /*      I_MISSING       0xaf */
 
 #define I_SETTIMESLICE	0xb0
@@ -646,7 +646,7 @@ static int tsdiff_sec[] = { \
 	0, 0, 1, 0,	/* a0: fpldzerodb, fpint, getpri, fpdup */
 	0, 0, -1, 0,	/* a4: fprev, ., fpldnladddb, . */
 	-1, 16, -1, -1,	/* a8: fpldnlmuldb, setpri, fpldnladdsn, fpentry */
-	-1, -1, 0, 0	/* ac: fpldnlmulsn, enbs3, ., . */
+	-1, -1, -1, 0	/* ac: fpldnlmulsn, enbs3, fpstnli64, . */
 };
 /*}}}*/
 /*{{{  secondary adjustments for 0xEx operands*/
