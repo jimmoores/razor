@@ -4107,17 +4107,18 @@ K_CALL_DEFINE_2_3 (X_norm)
 	if (!Areg && !Breg) {
 		Creg = 64;
 	} else {
-		while (!(Breg & 0x80000000)) {
-			Breg <<= 1;
-			if (Areg & 0x80000000) {
-				Breg |= 1;
-			}
+		while (!(Areg & 0x80000000)) {
 			Areg <<= 1;
+			if (Breg & 0x80000000) {
+				Areg |= 1;
+			}
+			Breg <<= 1;
 			Creg++;
 		}
 	}
 	
-	K_THREE_OUT (Areg, Breg, Creg);
+	/* Return lo in param0 and hi in cparam0 */
+	K_THREE_OUT (Breg, Areg, Creg);
 }
 /*}}}*/
 /*{{{  void kernel_X_fmul (void)*/
