@@ -4994,13 +4994,11 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_XOR, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_CJUMP, 2, 0, ARG_COND, CC_NS, ARG_LABEL, this_lab + 1));
 				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
-			}
-			if (options.debug_options & DEBUG_RANGESTOP) {
-				generate_range_code (ts, REOP_CSNGL, arch);
-			} else {
-				arch->compose_kcall (ts, K_BRANGERR, 0, -1);
-			}
-			if (0 /* disabled Wptr corruption */) {
+				if (options.debug_options & DEBUG_RANGESTOP) {
+					generate_range_code (ts, REOP_CSNGL, arch);
+				} else {
+					arch->compose_kcall (ts, K_BRANGERR, 0, -1);
+				}
 				add_to_ins_chain (compose_ins_ex (EtcSecondary (I_CSNGL), INS_SETLABEL, 1, 0, ARG_LABEL, this_lab + 1));
 			}
 		}

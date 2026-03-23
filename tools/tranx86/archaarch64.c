@@ -2180,16 +2180,23 @@ static int compose_aarch64_widenword (tstate *ts)
 		ts->stack->old_b_reg = tstack_newreg (ts->stack);
 	}
 
-	/* Sign extend 32-bit to 64-bit */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->a_reg, ARG_REG, tmp_reg));
-
+	/* Sign-extend 32-bit INT to double-word (hi:lo).
+	 * Areg holds the 32-bit value.  We need:
+	 *   a_reg (lo) = Areg (unchanged)
+	 *   b_reg (hi) = sign extension (0x00000000 or 0xFFFFFFFF)
+	 * Generate hi word by testing bit 31 and negating. */
 	/* Arrange for old_a_reg to stay at stack-top */
 	ts->stack->a_reg = ts->stack->old_a_reg;
 	ts->stack->b_reg = tmp_reg;
 	ts->stack->c_reg = ts->stack->old_b_reg;
 
+	/* Sign-extend the 32-bit INT to produce a proper hi word 
+	 * (0 for positive, 0xFFFFFFFF for negative). */
+	add_to_ins_chain (compose_ins (INS_SIGNEXT32, 1, 1, ARG_REG, ts->stack->a_reg, ARG_REG, tmp_reg));
+	add_to_ins_chain (compose_ins (INS_SAR, 2, 1, ARG_CONST, (intptr_t)63, ARG_REG, tmp_reg, ARG_REG, tmp_reg));
+	constmap_remove (tmp_reg);
 	return tmp_reg;
-}
+	}
 /*}}}*/
 
 /*{{{  static void compose_aarch64_longop (tstate *ts, int secondary_opcode)*/
@@ -4285,6 +4292,27 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 								aarch64_get_register_name (ins->in_args[0]->regconst));
 					}
 					break;
+				case INS_SAR:
+					if (!ins->out_args[0] || !ins->in_args[0] || !ins->in_args[1]) break;
+					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
+						long shift_val = (long)ins->in_args[0]->regconst;
+						if (shift_val >= 0 && shift_val < 64) {
+							fprintf (stream, "\tasr\t%s, %s, #%ld\n",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst), shift_val);
+						} else {
+							aarch64_emit_large_immediate (stream, shift_val, "x16");
+							fprintf (stream, "\tasr\t%s, %s, x16\n",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst));
+						}
+					} else {
+						fprintf (stream, "\tasr\t%s, %s, %s\n",
+								aarch64_get_register_name (ins->out_args[0]->regconst),
+								aarch64_get_register_name (ins->in_args[1]->regconst),
+								aarch64_get_register_name (ins->in_args[0]->regconst));
+					}
+					break;
 				case INS_CALL:
 					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 						char *symbol = (char *)ins->in_args[0]->regconst;
@@ -4636,14 +4664,35 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					}
 					break;
 				case INS_SIGNEXT32:
-					/* Sign-extend low 32 bits to 64: sxtw xN, wN.
-					 * Used before signed comparisons (I_GT) so that
-					 * 32-bit negative values are correctly negative
-					 * in 64-bit signed comparison. */
+					/* Sign-extend low 32 bits to 64: sxtw xN, wN. */
 					if (ins->in_args[0] && ins->out_args[0]) {
-						fprintf(stream, "\tsxtw\t%s, w%ld\n",
-							aarch64_get_register_name(ins->out_args[0]->regconst),
-							(long)ins->in_args[0]->regconst);
+						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
+							long val = (long)ins->in_args[0]->regconst;
+							aarch64_emit_large_immediate(stream, val, "x16");
+							fprintf(stream, "\tsxtw\t%s, w16\n",
+								aarch64_get_register_name(ins->out_args[0]->regconst));
+						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND) {
+							long disp = (ins->in_args[0]->flags & ARG_DISP) ? ins->in_args[0]->disp : 0;
+							aarch64_emit_mem_op(stream, "ldrsw", 
+								aarch64_get_register_name(ins->out_args[0]->regconst),
+								aarch64_get_register_name(ins->in_args[0]->regconst), disp);
+						} else {
+							/* ARG_REG: Need to extract the W register name */
+							char wsrc[8];
+							snprintf(wsrc, sizeof(wsrc), "w%ld", (long)ins->in_args[0]->regconst);
+							/* Wait, regconst is the register ID, we should get real hardware reg */
+							const char *xsrc = aarch64_get_register_name(ins->in_args[0]->regconst);
+							/* xsrc is e.g. "x4". Change to "w4" */
+							if (xsrc[0] == 'x' || xsrc[0] == 'X') {
+								snprintf(wsrc, sizeof(wsrc), "w%s", xsrc + 1);
+							} else if (strcmp(xsrc, "sp") == 0) {
+								strcpy(wsrc, "wsp");
+							} else {
+								strcpy(wsrc, xsrc);
+							}
+							fprintf(stream, "\tsxtw\t%s, %s\n",
+								aarch64_get_register_name(ins->out_args[0]->regconst), wsrc);
+						}
 					}
 					break;
 				case INS_LOADLABDIFF:
