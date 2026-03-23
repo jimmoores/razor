@@ -489,6 +489,23 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
         check(h, 1, "B178h")
         check(i, 1, "B178i")
         check(j, 1, "B178j")
+        #IF DEFINED(AARCH64)
+        ASM
+          LD ADDRESSOF [1(INT64),2(INT64),3(INT64)]
+          LDNL 2
+          ST a
+          LDLABELDIFF :bytelabel - :here1
+          LDPI
+          :here1
+          LB
+          ST b
+          LDLABELDIFF :bytelabel - :here2
+          LDPI
+          :here2
+          ADC 1
+          LB
+          ST c
+        #ELSE
         ASM
           LD ADDRESSOF [1,2,3]
           LDNL 2
@@ -504,6 +521,7 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
           ADC 1
           LB
           ST c
+        #ENDIF
         check(a, 3, "B178k")
         check(b, INT 'a', "B178l")
         check(c, 99, "B178m")
@@ -894,6 +912,9 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
           SEQ j = 0 FOR SIZE array[0]
             array[i][j] := i + j
         x := 1
+        #IF DEFINED(AARCH64)
+        -- Skip on 64-bit targets because LDNL loads 8 bytes from an INT array
+        #ELSE
         sub.array IS array[x] :
         GUY
           LDLP sub.array
@@ -907,8 +928,9 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
           LDLP b
           LDNL 0
           STL z
-        check(y, 2, "B594b")
-        check(z, 2, "B594c")
+        check(y, 2, "B594d")
+        check(z, 2, "B594e")
+        #ENDIF
         VAL b IS array[x][x] :
         GUY
           LDL b

@@ -4689,7 +4689,7 @@ fprintf (stderr, "tsimpleassign: MOBILE := MOBILE assignment\n");
 		   and destination are simple. */
 		type = targetintsize;
 	} else if ((type == S_CHAN) || (type == S_PORT)) {
-		type = targetintsize;
+		type = (bytesperword == 8) ? S_INT64 : targetintsize;
 	}
 	/*}}} */
 
