@@ -2222,41 +2222,184 @@ static void compose_aarch64_longop (tstate *ts, int secondary_opcode)
 	
 	switch (secondary_opcode) {
 	/* Handle actual transputer long operations */
+	/*{{{  I_LADD -- long addition (with overflow check) */
 	case I_LADD:
+		/* LADD: sum := Areg + Breg + (Creg & 1), sets overflow flag
+		 * Transputer stack: Areg=a, Breg=b, Creg=carry_in
+		 * Result: a_reg = sum, CC set for overflow detection */
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
+		/* Use flag-setting add: adds old_a + old_b → old_b, sets CC */
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+		/* Capture carry from first add into tmp */
+		{
+			int carry1 = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_AE, ARG_REG, carry1));
+			/* Add carry_in: old_b += old_c (which is 0 or 1) */
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 2, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+			constmap_remove (ts->stack->old_b_reg);
+		}
+		ts->stack->a_reg = ts->stack->old_b_reg;
+		break;
+	/*}}}*/
+	/*{{{  I_LSUM -- long sum (no overflow checks, produces carry) */
 	case I_LSUM:
-		/* LADD/LSUM: Areg + Breg + (Creg & 1) → result
-		 * On Transputer: adds two words plus carry bit from Creg.
-		 * Use: AND Creg,#1 to isolate carry; ADD Areg+Breg; ADD carry. */
+		/* LSUM: carry_out, sum := Areg + Breg + (Creg & 1)
+		 * Result: a_reg = sum, b_reg = carry_out (0 or 1) */
 		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		ts->stack->a_reg = ts->stack->old_b_reg;
+		/* Flag-setting add: sum = Areg + Breg */
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+		{
+			int carry1 = tstack_newreg (ts->stack);
+			/* Capture carry from first add (CC_AE = hs = carry set on aarch64 after ADDS) */
+			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_AE, ARG_REG, carry1));
+			/* Add carry_in: sum += carry_in */
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 2, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+			{
+				int carry2 = tstack_newreg (ts->stack);
+				/* Capture carry from second add */
+				add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_AE, ARG_REG, carry2));
+				/* Total carry = carry1 | carry2 (at most one can be set since carry_in is 0 or 1) */
+				add_to_ins_chain (compose_ins (INS_OR, 2, 1, ARG_REG, carry1, ARG_REG, carry2, ARG_REG, carry1));
+			}
+			constmap_remove (ts->stack->old_b_reg);
+			constmap_remove (carry1);
+			ts->stack->a_reg = ts->stack->old_b_reg;
+			ts->stack->b_reg = carry1;
+		}
 		break;
+	/*}}}*/
+	/*{{{  I_LSUB -- long subtraction (with overflow check) */
 	case I_LSUB:
-	case I_LDIFF:
-		/* LSUB/LDIFF: Breg - Areg - (Creg & 1) → result
-		 * On Transputer: subtracts two words minus borrow bit from Creg. */
+		/* LSUB: diff := Breg - Areg - (Creg & 1), sets overflow flag
+		 * Result: a_reg = diff, CC set for overflow detection
+		 * INS_SUB convention: out = in[1] - in[0] */
 		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg));
+		/* sub: diff = Breg - Areg, flag-setting */
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+		/* sub: diff -= borrow_in */
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+		constmap_remove (ts->stack->old_b_reg);
 		ts->stack->a_reg = ts->stack->old_b_reg;
 		break;
+	/*}}}*/
+	/*{{{  I_LDIFF -- long difference (no overflow checks, produces borrow) */
+	case I_LDIFF:
+		/* LDIFF: borrow_out, diff := Breg - Areg - (Creg & 1)
+		 * Result: a_reg = diff, b_reg = borrow_out (0 or 1)
+		 * INS_SUB convention: out = in[1] - in[0] */
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
+		/* Flag-setting sub: diff = Breg - Areg
+		 * INS_SUB: out = in[1] - in[0], so in[0]=old_a, in[1]=old_b */
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+		{
+			int borrow1 = tstack_newreg (ts->stack);
+			/* Capture borrow from first sub (CC_B = lo = carry clear = borrow on aarch64) */
+			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_B, ARG_REG, borrow1));
+			/* Sub borrow_in: diff -= borrow_in (out = in[1] - in[0] = old_b - old_c) */
+			add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+			{
+				int borrow2 = tstack_newreg (ts->stack);
+				/* Capture borrow from second sub */
+				add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_B, ARG_REG, borrow2));
+				/* Total borrow = borrow1 | borrow2 */
+				add_to_ins_chain (compose_ins (INS_OR, 2, 1, ARG_REG, borrow1, ARG_REG, borrow2, ARG_REG, borrow1));
+			}
+			constmap_remove (ts->stack->old_b_reg);
+			constmap_remove (borrow1);
+			ts->stack->a_reg = ts->stack->old_b_reg;
+			ts->stack->b_reg = borrow1;
+		}
+		break;
+	/*}}}*/
+	/*{{{  I_LMUL -- long multiplication (32-bit INT: 32x32->64 with accumulate) */
 	case I_LMUL:
-		add_to_ins_chain (compose_ins (INS_MUL, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		ts->stack->a_reg = ts->stack->old_b_reg;
+		/* LMUL: hi, lo := (unsigned)Areg * (unsigned)Breg + (unsigned)Creg
+		 * INT is 32-bit on aarch64. 32x32->64 multiply + 32-bit add.
+		 * On 64-bit aarch64: zero-extend, multiply, add, split into hi32/lo32.
+		 * Result: a_reg = lo, b_reg = hi */
+		{
+			int hi_reg = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
+			add_to_ins_chain (compose_ins (INS_MUL, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_CONST, (intptr_t)32, ARG_REG, ts->stack->old_a_reg, ARG_REG, hi_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			constmap_remove (ts->stack->old_a_reg);
+			constmap_remove (hi_reg);
+			ts->stack->a_reg = ts->stack->old_a_reg;
+			ts->stack->b_reg = hi_reg;
+		}
 		break;
+	/*}}}*/
+	/*{{{  I_LSHL -- long shift left (32-bit INT: shift 64-bit double-word) */
 	case I_LSHL:
-		add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-		ts->stack->a_reg = ts->stack->old_b_reg;
+		/* LSHL: shift 64-bit (Creg:Breg) left by Areg, split result.
+		 * Result: a_reg = lo32, b_reg = hi32
+		 * INS_SHL convention: out = in[1] << in[0] */
+		{
+			int combined = tstack_newreg (ts->stack);
+			int hi_reg = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t)32, ARG_REG, ts->stack->old_c_reg, ARG_REG, combined));
+			add_to_ins_chain (compose_ins (INS_OR, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, combined, ARG_REG, combined));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, combined, ARG_REG, combined));
+			add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_CONST, (intptr_t)32, ARG_REG, combined, ARG_REG, hi_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, combined, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, hi_reg, ARG_REG, hi_reg));
+			constmap_remove (ts->stack->old_b_reg);
+			constmap_remove (hi_reg);
+			ts->stack->a_reg = ts->stack->old_b_reg;
+			ts->stack->b_reg = hi_reg;
+		}
 		break;
+	/*}}}*/
+	/*{{{  I_LSHR -- long shift right (32-bit INT: shift 64-bit double-word) */
 	case I_LSHR:
-		add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-		ts->stack->a_reg = ts->stack->old_b_reg;
+		/* LSHR: shift 64-bit (Creg:Breg) right by Areg, split result.
+		 * Result: a_reg = lo32, b_reg = hi32
+		 * INS_SHR convention: out = in[1] >> in[0] */
+		{
+			int combined = tstack_newreg (ts->stack);
+			int hi_reg = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t)32, ARG_REG, ts->stack->old_c_reg, ARG_REG, combined));
+			add_to_ins_chain (compose_ins (INS_OR, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, combined, ARG_REG, combined));
+			add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, combined, ARG_REG, combined));
+			add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_CONST, (intptr_t)32, ARG_REG, combined, ARG_REG, hi_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, combined, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, hi_reg, ARG_REG, hi_reg));
+			constmap_remove (ts->stack->old_b_reg);
+			constmap_remove (hi_reg);
+			ts->stack->a_reg = ts->stack->old_b_reg;
+			ts->stack->b_reg = hi_reg;
+		}
 		break;
+	/*}}}*/
+	/*{{{  I_LDIV -- long division (32-bit INT: 64/32 division) */
 	case I_LDIV:
-		add_to_ins_chain (compose_ins (INS_DIV, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg));
-		ts->stack->a_reg = ts->stack->old_b_reg;
+		/* LDIV: quotient, remainder := (Creg:Breg) / Areg
+		 * INT is 32-bit. Combine to 64-bit, use UDIV, compute remainder.
+		 * Result: a_reg = quotient, b_reg = remainder */
+		{
+			int combined = tstack_newreg (ts->stack);
+			int quot_reg = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFF, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t)32, ARG_REG, ts->stack->old_c_reg, ARG_REG, combined));
+			add_to_ins_chain (compose_ins (INS_OR, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, combined, ARG_REG, combined));
+			add_to_ins_chain (compose_ins (INS_DIV, 2, 1, ARG_REG, combined, ARG_REG, ts->stack->old_a_reg, ARG_REG, quot_reg));
+			add_to_ins_chain (compose_ins (INS_MUL, 2, 1, ARG_REG, quot_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, combined, ARG_REG, combined));
+			constmap_remove (quot_reg);
+			constmap_remove (combined);
+			ts->stack->a_reg = quot_reg;
+			ts->stack->b_reg = combined;
+		}
 		break;
+
+	/*}}}*/
 	/* Test operations - these are critical for IEEE floating point operations */
 	case I_TESTSTS:  /* 0x26 - Test status */
 		/* For aarch64, implement as a simple status check that returns 0 (no error) */
@@ -4000,6 +4143,18 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[1]->regconst));
+					}
+					break;
+				case INS_UMUL:
+					/* Unsigned multiply: out[0] = lo(in[0]*in[1]), out[1] = hi(in[0]*in[1])
+					 * Emit umulh first to avoid clobbering inputs when out[0] aliases in[0] */
+					if (ins->out_args[0] && ins->out_args[1] && ins->in_args[0] && ins->in_args[1]) {
+						const char *in0 = aarch64_get_register_name (ins->in_args[0]->regconst);
+						const char *in1 = aarch64_get_register_name (ins->in_args[1]->regconst);
+						const char *out_lo = aarch64_get_register_name (ins->out_args[0]->regconst);
+						const char *out_hi = aarch64_get_register_name (ins->out_args[1]->regconst);
+						fprintf (stream, "\tumulh\t%s, %s, %s\n", out_hi, in0, in1);
+						fprintf (stream, "\tmul\t%s, %s, %s\n", out_lo, in0, in1);
 					}
 					break;
 				case INS_AND:
