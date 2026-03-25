@@ -290,12 +290,12 @@
 #define I_FPEXPDEC32	0xd9
 #define I_FPEXPINC32	0xda
 #define I_FPABS		0xdb
-/*      I_MISSING       0xdc */
+#define I_SXT32		0xdc
 #define I_FPADDDBSN	0xdd
 #define I_FPCHKI32	0xde
 #define I_FPCHKI64	0xdf
 
-#define I_MNEW		0xe0
+#define I_FPCHS		0xe0
 #define I_MFREE		0xe1
 #define I_MALLOC	0xe2
 #define I_MRELEASE	0xe3
@@ -324,7 +324,7 @@
 #define I_CSU		0xfb
 #define I_TRAP		0xfc
 #define I_NULL		0xfd
-/*      I_MISSING       0xfe */
+#define I_WIDE		0xfe	/* Prefix: next op is 64-bit wide, skip truncation */
 /*      I_MISSING       0xff */
 
 #define I_START		0x1ff

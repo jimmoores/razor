@@ -1026,6 +1026,12 @@ static int dump_secondary (int esfunc, char *buffer)
 	case I_FPR64TOR32:
 		sprintf (buffer, "\tFPR64TOR32");
 		break;
+	case I_SXT32:
+		sprintf (buffer, "\tSXT32");
+		break;
+	case I_FPCHS:
+		sprintf (buffer, "\tFPCHS");
+		break;
 	case I_MALLOC:
 		sprintf (buffer, "\tMALLOC");
 		break;
@@ -1035,14 +1041,15 @@ static int dump_secondary (int esfunc, char *buffer)
 	case I_MRELEASEP:
 		sprintf (buffer, "\tMRELEASEP");
 		break;
-	case I_MNEW:
-		sprintf (buffer, "\tMNEW");
-		break;
+	/* I_MNEW (0xe0) repurposed as I_FPCHS - handled above */
 	case I_MFREE:
 		sprintf (buffer, "\tMFREE");
 		break;
 	case I_NULL:
 		sprintf (buffer, "\tNULL");
+		break;
+	case I_WIDE:
+		sprintf (buffer, "\tWIDE");
 		break;
 	case I_MIN:
 		sprintf (buffer, "\tMIN");

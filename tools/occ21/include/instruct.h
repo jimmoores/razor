@@ -322,7 +322,7 @@
 #define I_FPEXPDEC32  0xD9 /* T9000 */
 #define I_FPEXPINC32  0xDA /* T9000 */
 #define I_FPABS       0xDB /* T9000 */
-/*#define I_FPCLRERR    0xDC*/ /* T9000 */ /* bug TS/1547 12/05/92 */
+#define I_SXT32       0xDC
 /*#define I_FPNOROUND   0xDD*/ /* replaced with FPADDDBSN 24/6/91 */
 #define I_FPADDDBSN   0xDD     /* new 24/6/91 */ /* T9000 */
 #define I_FPCHKI32    0xDE /* T9000 */
@@ -330,7 +330,7 @@
 
 /*}}}*/
 /*{{{  Ex */
-/* #define I_MNEW	0xE0 */
+#define I_FPCHS         0xE0
 /* #define I_MFREE	0xE1 */
 #define I_MALLOC        0xE2
 #define I_MRELEASE      0xE3
@@ -361,6 +361,7 @@
 #define I_CSU         0xFB /* T9000 */
 #define I_TRAP        0xFC /* KRoC break */
 #define I_NULL        0xFD /* Load NULL (as opposed to MINT) */
+#define I_WIDE        0xFE /* Prefix: next operation is 64-bit wide, skip truncation */
 
 /*}}}*/
 /*{{{  1xx */

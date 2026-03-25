@@ -2739,7 +2739,7 @@ PUBLIC void genshiftimmediate (const int op, const int shiftcount)
 				fprintf (outfile, "%-8s", secondaryname (op));
 			}
 			/*}}} */
-			if (shiftcount == 32) {	/* turn anything into zero */
+			if (shiftcount == (bytesperword * 8)) {	/* turn anything into zero */
 				etc_sinst (I_POP);
 				etc_pinst (I_LDC, 0);
 			} else if (op == I_SHR) {

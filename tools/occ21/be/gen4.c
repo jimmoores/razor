@@ -1380,16 +1380,26 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 	}
 	/*}}} */
 
+	/* On 64-bit targets, INT64 is single-word but the translator
+	 * truncates results to 32 bits after arithmetic (for INT correctness).
+	 * Emit I_WIDE prefix to tell the translator to skip truncation.
+	 * Only needed for ops where the translator calls emit_int_truncate. */
+#define EMIT_WIDE_IF_INT64() \
+	do { if (bytesperword > 4 && (type == S_INT64 || type == S_UINT64)) gensecondary (I_WIDE); } while(0)
+
 	switch (op) {
 		/*{{{  arithmetic operators */
 	case S_ADD:
+		EMIT_WIDE_IF_INT64();
 		gensecondary (I_ADD);
 		break;
 	case S_SUBTRACT:
+		EMIT_WIDE_IF_INT64();
 		gensecondary (I_SUB);
 		break;
 		/*{{{  multiply */
 	case S_MULT:
+		EMIT_WIDE_IF_INT64();
 		/*{{{  T9000_gamma_badmul */
 		if (T9000_gamma_badmul (&tx_global)) {
 			gensecondary (I_NOP);
@@ -1425,11 +1435,13 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		/*}}} */
 		/*{{{  shifts */
 	case S_LSHIFT:
+		EMIT_WIDE_IF_INT64();
 		if (!T9000_instruction_timings && !isconst (right))
 			checkerror ();	/* bug TS/1979 30/11/92 */
 		gensecondary (I_SHL);
 		break;
 	case S_RSHIFT:
+		EMIT_WIDE_IF_INT64();
 		if (!T9000_instruction_timings && !isconst (right))
 			checkerror ();	/* bug TS/1979 30/11/92 */
 		gensecondary (I_SHR);
@@ -1437,16 +1449,19 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		/*}}} */
 		/*{{{  modulo arithmetic */
 	case S_PLUS:
+		EMIT_WIDE_IF_INT64();
 		if (kroc_flag)
 			gensecondary (I_SUM);	/* keep it clean -- DCW */
 		else
 			/*gensecondary (I_SUM); */ gensecondary (I_BSUB);
 		break;
 	case S_MINUS:
+		EMIT_WIDE_IF_INT64();
 		gensecondary (I_DIFF);
 		break;
 		/*{{{  prod */
 	case S_TIMES:
+		EMIT_WIDE_IF_INT64();
 		/*{{{  T9000_gamma_badmul */
 		if (T9000_gamma_badmul (&tx_global)) {
 			gensecondary (I_NOP);
@@ -1716,6 +1731,12 @@ printtreenl (stderr, 4, tptr);
 		/*{{{  BITNOT                             break */
 	case S_BITNOT:
 		texp_main (OpOf (tptr), regs, signextend_result);
+		{
+			const int mtype = MOpTypeOf (tptr);
+			if (bytesperword > 4 && (mtype == S_INT64 || mtype == S_UINT64)) {
+				gensecondary (I_WIDE);
+			}
+		}
 		gensecondary (I_NOT);	/* automatically preserves sign-extendedness */
 #ifdef OCCAM2_5
 		if (MOpTypeOf (tptr) == S_BYTE) {

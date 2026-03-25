@@ -2907,6 +2907,16 @@ PRIVATE void preproc_builtin (void)
 		tw = lookupword ("TARGET.BITS.PER.WORD", 20);
 		preproc_add_define (tw, 20, PP_VAL_INT, (void *)(bytesperword * 8));
 	}
+	if (bytesperword == 8) {
+		/* Define architecture-specific preprocessor symbols for 64-bit targets */
+		if (tx_global.pstring && strcmp(tx_global.pstring, "AARCH64") == 0) {
+			tw = lookupword ("AARCH64", 7);
+			preproc_add_define (tw, 7, PP_VAL_NONE, NULL);
+		} else if (tx_global.pstring && strcmp(tx_global.pstring, "X64") == 0) {
+			tw = lookupword ("X64", 3);
+			preproc_add_define (tw, 3, PP_VAL_NONE, NULL);
+		}
+	}
 	if (target_bigendian) {
 		tw = lookupword ("TARGET.BIGENDIAN", 16);
 		preproc_add_define (tw, 16, PP_VAL_NONE, NULL);

@@ -4076,17 +4076,30 @@ PUBLIC void tpredef (treenode * tptr, treenode * destlist)
 			else {
 				treenode *temp = param[0];
 				treenode *x = NDeclOf (temp);
-				if (isaddressable (x))
-					loadelement (x, 0, MANY_REGS, TRUE);
-				else {
-					tsimpleassign (ntypeof (temp), P_TEMP, temp, P_EXP, x, MANY_REGS);
-					loadname (temp, 0);
+				if (bytesperword == 8) {
+					/* On 64-bit, use FP negation to avoid sign-extension
+					 * issues with MINT XOR trick (MINT is sign-extended
+					 * to 0xFFFFFFFF80000000, corrupting upper bits) */
+					if (isaddressable (x))
+						tfpexp (x, MANY_REGS, MANY_REGS);
+					else {
+						tsimpleassign (ntypeof (temp), P_TEMP, temp, P_EXP, x, MANY_REGS);
+						tfpexp (temp, MANY_REGS, MANY_REGS);
+					}
+					gensecondary (I_FPCHS);
+				} else {
+					if (isaddressable (x))
+						loadelement (x, 0, MANY_REGS, TRUE);
+					else {
+						tsimpleassign (ntypeof (temp), P_TEMP, temp, P_EXP, x, MANY_REGS);
+						loadname (temp, 0);
+					}
+					gensecondary (I_MINT);
+					/* looks OK for T9000_alpha_badmint bug */
+					gensecondary (I_XOR);
+					storeinname (temp, 0);
+					tfpexp (temp, MANY_REGS, MANY_REGS);
 				}
-				gensecondary (I_MINT);
-				/* looks OK for T9000_alpha_badmint bug */
-				gensecondary (I_XOR);
-				storeinname (temp, 0);
-				tfpexp (temp, MANY_REGS, MANY_REGS);
 			}
 		}
 		/*}}} */
@@ -4111,12 +4124,17 @@ PUBLIC void tpredef (treenode * tptr, treenode * destlist)
 				int hi = swap_r64words ^ target_bigendian ? 0 : 1;	/* MDP */
 				treenode *temp = param[0];
 				tsimpleassign (S_REAL64, P_TEMP, temp, P_EXP, NDeclOf (temp), MANY_REGS);
-				loadname (temp, hi);
-				gensecondary (I_MINT);
-				/* looks OK for T9000_alpha_badmint bug */
-				gensecondary (I_XOR);
-				storeinname (temp, hi);
-				tfpexp (temp, MANY_REGS, MANY_REGS);
+				if (bytesperword == 8) {
+					tfpexp (temp, MANY_REGS, MANY_REGS);
+					gensecondary (I_FPCHS);
+				} else {
+					loadname (temp, hi);
+					gensecondary (I_MINT);
+					/* looks OK for T9000_alpha_badmint bug */
+					gensecondary (I_XOR);
+					storeinname (temp, hi);
+					tfpexp (temp, MANY_REGS, MANY_REGS);
+				}
 			}
 		}
 		break;

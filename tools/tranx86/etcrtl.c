@@ -82,6 +82,7 @@ static void compose_cond_jump (tstate *ts, int cond, int label);
 static void deferred_cond (tstate *ts);
 static void emit_int_truncate (tstate *ts, int result_reg);
 static void emit_int_signext (tstate *ts, int reg);
+static int wide_next = 0;  /* Set by I_WIDE prefix; suppresses emit_int_truncate for next op */
 static void generate_overflow_code (tstate *ts, int dcode, arch_t *arch);
 static void generate_overflowed_code (tstate *ts, int dcode, arch_t *arch);
 static void generate_range_code (tstate *ts, int rcode, arch_t *arch);
@@ -3213,6 +3214,11 @@ static void deferred_cond (tstate *ts)
 static void emit_int_truncate (tstate *ts, int result_reg)
 {
 #if (BytesPerWord > 4)
+	if (wide_next) {
+		/* I_WIDE prefix active: operation is 64-bit, skip truncation */
+		wide_next = 0;
+		return;
+	}
 	add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, result_reg, ARG_REG, result_reg));
 #endif
 }
@@ -4272,17 +4278,12 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		ts->stack->must_set_cmp_flags = 1;
 		break;
 		/*}}}*/
-		/*{{{  I_MNEW -- allocate memory by pool index*/
-	case I_MNEW:
-		if (!options.disable_dynmem) {
-			arch->compose_kcall (ts, K_MNEW, 1, 1);
-		} else {
-			fprintf (stderr, "%s: (%s:%d) error: dynamic memory support is disabled.\n", progname,
-				(ts->file_pending >= 0) ? ts->file_list[ts->file_pending] : "???.occ", ts->line_pending);
-			exit (EXIT_FAILURE);
-		}
+		/*{{{  I_WIDE -- prefix: next operation is 64-bit wide*/
+	case I_WIDE:
+		wide_next = 1;
 		break;
 		/*}}}*/
+		/* I_MNEW (0xe0) repurposed as I_FPCHS, handled in fpop section */
 		/*{{{  I_MFREE -- free memory allocated by MNEW*/
 	case I_MFREE:
 		if (!options.disable_dynmem) {
@@ -5815,6 +5816,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 	case I_FPDIVBY2:
 	case I_FPR32TOR64:
 	case I_FPR64TOR32:
+	case I_FPCHS:
 		arch->compose_fpop (ts, sec);
 		break;
 		/*}}}*/

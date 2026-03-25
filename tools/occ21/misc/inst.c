@@ -240,6 +240,9 @@ PRIVATE const struct instruction_struct
     { I_MNEW,		"MNEW",		&trueval, 0 },
     { I_MFREE,		"MFREE",	&trueval, 0 },
 #endif
+    { I_FPCHS,              "FPCHS",        &has_fpu_core, 0 },
+    { I_SXT32,              "SXT32",        &trueval, 0 },
+    { I_WIDE,               "WIDE",         &trueval, 0 },
     { I_MALLOC,		"MALLOC",	&trueval, 0 },
     { I_MRELEASE,	"MRELEASE",	&trueval, 0 },
     { I_MRELEASEP,	"MRELEASEP",	&trueval, 0 },

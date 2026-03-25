@@ -3304,6 +3304,15 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		}
 		ts->stack->fs_depth++;
 		break;
+	case I_FPCHS:  /* 0xe0 - negate floating point value on top of stack */
+		if (aarch64_fp_stack_depth >= 1) {
+			int prec = aarch64_fp_stack_prec[0];
+			const char *r0 = aarch64_fp_regname (0, prec);
+			char buf[64];
+			snprintf (buf, sizeof(buf), "\tfneg\t%s, %s", r0, r0);
+			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+		}
+		break;
 	/* Remaining stub operations */
 	case 0x80: case 0x81: case 0x85:
 	case 0x8d:

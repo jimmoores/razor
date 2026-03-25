@@ -2334,7 +2334,7 @@ K_CALL_DEFINE_0_0 (Y_BasicRangeError)
 	K_CALL_PARAMS_0 ();
 	ENTRY_TRACE0 (Y_BasicRangeError);
 
-	BMESSAGE ("range error.\n");
+	BMESSAGE ("range error at address 0x%lx.\n", (unsigned long)return_address);
 	kernel_common_error (Wptr, sched, return_address, "BasicRangeError");
 }
 /*}}}*/
@@ -4099,12 +4099,11 @@ K_CALL_DEFINE_3_1 (X_mt_resize)
 K_CALL_DEFINE_2_3 (X_norm)
 {
 	unsigned int Areg, Breg, Creg;
-	
-	K_CALL_PARAMS_2 (Areg, Breg);
-	ENTRY_TRACE (X_norm, "0x%x, 0x%x", Areg, Breg);
 
-	Creg = 0;
-	if (!Areg && !Breg) {
+	K_CALL_PARAMS_2 (Breg, Areg);
+	ENTRY_TRACE (X_norm, "0x%x, 0x%x", Breg, Areg);
+
+	Creg = 0;	if (!Areg && !Breg) {
 		Creg = 64;
 	} else {
 		while (!(Areg & 0x80000000)) {
@@ -4733,7 +4732,7 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 		atw_set (channel_address, NotProcess_p);
 	}
 
-	BMESSAGE ("kernel_chan_io: temp=%p, Pointer=%d, temp[Pointer]=%p\n", (void *)temp, Pointer, (void *)(((word *)temp)[Pointer]));
+	//BMESSAGE ("kernel_chan_io: temp=%p, Pointer=%d, temp[Pointer]=%p\n", (void *)temp, Pointer, (void *)(((word *)temp)[Pointer]));
 
 	if (flags & CIO_INPUT) {
 		destination_address = pointer;
@@ -4870,7 +4869,7 @@ K_CALL_DEFINE_2_0 (Y_outbyte)
 	*pointer	= (byte) value;
 	
 	/* DEBUG */
-	BMESSAGE ("kernel_Y_outbyte: Wptr=%p, channel=%p, value=%ld, pointer=%p\n", Wptr, channel_address, value, pointer);
+	//BMESSAGE ("kernel_Y_outbyte: Wptr=%p, channel=%p, value=%ld, pointer=%p\n", Wptr, channel_address, value, pointer);
 	
 	kernel_chan_io (CIO_OUTPUT, Wptr, sched, channel_address, pointer, 1);
 }
