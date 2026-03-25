@@ -72,6 +72,7 @@ static int aarch64_fp_stack_depth;
 static int aarch64_fp_precision;
 static int aarch64_fp_rounding_mode = 0;  /* FPU_N=0 nearest, FPU_Z=3 truncate */
 static int aarch64_fp_had_fpint = 0;  /* set by I_FPINT, cleared by I_FPSTNLI32 */
+static int aarch64_fp_from_i64 = 0;  /* set by INS_FILD64, value is in d0 not s0 */
 
 /*{{{  constants and definitions*/
 /* aarch64 secondary opcodes for long operations (avoid conflicts with transputer.h) */
@@ -3045,8 +3046,10 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 	case I_FPSTNLSN:  /* 0x88 - Store REAL32 from FA to memory */
 	        /* Store s0 (REAL32 bits) to [old_a_reg].
 	         * Use INS_FIST64 with precision=132 to signal "store REAL32 bits".
-	         * The asm handler will emit: fmov w17, s0; str w17, [addr] */
-	        if (aarch64_fp_stack_depth >= 1) {			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+	         * The asm handler checks aarch64_fp_from_i64 flag to narrow d0→s0
+	         * if the value came from I64TOREAL. */
+	        {
+	                if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)132,
 					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
@@ -3055,12 +3058,14 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 					ARG_CONST, (intptr_t)132,
 					ARG_REGIND, ts->stack->old_a_reg));
 			}
-			aarch64_fp_pop ();
-			aarch64_fp_emit_pop (ts);
+			if (aarch64_fp_stack_depth >= 1) {
+				aarch64_fp_pop ();
+				aarch64_fp_emit_pop (ts);
+			}
 			if (ts->stack->fs_depth > 0) {
 				ts->stack->fs_depth--;
 			}
-		}
+	        }
 		break;
 	case I_FPI32TOR32:  /* 0x96 - Convert INT32 to REAL32, push onto FP stack */
 		/* old_a_reg has the ADDRESS of the integer.
@@ -5029,6 +5034,11 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						        store_reg = "x17";
 						} else if (prec == 132) {
 						        /* Store REAL32 bits: fmov w17, s0. */
+						        if (aarch64_fp_from_i64) {
+						                /* Value is REAL64 in d0 from I64TOREAL; narrow first */
+						                fprintf (stream, "\tfcvt\ts0, d0\n");
+						                aarch64_fp_from_i64 = 0;
+						        }
 						        fprintf (stream, "\tfmov\tw17, s0\n");
 						        if (ins->out_args[0]->flags & ARG_DISP) {
 						                store_reg = "x17";
@@ -5131,6 +5141,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							const char *base = aarch64_get_register_name (ins->in_args[0]->regconst);
 							aarch64_emit_mem_op (stream, "ldr", "x17", base, disp);
 							fprintf (stream, "\tscvtf\td0, x17\n");
+							aarch64_fp_from_i64 = 1;
 						}
 					}
 					break;
