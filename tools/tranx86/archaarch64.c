@@ -5120,6 +5120,20 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 					break;
+				case INS_FILD64:
+					/* Load 64-bit integer from memory and convert to REAL64.
+					 * in_args[0] = ARG_REGIND address of INT64 value.
+					 * Result goes to d0 (FP stack top). */
+					if (ins->in_args[0]) {
+						int mode = ins->in_args[0]->flags & ARG_MODEMASK;
+						if (mode == ARG_REGIND) {
+							long disp = (ins->in_args[0]->flags & ARG_DISP) ? (long)ins->in_args[0]->disp : 0;
+							const char *base = aarch64_get_register_name (ins->in_args[0]->regconst);
+							aarch64_emit_mem_op (stream, "ldr", "x17", base, disp);
+							fprintf (stream, "\tscvtf\td0, x17\n");
+						}
+					}
+					break;
 				default:
 					/* Skip unhandled instructions */
 					break;
