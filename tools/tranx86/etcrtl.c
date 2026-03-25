@@ -1322,9 +1322,13 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					 * the 64-bit register (e.g. from a 4-byte channel
 					 * input into an 8-byte workspace slot).  Clear the
 					 * upper bits before shifting to prevent the stale
-					 * data from corrupting the address calculation. */
-					if (BytesPerWord > 4) {
-						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+					 * data from corrupting the address calculation.
+					 * Skip this when I_WIDE is active (INT64 operation). */
+					if (BytesPerWord > 4 && !wide_next) {
+						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+					}
+					if (wide_next) {
+						wide_next = 0;
 					}
 					add_to_ins_chain (compose_ins (INS_SHL, 2, 2, ARG_CONST, (intptr_t) y_opd, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 					if (constmap_typeof (ts->stack->old_a_reg) == VALUE_CONST) {

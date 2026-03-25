@@ -1083,6 +1083,13 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 	BOOL sign_check = FALSE;
 	BOOL logical_op = FALSE;
 
+	/* On 64-bit targets, INT64 is single-word but the translator
+	 * truncates results to 32 bits after arithmetic (for INT correctness).
+	 * Emit I_WIDE prefix to tell the translator to skip truncation.
+	 * Only needed for ops where the translator calls emit_int_truncate. */
+#define EMIT_WIDE_IF_INT64() \
+	do { if (bytesperword > 4 && (type == S_INT64 || type == S_UINT64)) gensecondary (I_WIDE); } while(0)
+
 	/*{{{  look for some optimisations */
 	switch (op) {
 	default:
@@ -1096,7 +1103,8 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 				right = left;
 				left = temp;
 			}
-			if ((nodetypeoftag (TagOf (left)) == CONSTEXPNODE) && isconst (left) && !isinconstanttable (left)) {
+			if ((nodetypeoftag (TagOf (left)) == CONSTEXPNODE) && isconst (left) && !isinconstanttable (left)
+			    && HiValOf (left) == 0) {
 				/*{{{  we can optimise */
 				texp (right, regs);
 				genprimary (I_ADC, LoValOf (left));
@@ -1192,11 +1200,12 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 				lf = right;
 				rt = left;
 			}
-			if (isconstexpnd (lf))
+			if (isconstexpnd (lf) && HiValOf (lf) == 0)
 				exponent = whichpowerof2 (LoValOf (lf));
 			if (exponent > 0) {
 				/* genfastshift(rt, regs, exponent); */
 				texp_main (rt, regs, FALSE);	/* don't bother sign-extending */
+				EMIT_WIDE_IF_INT64();
 				genshiftimmediate (I_SHL, exponent);	/* MDP */
 				toverflowmask (signed_short, byte_short, signextend_result);	/* re-signextend */
 				return;
@@ -1207,7 +1216,7 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		/*{{{  LSHIFT,RSHIFT */
 	case S_LSHIFT:		/* added for bug 1168 14/3/91 by CON */
 	case S_RSHIFT:
-		if (isconstexpnd (right)) {
+		if (isconstexpnd (right) && HiValOf (right) == 0) {
 			/* genfastshift(left, regs, LoValOf(right)); */
 			texp_main (left, regs, FALSE);	/* don't bother sign-extending */
 			genshiftimmediate (op == S_LSHIFT ? I_SHL : I_SHR, LoValOf (right));	/* MDP */
@@ -1245,7 +1254,7 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		/*}}} */
 		/*{{{  DIV */
 	case S_DIV:		/* INSdi02165 */
-		if (isconstexpnd (right) && (LoValOf (right) == -1)) {
+		if (isconstexpnd (right) && (LoValOf (right) == -1) && (HiValOf (right) == 0 || HiValOf (right) == -1)) {
 			/*{{{  we can optimise into -x */
 			tdop (S_SUBTRACT, type, newconstant (0), left, regs, FALSE, signextend_result);
 			return;
@@ -1255,7 +1264,7 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		/*}}} */
 		/*{{{  REM */
 	case S_REM:		/* INSdi02165 */
-		if (isconstexpnd (right) && (LoValOf (right) == 1 || LoValOf (right) == -1)) {
+		if (isconstexpnd (right) && (HiValOf (right) == 0 || HiValOf (right) == -1) && (LoValOf (right) == 1 || LoValOf (right) == -1)) {
 			if (!cancauseerror (left)) {
 				genprimary (I_LDC, 0);
 			} else {
@@ -1379,13 +1388,6 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		}
 	}
 	/*}}} */
-
-	/* On 64-bit targets, INT64 is single-word but the translator
-	 * truncates results to 32 bits after arithmetic (for INT correctness).
-	 * Emit I_WIDE prefix to tell the translator to skip truncation.
-	 * Only needed for ops where the translator calls emit_int_truncate. */
-#define EMIT_WIDE_IF_INT64() \
-	do { if (bytesperword > 4 && (type == S_INT64 || type == S_UINT64)) gensecondary (I_WIDE); } while(0)
 
 	switch (op) {
 		/*{{{  arithmetic operators */
