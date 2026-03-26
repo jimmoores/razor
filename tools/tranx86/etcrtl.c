@@ -1354,10 +1354,14 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					} else {
 						constmap_remove (ts->stack->old_a_reg);
 					}
-					/* Note: no post-shift truncation here because SLLIMM is
-					 * used for both INT shifts and address calculations.
-					 * The pre-shift AND mask handles 32-bit value cleanup.
-					 * INT shift overflow is managed by I_CWORD range checks. */
+					/* On 64-bit, truncate result to 32 bits after left shift.
+					 * A 32-bit value shifted left can overflow into bit 32+
+					 * of a 64-bit register (e.g. #FFFFFFFF << 1 = #1FFFFFFFE).
+					 * This corrupts subsequent operations that expect 32-bit
+					 * values.  Skip for I_WIDE (INT64) operations. */
+					if (!is_wide) {
+						emit_int_truncate (ts, ts->stack->old_a_reg);
+					}
 					}
 					break;
 					/*}}}*/
