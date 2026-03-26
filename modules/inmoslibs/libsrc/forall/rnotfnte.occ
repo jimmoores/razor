@@ -46,7 +46,7 @@ BOOL FUNCTION NOTFINITE (VAL REAL32 X)
 
 #ENDIF
 
-#IF (TARGET.BITS.PER.WORD = 32) OR DEFINED(TARGET.HAS.FPU)
+#IF (TARGET.BITS.PER.WORD >= 32) OR DEFINED(TARGET.HAS.FPU)
 
 --{{{  #options and #comments
 #OPTION "E V"  -- no compiler libs, no vector space

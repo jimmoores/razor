@@ -48,7 +48,7 @@ REAL32 FUNCTION MINUSX (VAL REAL32 Y)
 
 #ENDIF
 
-#IF (TARGET.BITS.PER.WORD = 32)
+#IF (TARGET.BITS.PER.WORD >= 32)
 
 --{{{  #options and #comments
 #OPTION "E V"  -- no compiler libs, no vector space
