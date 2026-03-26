@@ -5032,6 +5032,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						        /* Store REAL64 bits: fmov x17, d0 */
 						        fprintf (stream, "\tfmov\tx17, d0\n");
 						        store_reg = "x17";
+						        aarch64_fp_from_i64 = 0;
 						} else if (prec == 132) {
 						        /* Store REAL32 bits: fmov w17, s0. */
 						        if (aarch64_fp_from_i64) {
@@ -5047,6 +5048,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						        }
 						} else {
 							/* Convert REAL32/REAL64 to INT32 or INT64. */
+							aarch64_fp_from_i64 = 0;
 							int fp_prec = prec & 0xFF;
 							int rmode = (prec >> 8) & 0xFF;
 							int is_int64 = (prec & 0x10000) != 0;
