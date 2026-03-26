@@ -1304,8 +1304,24 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					}
 					deferred_cond (ts);
 					ts->stack->old_a_reg = ts->stack->a_reg;
+					{
+					int is_wide = wide_next;
+					/* On 64-bit, clear upper 32 bits before right shift
+					 * to prevent stale data from affecting the result.
+					 * Skip for I_WIDE (INT64) operations. */
+					if (BytesPerWord > 4 && !wide_next) {
+						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+					}
+					if (wide_next) {
+						wide_next = 0;
+					}
 					add_to_ins_chain (compose_ins (INS_SHR, 2, 2, ARG_CONST, (intptr_t) y_opd, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
-					constmap_remove (ts->stack->old_a_reg);
+					if (constmap_typeof (ts->stack->old_a_reg) == VALUE_CONST) {
+						constmap_modregconst (ts->stack->old_a_reg, constmap_regconst(ts->stack->old_a_reg) >> y_opd);
+					} else {
+						constmap_remove (ts->stack->old_a_reg);
+					}
+					}
 					break;
 					/*}}}*/
 					/*{{{  SLLIMM*/
@@ -1324,6 +1340,8 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					 * upper bits before shifting to prevent the stale
 					 * data from corrupting the address calculation.
 					 * Skip this when I_WIDE is active (INT64 operation). */
+					{
+					int is_wide = wide_next;
 					if (BytesPerWord > 4 && !wide_next) {
 						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 					}
@@ -1335,6 +1353,11 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						constmap_modregconst (ts->stack->old_a_reg, constmap_regconst(ts->stack->old_a_reg) << y_opd);
 					} else {
 						constmap_remove (ts->stack->old_a_reg);
+					}
+					/* Note: no post-shift truncation here because SLLIMM is
+					 * used for both INT shifts and address calculations.
+					 * The pre-shift AND mask handles 32-bit value cleanup.
+					 * INT shift overflow is managed by I_CWORD range checks. */
 					}
 					break;
 					/*}}}*/
