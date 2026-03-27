@@ -4204,28 +4204,33 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						fprintf (stream, "\t// INVALID MUL: missing arguments\n");
 						break;
 					}
-					if (!aarch64_validate_register(ins->out_args[0]->regconst) || 
-					    !aarch64_validate_register(ins->in_args[0]->regconst) ||
-					    !aarch64_validate_register(ins->in_args[1]->regconst)) {
+					/* Only validate register operands, not constants */
+					if (((ins->out_args[0]->flags & ARG_MODEMASK) == ARG_REG && !aarch64_validate_register(ins->out_args[0]->regconst)) ||
+					    ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REG && !aarch64_validate_register(ins->in_args[0]->regconst)) ||
+					    ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_REG && !aarch64_validate_register(ins->in_args[1]->regconst))) {
 						fprintf (stream, "\t// SKIPPED MUL: invalid register\n");
 						break;
 					}
 					/* ARM64 mul doesn't support immediate operands, load to temp reg if needed */
+					{
+					const char *dst = aarch64_get_register_name (ins->out_args[0]->regconst);
 					if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
 						aarch64_emit_large_immediate (stream, (long)ins->in_args[0]->regconst, "x16");
-						fprintf (stream, "\tmul\t%s, x16, %s\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
+						fprintf (stream, "\tmul\t%s, x16, %s\n", dst,
 								aarch64_get_register_name (ins->in_args[1]->regconst));
 					} else if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
 						aarch64_emit_large_immediate (stream, (long)ins->in_args[1]->regconst, "x17");
-						fprintf (stream, "\tmul\t%s, %s, x17\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
+						fprintf (stream, "\tmul\t%s, %s, x17\n", dst,
 								aarch64_get_register_name (ins->in_args[0]->regconst));
 					} else {
-						fprintf (stream, "\tmul\t%s, %s, %s\n",
-								aarch64_get_register_name (ins->out_args[0]->regconst),
+						fprintf (stream, "\tmul\t%s, %s, %s\n", dst,
 								aarch64_get_register_name (ins->in_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[1]->regconst));
+					}
+					/* ARM64 mul does not set flags. Clear V (overflow) so
+					 * a following b.vs from checked arithmetic doesn't
+					 * spuriously trigger on stale flags. */
+					fprintf (stream, "\tcmp\t%s, %s\n", dst, dst);
 					}
 					break;
 				case INS_DIV:
