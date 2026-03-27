@@ -2063,6 +2063,13 @@ fprintf (stderr, "tinstance: alloc_ws_slots = %d, alloc_vs_slots = %d, alloc_ms_
 		/*}}}*/
 		/*{{{  allocate workspace and vectorspace*/
 		/* oki, allocate */
+		/* Save any existing RECURSIVE_WS from an outer recursive call.
+		 * For nested recursive function calls like f(f(x)), the inner
+		 * call's setup would overwrite the outer's workspace pointer.
+		 * Save the outer pointer so trecstoreparam can find it later. */
+		genprimary (I_LDL, RECURSIVE_WS);
+		genprimary (I_STL, RECURSIVE_WS - 3);
+
 		genprimary (I_LDC, (alloc_ws_slots << WSH));
 		gensecondary (I_MALLOC);
 		genprimary (I_ADC, ((alloc_ws_slots - 1) << WSH));	/* point at top element */

@@ -1960,6 +1960,12 @@ else fprintf (stderr, "\n    [NULL]\n");
 				genprimary (I_STL, temp); 	/* => A=ws ptr */
 				gensecondary (I_MRELEASE);	/* => empty stack */
 				genprimary (I_LDL, temp);	/* => A=result */
+				/* Restore RECURSIVE_WS from saved copy for nested calls.
+				 * The inner call's setup overwrote RECURSIVE_WS with
+				 * its own workspace pointer, but the outer call needs
+				 * the original value for parameter storage. */
+				genprimary (I_LDL, RECURSIVE_WS - 3);
+				genprimary (I_STL, RECURSIVE_WS);
 			}
 		}
 		break;
