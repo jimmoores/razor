@@ -3190,7 +3190,51 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts0, wzr")));
 		ts->stack->fs_depth++;
 		break;
-	/* Additional IEEE operations - remaining stubs */
+	case I_FPNAN:  /* 0x91 - test for NaN: pop FA, push TRUE if NaN */
+		{
+			int result_reg = tstack_newreg (ts->stack);
+			if (aarch64_fp_stack_depth >= 1) {
+				int prec = aarch64_fp_stack_prec[0];
+				const char *r0 = aarch64_fp_regname (0, prec);
+				char buf[128];
+				/* fcmp with self: unordered (VS) iff NaN */
+				snprintf (buf, sizeof(buf), "\tfcmp\t%s, %s", r0, r0);
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			}
+			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_O, ARG_REG, result_reg));
+			aarch64_fp_pop();
+			ts->stack->a_reg = result_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 0) ts->stack->fs_depth--;
+		}
+		break;
+	case I_FPNOTFINITE:  /* 0x93 - test for not-finite: pop FA, push TRUE if Inf or NaN */
+		{
+			int result_reg = tstack_newreg (ts->stack);
+			if (aarch64_fp_stack_depth >= 1) {
+				int prec = aarch64_fp_stack_prec[0];
+				const char *r0 = aarch64_fp_regname (0, prec);
+				const char *r3 = (prec == 64) ? "d3" : "s3";
+				char buf[128];
+				/* x - x is 0 for finite, NaN for inf/NaN */
+				snprintf (buf, sizeof(buf), "\tfsub\t%s, %s, %s", r3, r0, r0);
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+				/* fcmp NaN with self: unordered (VS) iff not finite */
+				snprintf (buf, sizeof(buf), "\tfcmp\t%s, %s", r3, r3);
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			}
+			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_O, ARG_REG, result_reg));
+			aarch64_fp_pop();
+			ts->stack->a_reg = result_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 0) ts->stack->fs_depth--;
+		}
+		break;
+	/* Additional IEEE operations */
 	case I_FPEQ:  /* 0x95 - FP equal: test FA == FB */
 	case I_FPGT:  /* 0x94 - FP greater than: test FB > FA */
 	case I_FPORDERED:  /* 0x92 - FP ordered: test FA and FB not NaN */
@@ -3321,7 +3365,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 	/* Remaining stub operations */
 	case 0x80: case 0x81: case 0x85:
 	case 0x8d:
-	case 0x8f: case 0x90: case 0x91: case 0x93:
+	case 0x8f: case 0x90:
 	case 0x97: case 0x99: case 0x9a: case 0x9b: case 0x9c:
 		/* For unknown IEEE operations, generate a no-op to prevent crashes */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// IEEE FP operation (stub)")));
