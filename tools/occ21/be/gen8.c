@@ -4451,6 +4451,12 @@ PUBLIC void tpredef (treenode * tptr, treenode * destlist)
 			}
 
 			chans = (type_bytes / bytesperword);
+			/* On 64-bit targets, anonymous shared channels have type_bytes
+			 * based on the protocol size (e.g. 4 for INT) which is smaller
+			 * than bytesperword (8). Ensure at least 1 channel word. */
+			if (chans < 1) {
+				chans = 1;
+			}
 
 			if (kroc_chantype_desc || kroc_chantype_knsf) {
 				flags |= MT_CB_STATE_SPACE;
