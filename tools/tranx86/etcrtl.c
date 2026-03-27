@@ -4846,6 +4846,13 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		 * correctly negative for 64-bit signed CMP (e.g., 0xFFFFFFFFFFFFFFFF). */
 		emit_int_signext (ts, ts->stack->old_a_reg);
 		emit_int_signext (ts, ts->stack->old_b_reg);
+#if (BytesPerWord > 4)
+		/* On 64-bit targets, always use register-register comparison.
+		 * The VALUE_LOCAL optimization loads a fresh 64-bit value from
+		 * memory, bypassing the sign-extension above and causing
+		 * zero-extended negative INTs to compare as positive. */
+		add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+#else
 		switch (constmap_typeof (ts->stack->old_a_reg)) {
 		default:
 			switch (constmap_typeof (ts->stack->old_b_reg)) {
@@ -4885,6 +4892,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			}
 			break;
 		}
+#endif
 		ts->stack->must_set_cmp_flags = 0;
 		break;
 		/*}}}*/
