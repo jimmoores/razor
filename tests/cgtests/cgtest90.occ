@@ -73,11 +73,46 @@ PROC cgtest90 (CHAN OF BYTE keyb?, scr!, err!)
       check.INT64 (ackermann (3, 4), 125, "ackermann (3, 4)")
   :
   --}}}
+  --{{{  test1 -- nested INT recursive functions (regression test)
+  PROC test1 ()
+    --{{{  nested dbl(dbl(x)) pattern
+    INT RECURSIVE FUNCTION dbl (VAL INT n)
+      INT r :
+      VALOF
+        IF
+          n > 100
+            r := n
+          TRUE
+            r := dbl (dbl (n + n))
+        RESULT r
+    :
+    --}}}
+    --{{{  INT Ackermann (nested recursive with different args)
+    INT RECURSIVE FUNCTION ack (VAL INT m, n)
+      INT r :
+      VALOF
+        IF
+          m = 0
+            r := n + 1
+          n = 0
+            r := ack (m - 1, 1)
+          TRUE
+            r := ack (m - 1, ack (m, n - 1))
+        RESULT r
+    :
+    --}}}
+    SEQ
+      check.INT (dbl (1), 128, "dbl(1)")
+      check.INT (dbl (50), 200, "dbl(50)")
+      check.INT (ack (3, 4), 125, "INT ack(3,4)")
+  :
+  --}}}
   --}}}
 
   SEQ
     init ("CG test 90", "RECURSIVE FUNCTIONs")
     test0 ()
+    test1 ()
     finish ()
 :
 
