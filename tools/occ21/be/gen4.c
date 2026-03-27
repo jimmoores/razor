@@ -1219,6 +1219,7 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		if (isconstexpnd (right) && HiValOf (right) == 0) {
 			/* genfastshift(left, regs, LoValOf(right)); */
 			texp_main (left, regs, FALSE);	/* don't bother sign-extending */
+			EMIT_WIDE_IF_INT64();
 			genshiftimmediate (op == S_LSHIFT ? I_SHL : I_SHR, LoValOf (right));	/* MDP */
 			toverflowmask (signed_short, byte_short, signextend_result);	/* re-signextend */
 			return;
