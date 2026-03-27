@@ -5034,8 +5034,13 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						        }
 						} else {
 							/* Convert REAL32/REAL64 to INT32 or INT64. */
-							aarch64_fp_from_i64 = 0;
 							int fp_prec = prec & 0xFF;
+							if (aarch64_fp_from_i64 && fp_prec != 64) {
+								/* Value is REAL64 in d0 from I64TOREAL but target
+								 * precision is REAL32; narrow first. */
+								fprintf (stream, "\tfcvt\ts0, d0\n");
+							}
+							aarch64_fp_from_i64 = 0;
 							int rmode = (prec >> 8) & 0xFF;
 							int is_int64 = (prec & 0x10000) != 0;
 							const char *fp_src = (fp_prec == 64) ? "d0" : "s0";
