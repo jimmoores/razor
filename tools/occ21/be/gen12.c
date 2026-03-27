@@ -886,15 +886,29 @@ fprintf (stderr, "gen12: mapfpexp(): EXACT/ROUND/TRUNC\n");
 				/* treat INT64 like INT32, cos we can use 'dup' to save
 				   using a temp */
 			case S_INT64:
-				if (isaddressable (*sourceptr))
-					mapaddr (sourceptr);	/* bug INSdi02163 */
-				else {
-					/* INSdi02195 - do this slightly differently to INT32 */
-					int sourcemode = P_PTR;
-					BOOL freeopdtemp = FALSE;
-					sourcemode = mapaddresslopd (sourcemode, sourceptr, &freeopdtemp);
-					if (freeopdtemp)
+				if (bytesperword >= 8) {
+					/* On 64-bit targets, INT64 is single-word.
+					   Handle like INT32 to ensure function call results
+					   are stored to workspace before taking address. */
+					if (isaddressable (*sourceptr)) {
+						mapaddr (sourceptr);
+					} else {
+						mapexp (sourceptr);
+						*sourceptr = gettemp (*sourceptr, NM_WORKSPACE);
+						upusecount (*sourceptr, 2);
 						freetemp (*sourceptr);
+					}
+				} else {
+					if (isaddressable (*sourceptr))
+						mapaddr (sourceptr);	/* bug INSdi02163 */
+					else {
+						/* INSdi02195 - do this slightly differently to INT32 */
+						int sourcemode = P_PTR;
+						BOOL freeopdtemp = FALSE;
+						sourcemode = mapaddresslopd (sourcemode, sourceptr, &freeopdtemp);
+						if (freeopdtemp)
+							freetemp (*sourceptr);
+					}
 				}
 				break;
 				/*}}} */
@@ -1303,12 +1317,24 @@ PUBLIC void tfpexp (treenode * tptr, int regs, int fpregs)
 			case S_INT64:
 				/* ROUND / TRUNC  no possibility of setting error */
 				{
-					const int sourcemode = ptrmodeof (addresslopd (P_EXP, source));
+					int sourcemode;
+					BOOL simple;
+					if (bytesperword >= 8) {
+						/* On 64-bit targets, INT64 is single-word.
+						   Use simplify to evaluate and store to temp (like INT32),
+						   so function results get stored to workspace before
+						   I64TOREAL reads from memory. */
+						sourcemode = P_EXP;
+						sourcemode = simplify (sourcemode, source);
+						sourcemode = ptrmodeof (sourcemode);
+					} else {
+						sourcemode = ptrmodeof (addresslopd (P_EXP, source));
+					}
 #if 0
-					const BOOL simple = issimplelocal (source, be_lexlevel);	/* bug 738 5/11/90 */
+					simple = issimplelocal (source, be_lexlevel);	/* bug 738 5/11/90 */
 #else
 					/* bug INSdi02168 */
-					const BOOL simple = issimplelocal (source, be_lexlevel)
+					simple = issimplelocal (source, be_lexlevel)
 						|| (T9000_instruction_timings && islocal (source, be_lexlevel));
 #endif
 					geni64tor (sourcemode, source, desttype, roundmode, simple);
