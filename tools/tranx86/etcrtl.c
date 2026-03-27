@@ -525,6 +525,21 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					ts->stack->must_set_cmp_flags = 1;
 					break;
 					/*}}}*/
+					/*{{{  WIDENWORD -- sign-extend 32-bit INT to 64-bit on 64-bit targets*/
+				case WIDENWORD:
+					glob_in_icount++;
+					if (options.annotate_output) {
+						add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (".WIDENWORD")));
+					}
+					deferred_cond (ts);
+#if (BytesPerWord > 4)
+					/* Sign-extend the 32-bit value in a_reg to 64 bits */
+					add_to_ins_chain (compose_ins (INS_SIGNEXT32, 1, 1, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+					constmap_remove (ts->stack->a_reg);
+#endif
+					ts->stack->must_set_cmp_flags = 1;
+					break;
+					/*}}}*/
 					/*{{{  FPPOP*/
 				case FPPOP:
 					glob_in_icount++;

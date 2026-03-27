@@ -291,6 +291,7 @@ PRIVATE int assemble_instruction (const INT32 instruction, INT32 operand)
 #define SPE_SEMRELEASE 12
 #define SPE_SEMINIT 13
 #define SPE_RESCHEDULE 14
+#define SPE_WIDENWORD 39
 #define SPE_INDIRECT_AREG 15
 #define SPE_INDIRECT_BREG 16
 #define SPE_INDIRECT_CREG 17
@@ -611,7 +612,8 @@ PRIVATE void etc_specop (const int specinst)
 		"KILLCALL",
 		"WAIT_FOR_INTERRUPT",
 		"R32TAN",
-		"R64TAN"
+		"R64TAN",
+		"WIDENWORD"
 	};
 	add_code (0x6f);
 	add_code (0xf0);
@@ -2873,6 +2875,21 @@ PUBLIC void genwidenshort (void)
 	/*}}} */
 	if (etc_output) {
 		etc_specop (SPE_WIDENSHORT);
+	}
+}
+
+/*}}}*/
+/*{{{  PUBLIC void genwidenword ()             called from GEN4t*/
+/*****************************************************************************
+ *
+ *  genwidenword generates code to sign-extend from INT32 to INT64
+ *  (single-word) on 64-bit targets.
+ *
+ *****************************************************************************/
+PUBLIC void genwidenword (void)
+{
+	if (etc_output) {
+		etc_specop (SPE_WIDENWORD);
 	}
 }
 

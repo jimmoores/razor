@@ -108,6 +108,7 @@ void close_object_file (FILE *fptr, const char *filename);
 /*{{{  extra routines only strictly needed if generating target code directly*/
 /* included here so we only need one version of this header file */
 void genwidenshort (void);
+void genwidenword (void);
 void noteprocentry (void);
 void genprocentry (const int tag, const int ws);
 void genprocreturn (const int tag, SOURCEPOSN elocn, const int nregs, const int ws);

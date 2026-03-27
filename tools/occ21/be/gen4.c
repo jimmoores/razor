@@ -1571,9 +1571,11 @@ PUBLIC void ttypeconversion (const int sourcetype, const int desttype)
 				gensecondary (I_XSWORD);
 			else if (sourcetype == S_INT16) {
 				genwidenshort ();
-			} else {
-				/* For S_INT on 64-bit targets, no additional widening needed after masking */
-				/* The value is already properly masked and sign-extended */
+			} else if (bytesperword >= 8 && (sourcetype == S_INT32 || sourcetype == S_INT)) {
+				/* On 64-bit targets, sign-extend 32-bit INT to 64-bit INT64.
+				 * After masking, the value is zero-extended in a 64-bit register.
+				 * We need sign-extension so negative values stay negative. */
+				genwidenword ();
 			}
 		}
 		/*}}} */
