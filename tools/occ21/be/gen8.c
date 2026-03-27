@@ -2882,7 +2882,7 @@ printtreenl (stderr, 4, foo);
 			}
 		}
 		genprimary (I_LDL, RECURSIVE_WS);
-		genprimary (I_ADC, -((alloc_ws_slots - 1) << 2));
+		genprimary (I_ADC, -((alloc_ws_slots - 1) << WSH));
 
 		if (TagOf (tptr) != S_FINSTANCE) {
 			gensecondary (I_MRELEASE);
