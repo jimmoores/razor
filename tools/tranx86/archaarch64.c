@@ -5231,6 +5231,17 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 					break;
+				case INS_SWAP:
+					/* Swap two registers: reg1 <-> reg2. No xchg on AArch64,
+					 * use x15 as temp (scratch register). */
+					if (ins->in_args[0] && ins->in_args[1]) {
+						const char *r0 = aarch64_get_register_name (ins->in_args[0]->regconst);
+						const char *r1 = aarch64_get_register_name (ins->in_args[1]->regconst);
+						fprintf (stream, "\tmov\tx15, %s\n", r0);
+						fprintf (stream, "\tmov\t%s, %s\n", r0, r1);
+						fprintf (stream, "\tmov\t%s, x15\n", r1);
+					}
+					break;
 				default:
 					/* Skip unhandled instructions */
 					break;
