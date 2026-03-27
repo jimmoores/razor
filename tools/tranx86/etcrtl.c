@@ -4751,10 +4751,16 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 	case I_SHL:
 	case I_SHR:
 		/*
-		 *	cmp	$32, %oldareg
+		 *	cmp	$32, %oldareg    (or $64 for I_WIDE INT64)
 		 *	jb	L0
 		 *	jz	L1
 		 */
+		{
+		int is_wide = wide_next;
+		intptr_t shift_limit = is_wide ? 64 : 32;
+		if (is_wide) {
+			wide_next = 0;
+		}
 		this_lab = ++(ts->last_lab);
 		this_lab2 = ++(ts->last_lab);
 		this_lab3 = ++(ts->last_lab);
@@ -4762,11 +4768,12 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		switch (constmap_typeof (ts->stack->old_a_reg)) {
 		default:
 			/* do comparison */
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) 32, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, shift_limit, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, this_lab));
 			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, this_lab2));
-			/* For SHR on 64-bit: truncate value to 32 bits before shifting */
-			if (sec == I_SHR) {
+			/* For SHR on 64-bit INT: truncate to 32 bits before shifting.
+			 * Skip for I_WIDE (INT64) operations. */
+			if (sec == I_SHR && !is_wide) {
 				emit_int_truncate (ts, ts->stack->old_b_reg);
 			}
 			/* code shifted to architecture-dependant handling for actual shift */
@@ -4775,7 +4782,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		case VALUE_CONST:
 			/* already know the result */
 			c_val = constmap_regconst (ts->stack->old_a_reg);
-			if (c_val > 32) {
+			if (c_val > shift_limit) {
 				fprintf (stderr, "%s: serious: bit-shift (%d) out of range around line %d in %s\n", progname, c_val, ts->line_pending, ts->file_list[ts->file_pending]);
 			}
 			break;
@@ -4796,7 +4803,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
 			if (options.debug_options & DEBUG_RANGESTOP) {
 				generate_range_code (ts, REOP_SHIFT, arch);
-			} else {	
+			} else {
 				arch->compose_kcall (ts, K_BRANGERR, 0, -1);
 			}
 			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab2));
@@ -4805,19 +4812,20 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			break;
 		case VALUE_CONST:
 			/* c_val set just before */
-			if (c_val > 32) {
+			if (c_val > shift_limit) {
 				/* insert error */
 				if (options.debug_options & DEBUG_RANGESTOP) {
 					generate_range_code (ts, REOP_SHIFT, arch);
-				} else {	
+				} else {
 					arch->compose_kcall (ts, K_BRANGERR, 0, -1);
 				}
-			} else if (c_val == 32) {
-				/* clear to zero (L1) */
+			} else if (c_val == shift_limit) {
+				/* clear to zero */
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) 0, ARG_REG, ts->stack->a_reg));
 			} else {
-				/* For SHR on 64-bit: truncate value to 32 bits before shifting */
-				if (sec == I_SHR) {
+				/* For SHR on 64-bit INT: truncate to 32 bits before shifting.
+				 * Skip for I_WIDE (INT64) operations. */
+				if (sec == I_SHR && !is_wide) {
 					emit_int_truncate (ts, ts->stack->old_b_reg);
 				}
 				/* insert shift (moved to arch) */
@@ -4830,7 +4838,10 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		ts->stack->c_reg = REG_UNDEFINED;
 		ts->stack->must_set_cmp_flags = 1;
 		constmap_remove (ts->stack->a_reg);
-		emit_int_truncate (ts, ts->stack->a_reg);
+		if (!is_wide) {
+			emit_int_truncate (ts, ts->stack->a_reg);
+		}
+		}
 		/*
 		 *	obvious optimisation for (==32 case):
 		 *		cmovz	$0,%areg
