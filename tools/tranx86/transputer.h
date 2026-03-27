@@ -557,10 +557,13 @@
 	#define W_POINTER	((-4) << WSH)
 	#define W_PRIORITY	((-3) << WSH)
 #else	/* !PROCESS_PRIORITY */
-	#define W_TIME		((-5) << WSH)
-	#define W_TLINK		((-4) << WSH)
-	#define W_STATUS	((-3) << WSH)
-	#define W_POINTER	((-3) << WSH)
+	/* These must match the runtime (ccsp_consts.h) which always
+	 * includes the Priofinity slot at -3. */
+	#define W_TIME		((-6) << WSH)
+	#define W_TLINK		((-5) << WSH)
+	#define W_STATUS	((-4) << WSH)
+	#define W_POINTER	((-4) << WSH)
+	#define W_PRIORITY	((-3) << WSH)
 #endif	/* !PROCESS_PRIORITY */
 #define W_LINK		((-2) << WSH)
 #define W_IPTR		((-1) << WSH)
