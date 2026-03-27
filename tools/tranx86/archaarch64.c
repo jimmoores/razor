@@ -5084,11 +5084,7 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						                aarch64_fp_from_i64 = 0;
 						        }
 						        fprintf (stream, "\tfmov\tw17, s0\n");
-						        if (ins->out_args[0]->flags & ARG_DISP) {
-						                store_reg = "x17";
-						        } else {
-						                store_reg = "w17";
-						        }
+						        store_reg = "w17";
 						} else {
 							/* Convert REAL32/REAL64 to INT32 or INT64. */
 							int fp_prec = prec & 0xFF;
