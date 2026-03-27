@@ -2891,24 +2891,24 @@ PRIVATE void preproc_builtin (void)
 	   for compatibility with existing libraries that use them to determine
 	   loop counts and conditional compilation paths.  On 64-bit targets
 	   where INT is 32-bit but word is 64-bit, these still report 32.
-	   TARGET.WORD.BITS/BYTES report the actual machine word size. */
-	if (bytesperword == 8) {
-		/* 64-bit target: INT is 32-bit, word is 64-bit */
+	   TARGET.WORD.BITS/BYTES report the actual machine word size.
+	   Note: bytesperword (tx_global.bpw) may not be set yet at this point,
+	   so we detect 64-bit targets via the processor string instead. */
+	{
+		int is_64bit = (tx_global.pstring &&
+			(strcmp(tx_global.pstring, "AARCH64") == 0 ||
+			 strcmp(tx_global.pstring, "X64") == 0));
 		tw = lookupword ("TARGET.BYTES.PER.WORD", 21);
-		preproc_add_define (tw, 21, PP_VAL_INT, (void *)4);  /* INT size */
+		preproc_add_define (tw, 21, PP_VAL_INT, (void *)(is_64bit ? 4 : (long)bytesperword));
 		tw = lookupword ("TARGET.BITS.PER.WORD", 20);
-		preproc_add_define (tw, 20, PP_VAL_INT, (void *)32); /* INT size */
-		/* Actual machine word size constants */
-		tw = lookupword ("TARGET.WORD.BYTES", 18);
-		preproc_add_define (tw, 18, PP_VAL_INT, (void *)bytesperword);
-		tw = lookupword ("TARGET.WORD.BITS", 17);
-		preproc_add_define (tw, 17, PP_VAL_INT, (void *)(bytesperword * 8));
-	} else {
-		/* 16-bit and 32-bit targets: INT == word */
-		tw = lookupword ("TARGET.BYTES.PER.WORD", 21);
-		preproc_add_define (tw, 21, PP_VAL_INT, (void *)bytesperword);
-		tw = lookupword ("TARGET.BITS.PER.WORD", 20);
-		preproc_add_define (tw, 20, PP_VAL_INT, (void *)(bytesperword * 8));
+		preproc_add_define (tw, 20, PP_VAL_INT, (void *)(is_64bit ? 32 : (long)(bytesperword * 8)));
+		if (is_64bit) {
+			/* Actual machine word size constants for 64-bit targets */
+			tw = lookupword ("TARGET.WORD.BYTES", 18);
+			preproc_add_define (tw, 18, PP_VAL_INT, (void *)8);
+			tw = lookupword ("TARGET.WORD.BITS", 16);
+			preproc_add_define (tw, 16, PP_VAL_INT, (void *)64);
+		}
 	}
 	if (bytesperword == 8) {
 		/* Define architecture-specific preprocessor symbols for 64-bit targets */

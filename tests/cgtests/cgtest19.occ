@@ -1445,7 +1445,14 @@ PROC cgtest19 (CHAN OF BYTE keyb, scr, err)
         x := VSSIZEOF(test)
         check(x, 0, "B1797c")
         x := VSSIZEOF(testv)
+        #IF DEFINED (TARGET.WORD.BITS)
+        -- 64-bit target: INT < WORD, so vectorspace in words < element count.
+        -- Check that enough bytes are allocated for the array.
+        VAL INT vs.bytes IS x * (##TARGET.WORD.BITS / 8) :
+        check(INT (vs.bytes >= (slots * 4)), INT TRUE, "B1797d")
+        #ELSE
         check(INT (x >= slots), INT TRUE, "B1797d")
+        #ENDIF
         x := VSSIZEOF(testw)
         check(x, 0, "B1797e")
         x := WSSIZEOF(testw)
