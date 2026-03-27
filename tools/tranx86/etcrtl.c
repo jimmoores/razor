@@ -840,6 +840,13 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					/*}}}*/
 					/*{{{  FBARINIT*/
 				case FBARINIT:
+				{
+					/* FORK barrier field offsets (word-sized fields) */
+					#define FBAR_ENROLLED	(0 * BytesPerWord)
+					#define FBAR_COUNT	(1 * BytesPerWord)
+					#define FBAR_FPTR	(2 * BytesPerWord)
+					#define FBAR_BPTR	(3 * BytesPerWord)
+
 					glob_in_icount++;
 					ts->stack->old_a_reg = ts->stack->a_reg;
 					ts->stack->old_b_reg = ts->stack->b_reg;
@@ -848,15 +855,16 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						arch->compose_kcall (ts, K_FBAR_INIT, 1, 0);
 					} else {
 						/* initialise barrier to (0,0,notprocess,notprocess) */
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 0));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 4));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 8));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 12));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_ENROLLED));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_COUNT));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_FPTR));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_BPTR));
 					}
 
 					ts->stack->must_set_cmp_flags = 0;
 					ts->stack->ts_depth -= 1;
 					break;
+				}
 					/*}}}*/
 					/*{{{  FBARSYNC*/
 				case FBARSYNC:
@@ -875,56 +883,56 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						int fslab = ++(ts->last_lab);
 						int rslab = ++(ts->last_lab);
 
-						add_to_ins_chain (compose_ins (INS_DEC, 1, 2, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 4, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 4, ARG_REG | ARG_IMP, REG_CC));
+						add_to_ins_chain (compose_ins (INS_DEC, 1, 2, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_COUNT, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_COUNT, ARG_REG | ARG_IMP, REG_CC));
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NZ, ARG_LABEL, skiplab));
 						/* barrier complete, reset count attach barrier queue to run-queue */
 						tmp_reg = tstack_newreg (ts->stack);
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 0, ARG_REG, tmp_reg));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 4));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_ENROLLED, ARG_REG, tmp_reg));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_COUNT));
 						/* fptr == NotProcess.p ? */
-						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 8, ARG_REG | ARG_IMP, REG_CC));
+						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_FPTR, ARG_REG | ARG_IMP, REG_CC));
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, outlab));
 						/* no, append it to the run-queue */
 						add_to_ins_chain (compose_ins (INS_OR, 2, 1, ARG_REG, REG_FPTR, ARG_REG, REG_FPTR, ARG_REG, REG_FPTR, ARG_REG | ARG_IMP, REG_CC));
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, fqlab));
 						/* run-queue non-empty, append onto BPTR */
 						tmp_reg = tstack_newreg (ts->stack);
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 8, ARG_REG, tmp_reg));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_FPTR, ARG_REG, tmp_reg));
 						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_BPTR, W_LINK));
 						add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_LABEL, fslab));
 
 #if 0
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 12, ARG_REG, REG_BPTR));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 8));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_BPTR, ARG_REG, REG_BPTR));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_FPTR));
 						add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_LABEL, outlab));
 #endif
-						
+
 						/* run-queue empty, load fptr and bptr into regs */
 						add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, fqlab));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 8, ARG_REG, REG_FPTR));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_FPTR, ARG_REG, REG_FPTR));
 						add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, fslab));
 
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 12, ARG_REG, REG_BPTR));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 8));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_BPTR, ARG_REG, REG_BPTR));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_FPTR));
 						add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_LABEL, outlab));
 
 						add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, skiplab));
 						/* barrier not complete, add process to queue and reschedule */
-						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 8, ARG_REG | ARG_IMP, REG_CC));
+						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_FPTR, ARG_REG | ARG_IMP, REG_CC));
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, fxlab));
 						/* queue already has something on it, add ourselves */
 						tmp_reg = tstack_newreg (ts->stack);
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 12, ARG_REG, tmp_reg));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_BPTR, ARG_REG, tmp_reg));
 						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REGIND | ARG_DISP, tmp_reg, W_LINK));
 						add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_LABEL, rslab));
 
 						/* queue emoty, put ourselves in it */
 						add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, fxlab));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 8));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_FPTR));
 
 						/* put in Bptr and reschedule */
 						add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, rslab));
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, 12));
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, FBAR_BPTR));
 						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_LINK));
 						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, outlab, ARG_REGIND | ARG_DISP, REG_WPTR, W_IPTR));
 
@@ -963,10 +971,10 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 
 						if (constmap_typeof (ts->stack->old_a_reg) == VALUE_CONST) {
 							add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_CONST | ARG_ISCONST, constmap_regconst (ts->stack->old_a_reg),
-										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 0, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 0, ARG_REG | ARG_IMP, REG_CC));
+										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_ENROLLED, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_ENROLLED, ARG_REG | ARG_IMP, REG_CC));
 						} else {
-							add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 0,
-										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 0, ARG_REG | ARG_IMP, REG_CC));
+							add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_ENROLLED,
+										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_ENROLLED, ARG_REG | ARG_IMP, REG_CC));
 						}
 						/* if this goes below zero, badness */
 						add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_NS, ARG_LABEL, cslab));
@@ -990,10 +998,10 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, cslab));
 						if (constmap_typeof (ts->stack->old_a_reg) == VALUE_CONST) {
 							add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_CONST | ARG_ISCONST, constmap_regconst (ts->stack->old_a_reg),
-										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 4, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 4, ARG_REG | ARG_IMP, REG_CC));
+										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_COUNT, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_COUNT, ARG_REG | ARG_IMP, REG_CC));
 						} else {
-							add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 4,
-										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 4, ARG_REG | ARG_IMP, REG_CC));
+							add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_COUNT,
+										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_COUNT, ARG_REG | ARG_IMP, REG_CC));
 						}
 
 						if (!extends_magic) {
@@ -1001,26 +1009,26 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 
 							/* barrier complete, reset count and attach barrier queue to run-queue */
 							tmp_reg = tstack_newreg (ts->stack);
-							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 0, ARG_REG, tmp_reg));
-							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 4));
+							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_ENROLLED, ARG_REG, tmp_reg));
+							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_COUNT));
 							/* fptr == NotProcess.p ? */
-							add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 8, ARG_REG | ARG_IMP, REG_CC));
+							add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_FPTR, ARG_REG | ARG_IMP, REG_CC));
 							add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, outlab));
 							/* no, append it to the run-queue */
 							add_to_ins_chain (compose_ins (INS_OR, 2, 2, ARG_REG, REG_FPTR, ARG_REG, REG_FPTR, ARG_REG, REG_FPTR, ARG_REG | ARG_IMP, REG_CC));
 							add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_LABEL, fqlab));
 							/* run-queue non-empty, append onto BPTR */
 							tmp_reg = tstack_newreg (ts->stack);
-							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 8, ARG_REG, tmp_reg));
+							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_FPTR, ARG_REG, tmp_reg));
 							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_BPTR, W_LINK));
 							add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_LABEL, fslab));
 							/* run-queue empty, load fptr and bptr into regs */
 							add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, fqlab));
-							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 8, ARG_REG, REG_FPTR));
+							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_FPTR, ARG_REG, REG_FPTR));
 							add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, fslab));
 
-							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 12, ARG_REG, REG_BPTR));
-							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 8));
+							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_BPTR, ARG_REG, REG_BPTR));
+							add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_FPTR));
 
 							add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, outlab));
 						}
@@ -1043,15 +1051,15 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						switch (constmap_typeof (ts->stack->old_a_reg)) {
 						case VALUE_CONST:
 							add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP,
-										ts->stack->old_b_reg, 4, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 4));
+										ts->stack->old_b_reg, FBAR_COUNT, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_COUNT));
 							add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP,
-										ts->stack->old_b_reg, 0, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 0));
+										ts->stack->old_b_reg, FBAR_ENROLLED, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_ENROLLED));
 							break;
 						default:
-							add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 4,
-										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 4));
-							add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 0,
-										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, 0));
+							add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_COUNT,
+										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_COUNT));
+							add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_ENROLLED,
+										ARG_REGIND | ARG_DISP, ts->stack->old_b_reg, FBAR_ENROLLED));
 							break;
 						}
 					}
