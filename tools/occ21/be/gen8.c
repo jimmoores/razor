@@ -1914,8 +1914,12 @@ printtreenl (stderr, 4, tptr);
 			/* frmb (09/01/2005): new allocator doesn't necessarily have this extra word..! */
 			genprimary (I_LDC, ((alloc_ms_slots + 1) * bytesperword));
 			gensecondary (I_MALLOC);
-			genprimary (I_LDC, 4);
-			gensecondary (I_SUM);					/* offset by 4 */
+			genprimary (I_LDC, bytesperword);
+			/* pointer arithmetic: skip 32-bit truncation on 64-bit */
+			if (bytesperword > 4) {
+				gensecondary (I_WIDE);
+			}
+			gensecondary (I_SUM);					/* offset by 1 word */
 			genprimary (I_STL, FORK_SETUP_TEMP_MS);			/* store in temp MS slot */
 			/* put MINT in word 0 */
 			gensecondary (I_MINT);
@@ -2013,9 +2017,13 @@ printtreenl (stderr, 4, nplist);
 		genprimary (I_LDL, DYNCALL_SETUP_TEMP_NAME);
 		genprimary (I_LDNL, 1);					/* WS slots */
 		genprimary (I_ADC, ((nparams < MAXREGS) ? MAXREGS : nparams) + MAXREGS + MIN_DYNCALL_SLOTS - 1);	/* extra slots for params + state */
-		loadconstant (4);
+		loadconstant (bytesperword);
 		gensecondary (I_PROD);
 		genprimary (I_LDL, DYNCALL_SETUP_TEMP_WSBASE);
+		/* pointer arithmetic: skip 32-bit truncation on 64-bit */
+		if (bytesperword > 4) {
+			gensecondary (I_WIDE);
+		}
 		gensecondary (I_SUM);					/* add to base addr */
 		genprimary (I_STL, DYNCALL_SETUP_TEMP_WS);
 
@@ -2170,6 +2178,10 @@ printtreenl (stderr, 4, msp_ptr);
 		loadmobile (iname);
 		genprimary (I_LDNL, MPP_WSBASE);
 		genprimary (I_LDL, MPA_SETUP_TEMP);
+		/* pointer arithmetic: wsbase + wssize - skip 32-bit truncation on 64-bit */
+		if (bytesperword > 4) {
+			gensecondary (I_WIDE);
+		}
 		gensecondary (I_SUM);
 		genprimary (I_STL, MPA_SETUP_TEMP);
 
