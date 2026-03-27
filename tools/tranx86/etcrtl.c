@@ -5928,9 +5928,10 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_PROC_PARAM -- copy a parameter to a workspace*/
 	case I_PROC_PARAM:
 		if (1) {
-			/* CGR FIXME: I'm pretty sure this is wrong, will fix when I have code
-			 * that generates these instructions */
-			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) WShift, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			/* Store parameter to forked workspace: ws[slot] := value.
+			 * old_a = slot number, old_b = workspace ptr, old_c = value.
+			 * Convert slot to byte offset using WSH (word shift). */
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) WSH, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REGIND, ts->stack->old_b_reg));
 			tstack_undefine (ts->stack);
