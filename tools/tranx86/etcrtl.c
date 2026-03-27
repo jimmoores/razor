@@ -4308,8 +4308,9 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*{{{  I_MINT -- generate MOSTNEG INT*/
 	case I_MINT:
 		{
-			/* occam INT is always 32-bit; MOSTNEG INT = 0x80000000. */
-			intptr_t most_neg = (intptr_t)(unsigned int)0x80000000;
+			/* occam INT is always 32-bit; MOSTNEG INT = 0x80000000.
+			 * Sign-extend to 64-bit so negative comparisons work correctly. */
+			intptr_t most_neg = (intptr_t)(int)0x80000000;
 			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) most_neg, ARG_REG, ts->stack->a_reg);
 			constmap_new (ts->stack->a_reg, VALUE_CONST, most_neg, tmp_ins);
 			add_to_ins_chain (tmp_ins);
