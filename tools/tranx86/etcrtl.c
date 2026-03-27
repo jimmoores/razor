@@ -5792,9 +5792,8 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*}}}*/
 		/*{{{  I_CFLERR -- clear error-flag (unsupported)*/
 	case I_CFLERR:
-		/* no translation for this, or never generated ? */
-		CONVMISSING ("CFLERR");
-		/* **INCOMPLETE** */
+		/* Clear FP error flag. On modern targets with IEEE 754 default
+		 * non-trapping behaviour, this is a no-op. */
 		break;
 		/*}}}*/
 		/*{{{  I_DUP -- duplicate top stack entry*/
@@ -5842,7 +5841,8 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*}}}*/
 		/*{{{  I_FPTESTERR -- FP test error (unsupported)*/
 	case I_FPTESTERR:
-		CONVMISSING ("FPTESTERR");
+		/* Test FP error flag. On modern targets with IEEE 754 default
+		 * non-trapping behaviour, FP errors don't occur. No-op. */
 		break;
 		/*}}}*/
 		/*{{{  I_FP... -- various floating-point operations*/

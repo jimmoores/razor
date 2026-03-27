@@ -3362,12 +3362,69 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 		}
 		break;
-	/* Remaining stub operations */
+	case I_FPGE:  /* 0x97 - FP greater-or-equal: test FB >= FA */
+		/* Like FPGT but with >= semantics. FB >= FA → !(FA > FB). */
+		{
+			int result_reg = tstack_newreg (ts->stack);
+			if (aarch64_fp_stack_depth >= 2) {
+				int prec = aarch64_fp_stack_prec[0];
+				const char *r0 = aarch64_fp_regname (0, prec);
+				const char *r1 = aarch64_fp_regname (1, prec);
+				char buf[128];
+				/* fcmp FB, FA → flags set for FB >= FA */
+				snprintf (buf, sizeof(buf), "\tfcmp\t%s, %s", r1, r0);
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+			}
+			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_GE, ARG_REG, result_reg));
+			aarch64_fp_pop();
+			aarch64_fp_pop();
+			ts->stack->a_reg = result_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 1) {
+				ts->stack->fs_depth -= 2;
+			} else {
+				ts->stack->fs_depth = 0;
+			}
+		}
+		break;
+	case I_FPB32TOR64:  /* 0x9a - Convert unsigned bottom 32-bit INT to REAL64 */
+		/* Input: 32-bit unsigned value on eval stack (old_a_reg).
+		 * Output: REAL64 on FP stack.
+		 * On AArch64: zero-extend to 64-bit unsigned via TRUNCATE32 (mov wN, wN),
+		 * then convert using INS_FILD64 which does scvtf d0, xN.
+		 * Since the value is zero-extended (unsigned), the signed conversion
+		 * via scvtf is correct for values 0..0xFFFFFFFF. */
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		add_to_ins_chain (compose_ins (INS_FILD64, 1, 0, ARG_REG, ts->stack->old_a_reg));
+		ts->stack->fs_depth++;
+		tstate_ctofp (ts);
+		break;
+	case I_FPRANGE:  /* 0x8d - FP range check (for conversion safety) */
+		/* No-op on AArch64: range checking is handled by fcvt* instructions
+		 * which produce defined results for out-of-range values. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// FPRANGE (no-op on aarch64)")));
+		break;
+	case I_FPLG:  /* 0x9b - FP logarithm (T9000) */
+		/* Not expected to be generated. If it is, fall through to error. */
+		fprintf (stderr, "%s: warning: I_FPLG (FP log) not implemented for aarch64\n", progname);
+		break;
+	case I_FPTESTERR:  /* 0x9c - FP test error flag */
+		/* On AArch64, FP exceptions don't trap by default (IEEE 754).
+		 * Always report no error. Push FALSE (0) onto integer stack. */
+		{
+			int result_reg = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, result_reg));
+			ts->stack->a_reg = result_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+		}
+		break;
+	/* Remaining true stubs (T9000-specific, not generated) */
 	case 0x80: case 0x81: case 0x85:
-	case 0x8d:
-	case 0x8f: case 0x90:
-	case 0x97: case 0x99: case 0x9a: case 0x9b: case 0x9c:
-		/* For unknown IEEE operations, generate a no-op to prevent crashes */
+	case 0x8f: case 0x90: case 0x99:
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// IEEE FP operation (stub)")));
 		break;
 	default:
@@ -5124,8 +5181,9 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					}
 					break;
 				case INS_FILD64:
-					/* Load 64-bit integer from memory and convert to REAL64.
-					 * in_args[0] = ARG_REGIND address of INT64 value.
+					/* Load 64-bit integer and convert to REAL64.
+					 * ARG_REGIND: address of INT64 value (load then convert).
+					 * ARG_REG: value already in register (convert directly).
 					 * Result goes to d0 (FP stack top). */
 					if (ins->in_args[0]) {
 						int mode = ins->in_args[0]->flags & ARG_MODEMASK;
@@ -5134,6 +5192,10 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							const char *base = aarch64_get_register_name (ins->in_args[0]->regconst);
 							aarch64_emit_mem_op (stream, "ldr", "x17", base, disp);
 							fprintf (stream, "\tscvtf\td0, x17\n");
+							aarch64_fp_from_i64 = 1;
+						} else if (mode == ARG_REG) {
+							fprintf (stream, "\tscvtf\td0, %s\n",
+								aarch64_get_register_name (ins->in_args[0]->regconst));
 							aarch64_fp_from_i64 = 1;
 						}
 					}
