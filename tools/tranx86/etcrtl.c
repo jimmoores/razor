@@ -4869,9 +4869,15 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/* Sign-extend both operands for correct 32-bit signed comparison
 		 * on 64-bit targets. After INS_TRUNCATE32, INT values are zero-extended
 		 * (e.g., -1 = 0x00000000FFFFFFFF). Sign-extension makes them
-		 * correctly negative for 64-bit signed CMP (e.g., 0xFFFFFFFFFFFFFFFF). */
-		emit_int_signext (ts, ts->stack->old_a_reg);
-		emit_int_signext (ts, ts->stack->old_b_reg);
+		 * correctly negative for 64-bit signed CMP (e.g., 0xFFFFFFFFFFFFFFFF).
+		 * Skip for I_WIDE (INT64): operands are already full 64-bit values
+		 * and sign-extending from 32 bits would corrupt them. */
+		if (wide_next) {
+			wide_next = 0;
+		} else {
+			emit_int_signext (ts, ts->stack->old_a_reg);
+			emit_int_signext (ts, ts->stack->old_b_reg);
+		}
 #if (BytesPerWord > 4)
 		/* On 64-bit targets, always use register-register comparison.
 		 * The VALUE_LOCAL optimization loads a fresh 64-bit value from

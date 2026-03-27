@@ -1485,6 +1485,7 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		/*}}} */
 		/*{{{  comparison */
 	case S_GR:
+		EMIT_WIDE_IF_INT64();
 		gensecondary (I_GT);
 		if (T9000_alpha_badgt (&tx_global)) {
 			genprimary (I_EQC, 1);
