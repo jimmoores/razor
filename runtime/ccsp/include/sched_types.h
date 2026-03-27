@@ -163,17 +163,25 @@ static inline void init_runqueue_t (runqueue_t *rq) {
 #define MWINDOW_HEAD_WRAP_BIT	(4)
 #define MWINDOW_MASK		0xffff
 struct _mwindow_t {
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
+	volatile word		data[MWINDOW_SIZE + 1];
+#else
 	atomic_t		data[MWINDOW_SIZE + 1];
+#endif
 } _PACK_STRUCT;
 
 static inline void init_mwindow_t (mwindow_t *mw) {
 	int i;
 	for (i = 0; i < MWINDOW_SIZE + 1; ++i) {
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
+		mw->data[i] = 0;
+#else
 		if (i == MWINDOW_STATE) {
 			att_init (&(mw->data[i]), (unsigned int)0);
 		} else {
 			att_init (&(mw->data[i]), (unsigned int)NULL);
 		}
+#endif
 	}
 }
 /*}}}*/

@@ -722,22 +722,22 @@ static TRIVIAL unsigned int increment_mwindow_head (unsigned int head)
 /*{{{  static HOT void add_to_visible_runqueue (runqueue_t *rq, mwindow_t *mw, batch_t *batch)*/
 static HOT void add_to_visible_runqueue (runqueue_t *rq, mwindow_t *mw, batch_t *batch)
 {
-	unsigned int state = att_val (&(mw->data[MWINDOW_STATE]));
+	unsigned int state = (unsigned int) atw_val (&(mw->data[MWINDOW_STATE]));
 	unsigned int w = increment_mwindow_head (MWINDOW_HEAD (state));
 
 	set_batch_window (batch, w);
 	weak_write_barrier ();
 
-	if (att_val (&(mw->data[w])) != ((unsigned int) NULL)) {
-		batch_t *old = (batch_t *) att_swap (&(mw->data[w]), (unsigned int) batch);
+	if (atw_val (&(mw->data[w])) != 0) {
+		batch_t *old = (batch_t *) atw_swap (&(mw->data[w]), (word) batch);
 		if (old != NULL) {
 			set_batch_clean (old);
 		}
 	} else {
-		att_set (&(mw->data[w]), (unsigned int) batch);
+		atw_set (&(mw->data[w]), (word) batch);
 		weak_write_barrier ();
 	}
-	att_set (&(mw->data[MWINDOW_STATE]), MWINDOW_NEW_STATE (state, w));
+	atw_set (&(mw->data[MWINDOW_STATE]), (word) MWINDOW_NEW_STATE (state, w));
 
 	add_to_local_runqueue (rq, batch);
 }
@@ -777,8 +777,8 @@ static HOT batch_t *try_pull_from_runqueue (sched_t *sched, unsigned int rq_n)
 
 			ASSERT ( (window > 0) && (window <= 15) );
 
-			if (att_cas (&(mw->data[window]), (unsigned int) batch, (unsigned int) NULL)) {
-				att_unsafe_clear_bit (&(mw->data[MWINDOW_STATE]), window + MWINDOW_BM_OFFSET);
+			if (atw_cas (&(mw->data[window]), (word) batch, (word) 0)) {
+				atw_clear_bit (&(mw->data[MWINDOW_STATE]), window + MWINDOW_BM_OFFSET);
 				set_batch_clean (batch);
 			} else {
 				release_dirty_batch (sched, batch);
@@ -1112,7 +1112,7 @@ static WARM void switch_priofinity (sched_t *sched, word priofinity)
 static TEPID batch_t *try_migrate_from_scheduler (sched_t *sched, unsigned int rq_n)
 {
 	mwindow_t *mw 		= &(sched->mw[rq_n]);
-	unsigned int state 	= att_val (&(mw->data[MWINDOW_STATE]));
+	unsigned int state 	= (unsigned int) atw_val (&(mw->data[MWINDOW_STATE]));
 	unsigned int head, bm;
 	batch_t *batch = NULL;
 
@@ -1121,21 +1121,21 @@ static TEPID batch_t *try_migrate_from_scheduler (sched_t *sched, unsigned int r
 
 	while (bm && batch == NULL) {
 		unsigned int w;
-		
+
 		w = bm & (MWINDOW_MASK << head);
 		if (w) {
 			w = bsr (w);
 		} else {
 			w = bsr (bm & (MWINDOW_MASK >> ((MWINDOW_SIZE + 1) - head)));
 		}
-		
-		att_clear_bit (&(mw->data[MWINDOW_STATE]), w + MWINDOW_BM_OFFSET);
-		batch = (batch_t *) att_swap (&(mw->data[w]), (unsigned int) NULL);
+
+		atw_clear_bit (&(mw->data[MWINDOW_STATE]), w + MWINDOW_BM_OFFSET);
+		batch = (batch_t *) atw_swap (&(mw->data[w]), (word) 0);
 		bm &= ~(1 << w);
 	}
 
 	/* don't worry about race in following line */
-	if ((!bm) && head == att_val (&(mw->data[MWINDOW_STATE]))) {
+	if ((!bm) && head == (unsigned int) atw_val (&(mw->data[MWINDOW_STATE]))) {
 		att_clear_bit (&(sched->mwstate), rq_n);
 	}
 
@@ -1713,8 +1713,8 @@ static bool find_remove_from_runqueue (sched_t *sched, word rq_n, bool remove, w
 			if (remove && (b->size <= 0)) {
 				if (window) {
 					mwindow_t *mw = &(sched->mw[rq_n]);
-					if (att_cas (&(mw->data[window]), (unsigned int) b, (unsigned int) NULL)) {
-						att_unsafe_clear_bit (&(mw->data[MWINDOW_STATE]), window + MWINDOW_BM_OFFSET);
+					if (atw_cas (&(mw->data[window]), (word) b, (word) 0)) {
+						atw_clear_bit (&(mw->data[MWINDOW_STATE]), window + MWINDOW_BM_OFFSET);
 						set_batch_clean (b);
 					} else {
 						BMESSAGE ("reached undefined state during find_remove_from_runqueue (multiple runtime threads?)\n");
@@ -2446,6 +2446,174 @@ K_CALL_DEFINE_0_0 (Y_unsupported)
 		BMESSAGE ("unsupported kernel call.\n");
 		ccsp_kernel_exit (1, return_address);
 	}
+}
+/*}}}*/
+/*}}}*/
+
+/*{{{  fork barrier operations */
+/*
+ *	Fork barriers are simple workspace-based barriers with 4 word-sized fields:
+ *	  [0] enrolled - total enrolled process count
+ *	  [1] count    - remaining sync count (decremented as processes sync)
+ *	  [2] fptr     - front pointer of waiting process queue
+ *	  [3] bptr     - back pointer of waiting process queue
+ */
+#define FBAR_ENROLLED	0
+#define FBAR_COUNT	1
+#define FBAR_FPTR	2
+#define FBAR_BPTR	3
+
+/*{{{  static void fbar_complete (sched_t *sched, word *bar) */
+static void fbar_complete (sched_t *sched, word *bar)
+{
+	word *fptr, *bptr;
+
+	/* reset count = enrolled */
+	bar[FBAR_COUNT] = bar[FBAR_ENROLLED];
+
+	fptr = (word *) bar[FBAR_FPTR];
+	if (fptr != (word *) NotProcess_p && fptr != NULL) {
+		bptr = (word *) bar[FBAR_BPTR];
+		/* append barrier queue to run-queue */
+		if (sched->curb.Fptr != NotProcess_p) {
+			((word *) sched->curb.Bptr)[Link] = (word) fptr;
+		} else {
+			sched->curb.Fptr = fptr;
+		}
+		sched->curb.Bptr = bptr;
+		sched->curb.size++;
+	}
+	/* clear the barrier queue */
+	bar[FBAR_FPTR] = NotProcess_p;
+	bar[FBAR_BPTR] = NotProcess_p;
+}
+/*}}}*/
+
+/*{{{  void kernel_X_fbar_init (void) */
+/*
+ *	initialise fork barrier
+ *
+ *	@SYMBOL:	X_fbar_init
+ *	@INPUT:		1
+ *	@OUTPUT: 	0
+ *	@CALL: 		K_FBAR_INIT
+ *	@PRIO:		90
+ */
+K_CALL_DEFINE_1_0 (X_fbar_init)
+{
+	word *bar;
+
+	K_CALL_PARAMS_1 (bar);
+	ENTRY_TRACE (X_fbar_init, "%p", bar);
+
+	bar[FBAR_ENROLLED] = 0;
+	bar[FBAR_COUNT] = 0;
+	bar[FBAR_FPTR] = NotProcess_p;
+	bar[FBAR_BPTR] = NotProcess_p;
+
+	K_ZERO_OUT ();
+}
+/*}}}*/
+
+/*{{{  void kernel_Y_fbar_sync (void) */
+/*
+ *	synchronise on fork barrier
+ *
+ *	@SYMBOL:	Y_fbar_sync
+ *	@INPUT:		1
+ *	@OUTPUT: 	0
+ *	@CALL: 		K_FBAR_SYNC
+ *	@PRIO:		90
+ */
+K_CALL_DEFINE_1_0 (Y_fbar_sync)
+{
+	word *bar;
+
+	K_CALL_PARAMS_1 (bar);
+	ENTRY_TRACE (Y_fbar_sync, "%p", bar);
+
+	bar[FBAR_COUNT]--;
+
+	if (bar[FBAR_COUNT] == 0) {
+		/* barrier complete - release all waiting processes */
+		fbar_complete (sched, bar);
+		K_ZERO_OUT ();
+	} else {
+		/* not complete - enqueue this process and reschedule */
+		word *fptr = (word *) bar[FBAR_FPTR];
+
+		save_return (sched, Wptr, return_address);
+		Wptr[Link] = NotProcess_p;
+
+		if (fptr == (word *) NotProcess_p || fptr == NULL) {
+			bar[FBAR_FPTR] = (word) Wptr;
+		} else {
+			word *bptr = (word *) bar[FBAR_BPTR];
+			bptr[Link] = (word) Wptr;
+		}
+		bar[FBAR_BPTR] = (word) Wptr;
+
+		kernel_scheduler (sched);
+	}
+}
+/*}}}*/
+
+/*{{{  void kernel_X_fbar_enroll (void) */
+/*
+ *	enroll processes on fork barrier
+ *
+ *	@SYMBOL:	X_fbar_enroll
+ *	@INPUT:		2
+ *	@OUTPUT: 	0
+ *	@CALL: 		K_FBAR_ENROLL
+ *	@PRIO:		90
+ */
+K_CALL_DEFINE_2_0 (X_fbar_enroll)
+{
+	word count;
+	word *bar;
+
+	K_CALL_PARAMS_2 (count, bar);
+	ENTRY_TRACE (X_fbar_enroll, "%p, %d", bar, count);
+
+	bar[FBAR_ENROLLED] += count;
+	bar[FBAR_COUNT] += count;
+
+	K_ZERO_OUT ();
+}
+/*}}}*/
+
+/*{{{  void kernel_X_fbar_resign (void) */
+/*
+ *	resign processes from fork barrier
+ *
+ *	@SYMBOL:	X_fbar_resign
+ *	@INPUT:		2
+ *	@OUTPUT: 	0
+ *	@CALL: 		K_FBAR_RESIGN
+ *	@PRIO:		90
+ */
+K_CALL_DEFINE_2_0 (X_fbar_resign)
+{
+	word count;
+	word *bar;
+
+	K_CALL_PARAMS_2 (count, bar);
+	ENTRY_TRACE (X_fbar_resign, "%p, %d", bar, count);
+
+	bar[FBAR_ENROLLED] -= count;
+	if (bar[FBAR_ENROLLED] < 0) {
+		BMESSAGE ("fbar_resign: enrolled count went negative!\n");
+		ccsp_kernel_exit (1, return_address);
+	}
+
+	bar[FBAR_COUNT] -= count;
+	if (bar[FBAR_COUNT] == 0) {
+		/* barrier complete after resignation - release all waiting processes */
+		fbar_complete (sched, bar);
+	}
+
+	K_ZERO_OUT ();
 }
 /*}}}*/
 /*}}}*/
