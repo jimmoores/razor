@@ -2957,17 +2957,27 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td0, xzr")));
 		ts->stack->fs_depth++;
 		break;
-	case I_FPINT:  /* 0xa1 (161) - Integer part (truncate to integer, keep as float) */
+	case I_FPINT:  /* 0xa1 (161) - Integer part (round to integer, keep as float) */
 		if (aarch64_fp_stack_depth >= 1) {
 			int prec = aarch64_fp_stack_prec[0];
 			const char *r0 = aarch64_fp_regname (0, prec);
+			const char *frnd;
 			char buf[128];
-			snprintf (buf, sizeof(buf), "\tfrintz\t%s, %s", r0, r0);
+			/* Use the current rounding mode set by FPRZ/FPRN/FPRP/FPRM */
+			switch (aarch64_fp_rounding_mode) {
+				case 3: frnd = "frintz"; break;  /* FPU_Z: toward zero */
+				case 1: frnd = "frintp"; break;  /* FPU_P: toward +inf */
+				case 2: frnd = "frintm"; break;  /* FPU_M: toward -inf */
+				default: frnd = "frintn"; break; /* FPU_N: nearest */
+			}
+			snprintf (buf, sizeof(buf), "\t%s\t%s, %s", frnd, r0, r0);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 		}
 		/* Mark that FPINT was used — FPSTNLI32 should truncate (fcvtzs).
 		 * Without FPINT, FPSTNLI32 should round to nearest (fcvtns). */
 		aarch64_fp_had_fpint = 1;
+		/* Reset rounding mode to default (nearest) after use */
+		aarch64_fp_rounding_mode = 0;
 		break;
 	/* IEEE floating point operations */
 	case I_FPLDNLSN:  /* 0x8e - Load non-local REAL32 onto FP stack */
@@ -3431,6 +3441,26 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		fprintf (stderr, "%s: unsupported aarch64 floating point operation %d (0x%x)\n", progname, secondary_opcode, secondary_opcode);
 		/* Generate a no-op to prevent crashes */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// unsupported FP operation")));
+		break;
+	}
+	/* Reset FP rounding mode to nearest after operations that consumed it.
+	 * The transputer FPRZ/FPRN instructions set the mode for the next
+	 * rounding operation. The compiler emits FPRZ before TRUNC but not
+	 * FPRN before ROUND (since nearest is the default). Reset after
+	 * operations that use the rounding mode so it doesn't leak to later
+	 * ROUND conversions. INT-to-REAL conversions (FPI32TOR32 etc) don't
+	 * use the rounding mode, only FPINT and FPSTNLI do. */
+	switch (secondary_opcode) {
+	case I_FPINT:       /* round to integer (keeps as float) */
+	case I_FPSTNLI32:   /* convert FP to INT32 and store */
+	case I_FPSTNLI64:   /* convert FP to INT64 and store */
+	case I_FPR64TOR32:  /* narrowing REAL64→REAL32 */
+	case I_FPI32TOR32:  /* INT→REAL32 (completes TRUNC chain) */
+	case I_FPI32TOR64:  /* INT→REAL64 (completes TRUNC chain) */
+	case I_FPB32TOR64:  /* unsigned INT→REAL64 */
+		aarch64_fp_rounding_mode = 0;  /* FPU_N = round to nearest */
+		break;
+	default:
 		break;
 	}
 }
