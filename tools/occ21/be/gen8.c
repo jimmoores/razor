@@ -1559,7 +1559,14 @@ fprintf (stderr, "gen8: done size fiddling, stored = %d, carried = %d\n", stored
 					gensecondary (I_PROD);
 				}
 			} else {
-				loadconstant (bytesin (formaltype));
+				INT32 bs = bytesin (formaltype);
+				if (bs == -1) {
+					/* Dynamic formal type (e.g. []BYTE) but the actual argument
+					 * has a known size (e.g. string literal). Use the actual
+					 * argument's type to determine the byte count. */
+					bs = bytesin (gettype (opd));
+				}
+				loadconstant (bs);
 			}
 			/* load type */
 			loadconstant (MT_SIMPLE | MT_MAKE_TYPE (MT_DATA));
