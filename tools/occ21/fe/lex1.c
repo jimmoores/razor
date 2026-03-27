@@ -2887,25 +2887,18 @@ PRIVATE void preproc_builtin (void)
 	tw = lookupword ("TARGET.VENDOR", 13);
 	preproc_add_define (tw, 13, PP_VAL_STRING, new_string (TARGET_VENDOR));
 #endif
-	/* On 64-bit targets, TARGET.BITS.PER.WORD represents INT size (32-bit) for compatibility */
-	/* On 16-bit and 32-bit targets, it represents the actual word size as before */
+	/* TARGET.BITS.PER.WORD and TARGET.BYTES.PER.WORD always reflect the
+	   actual word size (not the INT size, which may differ on 64-bit). */
+	tw = lookupword ("TARGET.BYTES.PER.WORD", 21);
+	preproc_add_define (tw, 21, PP_VAL_INT, (void *)bytesperword);
+	tw = lookupword ("TARGET.BITS.PER.WORD", 20);
+	preproc_add_define (tw, 20, PP_VAL_INT, (void *)(bytesperword * 8));
 	if (bytesperword == 8) {
-		/* 64-bit target: INT is 32-bit, but word is 64-bit */
-		tw = lookupword ("TARGET.BYTES.PER.WORD", 21);
-		preproc_add_define (tw, 21, PP_VAL_INT, (void *)4);  /* INT size */
-		tw = lookupword ("TARGET.BITS.PER.WORD", 20);
-		preproc_add_define (tw, 20, PP_VAL_INT, (void *)32); /* INT size */
-		/* Actual target word size constants */
+		/* Additional constants for 64-bit targets */
 		tw = lookupword ("TARGET.WORD.BYTES", 18);
 		preproc_add_define (tw, 18, PP_VAL_INT, (void *)bytesperword);
 		tw = lookupword ("TARGET.WORD.BITS", 17);
 		preproc_add_define (tw, 17, PP_VAL_INT, (void *)(bytesperword * 8));
-	} else {
-		/* 16-bit and 32-bit targets: preserve existing behavior */
-		tw = lookupword ("TARGET.BYTES.PER.WORD", 21);
-		preproc_add_define (tw, 21, PP_VAL_INT, (void *)bytesperword);
-		tw = lookupword ("TARGET.BITS.PER.WORD", 20);
-		preproc_add_define (tw, 20, PP_VAL_INT, (void *)(bytesperword * 8));
 	}
 	if (bytesperword == 8) {
 		/* Define architecture-specific preprocessor symbols for 64-bit targets */
