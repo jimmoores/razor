@@ -4871,13 +4871,12 @@ static INLINE void kernel_chan_io_mobile (sched_t *sched, word flags, word *src,
 /*
  *	channel input and output
  */
-static int chan_io_count = 0;
 static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word *channel_address, byte *pointer, unsigned int count)
 {
 	byte *destination_address, *source_address;
 	word temp;
 
-	if (0 && ++chan_io_count > 50 && chan_io_count <= 70) {
+	if (0) {
 		BMESSAGE ("chan_io[%d]: flags=0x%x chan=%p ptr=%p Wptr=%p *chan=0x%lx\n",
 			chan_io_count, (int)flags, channel_address, pointer, Wptr,
 			(unsigned long)atw_val(channel_address));
