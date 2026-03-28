@@ -197,7 +197,7 @@ def measure_indent(s):
 	m = indent_re.match(s)
 	if not m:
 		raise OccamDocException("Invalid indentation at start of line '" + s + "'")
-	return len(m.group(1)) // 2
+	return len(m.group(1)) / 2
 
 def split_comment(s):
 	"""Split a line into pre-comment and comment parts, removing trailing
@@ -568,7 +568,7 @@ def parse_file(f, include_private = False, include_undocumented = False):
 		if s != "":
 			(old_level, pos, old_decl, old_private) = level_stack[-1]
 			level = measure_indent(l)
-			if old_level is not None and level < old_level:
+			if level < old_level:
 				raise OccamDocException("Missed end of declaration -- started at " + pos)
 			elif level == old_level:
 				if s != ":":
@@ -619,7 +619,7 @@ def parse_file(f, include_private = False, include_undocumented = False):
 def generic_tag_to_xml(doc, text, tags, text_handler):
 	"""Generic converter from tagged text to a DOM node."""
 
-	fields = re.split(r'\s+', text, maxsplit=1)
+	fields = re.split(r'\s+', text, 1)
 	if len(fields) == 0:
 		raise OccamDocException("Expected tag in '[@" + text + "]'")
 	tagname = fields[0]
@@ -636,7 +636,7 @@ def generic_tag_to_xml(doc, text, tags, text_handler):
 		if len(fields) != 2:
 			raise OccamDocException("Too few arguments to tag in '[@" + text + "]'")
 		rest = fields[1]
-		fields = re.split(r'\s', rest, maxsplit=1)
+		fields = re.split(r'\s', rest, 1)
 		if arg is None:
 			text_handler(doc, rest, el)
 		elif type(arg) is type(generic_tag_to_xml):  # i.e. a function
@@ -1130,9 +1130,9 @@ def main(args):
 	try:
 		if output_dir is None:
 			# For stdout, ensure it's written in UTF-8.
-			f = io.TextIOWrapper(sys.stdout.buffer, encoding="UTF-8")
+			f = io.TextIOWrapper(sys.stdout.buffer, encoding=encoding)
 		else:
-			f = open(xml_file, "w", encoding="UTF-8")
+			f = open(xml_file, "w", encoding=encoding)
 		write_xml(list(decls.values()), f, errors)
 		if output_dir is not None:
 			f.close()
@@ -1173,15 +1173,15 @@ def main(args):
 			status("done\n")
 	except OccamDocException as e:
 		status("failed\n")
-		print("Error: During conversion: " + str(e), file=sys.stderr)
+		print >>sys.stderr, "Error: During conversion: " + str(e)
 		return 1
 	except IOError as e:
 		status("failed\n")
-		print("Error: While writing output files: " + str(e), file=sys.stderr)
+		print >>sys.stderr, "Error: While writing output files: " + str(e)
 		return 1
 
 	if failed:
-		print("Errors were found; output will be incomplete", file=sys.stderr)
+		print >>sys.stderr, "Errors were found; output will be incomplete"
 		return 1
 	else:
 		return 0
