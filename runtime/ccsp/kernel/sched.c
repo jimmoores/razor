@@ -4884,14 +4884,6 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 	byte *destination_address, *source_address;
 	word temp;
 
-	{	static int chan_io_count = 0;
-		chan_io_count++;
-		if (chan_io_count > 55) {
-			BMESSAGE ("chan_io[%d]: flags=0x%x chan=%p ptr=%p Wptr=%p *chan=0x%lx\n",
-				chan_io_count, (int)flags, channel_address, pointer, Wptr,
-				(unsigned long)atw_val(channel_address));
-		}
-	}
 	temp = atw_val (channel_address);
 
 	if (temp == NotProcess_p || (temp & 1)) {
