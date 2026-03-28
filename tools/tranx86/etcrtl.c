@@ -4286,8 +4286,15 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*}}}*/
 		/*{{{  I_GAJW -- general adjust workspace pointer*/
 	case I_GAJW:
-		add_to_ins_chain (compose_ins (INS_SWAP, 2, 2, ARG_REG, ts->stack->a_reg, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR, ARG_REG, ts->stack->a_reg));
-		constmap_clearall ();
+		{
+			/* GAJW: swap Areg and Wptr. Use a temp register to ensure
+			 * the register allocator doesn't optimize away the swap. */
+			int tmp_reg = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, tmp_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->a_reg, ARG_REG, REG_WPTR));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REG, ts->stack->a_reg));
+			constmap_clearall ();
+		}
 		break;
 		/*}}}*/
 		/*{{{  I_GCALL -- general call*/

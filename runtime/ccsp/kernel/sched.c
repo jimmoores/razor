@@ -3180,7 +3180,9 @@ static REGPARM void mproc_bar_resign (sched_t *sched, mproc_bar_t *bar, word cou
 static REGPARM void mproc_bar_sync (sched_t *sched, mproc_bar_t *bar, word *Wptr)
 {
 	word retry = false;
-	
+	BMESSAGE ("mproc_bar_sync: bar=%p Wptr=%p enrolled=%ld state=0x%lx\n",
+		bar, Wptr, (long)bar->enrolled, (unsigned long)atw_val(&(bar->state)));
+
 	for (;;) {
 		word state = atw_val (&(bar->state));
 
@@ -4832,6 +4834,12 @@ static INLINE void kernel_chan_io_static (word flags, byte *src, byte *dst, unsi
 		case 1:
 			*((byte *)dst) = *((byte *)src);
 			break;
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
+		case 4:
+			/* 32-bit INT transfer on 64-bit target: zero-extend to word */
+			*((word *)dst) = (word) *((unsigned int *)src);
+			break;
+#endif
 		case (sizeof(word)):
 			*((word *)dst) = *((word *)src);
 			break;
@@ -4876,10 +4884,13 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 	byte *destination_address, *source_address;
 	word temp;
 
-	if (0) {
-		BMESSAGE ("chan_io[%d]: flags=0x%x chan=%p ptr=%p Wptr=%p *chan=0x%lx\n",
-			chan_io_count, (int)flags, channel_address, pointer, Wptr,
-			(unsigned long)atw_val(channel_address));
+	{	static int chan_io_count = 0;
+		chan_io_count++;
+		if (chan_io_count > 55) {
+			BMESSAGE ("chan_io[%d]: flags=0x%x chan=%p ptr=%p Wptr=%p *chan=0x%lx\n",
+				chan_io_count, (int)flags, channel_address, pointer, Wptr,
+				(unsigned long)atw_val(channel_address));
+		}
 	}
 	temp = atw_val (channel_address);
 
