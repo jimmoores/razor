@@ -6,7 +6,7 @@ Coding Guidelines
   * Naming convention of variables and functions (e.g. CamelCase vs underscores, constants in CAPS, etc.)
 
 # Platform specific target code
-* Make sure platform specific code is protected with `#ifdef`s and `#define`s.
+* Make sure platform specific code is protected with `#ifdef`s and `#define`s or autotools macros.
 * Do not change code such that existing platforms would no longer work, even if obsolete.
 * Use implementations for existing architectures as a template for aarch64 and x64.
 * Look for code that makes assumptions about word length, alignment etc. and make sure 
