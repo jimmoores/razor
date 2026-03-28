@@ -20,17 +20,18 @@
  */
 
 #ifdef HAVE_CONFIG_H
+#include <stdint.h>
 #include <config.h>
 #endif
 
 #if defined(RMOX_BUILD)
 /*{{{  RMoX stuff*/
 #include <rmox_if.h>
-/*{{{  void _killcall (int *w)*/
+/*{{{  void _killcall (intptr_t *w)*/
 /*
  *	dummy for RMOX
  */
-void _killcall (int *w)
+void _killcall (intptr_t *w)
 {
 	rmox_panic ("_killcall()");
 }

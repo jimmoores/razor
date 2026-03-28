@@ -19,6 +19,7 @@
  *	MA 02110-1301, USA.
  */
 
+#include <stdint.h>
 #include <stdio.h>
 
 void calculate_mandel (double x_init, double y_init, double x_stride, double y_stride, int width, int height, int max_count, int *data)
@@ -49,7 +50,7 @@ void calculate_mandel (double x_init, double y_init, double x_stride, double y_s
 	}
 }
 
-void _calculate_mandel (int *ws) {
+void _calculate_mandel (intptr_t *ws) {
 	calculate_mandel (*(double *) (ws[0]), *(double *) (ws[1]), *(double *) (ws[2]), *(double *) (ws[3]),
 	                  ws[4], ws[5], ws[6], (int *) ws[7]);
 }

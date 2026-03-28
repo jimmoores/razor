@@ -17,6 +17,7 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -434,11 +435,11 @@ static __inline__ void cspdrv_release (int *addr)
 
 
 /* occam entry points */
-void _cspdrvlib_init (int *ws)
+void _cspdrvlib_init (intptr_t *ws)
 {
 	cspdrv_init ((char *)(ws[0]), (int)(ws[1]), (int)(ws[2]), (int *)(ws[3]));
 }
-void _cspdrvlib_release (int *ws)
+void _cspdrvlib_release (intptr_t *ws)
 {
 	cspdrv_release ((int *)(ws[0]));
 }

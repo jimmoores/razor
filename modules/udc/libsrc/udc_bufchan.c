@@ -17,6 +17,7 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -204,8 +205,8 @@ static __inline__ void real_udc_bufchan_free (int *addr)
 
 
 /* occam call point */
-void _udc_bufchan_alloc (int *ws) { real_udc_bufchan_alloc ((int)(ws[0]), (int *)(ws[1])); }
-void _udc_bufchan_free (int *ws) { real_udc_bufchan_free ((int *)(ws[0])); }
+void _udc_bufchan_alloc (intptr_t *ws) { real_udc_bufchan_alloc ((int)(ws[0]), (int *)(ws[1])); }
+void _udc_bufchan_free (intptr_t *ws) { real_udc_bufchan_free ((int *)(ws[0])); }
 
 
 

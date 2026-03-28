@@ -17,6 +17,7 @@
  *	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -840,52 +841,52 @@ static inline int video_grabframe (opi_video_device_t *dev, int raw, opi_video_f
 
 
 /*{{{  PROC ..video.initstruct (RESULT VIDEO.DEVICE vdev)*/
-void _video_initstruct (int *w)			{ *((int *)w[0]) = (int) video_initstruct (); }
+void _video_initstruct (intptr_t *w)			{ *((int *)w[0]) = (int) video_initstruct (); }
 /*}}}*/
 /*{{{  PROC ..video.open (VAL VIDEO.DEVICE vdev, RESULT BOOL ok)*/
-void _video_open (int *w)			{ *((int *)w[3]) = video_open ((opi_video_device_t *)(w[0]), (char *)(w[1]), (int)(w[2])); }
+void _video_open (intptr_t *w)			{ *((int *)w[3]) = video_open ((opi_video_device_t *)(w[0]), (char *)(w[1]), (int)(w[2])); }
 /*}}}*/
 /*{{{  PROC ..video.close (VAL VIDEO.DEVICE vdev, RESULT BOOL ok)*/
-void _video_close (int *w)			{ *((int *)w[1]) = video_close ((opi_video_device_t *)(w[0])); }
+void _video_close (intptr_t *w)			{ *((int *)w[1]) = video_close ((opi_video_device_t *)(w[0])); }
 /*}}}*/
 /*{{{  PROC ..video.freestruct (RESULT VIDEO.DEVICE vdev)*/
-void _video_freestruct (int *w)			{ *((int *)w[0]) = (int) video_freestruct ((opi_video_device_t *)(*((int *)w[0]))); }
+void _video_freestruct (intptr_t *w)			{ *((int *)w[0]) = (int) video_freestruct ((opi_video_device_t *)(*((int *)w[0]))); }
 /*}}}*/
 
 /*{{{  PROC ..video.identity (VAL VIDEO.DEVICE vdev, RESULT VIDEO.IDENTITY ident, RESULT BOOL ok)*/
-void _video_identity (int *w)			{ *((int *)w[2]) = video_identity ((opi_video_device_t *)(w[0]), (opi_video_identity_t *)(w[1])); }
+void _video_identity (intptr_t *w)			{ *((int *)w[2]) = video_identity ((opi_video_device_t *)(w[0]), (opi_video_identity_t *)(w[1])); }
 /*}}}*/
 /*{{{  PROC ..video.numinputs (VAL VIDEO.DEVICE vdev, RESULT INT num)*/
-void _video_numinputs (int *w)			{ *((int *)w[1]) = video_numinputs ((opi_video_device_t *)(w[0])); }
+void _video_numinputs (intptr_t *w)			{ *((int *)w[1]) = video_numinputs ((opi_video_device_t *)(w[0])); }
 /*}}}*/
 /*{{{  PROC ..video.getinputs (VAL VIDEO.DEVICE vdev, []VIDEO.INPUT inputs)*/
-void _video_getinputs (int *w)		{ video_getinputs ((opi_video_device_t *)(w[0]), (opi_video_input_t *)(w[1]), (int)(w[2])); }
+void _video_getinputs (intptr_t *w)		{ video_getinputs ((opi_video_device_t *)(w[0]), (opi_video_input_t *)(w[1]), (int)(w[2])); }
 /*}}}*/
 /*{{{  PROC ..video.currentinput (VAL VIDEO.DEVICE vdev, RESULT INT input)*/
-void _video_currentinput (int *w)		{ *((int *)w[1]) = video_currentinput ((opi_video_device_t *)(w[0])); }
+void _video_currentinput (intptr_t *w)		{ *((int *)w[1]) = video_currentinput ((opi_video_device_t *)(w[0])); }
 /*}}}*/
 /*{{{  PROC ..video.setinput (VAL VIDEO.DEVICE vdev, VIDEO.INPUT input, RESULT BOOL ok)*/
-void _video_setinput (int *w)			{ *((int *)w[2]) = video_setinput ((opi_video_device_t *)(w[0]), (opi_video_input_t *)(w[1])); }
+void _video_setinput (intptr_t *w)			{ *((int *)w[2]) = video_setinput ((opi_video_device_t *)(w[0]), (opi_video_input_t *)(w[1])); }
 /*}}}*/
 /*{{{  PROC ..video.getframeinfo (VAL VIDEO.DEVICE vdev, RESULT VIDEO.FRAMEINFO frameinfo)*/
-void _video_getframeinfo (int *w)		{ video_getframeinfo ((opi_video_device_t *)(w[0]), (opi_video_frameinfo_t *)(w[1])); }
+void _video_getframeinfo (intptr_t *w)		{ video_getframeinfo ((opi_video_device_t *)(w[0]), (opi_video_frameinfo_t *)(w[1])); }
 /*}}}*/
 /*{{{  PROC ..video.setframeinfo (VAL VIDEO.DEVICE vdev, VIDEO.FRAMEINFO frameinfo, RESULT BOOL ok)*/
-void _video_setframeinfo (int *w)		{ *((int *)w[2]) = video_setframeinfo ((opi_video_device_t *)(w[0]), (opi_video_frameinfo_t *)(w[1])); }
+void _video_setframeinfo (intptr_t *w)		{ *((int *)w[2]) = video_setframeinfo ((opi_video_device_t *)(w[0]), (opi_video_frameinfo_t *)(w[1])); }
 /*}}}*/
 /*{{{  PROC ..video.getpicture (VAL VIDEO.DEVICE vdev, RESULT VIDEO.PICTURE picture)*/
-void _video_getpicture (int *w)			{ video_getpicture ((opi_video_device_t *)(w[0]), (opi_video_picture_t *)(w[1])); }
+void _video_getpicture (intptr_t *w)			{ video_getpicture ((opi_video_device_t *)(w[0]), (opi_video_picture_t *)(w[1])); }
 /*}}}*/
 /*{{{  PROC ..video.setpicture (VAL VIDEO.DEVICE vdev, VIDEO.PICTURE picture, RESULT BOOL ok)*/
-void _video_setpicture (int *w)			{ *((int *)w[2]) = video_setpicture ((opi_video_device_t *)(w[0]), (opi_video_picture_t *)(w[1])); }
+void _video_setpicture (intptr_t *w)			{ *((int *)w[2]) = video_setpicture ((opi_video_device_t *)(w[0]), (opi_video_picture_t *)(w[1])); }
 /*}}}*/
 /*{{{  PROC ..video.initio (VAL VIDEO.DEVICE vdev, VAL BOOL oneshot, RESULT VIDEO.FRAMEINFO finfo, RESULT BOOL ok)*/
-void _video_initio (int *w)			{ *((int *)w[3]) = video_initio ((opi_video_device_t *)(w[0]), (int)(w[1]), (opi_video_frameinfo_t *)(w[2])); }
+void _video_initio (intptr_t *w)			{ *((int *)w[3]) = video_initio ((opi_video_device_t *)(w[0]), (int)(w[1]), (opi_video_frameinfo_t *)(w[2])); }
 /*}}}*/
 /*{{{  PROC ..video.shutdownio (VAL VIDEO.DEVICE vdev)*/
-void _video_shutdownio (int *w)			{ video_shutdownio ((opi_video_device_t *)(w[0])); }
+void _video_shutdownio (intptr_t *w)			{ video_shutdownio ((opi_video_device_t *)(w[0])); }
 /*}}}*/
 /*{{{  PROC ..video.grabframe (VAL VIDEO.DEVICE vdev, VAL BOOL raw, VIDEO.FRAMEINFO finfo, []BYTE buffer, RESULT BOOL ok)*/
-void _video_grabframe (int *w)			{ *((int *)w[5]) = video_grabframe ((opi_video_device_t *)(w[0]), (int)(w[1]), (opi_video_frameinfo_t *)(w[2]), (int *)(w[3]), (int)(w[4])); }
+void _video_grabframe (intptr_t *w)			{ *((int *)w[5]) = video_grabframe ((opi_video_device_t *)(w[0]), (int)(w[1]), (opi_video_frameinfo_t *)(w[2]), (int *)(w[3]), (int)(w[4])); }
 /*}}}*/
 

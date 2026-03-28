@@ -21,6 +21,7 @@
  */
 
 //{{{  Compiler declarations
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -354,13 +355,13 @@ static __inline__ void pony_real_getcode_eaddrinuse (int *err_code)
 
 //{{{  void _pony_int_tcpip_socket_fullwrite_iovecdim
 // PROC C.pony.int.tcpip.socket.fullwrite.iovecdim (VAL []INT sizes, RESULT INT iovecdim)
-void _pony_int_tcpip_socket_fullwrite_iovecdim (int *ws) {
+void _pony_int_tcpip_socket_fullwrite_iovecdim (intptr_t *ws) {
   pony_real_fullwrite_iovecdim ((int *)(ws[0]), (int)(ws[1]), (int *)(ws[2]));
 }
 //}}}
 //{{{  void _pony_int_tcpip_socket_fullwrite_multi
 // PROC B.pony.int.tcpip.socket.fullwrite.multi (SOCKET sock, VAL []BYTE header, VAL []INT addrs, sizes, RESULT []BYTE iovec.buffer, RESULT INT result)
-void _pony_int_tcpip_socket_fullwrite_multi (int *ws) {
+void _pony_int_tcpip_socket_fullwrite_multi (intptr_t *ws) {
   pony_real_fullwrite_multi ((occ_socket *)(ws[0]),
                              (char *)(ws[1]), (int)(ws[2]),
                              (int *)(ws[3]), (int)(ws[4]),
@@ -371,13 +372,13 @@ void _pony_int_tcpip_socket_fullwrite_multi (int *ws) {
 //}}}
 //{{{  void _pony_int_tcpip_socket_fullread_sizes
 // PROC C.pony.int.tcpip.socket.fullread.sizes (INT data.dim, sizes.dim)
-void _pony_int_tcpip_socket_fullread_sizes (int *ws) {
+void _pony_int_tcpip_socket_fullread_sizes (intptr_t *ws) {
   pony_real_fullread_sizes ((int *)(ws[0]), (int *)(ws[1]));
 }
 //}}}
 //{{{  void _pony_int_tcpip_socket_fullread_multi
 //PROC B.pony.int.tcpip.socket.fullread.multi (SOCKET sock, RESULT []BYTE header, MOBILE []BYTE data, INT data.size, MOBILE []INT sizes, INT sizes.size, RESULT INT result)
-void _pony_int_tcpip_socket_fullread_multi (int *ws) {
+void _pony_int_tcpip_socket_fullread_multi (intptr_t *ws) {
   pony_real_fullread_multi ((occ_socket *)(ws[0]),
                             (char *)(ws[1]), (int)(ws[2]),
                             /* ws[3] is data */
@@ -394,7 +395,7 @@ void _pony_int_tcpip_socket_fullread_multi (int *ws) {
 
 //{{{  void _pony_int_tcpip_getcode_eaddrinuse
 // PROC C.pony.int.tcpip.getcode.eaddrinuse (INT err.code)
-void _pony_int_tcpip_getcode_eaddrinuse (int *ws) {
+void _pony_int_tcpip_getcode_eaddrinuse (intptr_t *ws) {
   pony_real_getcode_eaddrinuse ((int *)(ws[0]));
 }
 //}}}

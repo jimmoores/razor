@@ -17,6 +17,7 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -221,11 +222,11 @@ static __inline__ void r_os_setenv (occ_environment *env, int env_size)
 
 /* interface */
 
-void _pl_run (int *w)				{ r_run ((occ_environment *)(w[0]), (int)(w[1]), (char *)(w[2]), (int)(w[3]), (int)(w[4]),
+void _pl_run (intptr_t *w)				{ r_run ((occ_environment *)(w[0]), (int)(w[1]), (char *)(w[2]), (int)(w[3]), (int)(w[4]),
 							(int)(w[5]), (int)(w[6]), (int)(w[7]), (int *)(w[8]), 0); }
-void _pl_run2 (int *w)				{ r_run ((occ_environment *)(w[0]), (int)(w[1]), (char *)(w[2]), (int)(w[3]), (int)(w[4]),
+void _pl_run2 (intptr_t *w)				{ r_run ((occ_environment *)(w[0]), (int)(w[1]), (char *)(w[2]), (int)(w[3]), (int)(w[4]),
 							(int)(w[5]), (int)(w[6]), (int)(w[7]), (int *)(w[8]), 1); }
-void _pl_os_getenv (int *w)			{ r_os_getenv ((occ_environment *)(w[0]), (char *)(w[1]), (int)(w[2])); }
-void _pl_os_setenv (int *w)			{ r_os_setenv ((occ_environment *)(w[0]), (int)(w[1])); }
+void _pl_os_getenv (intptr_t *w)			{ r_os_getenv ((occ_environment *)(w[0]), (char *)(w[1]), (int)(w[2])); }
+void _pl_os_setenv (intptr_t *w)			{ r_os_setenv ((occ_environment *)(w[0]), (int)(w[1])); }
 
 

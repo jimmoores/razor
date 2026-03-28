@@ -18,6 +18,7 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdint.h>
 #include <stdio.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
@@ -293,8 +294,8 @@ static __inline__ void real_udc_sockchan_free (int *addr)
 
 
 /* occam call points */
-void _udc_sockchan_alloc (int *ws) { real_udc_sockchan_alloc ((char *)(ws[0]), (int)(ws[1]),
+void _udc_sockchan_alloc (intptr_t *ws) { real_udc_sockchan_alloc ((char *)(ws[0]), (int)(ws[1]),
 	(int)(ws[2]), (int *)(ws[3])); }
-void _udc_sockchan_free (int *ws) { real_udc_sockchan_free ((int *)(ws[0])); }
+void _udc_sockchan_free (intptr_t *ws) { real_udc_sockchan_free ((int *)(ws[0])); }
 
 

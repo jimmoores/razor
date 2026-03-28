@@ -17,6 +17,7 @@
 	<http://www.gnu.org/licenses/>.
 */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,7 +51,7 @@ typedef struct {
 
 /*{{{  _read_raster_png_1 */
 /* #PRAGMA EXTERNAL "PROC C.read.raster.png.1 (VAL []BYTE filename, RESULT INT height, width, magic) = 0" */
-void _read_raster_png_1 (int *w)
+void _read_raster_png_1 (intptr_t *w)
 {
 	char *filename = terminate ((const char *) w[0], w[1]);
 	int *height = (int *) w[2];
@@ -135,7 +136,7 @@ void _read_raster_png_1 (int *w)
 
 /*{{{  _read_raster_png_2 */
 /* #PRAGMA EXTERNAL "PROC C.read.raster.png.2 (VAL INT magic, [][]INT raster, INT rc) = 0" */
-void _read_raster_png_2 (int *w)
+void _read_raster_png_2 (intptr_t *w)
 {
 	read_raster_png_state *state = (read_raster_png_state *) w[0];
 	int *raster = (int *) w[1];
@@ -176,7 +177,7 @@ out:
 
 /*{{{  _write_raster_png */
 /* #PRAGMA EXTERNAL "PROC C.write.raster.png (VAL []BYTE filename, VAL [][]INT raster, RESULT INT rc) = 0" */
-void _write_raster_png (int *w)
+void _write_raster_png (intptr_t *w)
 {
 	char *filename = terminate ((const char *) w[0], w[1]);
 	int *raster = (int *) w[2];

@@ -21,6 +21,7 @@
 /* NOTE: this assumes a 24/32-bit visual.  Will break if used in 8/16-bit modes */
 /* unless SDL transparently maps it away */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -59,27 +60,27 @@ static inline void sdlraster_update_n (int n)
 	}
 }
 
-void _sdlraster_set_buffer (int *ws)
+void _sdlraster_set_buffer (intptr_t *ws)
 {
 	sdlraster_set_buffer (ws[0], (int *) ws[1], ws[2], ws[3]);
 }
 
-void _sdlraster_set_update_buffer (int *ws)
+void _sdlraster_set_update_buffer (intptr_t *ws)
 {
 	sdlraster_set_update_buffer ((int *) ws[0]);
 }
 
-void _sdlraster_clear (int *ws)
+void _sdlraster_clear (intptr_t *ws)
 {
 	sdlraster_clear ((int *) ws[0], ws[1], ws[2]);
 }
 
-void _sdlraster_update (int *ws)
+void _sdlraster_update (intptr_t *ws)
 {
 	sdlraster_update ((int *) ws[0]);
 }
 
-void _sdlraster_update_n (int *ws)
+void _sdlraster_update_n (intptr_t *ws)
 {
 	sdlraster_update_n (ws[0]);
 }

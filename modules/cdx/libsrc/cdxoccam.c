@@ -18,6 +18,7 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "cdxclient.h"
@@ -40,19 +41,19 @@ void real_cdxclient_new (const char *host, int host_len, int port, int width, in
 
 	free (c_host);
 }
-void _cdxclient_new (int *w) {
+void _cdxclient_new (intptr_t *w) {
 	real_cdxclient_new ((const char *) w[0], (int) w[1], (int) w[2], (int) w[3], (int) w[4], (struct cdxclient **) w[5]);
 }
 void real_cdxclient_send (struct cdxclient *c, int frame, int offset, int *data, int data_len, int *ret) {
 	*ret = cdxclient_send (c, frame, offset * 4, (const unsigned char *) data, data_len * 4);
 }
-void _cdxclient_send (int *w) {
+void _cdxclient_send (intptr_t *w) {
 	real_cdxclient_send ((struct cdxclient *) w[0], (int) w[1], (int) w[2], (int *) w[3], (int) w[4], (int *) w[5]);
 }
 void real_cdxclient_close (struct cdxclient *c, int *ret) {
 	*ret = cdxclient_close (c);
 }
-void _cdxclient_close (int *w) {
+void _cdxclient_close (intptr_t *w) {
 	real_cdxclient_close ((struct cdxclient *) w[0], (int *) w[1]);
 }
 
