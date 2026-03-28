@@ -6288,10 +6288,10 @@ K_CALL_DEFINE_2_0 (X_mt_unlock)
 K_CALL_DEFINE_1_0 (Y_mt_sync)
 {
 	ccsp_barrier_t *bar;
-	
+
 	K_CALL_PARAMS_1 (bar);
 	ENTRY_TRACE (Y_mt_sync, "%p", bar);
-	
+
 	save_return (sched, Wptr, return_address);
 
 	bar->sync (sched, &(bar->data), Wptr);
