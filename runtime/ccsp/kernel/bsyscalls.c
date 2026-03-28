@@ -497,11 +497,27 @@ void _blocking_syscalls_disabled (void)
 #endif	/* !BLOCKING_SYSCALLS */
 
 /*{{{  void *bsyscalls_set_cleanup (void (*cleanup)(void *))*/
+/*
+ *	Set a cleanup handler for the current blocking syscall thread.
+ *	First call with NULL allocates thread-local storage and returns pointer.
+ *	Subsequent call registers the actual cleanup function.
+ *	If the blocking thread is killed, cleanup(ptr) is called.
+ */
+static __thread void (*bsc_cleanup_func)(void *) = NULL;
+static __thread int bsc_cleanup_data = 0;
+
 void *bsyscalls_set_cleanup (void (*cleanup)(void *))
 {
-	BMESSAGE0 ("unsupported bsyscalls_set_cleanup() called");
-	ccsp_kernel_exit (1, 0);
-	return NULL;
+	if (cleanup == NULL) {
+		/* allocate: return pointer to thread-local storage */
+		bsc_cleanup_func = NULL;
+		bsc_cleanup_data = 0;
+		return &bsc_cleanup_data;
+	} else {
+		/* register cleanup function */
+		bsc_cleanup_func = cleanup;
+		return &bsc_cleanup_data;
+	}
 }
 /*}}}*/
 
