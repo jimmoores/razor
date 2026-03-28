@@ -53,7 +53,7 @@ install-exec-local: hostsp.lib
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" hostsp.lib
 
 clean-local:
-	$(OCCBUILD) --clean hostsp.lib $(hostsp_lib_objs)
+	-$(OCCBUILD) --clean hostsp.lib $(hostsp_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

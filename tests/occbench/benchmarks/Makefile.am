@@ -27,7 +27,7 @@ install-exec-local: $(benchmarks)
 	$(OCCBUILD) --install-examples occbench --prefix "$(prefix)" --destdir "$(DESTDIR)" $(benchmarks)
 
 clean-local:
-	$(OCCBUILD) --clean $(benchmarks)
+	-$(OCCBUILD) --clean $(benchmarks)
 
 SUFFIXES = .occ
 

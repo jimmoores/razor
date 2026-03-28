@@ -73,7 +73,7 @@ install-exec-local: $(libs) $(includes) $(tools)
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" $(libs) $(includes) $(tools)
 
 clean-local:
-	$(OCCBUILD) --clean $(libs) $(pony_lib_objs) $(tools) $(ponyanstcpip_objs)
+	-$(OCCBUILD) --clean $(libs) $(pony_lib_objs) $(tools) $(ponyanstcpip_objs)
 
 SUFFIXES = .occ .tce .lib
 

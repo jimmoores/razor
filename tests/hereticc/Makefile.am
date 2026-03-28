@@ -27,6 +27,6 @@ install-exec-local: $(tests)
 	$(OCCBUILD) --install-examples hereticc --prefix "$(prefix)" --destdir "$(DESTDIR)" $(tests)
 
 clean-local:
-	$(OCCBUILD) --clean $(tests)
+	-$(OCCBUILD) --clean $(tests)
 
 SUFFIXES = .occ

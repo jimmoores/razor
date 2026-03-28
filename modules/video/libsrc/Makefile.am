@@ -36,7 +36,7 @@ install-exec-local: $(libs) $(includes)
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" $(libs) $(includes)
 
 clean-local:
-	$(OCCBUILD) --clean $(libs) $(video_lib_objs) $(tests)
+	-$(OCCBUILD) --clean $(libs) $(video_lib_objs) $(tests)
 
 SUFFIXES = .occ .tce .lib
 

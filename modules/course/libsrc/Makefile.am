@@ -53,7 +53,7 @@ install-exec-local: course.lib $(srcdir)/consts.inc shared_screen.lib ss.lib $(s
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" course.lib $(srcdir)/consts.inc shared_screen.lib ss.lib $(srcdir)/shared_screen.inc
 
 clean-local:
-	$(OCCBUILD) --clean course.lib $(course_lib_objs) shared_screen.lib ss.lib $(shared_screen_lib_objs)
+	-$(OCCBUILD) --clean course.lib $(course_lib_objs) shared_screen.lib ss.lib $(shared_screen_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

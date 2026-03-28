@@ -115,7 +115,7 @@ install-exec-local: $(examples)
 	$(OCCBUILD) --install-examples course --prefix "$(prefix)" --destdir "$(DESTDIR)" $(examples)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples)
+	-$(OCCBUILD) --clean $(examples)
 	rm -f *-[0-9].o
 
 SUFFIXES = .occ .tce

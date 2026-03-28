@@ -46,7 +46,7 @@ install-exec-local: $(libs) $(includes)
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" $(libs) $(includes)
 
 clean-local:
-	$(OCCBUILD) --clean $(libs) $(rasterio_lib_objs)
+	-$(OCCBUILD) --clean $(libs) $(rasterio_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

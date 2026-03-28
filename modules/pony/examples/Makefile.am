@@ -43,7 +43,7 @@ install-exec-local: $(examples)
 	$(OCCBUILD) --install-examples pony --prefix "$(prefix)" --destdir "$(DESTDIR)" $(examples)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples) mandelbauer-c.o
+	-$(OCCBUILD) --clean $(examples) mandelbauer-c.o
 
 mandelbauer: mandelbauer.occ mandelbauer-c.o
 	$(OCCBUILD) --program $(srcdir)/mandelbauer.occ mandelbauer-c.o

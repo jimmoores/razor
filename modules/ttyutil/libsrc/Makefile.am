@@ -28,7 +28,7 @@ install-exec-local: $(libs) $(includes)
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" $(libs) $(includes)
 
 clean-local:
-	$(OCCBUILD) --clean ttyutil.lib $(ttyutil_lib_objs)
+	-$(OCCBUILD) --clean ttyutil.lib $(ttyutil_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

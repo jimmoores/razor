@@ -45,7 +45,7 @@ endif
 all-local: $(examples) $(dynprocs)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples)
+	-$(OCCBUILD) --clean $(examples)
 	rm -f $(dynprocs)
 
 SUFFIXES = .occ .tce .so
@@ -57,4 +57,4 @@ SUFFIXES = .occ .tce .so
 	$(OCCBUILD) --object $<
 	$(OCCBUILD) --library $*.lib $*.tce
 	mv liboccam_$*.so $@
-	$(OCCBUILD) --clean $*.tce $*.lib
+	-$(OCCBUILD) --clean $*.tce $*.lib

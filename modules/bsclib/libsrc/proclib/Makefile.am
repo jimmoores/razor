@@ -26,7 +26,7 @@ install-exec-local: proc.lib $(srcdir)/proclib.inc
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" proc.lib $(srcdir)/proclib.inc
 
 clean-local:
-	$(OCCBUILD) --clean proc.lib $(proc_lib_objs)
+	-$(OCCBUILD) --clean proc.lib $(proc_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

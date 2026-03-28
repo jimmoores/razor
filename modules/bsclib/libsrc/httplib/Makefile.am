@@ -24,7 +24,7 @@ install-exec-local: http.lib $(srcdir)/httplib.inc
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" http.lib $(srcdir)/httplib.inc
 
 clean-local:
-	$(OCCBUILD) --clean http.lib $(http_lib_objs)
+	-$(OCCBUILD) --clean http.lib $(http_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

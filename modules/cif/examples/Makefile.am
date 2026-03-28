@@ -59,7 +59,7 @@ install-exec-local: $(examples)
 	$(OCCBUILD) --install-examples cif --prefix "$(prefix)" --destdir "$(DESTDIR)" $(examples)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples) *.o
+	-$(OCCBUILD) --clean $(examples) *.o
 
 SUFFIXES = .occ
 

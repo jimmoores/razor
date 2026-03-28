@@ -26,7 +26,7 @@ install-exec-local: file.lib $(srcdir)/filelib.inc
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" file.lib $(srcdir)/filelib.inc
 
 clean-local:
-	$(OCCBUILD) --clean file.lib $(file_lib_objs)
+	-$(OCCBUILD) --clean file.lib $(file_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

@@ -31,7 +31,7 @@ install-exec-local: $(libs) $(includes)
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" $(libs) $(includes)
 
 clean-local:
-	$(OCCBUILD) --clean $(libs) $(button_lib_objs)
+	-$(OCCBUILD) --clean $(libs) $(button_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

@@ -37,7 +37,7 @@ install-exec-local: $(examples)
 	$(OCCBUILD) --install-examples occSDL --prefix "$(prefix)" --destdir "$(DESTDIR)" $(examples)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples)
+	-$(OCCBUILD) --clean $(examples)
 
 SUFFIXES = .occ
 

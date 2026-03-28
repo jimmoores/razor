@@ -55,7 +55,7 @@ install-exec-local: $(demos)
 	$(OCCBUILD) --install-examples game --prefix "$(prefix)" --destdir "$(DESTDIR)" $(demos)
 
 clean-local:
-	$(OCCBUILD) --clean $(demos) $(game_objs)
+	-$(OCCBUILD) --clean $(demos) $(game_objs)
 
 SUFFIXES = .occ .tce .lib
 

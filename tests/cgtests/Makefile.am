@@ -278,7 +278,7 @@ install-exec-local: $(libs) $(tests)
 	$(OCCBUILD) --install-examples cgtests --prefix "$(prefix)" --destdir "$(DESTDIR)" $(tests)
 
 clean-local:
-	$(OCCBUILD) --clean $(tests) $(libs) $(cglib_lib_objs)
+	-$(OCCBUILD) --clean $(tests) $(libs) $(cglib_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

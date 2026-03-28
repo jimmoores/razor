@@ -28,7 +28,7 @@ install-exec-local: string.lib
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" string.lib
 
 clean-local:
-	$(OCCBUILD) --clean string.lib $(string_lib_objs)
+	-$(OCCBUILD) --clean string.lib $(string_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

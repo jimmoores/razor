@@ -22,7 +22,7 @@ install-exec-local: $(examples)
 	$(OCCBUILD) --install-examples button --prefix "$(prefix)" --destdir "$(DESTDIR)" $(examples)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples) button_sample.tce
+	-$(OCCBUILD) --clean $(examples) button_sample.tce
 
 SUFFIXES = .occ .tce .lib
 

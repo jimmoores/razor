@@ -50,7 +50,7 @@ install-exec-local: $(libs) $(includes) $(tools)
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" $(libs) $(includes) $(tools)
 
 clean-local:
-	$(OCCBUILD) --clean $(libs) $(selector_lib_objs) $(trap_lib_objs) $(tools)
+	-$(OCCBUILD) --clean $(libs) $(selector_lib_objs) $(trap_lib_objs) $(tools)
 
 SUFFIXES = .occ .tce .lib
 

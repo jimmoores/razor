@@ -51,7 +51,7 @@ install-exec-local: $(examples)
 	$(OCCBUILD) --install-examples occade --prefix "$(prefix)" --destdir "$(DESTDIR)" $(examples)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples) shutdown.tce
+	-$(OCCBUILD) --clean $(examples) shutdown.tce
 
 SUFFIXES = .occ .tce .lib
 

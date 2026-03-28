@@ -312,7 +312,7 @@ install-exec-local: $(libs)
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" $(libs)
 
 clean-local:
-	$(OCCBUILD) --clean $(libs) $(forall_lib_objs)
+	-$(OCCBUILD) --clean $(libs) $(forall_lib_objs)
 	rm -f forall-phase1 forall-phase2 forall-real
 
 SUFFIXES = .occ .tce .lib

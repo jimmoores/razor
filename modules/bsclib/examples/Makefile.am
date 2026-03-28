@@ -45,7 +45,7 @@ endif
 all-local: $(examples)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples)
+	-$(OCCBUILD) --clean $(examples)
 
 SUFFIXES = .occ
 

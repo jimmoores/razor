@@ -35,7 +35,7 @@ install-exec-local: $(examples)
 	$(OCCBUILD) --install-examples ocuda --prefix "$(prefix)" --destdir "$(DESTDIR)" $(examples)
 
 clean-local:
-	$(OCCBUILD) --clean $(examples) mandelcuda.o occoids_cuda.o
+	-$(OCCBUILD) --clean $(examples) mandelcuda.o occoids_cuda.o
 
 mandelgpu: mandelgpu.occ mandelgpu_types.inc mandelcuda.o
 	$(OCCBUILD) --program $(srcdir)/mandelgpu.occ mandelcuda.o

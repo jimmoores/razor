@@ -26,7 +26,7 @@ install-exec-local: sock.lib $(srcdir)/socklib.inc
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" sock.lib $(srcdir)/socklib.inc
 
 clean-local:
-	$(OCCBUILD) --clean sock.lib $(sock_lib_objs)
+	-$(OCCBUILD) --clean sock.lib $(sock_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

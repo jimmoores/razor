@@ -28,7 +28,7 @@ install-exec-local: cspdrv.lib $(srcdir)/cspdrvlib.inc
 	$(OCCBUILD) --install --prefix "$(prefix)" --destdir "$(DESTDIR)" cspdrv.lib $(srcdir)/cspdrvlib.inc
 
 clean-local:
-	$(OCCBUILD) --clean cspdrv.lib $(cspdrv_lib_objs)
+	-$(OCCBUILD) --clean cspdrv.lib $(cspdrv_lib_objs)
 
 SUFFIXES = .occ .tce .lib
 

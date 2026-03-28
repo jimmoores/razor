@@ -12,7 +12,7 @@ all-local: output.stamp
 endif
 
 output.stamp:
-	$(OCCAMDOC) -v -f html -d output `find $(docsrc) -name '*.occ' -or -name '*.inc'`
+	-$(OCCAMDOC) -v -f html -d output `find $(docsrc) -name '*.occ' -or -name '*.inc'`
 	touch output.stamp
 
 if OCCAMDOC_ENABLED
