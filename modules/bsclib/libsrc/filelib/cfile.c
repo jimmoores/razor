@@ -459,7 +459,7 @@ static __inline__ void r_fcntl0 (int fd, int cmd, int *result)
 	}
 #endif
 }
-void _fl_fcntl0 (int *ws) { r_fcntl0 ((int)(ws[0]), (int)(ws[1]), (int *)(ws[2])); }
+void _fl_fcntl0 (intptr_t *ws) { r_fcntl0 ((int)(ws[0]), (int)(ws[1]), (int *)(ws[2])); }
 /*}}}*/
 /*{{{  PROC C.fl.fcntl1 (VAL INT fd, cmd, arg, RESULT INT result) */
 static __inline__ void r_fcntl1 (int fd, int cmd, int arg, int *result)
@@ -478,7 +478,7 @@ static __inline__ void r_fcntl1 (int fd, int cmd, int arg, int *result)
 	}
 #endif
 }
-void _fl_fcntl1 (int *ws) { r_fcntl1 ((int)(ws[0]), (int)(ws[1]), (int)(ws[2]), (int *)(ws[3])); }
+void _fl_fcntl1 (intptr_t *ws) { r_fcntl1 ((int)(ws[0]), (int)(ws[1]), (int)(ws[2]), (int *)(ws[3])); }
 /*}}}*/
 /*{{{  PROC [BC].fl.select ([]INT read.set, write.set, except.set, VAL INT high.fd, timeout, RESULT INT result) */
 static __inline__ void r_select (int *rs, int n_rs, int *ws, int n_ws, int *es, int n_es, int high_fd,
@@ -541,7 +541,7 @@ static __inline__ void r_select (int *rs, int n_rs, int *ws, int n_ws, int *es, 
 	}
 #endif
 }
-void _fl_select (int *ws) { r_select ((int *)(ws[0]), (int)(ws[1]), (int *)(ws[2]), (int)(ws[3]), (int *)(ws[4]), (int)(ws[5]), (int)(ws[6]), (int)(ws[7]), (int *)(ws[8])); }
+void _fl_select (intptr_t *ws) { r_select ((int *)(ws[0]), (int)(ws[1]), (int *)(ws[2]), (int)(ws[3]), (int *)(ws[4]), (int)(ws[5]), (int)(ws[6]), (int)(ws[7]), (int *)(ws[8])); }
 /*}}}*/
 
 /*{{{  command-line access stuff */
@@ -559,7 +559,7 @@ static __inline__ void r_tvm_set_args (int argc, int argv)
 	kroc_argv = (char **) argv;
 	return;
 }
-void _fl_tvm_set_args (int *ws) { r_tvm_set_args ((int)(ws[0]), (int)(ws[1])); }
+void _fl_tvm_set_args (intptr_t *ws) { r_tvm_set_args ((int)(ws[0]), (int)(ws[1])); }
 #else
 #error No implementation of argc/argv for this environment
 #endif
@@ -570,7 +570,7 @@ static __inline__ void r_num_args (int *n)
 	*n = kroc_argc;
 	return;
 }
-void _fl_num_args (int *ws) { r_num_args ((int *)(ws[0])); }
+void _fl_num_args (intptr_t *ws) { r_num_args ((int *)(ws[0])); }
 
 /* PROC C.fl.nth.arg (VAL INT n, RESULT []BYTE arg, RESULT INT len) */
 static __inline__ void r_nth_arg (int n, char *arg, int arglen, int *len)
@@ -590,7 +590,7 @@ static __inline__ void r_nth_arg (int n, char *arg, int arglen, int *len)
 
 	return;
 }
-void _fl_nth_arg (int *ws) { r_nth_arg ((int)(ws[0]), (char *)(ws[1]), (int)(ws[2]), (int *)(ws[3])); }
+void _fl_nth_arg (intptr_t *ws) { r_nth_arg ((int)(ws[0]), (char *)(ws[1]), (int)(ws[2]), (int *)(ws[3])); }
 /*}}}*/
 
 /*{{{  struct occam_stat */
@@ -774,28 +774,28 @@ static __inline__ void r_fsync (int fd, int *result)
 /*}}}*/
 
 /*{{{  interface functions*/
-void _fl_check_access (int *w)				{ r_check_access ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_size (int *w)					{ r_size ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_open (int *w)					{ r_open ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_open3 (int *w)					{ r_open3 ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
-void _fl_pipe (int *w)					{ r_pipe ((int *)(w[0]), (int *)(w[1]), (int *)(w[2])); }
-void _fl_dup2 (int *w)					{ r_dup2 ((int)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_read (int *w)					{ r_read ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_write (int *w)					{ r_write ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_seek (int *w)					{ r_seek ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_close (int *w)					{ r_close ((int)(w[0]), (int *)(w[1])); }
-void _fl_mkdir (int *w)					{ r_mkdir ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_rmdir (int *w)					{ r_rmdir ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_unlink (int *w)				{ r_unlink ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_fd_fd_copy (int *w)				{ r_fd_fd_copy ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_sendfile (int *w)				{ r_sendfile ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3]), (int *)(w[4])); }
-void _fl_stat(int *w)					{ r_stat ((char *)(w[0]), (int)(w[1]), (struct occam_stat *)(w[2]), (int *)(w[3])); }
-void _fl_lstat(int *w)					{ r_lstat ((char *)(w[0]), (int)(w[1]), (struct occam_stat *)(w[2]), (int *)(w[3])); }
-void _fl_fstat(int *w)					{ r_fstat ((int)(w[0]), (struct occam_stat *)(w[1]), (int *)(w[2])); }
-void _fl_opendir(int *w)				{ r_opendir ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_readdir(int *w)				{ r_readdir ((int)(w[0]), (struct occam_dirent *)(w[1]), (int *)(w[2])); }
-void _fl_closedir(int *w)				{ r_closedir ((int)(w[0]), (int *)(w[1])); }
-void _fl_chmod(int *w)					{ r_chmod ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_fsync(int *w)					{ r_fsync ((int)(w[0]), (int *)(w[1])); }
+void _fl_check_access (intptr_t *w)				{ r_check_access ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_size (intptr_t *w)					{ r_size ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_open (intptr_t *w)					{ r_open ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_open3 (intptr_t *w)					{ r_open3 ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
+void _fl_pipe (intptr_t *w)					{ r_pipe ((int *)(w[0]), (int *)(w[1]), (int *)(w[2])); }
+void _fl_dup2 (intptr_t *w)					{ r_dup2 ((int)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_read (intptr_t *w)					{ r_read ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_write (intptr_t *w)					{ r_write ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_seek (intptr_t *w)					{ r_seek ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_close (intptr_t *w)					{ r_close ((int)(w[0]), (int *)(w[1])); }
+void _fl_mkdir (intptr_t *w)					{ r_mkdir ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_rmdir (intptr_t *w)					{ r_rmdir ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_unlink (intptr_t *w)				{ r_unlink ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_fd_fd_copy (intptr_t *w)				{ r_fd_fd_copy ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_sendfile (intptr_t *w)				{ r_sendfile ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3]), (int *)(w[4])); }
+void _fl_stat(intptr_t *w)					{ r_stat ((char *)(w[0]), (int)(w[1]), (struct occam_stat *)(w[2]), (int *)(w[3])); }
+void _fl_lstat(intptr_t *w)					{ r_lstat ((char *)(w[0]), (int)(w[1]), (struct occam_stat *)(w[2]), (int *)(w[3])); }
+void _fl_fstat(intptr_t *w)					{ r_fstat ((int)(w[0]), (struct occam_stat *)(w[1]), (int *)(w[2])); }
+void _fl_opendir(intptr_t *w)				{ r_opendir ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_readdir(intptr_t *w)				{ r_readdir ((int)(w[0]), (struct occam_dirent *)(w[1]), (int *)(w[2])); }
+void _fl_closedir(intptr_t *w)				{ r_closedir ((int)(w[0]), (int *)(w[1])); }
+void _fl_chmod(intptr_t *w)					{ r_chmod ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_fsync(intptr_t *w)					{ r_fsync ((int)(w[0]), (int *)(w[1])); }
 /*}}}*/
 
