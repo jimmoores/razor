@@ -27,5 +27,13 @@ clean-local:
 
 SUFFIXES = .occ
 
+# Depend on toolchain so examples rebuild when compiler/runtime changes
+TOOLCHAIN_DEPS = \
+	$(KROC_BUILD_ROOT)/tools/occ21/occ21 \
+	$(KROC_BUILD_ROOT)/tools/tranx86/tranx86 \
+	$(KROC_BUILD_ROOT)/runtime/ccsp/libccsp.a
+
 .occ:
 	$(OCCBUILD) --program $<
+
+$(examples): $(TOOLCHAIN_DEPS)
