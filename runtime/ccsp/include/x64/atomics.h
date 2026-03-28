@@ -171,7 +171,7 @@ static INLINE void att_unsafe_clear_bit (atomic_t *atval, unsigned int bit)
 /*{{{  unsigned int att_test_set_bit (atomic_t *atval, unsigned int bit)*/
 static INLINE unsigned int att_safe_test_set_bit (atomic_t *atval, unsigned int bit)
 {
-	unsigned int old = __atomic_or_fetch(&atval->value, 1U << bit, __ATOMIC_ACQ_REL);
+	unsigned int old = __atomic_fetch_or(&atval->value, 1U << bit, __ATOMIC_ACQ_REL);
 	return (old >> bit) & 1;
 }
 
@@ -185,7 +185,7 @@ static INLINE unsigned int att_unsafe_test_set_bit (atomic_t *atval, unsigned in
 /*{{{  unsigned int att_test_clear_bit (atomic_t *atval, unsigned int bit)*/
 static INLINE unsigned int att_safe_test_clear_bit (atomic_t *atval, unsigned int bit)
 {
-	unsigned int old = __atomic_and_fetch(&atval->value, ~(1U << bit), __ATOMIC_ACQ_REL);
+	unsigned int old = __atomic_fetch_and(&atval->value, ~(1U << bit), __ATOMIC_ACQ_REL);
 	return (old >> bit) & 1;
 }
 
@@ -254,8 +254,8 @@ static INLINE unsigned int att_unsafe_test_clear_bit (atomic_t *atval, unsigned 
 #define atw_cas(W,O,N)		__atomic_compare_exchange_n((word *)(W), &(word){(word)(O)}, (word)(N), 0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE)
 #define	atw_set_bit(W,B) 	__atomic_or_fetch((word *)(W), (word)(1UL << (B)), __ATOMIC_ACQ_REL)
 #define atw_clear_bit(W,B)	__atomic_and_fetch((word *)(W), (word)(~(1UL << (B))), __ATOMIC_ACQ_REL)
-#define atw_test_set_bit(W,B)	((__atomic_or_fetch((word *)(W), (word)(1UL << (B)), __ATOMIC_ACQ_REL) >> (B)) & 1)
-#define atw_test_clear_bit(W,B)	((__atomic_and_fetch((word *)(W), (word)(~(1UL << (B))), __ATOMIC_ACQ_REL) >> (B)) & 1)
+#define atw_test_set_bit(W,B)	((__atomic_fetch_or((word *)(W), (word)(1UL << (B)), __ATOMIC_ACQ_REL) >> (B)) & 1)
+#define atw_test_clear_bit(W,B)	((__atomic_fetch_and((word *)(W), (word)(~(1UL << (B))), __ATOMIC_ACQ_REL) >> (B)) & 1)
 #else
 /* 32-bit atomics */
 #define atw_val(W) 		((word) (att_val ((atomic_t *)((W)))))

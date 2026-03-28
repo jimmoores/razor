@@ -2466,23 +2466,19 @@ K_CALL_DEFINE_0_0 (Y_unsupported)
 /*{{{  static void fbar_complete (sched_t *sched, word *bar) */
 static void fbar_complete (sched_t *sched, word *bar)
 {
-	word *fptr, *bptr;
+	word *proc;
 
 	/* reset count = enrolled */
 	bar[FBAR_COUNT] = bar[FBAR_ENROLLED];
 
-	fptr = (word *) bar[FBAR_FPTR];
-	if (fptr != (word *) NotProcess_p && fptr != NULL) {
-		bptr = (word *) bar[FBAR_BPTR];
-		/* append barrier queue to run-queue */
-		if (sched->curb.Fptr != NotProcess_p) {
-			((word *) sched->curb.Bptr)[Link] = (word) fptr;
-		} else {
-			sched->curb.Fptr = fptr;
-		}
-		sched->curb.Bptr = bptr;
-		sched->curb.size++;
+	/* walk the barrier queue and enqueue each waiting process */
+	proc = (word *) bar[FBAR_FPTR];
+	while (proc != (word *) NotProcess_p && proc != NULL) {
+		word *next = (word *) proc[Link];
+		enqueue_process_nopri (sched, proc);
+		proc = next;
 	}
+
 	/* clear the barrier queue */
 	bar[FBAR_FPTR] = NotProcess_p;
 	bar[FBAR_BPTR] = NotProcess_p;
@@ -2655,7 +2651,7 @@ static INLINE word *sem_dequeue (ccsp_sem_t *sem) {
 		} else {
 			to_test = &(sem->fptr);
 		}
-		
+
 		/* Partially complete enqueue, so we can't dequeue.
 		 * Instead we release the lock and retry once.
 		 */
