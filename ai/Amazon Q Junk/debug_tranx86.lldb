@@ -1,3 +1,0 @@
-run -mx64 simple_x64.tce -o simple_x64.s
-bt
-quit

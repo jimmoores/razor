@@ -1,8 +1,0 @@
-file h_working
-b kernel_Y_outbyte
-run
-p/x $x1
-p/x (void*)($x1 + 8)
-x/8gx $x1
-x/8gx ($x1 + 8)
-quit

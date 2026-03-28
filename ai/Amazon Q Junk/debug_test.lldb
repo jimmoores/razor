@@ -1,6 +1,0 @@
-breakpoint set --name kernel_Y_outbyte
-run
-print (void*)sched->cparam[0]
-print /x sched->cparam[0]
-continue
-quit

@@ -10,7 +10,9 @@
 *.a
 *.so
 *~
-
+GEMINI.md
+CLAUDE.md
+.DS_Store
 
 # Dangerous, but we'll do it.
 config.h

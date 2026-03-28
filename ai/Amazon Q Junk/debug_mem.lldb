@@ -1,6 +1,0 @@
-breakpoint set --name kernel_Y_outbyte
-run
-print (void*)((char*)sched + 8)
-x/2gx ((char*)sched + 8)
-continue
-quit

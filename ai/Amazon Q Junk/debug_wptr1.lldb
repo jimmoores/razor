@@ -1,6 +1,0 @@
-breakpoint set --name kernel_Y_outbyte
-run
-print (void*)Wptr[1]
-print /x *(long*)(Wptr + 1)
-continue
-quit
