@@ -4345,6 +4345,7 @@ K_CALL_DEFINE_2_0 (Y_startp)
 
 	K_CALL_PARAMS_2 (workspace, start_offset);
 	ENTRY_TRACE (Y_startp, "%p, %d", workspace, start_offset);
+	/* BMESSAGE ("startp: ws=%p offset=%ld iptr=%p Wptr=%p\n", workspace, (long)start_offset, (void*)(return_address + start_offset), Wptr); */
 
 	SAFETY {
 		if (sched->curb.Fptr != NotProcess_p) {
@@ -4451,6 +4452,7 @@ K_CALL_DEFINE_1_0 (Y_endp)
 	
 	K_CALL_PARAMS_1 (ptr);
 	ENTRY_TRACE (Y_endp, "%p", ptr);
+	/* BMESSAGE ("endp: ptr=%p count=%ld Wptr=%p\n", ptr, (long)ptr[Count], Wptr); */
 
 	/* save the return address for CIF */
 	save_return (sched, Wptr, return_address);
@@ -4869,11 +4871,17 @@ static INLINE void kernel_chan_io_mobile (sched_t *sched, word flags, word *src,
 /*
  *	channel input and output
  */
+static int chan_io_count = 0;
 static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word *channel_address, byte *pointer, unsigned int count)
 {
 	byte *destination_address, *source_address;
 	word temp;
 
+	if (0 && ++chan_io_count > 50 && chan_io_count <= 70) {
+		BMESSAGE ("chan_io[%d]: flags=0x%x chan=%p ptr=%p Wptr=%p *chan=0x%lx\n",
+			chan_io_count, (int)flags, channel_address, pointer, Wptr,
+			(unsigned long)atw_val(channel_address));
+	}
 	temp = atw_val (channel_address);
 
 	if (temp == NotProcess_p || (temp & 1)) {
