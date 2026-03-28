@@ -1877,13 +1877,10 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 
 		oregs[0] = oregs[1] = oregs[2] = REG_UNDEFINED;
 		if (regs_out >= 1) {
-			/* Allocate a FRESH register for the return value.
-			 * Using old_a_reg (cregs[0]) causes the register allocator
-			 * to reuse the same physical register, which can be overwritten
-			 * by subsequent instructions before the value is consumed.
-			 * A fresh register avoids this conflict. */
+			/* Return value is in x0. Constrain a fresh register to x0
+			 * so the register allocator knows to use physical x0. */
 			oregs[0] = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_X0, ARG_REG, oregs[0]));
+			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, oregs[0], ARG_REG, REG_X0));
 			ts->stack->a_reg = oregs[0];
 		}
 		if (regs_out >= 2) {
