@@ -2803,6 +2803,9 @@ PRIVATEPARAM void treplpar (treenode * tptr, void *const voidptr, const INT32 pr
 		gencomment0 ("ws_aslot");
 		genprimary (I_LDL, acount);
 		gencomment0 ("acount");
+		if (bytesperword > 4) {
+			gensecondary (I_WIDE);
+		}
 		gensecondary (I_SUM);
 		genprimary (I_STNL, 0);
 		gencomment0 ("ws stored in array");
@@ -2848,6 +2851,9 @@ PRIVATEPARAM void treplpar (treenode * tptr, void *const voidptr, const INT32 pr
 			gencomment0 ("vs_aslot");
 			genprimary (I_LDL, acount);
 			gencomment0 ("acount");
+			if (bytesperword > 4) {
+				gensecondary (I_WIDE);
+			}
 			gensecondary (I_SUM);
 			genprimary (I_STNL, 0);
 			gencomment0 ("vs stored in array");
@@ -2922,7 +2928,7 @@ PRIVATEPARAM void treplpar (treenode * tptr, void *const voidptr, const INT32 pr
 			genbranch (I_CJ, le_lab);
 			throw_the_result_away ();
 			genprimary (I_LDL, ms_tslot2);
-			genprimary (I_LDC, 4);
+			genprimary (I_LDC, bytesperword);
 			gensecondary (I_DIFF);
 			genprimary (I_STL, ms_tslot2);
 			genbranch (I_J, lp_lab);
@@ -2990,7 +2996,10 @@ PRIVATEPARAM void treplpar (treenode * tptr, void *const voidptr, const INT32 pr
 		gencomment0 ("PTR wstemp");
 		gencomment0 ("updating acount");
 		genprimary (I_LDL, acount);
-		genprimary (I_LDC, 4);
+		genprimary (I_LDC, bytesperword);
+		if (bytesperword > 4) {
+			gensecondary (I_WIDE);
+		}
 		gensecondary (I_SUM);
 		genprimary (I_STL, acount);
 		gencomment0 ("acount");
@@ -3471,7 +3480,10 @@ PRIVATE void gendynamicmobilespace (int ms_temp_slot, int ms_tslot, int ms_tslot
 		genprimary (I_STNL, 0);			/* store MINT in array  */
 
 		genprimary (I_LDL, ms_tslot);		/* mobilespace array pointer */
-		genprimary (I_LDC, 4);
+		genprimary (I_LDC, bytesperword);
+		if (bytesperword > 4) {
+			gensecondary (I_WIDE);
+		}
 		gensecondary (I_SUM);
 		genprimary (I_STL, ms_tslot);		/* next please */
 
@@ -4351,12 +4363,15 @@ printtreenl (stderr, 4, resinst);
 						/* only get here once; need to free-up memory allocated during replication */
 						gencomment0 ("free dynamic stuff");
 						genprimary (I_LDL, acount);
-						genprimary (I_LDC, 4);
+						genprimary (I_LDC, bytesperword);
 						gensecondary (I_DIFF);
-						genprimary (I_STL, acount);		/* acount -= 4 */
+						genprimary (I_STL, acount);		/* acount -= bytesperword */
 
 						genprimary (I_LDL, ws_aslot);
 						genprimary (I_LDL, acount);
+						if (bytesperword > 4) {
+							gensecondary (I_WIDE);
+						}
 						gensecondary (I_SUM);
 						genprimary (I_LDNL, 0);
 						gensecondary (I_MRELEASE);		/* free workspace */
@@ -4364,6 +4379,9 @@ printtreenl (stderr, 4, resinst);
 						if (vectorspace) {
 							genprimary (I_LDL, vs_aslot);
 							genprimary (I_LDL, acount);
+							if (bytesperword > 4) {
+								gensecondary (I_WIDE);
+							}
 							gensecondary (I_SUM);
 							genprimary (I_LDNL, 0);
 							gensecondary (I_MRELEASE);

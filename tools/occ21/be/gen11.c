@@ -1078,13 +1078,19 @@ printtreenl (stderr, 4, temp);
 		gencomment0 ("begin initialise dynamic channel array");
 		setlab (loophead);
 		loadname (temp, 0);
-		genprimary (I_ADC, -4);
+		genprimary (I_ADC, -bytesperword);
 		gensecondary (I_DUP);
 		storeinname (temp, 0);
 		loadmobile (rdest);
 		genprimary (I_LDNL, 0);
+		if (bytesperword > 4) {
+			gensecondary (I_WIDE);
+		}
 		gensecondary (I_SUM);
 		loaddynmobilesize (rdest, 1);
+		if (bytesperword > 4) {
+			gensecondary (I_WIDE);
+		}
 		gensecondary (I_SUM);
 		gensecondary (I_DUP);
 		gensecondary (I_NULL);
