@@ -282,11 +282,14 @@ va_dcl
         switch (*++p)
           {
             case 'd':
-              res += tcoff_sizel (va_arg (ap, long int));
+              /* Use int for va_arg: all callers pass int, and on LP64 platforms
+                 (e.g. aarch64) reading long int from va_arg when int was passed
+                 is undefined behaviour due to the size mismatch. */
+              res += tcoff_sizel ((long int) va_arg (ap, int));
               break;
             case 'u':
               res += 4L;
-              dummy = va_arg (ap, unsigned long int);
+              dummy = (unsigned long int) va_arg (ap, unsigned int);
               break;
             default:
               fprintf (stderr, "characters 'l%c' unknown in record string. please report", *p);
@@ -338,8 +341,8 @@ va_dcl
         break;
       case 'l': switch (*++p)
                 {
-                  case 'd': tcoff_putl (fs, va_arg (ap, long int)); break;
-                  case 'u': tcoff_putul (fs, va_arg (ap, unsigned long int)); break;
+                  case 'd': tcoff_putl (fs, (long int) va_arg (ap, int)); break;
+                  case 'u': tcoff_putul (fs, (unsigned long int) va_arg (ap, unsigned int)); break;
                   default:  fprintf (stderr, "characters 'l%c' unknown in record string. please report", *p);
                             exit (EXIT_FAILURE);
                             break;

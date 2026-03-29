@@ -4798,9 +4798,10 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
 						aarch64_emit_mem_op(stream, "ldrsh", dst, base, disp);
 					} else {
-						const char *src = aarch64_get_register_name(ins->in_args[0]->regconst);
+						char wsrc[8];
 						const char *dst = aarch64_get_register_name(ins->out_args[0]->regconst);
-						fprintf(stream, "\tsxth\t%s, %s\n", dst, src);
+						snprintf(wsrc, sizeof(wsrc), "w%ld", (long)ins->in_args[0]->regconst);
+						fprintf(stream, "\tsxth\t%s, %s\n", dst, wsrc);
 					}
 					break;
 				case INS_MOVE32:
@@ -5392,14 +5393,27 @@ static char *aarch64_convert_symbol_name(const char *symbol) {
 		sprintf(rbuf, "%skernel_%s", ext, symbol);
 		return rbuf;
 	}
+	/* Already-converted kernel call symbols (from double conversion) */
+	if (!strncmp(symbol, "kernel_Y_", 9) || !strncmp(symbol, "kernel_X_", 9)) {
+		sprintf(rbuf, "%s%s", ext, symbol);
+		return rbuf;
+	}
 
-	/* System symbols: ccsp_*, occam_*, *wsbytes, etc -> __name */
+	/* System symbols: ccsp_*, occam_*, *wsbytes, etc.
+	 * On Darwin (extref_prefix="_"): C symbol _foo becomes __foo in the object file,
+	 *   so occam code must also reference __foo.
+	 * On Linux (no extref_prefix): C symbol _foo stays _foo,
+	 *   so occam code must reference _foo. */
 	if (!strncmp(symbol, "ccsp_", 5) || !strncmp(symbol, "occam_", 6) ||
 	    strstr(symbol, "wsbytes") || strstr(symbol, "msbytes") ||
 	    strstr(symbol, "vsbytes") || strstr(symbol, "wsadjust")) {
 		const char *base = symbol;
 		while (*base == '_') base++;
-		sprintf(rbuf, "__%s", base);
+		if (options.extref_prefix && options.extref_prefix[0] == '_') {
+			sprintf(rbuf, "__%s", base);
+		} else {
+			sprintf(rbuf, "_%s", base);
+		}
 		return rbuf;
 	}
 
@@ -5506,9 +5520,9 @@ static void aarch64_emit_symbol_addr (FILE *stream, const char *dst_reg, const c
 		fprintf (stream, "\tadrp\t%s, %s@PAGE\n", dst_reg, symbol);
 		fprintf (stream, "\tadd\t%s, %s, %s@PAGEOFF\n", dst_reg, dst_reg, symbol);
 	} else {
-		/* Linux ELF: use :lo12: syntax */
-		fprintf (stream, "\tadrp\t%s, %s\n", dst_reg, symbol);
-		fprintf (stream, "\tadd\t%s, %s, :lo12:%s\n", dst_reg, dst_reg, symbol);
+		/* Linux ELF: use GOT-relative addressing for PIC shared library compatibility */
+		fprintf (stream, "\tadrp\t%s, :got:%s\n", dst_reg, symbol);
+		fprintf (stream, "\tldr\t%s, [%s, :got_lo12:%s]\n", dst_reg, dst_reg, symbol);
 	}
 }
 /*}}}*/

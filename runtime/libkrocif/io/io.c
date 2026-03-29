@@ -146,8 +146,8 @@ int init_occam_io (int tlpiface)
 	asm ("adrp %0, _O_kroc_keyboard_process@PAGE\n\t"
 		 "add  %0, %0, _O_kroc_keyboard_process@PAGEOFF" : "=r" (kbd_ws[-1]));
 #elif defined(__aarch64__)
-	asm ("adrp %0, O_kroc_keyboard_process\n\t"
-		 "add  %0, %0, :lo12:O_kroc_keyboard_process" : "=r" (kbd_ws[-1]));
+	asm ("adrp %0, :got:O_kroc_keyboard_process\n\t"
+		 "ldr  %0, [%0, :got_lo12:O_kroc_keyboard_process]" : "=r" (kbd_ws[-1]));
 #elif defined(__i386__)
 	asm ("movl $O_kroc_keyboard_process, %0" : "=r" (kbd_ws[-1]));
 #endif
@@ -169,8 +169,8 @@ int init_occam_io (int tlpiface)
 	asm ("adrp %0, _O_kroc_screen_process@PAGE\n\t"
 	     "add  %0, %0, _O_kroc_screen_process@PAGEOFF" : "=r" (scr_ws[-1]));
 #elif defined(__aarch64__)
-	asm ("adrp %0, O_kroc_screen_process\n\t"
-	     "add  %0, %0, :lo12:O_kroc_screen_process" : "=r" (scr_ws[-1]));
+	asm ("adrp %0, :got:O_kroc_screen_process\n\t"
+	     "ldr  %0, [%0, :got_lo12:O_kroc_screen_process]" : "=r" (scr_ws[-1]));
 #elif defined(__i386__)
 	asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[-1]));
 #endif
@@ -186,8 +186,8 @@ int init_occam_io (int tlpiface)
 	asm ("adrp %0, _O_kroc_error_process@PAGE\n\t"
 	     "add  %0, %0, _O_kroc_error_process@PAGEOFF" : "=r" (err_ws[-1]));
 #elif defined(__aarch64__)
-	asm ("adrp %0, O_kroc_error_process\n\t"
-	     "add  %0, %0, :lo12:O_kroc_error_process" : "=r" (err_ws[-1]));
+	asm ("adrp %0, :got:O_kroc_error_process\n\t"
+	     "ldr  %0, [%0, :got_lo12:O_kroc_error_process]" : "=r" (err_ws[-1]));
 #elif defined(__i386__)
 	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[-1]));
 #endif
