@@ -102,7 +102,15 @@
 #else
 #define CIF_STACK_LINKAGE   1 /* words */
 #endif
+/* CIF_PROCESS_WORDS: number of words reserved below the workspace pointer
+ * for CIF runtime state.  On AArch64, the CIF assembly stub saves all
+ * callee-saved registers (x19-x30, x29) plus SP to workspace negative
+ * offsets, requiring slots -7 through -22 (22 words total). */
+#if defined(__aarch64__) || defined(__x86_64__)
+#define CIF_PROCESS_WORDS	24 /* words: enough for 22 saved regs + padding */
+#else
 #define CIF_PROCESS_WORDS	8 /* words */
+#endif
 
 #endif /* __CCSP_CONSTS_H */
 

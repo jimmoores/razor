@@ -2113,11 +2113,7 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 	init_sched_t (sched);
 	memcpy (sched->calltable, ccsp_calltable, sizeof(void *) * K_MAX_SUPPORTED);
 	sched->allocator 	= allocator;
-	/* Point sched->stack to the top of the sched_t structure, aligned
-	 * to 16 bytes (required by AArch64 for SP).  Kernel C frames grow
-	 * DOWN from here into sched's padding.  This keeps the kernel stack
-	 * below the CIF C function's stack frames. */
-	sched->stack		= (stack + sizeof(sched_t)) & ~((word)0xF);
+	sched->stack		= stack;
 	sched->priofinity	= BuildPriofinity (0, (MAX_PRIORITY_LEVELS / 2));
 	
 	set_local_scheduler (sched);

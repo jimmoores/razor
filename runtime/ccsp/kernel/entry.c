@@ -41,12 +41,27 @@
 /*{{{  void ccsp_kernel_entry (word *wptr, word *fptr)*/
 void ccsp_kernel_entry (word *wptr, word *fptr)
 {
-	word stack = (word) (((byte *)&fptr) + sizeof(word));
+	word top = (word) (((byte *)&fptr) + sizeof(word));
+	word sched_base, kernel_stack_top;
 
-	stack -= sizeof(sched_t);	/* allocate stack for sched_t structure */
-	stack &= ~((word)0xFFF);	/* align the stack on a page boundary */
+	/* Layout on the C stack (growing downward):
+	 *
+	 *   [high]  ... CIF C function frames ...
+	 *           ccsp_kernel_entry frame  (top = &fptr + sizeof(word))
+	 *           64KB gap for CIF call frames and IO process workspaces
+	 *           sched_t structure        (sizeof(sched_t) bytes)
+	 *   [low]   kernel stack grows DOWN from sched_base
+	 *
+	 * sched->stack = sched_base.  The kernel SP starts at sched_base and
+	 * grows downward into the thread stack below (which has plenty of room).
+	 * The 64KB gap above sched ensures the CIF asm stub's saved callee-saved
+	 * registers (on the C stack above) are well above sched_base, so the
+	 * kernel stack frames (which start at sched_base and grow down) cannot
+	 * collide with them.
+	 */
+	sched_base = (top - sizeof(sched_t)) & ~((word)0x3F);  /* 64-byte align for cacheline */
 
-	K_ENTRY (ccsp_calltable[K_RTTHREADINIT], stack, wptr, fptr);
+	K_ENTRY (ccsp_calltable[K_RTTHREADINIT], sched_base, wptr, fptr);
 }
 /*}}}*/
 
