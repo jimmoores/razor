@@ -121,3 +121,53 @@ ccsp_cif_call_asm_resched:
     ldur x28, [x28, #-176]
 
     br x30
+
+// void ccsp_cif_process_call(void *wptr, void *func)
+//
+// Wrapper for calling a CIF C function on a PRIVATE stack in the workspace.
+// The sched->stack is shared by all processes, so we can't let the CIF
+// function's callee-saved register saves (especially LR/x30) live on it
+// — other processes' C calls would overwrite them during context switches.
+//
+// This function:
+//   1. Saves current SP (sched->stack) to wptr[-5] (byte -40)
+//   2. Switches SP to a private stack at wptr - 248, 16-byte aligned
+//   3. Calls func(wptr) — the CIF C function with wptr as x0
+//   4. Restores SP from wptr[-5]
+//   5. Returns to the occam code
+//
+#if defined(__APPLE__)
+.global _ccsp_cif_process_call
+_ccsp_cif_process_call:
+#else
+.global ccsp_cif_process_call
+ccsp_cif_process_call:
+#endif
+    // x0 = wptr (Wptr+1, passed by compose_cif_call)
+    // x1 = func address
+    // x28 = Wptr (from occam, callee-saved)
+
+    // Save current SP (= sched->stack) to wptr[-5] (byte -40 from x0)
+    mov x9, sp
+    stur x9, [x0, #-40]
+
+    // Set up private stack at wptr - 248, aligned to 16 bytes.
+    // wptr = x0 = Wptr + 8.  So private stack = Wptr + 8 - 248 = Wptr - 240.
+    // The CIF asm stub's workspace saves are at wptr[-10..-22] = bytes
+    // -80 to -176 from wptr.  The private stack at -248 is below all saves.
+    sub x9, x0, #248
+    and x9, x9, #-16            // 16-byte align
+    mov sp, x9                  // switch to private stack
+
+    // Call the CIF C function: func(wptr)
+    blr x1
+
+    // CIF function returned.  Restore SP from wptr[-5].
+    // x28 is callee-saved and should still be Wptr (from occam).
+    // x0 was Wptr+8 at entry, also callee-saved by the C function.
+    // But we need wptr to reload SP.  x28+8 = wptr.
+    add x9, x28, #8             // x9 = Wptr + 8 = wptr
+    ldur x9, [x9, #-40]         // x9 = wptr[-5] = saved SP
+    mov sp, x9                  // restore shared sched->stack
+
+    ret

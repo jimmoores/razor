@@ -1119,13 +1119,29 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 	 * reads wptr[1] = (original_Wptr+1)[1] = original_Wptr[2] = first param. */
 	add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(1 << WSH), ARG_REG, REG_X0));
 
-	/* Build symbol: @<extref_prefix><name+4>
-	 * The '@' prevents aarch64_convert_symbol_name from adding O_ prefix. */
+	/* Call the CIF function through ccsp_cif_process_call, which switches
+	 * SP to a private workspace-based stack before calling the function.
+	 * This prevents the CIF C function's callee-saved registers from being
+	 * on the shared sched->stack where other processes would overwrite them.
+	 *
+	 * ccsp_cif_process_call(wptr, func_addr):
+	 *   - saves current SP to wptr[-5] (byte -40 from wptr = x0)
+	 *   - switches SP to wptr - 248 (private workspace stack)
+	 *   - calls func(wptr)
+	 *   - restores SP from wptr[-5]
+	 *
+	 * x0 already has wptr+1 from the LEA above.  x1 gets the function address. */
 	sprintf (sbuf, "@%s%s", options.extref_prefix ? options.extref_prefix : "", name + 4);
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (sbuf)));
+	{
+		char func_sbuf[256];
+		/* Load function address into x1 */
+		snprintf (func_sbuf, sizeof(func_sbuf), "%s", sbuf);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, string_dup (func_sbuf), ARG_REG, REG_X1));
+	}
+	/* Call the wrapper: ccsp_cif_process_call(wptr, func_addr) */
+	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup ("@_ccsp_cif_process_call")));
 
-	/* Restore state after CIF call.
-	 * sched restore from REG_WPTR[-6] (matching the save above). */
+	/* Restore state after CIF call. */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-6 << WSH), ARG_REG, REG_SCHED));
 
