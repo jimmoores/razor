@@ -1,8 +1,8 @@
 # Top-level configure.ac for the KRoC tree.
 
-AC_INIT([kroc], [1.6.1-pre0], [kroc-bugs@kent.ac.uk])
-AC_PREREQ(2.59)
-AC_CANONICAL_SYSTEM
+AC_INIT([kroc],[1.6.1-pre0],[kroc-bugs@kent.ac.uk])
+AC_PREREQ([2.72])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])
 AC_PROG_CC
@@ -44,8 +44,7 @@ if test $OCCBUILD_TOOLCHAIN = tvm; then
   OCCAM_CONFIG_TARGET_SUBDIRS(runtime/libtvm)
 
   AC_ARG_WITH([wrapper],
-              AC_HELP_STRING([--with-wrapper=...],
-                             [Transterpreter wrapper to use (posix, none)]),
+              AS_HELP_STRING([--with-wrapper=...],[Transterpreter wrapper to use (posix, none)]),
               [wrapper=$withval], [wrapper=posix])
   if test "x$wrapper" = "xposix"; then
     OCCAM_CONFIG_TARGET_SUBDIRS(tvm/posix)

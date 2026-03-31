@@ -1,5 +1,5 @@
-AC_INIT([occSDL], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([occSDL],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -39,4 +39,5 @@ AC_MSG_RESULT($build_occSDLsound)
 AM_CONDITIONAL(BUILD_OCCSDLSOUND, [test $build_occSDLsound = yes])
 OCCAM_PROVIDE(occSDLsound.module, , , [test $build_occSDLsound = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

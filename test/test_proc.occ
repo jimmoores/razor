@@ -1,0 +1,14 @@
+PROC inc(BYTE x)
+  x := x + 1
+:
+
+PROC main(CHAN OF BYTE in, out, err)
+  BYTE b:
+  SEQ
+    b := 'A'
+    SEQ i=0 FOR 10
+      SEQ
+        inc(b)
+        err ! b
+    err ! '*n'
+:

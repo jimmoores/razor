@@ -18,8 +18,13 @@ extern "C" {
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
+#if defined(__aarch64__) || defined(__x86_64__)
+typedef intptr_t word;
+#else
 typedef int word;
+#endif
 
 
 #include <SDL.h>

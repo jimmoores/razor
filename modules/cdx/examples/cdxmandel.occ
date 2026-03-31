@@ -71,7 +71,8 @@ PROC calculate.mandel (VAL INT x, y, id, VAL REAL32 zoom, []INT data)
 :
 
 PROC mandel.worker (SHARED CHAN BYTE err!)
-  INT cdx.handle, rc, frame:
+  CDX.HANDLE cdx.handle:
+  INT rc, frame:
   NETBAR netbar:
   SEQ
     cdxclient.new (Host, 2345, Width, Height, cdx.handle)

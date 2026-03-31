@@ -13,6 +13,93 @@
 #IF NOT DEFINED (WRAPPERS.occSDL.INC)
 #DEFINE WRAPPERS.occSDL.INC
 --{{{  data types
+#IF DEFINED (TARGET.WORD.BITS)
+-- 64-bit targets: opaque C pointer/struct types need INT64 to hold
+-- native pointers.  Enumeration types remain INT.
+--* Foreign enumeration type [@text SDL_DUMMY_ENUM].
+DATA TYPE SDL.DUMMY.ENUM IS INT:
+--* Foreign struct type [@text SDL_ExposeEvent].
+DATA TYPE SDL.ExposeEvent IS INT64:
+--* Foreign struct type [@text SDL_UserEvent].
+DATA TYPE SDL.UserEvent IS INT64:
+--* Foreign enumeration type [@text SDL_eventaction].
+DATA TYPE SDL.eventaction IS INT:
+--* Foreign struct type [@text SDL_JoyBallEvent].
+DATA TYPE SDL.JoyBallEvent IS INT64:
+--* Foreign struct type [@text SDL_JoyHatEvent].
+DATA TYPE SDL.JoyHatEvent IS INT64:
+--* Foreign struct type [@text SDL_QuitEvent].
+DATA TYPE SDL.QuitEvent IS INT64:
+--* Foreign union type [@text SDL_Event].
+DATA TYPE SDL.Event IS INT64:
+--* Foreign struct type [@text SDL_Surface].
+DATA TYPE SDL.Surface IS INT64:
+--* Foreign enumeration type [@text SDL_GrabMode].
+DATA TYPE SDL.GrabMode IS INT:
+--* Foreign function pointer typedef type [@text SDL_blit].
+DATA TYPE SDL.blit IS INT64:
+--* Foreign enumeration type [@text SDL_bool].
+DATA TYPE SDL.bool IS INT:
+--* Foreign struct type [@text SDL_Palette].
+DATA TYPE SDL.Palette IS INT64:
+--* Foreign struct type [@text struct private_hwdata].
+DATA TYPE private.hwdata IS INT64:
+--* Foreign struct type [@text struct private_yuvhwdata].
+DATA TYPE private.yuvhwdata IS INT64:
+--* Foreign struct type [@text SDL_ResizeEvent].
+DATA TYPE SDL.ResizeEvent IS INT64:
+--* Foreign struct type [@text SDL_ActiveEvent].
+DATA TYPE SDL.ActiveEvent IS INT64:
+--* Foreign struct type [@text SDL_AudioSpec].
+DATA TYPE SDL.AudioSpec IS INT64:
+--* Foreign enumeration type [@text SDLKey].
+DATA TYPE SDLKey IS INT:
+--* Foreign struct type [@text struct SDL_BlitMap].
+DATA TYPE SDL.BlitMap IS INT64:
+--* Foreign struct type [@text struct private_yuvhwfuncs].
+DATA TYPE private.yuvhwfuncs IS INT64:
+--* Foreign struct type [@text SDL_Rect].
+DATA TYPE SDL.Rect IS INT64:
+--* Foreign struct type [@text struct SDL_SysWMmsg].
+DATA TYPE SDL.SysWMmsg IS INT64:
+--* Foreign struct typedef type [@text SDL_Joystick].
+DATA TYPE SDL.Joystick IS INT64:
+--* Foreign struct type [@text struct _SDL_Joystick].
+DATA TYPE underscore.SDL.Joystick IS INT64:
+--* Foreign enumeration type [@text SDL_GLattr].
+DATA TYPE SDL.GLattr IS INT:
+--* Foreign struct type [@text SDL_JoyAxisEvent].
+DATA TYPE SDL.JoyAxisEvent IS INT64:
+--* Foreign struct type [@text SDL_Color].
+DATA TYPE SDL.Color IS INT64:
+--* Foreign enumeration type [@text SDL_audiostatus].
+DATA TYPE SDL.audiostatus IS INT:
+--* Foreign struct type [@text SDL_AudioCVT].
+DATA TYPE SDL.AudioCVT IS INT64:
+--* Foreign struct type [@text SDL_SysWMEvent].
+DATA TYPE SDL.SysWMEvent IS INT64:
+--* Foreign struct type [@text SDL_PixelFormat].
+DATA TYPE SDL.PixelFormat IS INT64:
+--* Foreign struct type [@text SDL_keysym].
+DATA TYPE SDL.keysym IS INT64:
+--* Foreign function pointer typedef type [@text SDL_EventFilter].
+DATA TYPE SDL.EventFilter IS INT64:
+--* Foreign struct type [@text SDL_KeyboardEvent].
+DATA TYPE SDL.KeyboardEvent IS INT64:
+--* Foreign enumeration type [@text SDLMod].
+DATA TYPE SDLMod IS INT:
+--* Foreign struct type [@text SDL_VideoInfo].
+DATA TYPE SDL.VideoInfo IS INT64:
+--* Foreign struct type [@text SDL_JoyButtonEvent].
+DATA TYPE SDL.JoyButtonEvent IS INT64:
+--* Foreign struct type [@text SDL_MouseButtonEvent].
+DATA TYPE SDL.MouseButtonEvent IS INT64:
+--* Foreign struct type [@text SDL_MouseMotionEvent].
+DATA TYPE SDL.MouseMotionEvent IS INT64:
+--* Foreign struct type [@text SDL_Overlay].
+DATA TYPE SDL.Overlay IS INT64:
+#ELSE
+-- 32-bit targets: all types are INT
 --* Foreign enumeration type [@text SDL_DUMMY_ENUM].
 DATA TYPE SDL.DUMMY.ENUM IS INT:
 --* Foreign struct type [@text SDL_ExposeEvent].
@@ -95,6 +182,7 @@ DATA TYPE SDL.MouseButtonEvent IS INT:
 DATA TYPE SDL.MouseMotionEvent IS INT:
 --* Foreign struct type [@text SDL_Overlay].
 DATA TYPE SDL.Overlay IS INT:
+#ENDIF
 --}}}
 --{{{  constant SDL_INIT_TIMER
 --* Foreign constant [@text SDL_INIT_TIMER].

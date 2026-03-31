@@ -1,5 +1,5 @@
-AC_INIT([ocuda], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([ocuda],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -17,5 +17,6 @@ AC_MSG_RESULT($build_ocuda)
 AM_CONDITIONAL(BUILD_OCUDA, [test $build_ocuda = yes])
 OCCAM_PROVIDE(ocuda.module, , , [test $build_ocuda = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
 

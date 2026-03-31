@@ -7,5 +7,5 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface SDLCocoaInit : NSObject
-@end
+/* SDLCocoaInit function is defined in cocoa_helper.m */
+void SDLCocoaInit(void);

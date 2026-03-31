@@ -1,5 +1,5 @@
-AC_INIT([cif], [0.3], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([cif],[0.3],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -16,4 +16,5 @@ AC_MSG_RESULT($build_cif)
 AM_CONDITIONAL(BUILD_CIF, [test $build_cif = yes])
 OCCAM_PROVIDE(cif.module, , , [test $build_cif = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

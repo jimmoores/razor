@@ -1,5 +1,5 @@
-AC_INIT([occGL], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([occGL],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -25,4 +25,5 @@ AC_MSG_RESULT($build_occGL)
 AM_CONDITIONAL(BUILD_OCCGL, [test $build_occGL = yes])
 OCCAM_PROVIDE(occGL.module, , , [test $build_occGL = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

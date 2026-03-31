@@ -1,0 +1,29 @@
+PROC main(CHAN OF BYTE in?, out!, err!)
+  SEQ
+    INT X:
+    SEQ
+      X := 42
+      BYTE Y:
+      Y := 'z'
+      IF
+        X = 42
+          out ! 'P'
+        TRUE
+          out ! 'F'
+    -- Now test via a nested PROC call
+    PROC inner(VAL INT val)
+      IF
+        val = 42
+          out ! 'P'
+        TRUE
+          out ! 'F'
+    :
+    INT X2:
+    SEQ
+      X2 := 42
+      BYTE Y2:
+      Y2 := 'a'
+      inner(X2)
+    out ! '*n'
+    out ! #FF
+:

@@ -1,5 +1,5 @@
-AC_INIT([ttyutil], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([ttyutil],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -19,4 +19,5 @@ AC_MSG_RESULT($build_ttyutil)
 AM_CONDITIONAL(BUILD_TTYUTIL, [test $build_ttyutil = yes])
 OCCAM_PROVIDE(ttyutil.module, , , [test $build_ttyutil = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

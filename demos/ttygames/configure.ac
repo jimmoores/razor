@@ -1,5 +1,5 @@
-AC_INIT([ttygames], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([ttygames],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -19,4 +19,5 @@ AC_MSG_CHECKING([whether to build ttygames])
 AC_MSG_RESULT($build_ttygames)
 AM_CONDITIONAL([BUILD_TTYGAMES], [test $build_ttygames = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

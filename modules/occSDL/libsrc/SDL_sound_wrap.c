@@ -617,7 +617,7 @@ SWIGEXPORT void _Sound_Version_major_get (word occ_args[]) {
     arg1 = (Sound_Version *) occ_args[0]; 
   }result = (int) ((arg1)->major);
   {
-    *((int *) occ_args[1]) = result; 
+    *((word *) occ_args[1]) = result; 
   }
 }
 
@@ -647,7 +647,7 @@ SWIGEXPORT void _Sound_Version_minor_get (word occ_args[]) {
     arg1 = (Sound_Version *) occ_args[0]; 
   }result = (int) ((arg1)->minor);
   {
-    *((int *) occ_args[1]) = result; 
+    *((word *) occ_args[1]) = result; 
   }
 }
 
@@ -677,7 +677,7 @@ SWIGEXPORT void _Sound_Version_patch_get (word occ_args[]) {
     arg1 = (Sound_Version *) occ_args[0]; 
   }result = (int) ((arg1)->patch);
   {
-    *((int *) occ_args[1]) = result; 
+    *((word *) occ_args[1]) = result; 
   }
 }
 
@@ -725,7 +725,7 @@ SWIGEXPORT void _Sound_Init (word occ_args[]) {
   
   result = (int)Sound_Init();
   {
-    *((int *) occ_args[0]) = result; 
+    *((word *) occ_args[0]) = result; 
   }
 }
 
@@ -737,7 +737,7 @@ SWIGEXPORT void _Sound_Quit (word occ_args[]) {
   
   result = (int)Sound_Quit();
   {
-    *((int *) occ_args[0]) = result; 
+    *((word *) occ_args[0]) = result; 
   }
 }
 
@@ -792,7 +792,7 @@ SWIGEXPORT void _occ_Sound_GetError (word occ_args[]) {
     arg2 = * ((int *) &occ_args[2]); 
   }result = (int)occ_Sound_GetError(arg1,arg2);
   {
-    *((int *) occ_args[3]) = result; 
+    *((word *) occ_args[3]) = result; 
   }
 }
 
@@ -873,7 +873,7 @@ SWIGEXPORT void _Sound_SetBufferSize (word occ_args[]) {
     arg2 = * ((Uint32 *) &occ_args[1]); 
   }result = (int)Sound_SetBufferSize(arg1,arg2);
   {
-    *((int *) occ_args[2]) = result; 
+    *((word *) occ_args[2]) = result; 
   }
 }
 
@@ -918,7 +918,7 @@ SWIGEXPORT void _Sound_Rewind (word occ_args[]) {
     arg1 = (Sound_Sample *) occ_args[0]; 
   }result = (int)Sound_Rewind(arg1);
   {
-    *((int *) occ_args[1]) = result; 
+    *((word *) occ_args[1]) = result; 
   }
 }
 
@@ -936,7 +936,7 @@ SWIGEXPORT void _Sound_Seek (word occ_args[]) {
     arg2 = * ((Uint32 *) &occ_args[1]); 
   }result = (int)Sound_Seek(arg1,arg2);
   {
-    *((int *) occ_args[2]) = result; 
+    *((word *) occ_args[2]) = result; 
   }
 }
 
@@ -1038,7 +1038,7 @@ SWIGEXPORT void _check_if_done_playing (word occ_args[]) {
   
   result = (int)check_if_done_playing();
   {
-    *((int *) occ_args[0]) = result; 
+    *((word *) occ_args[0]) = result; 
   }
 }
 

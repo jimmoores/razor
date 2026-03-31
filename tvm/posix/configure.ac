@@ -2,16 +2,24 @@
 #  Autoconf script for POSIX tvm  #
 ###################################
 
-AC_INIT([tvm-posix], [1.0.0], [kroc-bugs@kent.ac.uk])
+AC_INIT([tvm-posix],[1.0.0],[kroc-bugs@kent.ac.uk])
 AC_CONFIG_HEADERS([config.h])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
 AC_PROG_CC
 AC_PROG_RANLIB
 
-AC_HEADER_STDC
+m4_warn([obsolete],
+[The preprocessor macro 'STDC_HEADERS' is obsolete.
+  Except in unusual embedded environments, you can safely include all
+  C89 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_CHECK_HEADERS([stdlib.h stdio.h stdarg.h string.h])
 AC_CHECK_HEADERS([dlfcn.h errno.h inttypes.h limits.h math.h])
 AC_CHECK_HEADERS([search.h signal.h termios.h time.h unistd.h])
@@ -105,4 +113,5 @@ AM_CONDITIONAL([OS_WINDOWS],	test "$x_os" = "windows")
 #  Output
 #########################
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

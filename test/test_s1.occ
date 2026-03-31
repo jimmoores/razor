@@ -1,0 +1,21 @@
+PROC main(CHAN OF BYTE in?, out!, err!)
+  INT X:
+  SEQ
+    X := 42
+    BYTE Y:
+    Y := 'z'
+    IF
+      X = 42
+        SEQ
+          out ! 'O'
+          out ! 'K'
+          out ! '*n'
+      TRUE
+        SEQ
+          out ! 'X'
+          out ! '='
+          SEQ i = 0 FOR 8
+            out ! (BYTE ((X >> ((7-i)*4)) /\ #F)) + (BYTE '0')
+          out ! '*n'
+    out ! #FF
+:

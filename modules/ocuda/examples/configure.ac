@@ -1,5 +1,5 @@
-AC_INIT([ocuda-examples], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([ocuda-examples],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -25,5 +25,6 @@ AC_MSG_RESULT($build_ocuda_sdl_examples)
 AM_CONDITIONAL([BUILD_OCUDA_EXAMPLES], [test $build_ocuda_examples = yes])
 AM_CONDITIONAL([BUILD_OCUDA_SDL_EXAMPLES], [test $build_ocuda_sdl_examples = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
 

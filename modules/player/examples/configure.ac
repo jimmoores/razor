@@ -1,5 +1,5 @@
-AC_INIT([player-examples], [0.2], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([player-examples],[0.2],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -16,4 +16,5 @@ AC_MSG_CHECKING([whether to build player examples])
 AC_MSG_RESULT($build_player_examples)
 AM_CONDITIONAL([BUILD_PLAYER_EXAMPLES], [test $build_player_examples = yes])
 
-AC_OUTPUT([Makefile worlds/Makefile])
+AC_CONFIG_FILES([Makefile worlds/Makefile])
+AC_OUTPUT

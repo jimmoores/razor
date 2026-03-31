@@ -1,6 +1,6 @@
-AC_INIT([kroc], [1.6.1-pre0], [kroc-bugs@kent.ac.uk])
+AC_INIT([kroc],[1.6.1-pre0],[kroc-bugs@kent.ac.uk])
 
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -141,4 +141,5 @@ AC_SUBST(ACLOCALDIR)
 AC_SUBST(CONFFILEPREFIX)
 AC_SUBST(ENV_LIBRARY_PATH)
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

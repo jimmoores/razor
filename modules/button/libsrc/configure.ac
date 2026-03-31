@@ -1,5 +1,5 @@
-AC_INIT([button], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([button],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -19,4 +19,5 @@ AM_CONDITIONAL(BUILD_BUTTON, [test $build_button = yes])
 OCCAM_PROVIDE(button.module, , , [test $build_button = yes])
 
 dnl Checks for libraries.
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

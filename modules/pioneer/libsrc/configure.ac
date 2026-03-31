@@ -1,10 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(pioneer.inc)
-AC_PREREQ(2.12)
+AC_INIT
+AC_CONFIG_SRCDIR([pioneer.inc])
+AC_PREREQ([2.72])
 
 dnl for automake 1.1 
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE(pioneer, 1.0)
 
 dnl Checks for programs.
@@ -15,4 +16,5 @@ dnl Checks for occam modules.
 OCCAM_INCLUDE([ioport.module], ,
               [AC_MSG_ERROR(Required modules not found)])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

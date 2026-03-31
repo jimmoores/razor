@@ -1,5 +1,5 @@
-AC_INIT([tvm-nxt], [1.0.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([tvm-nxt],[1.0.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -10,8 +10,7 @@ AC_CHECK_HEADERS([stdio.h stdint.h])
 
 
 AC_ARG_WITH([nxos-path],
-            AC_HELP_STRING([--with-nxos-path=...],
-                           [path to NxOS sources]),
+            AS_HELP_STRING([--with-nxos-path=...],[path to NxOS sources]),
             [NXOS_PATH=$withval])
 if test "x$NXOS_PATH" == "x"; then
 	AC_MSG_ERROR([must specify path to NxOS sources using --with-nxos-path=])
@@ -27,4 +26,5 @@ LIBGCC=`$CC $CFLAGS -print-libgcc-file-name`
 AC_SUBST(LIBGCC)
 
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

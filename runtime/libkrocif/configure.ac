@@ -1,6 +1,6 @@
-AC_INIT([libkrocif], [1.5], [kroc-bugs@kent.ac.uk])
+AC_INIT([libkrocif],[1.5],[kroc-bugs@kent.ac.uk])
 AC_CONFIG_HEADERS([config.h])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -44,5 +44,6 @@ AM_CONDITIONAL(BUILD_SHARED, [test "$build_shared" = "yes"])
 
 dnl Checks for libraries.
 
-AC_OUTPUT([Makefile include/Makefile io/Makefile rts/Makefile support/Makefile])
+AC_CONFIG_FILES([Makefile include/Makefile io/Makefile rts/Makefile support/Makefile])
+AC_OUTPUT
 

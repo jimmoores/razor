@@ -1,0 +1,8 @@
+PROC main(CHAN OF BYTE in?, CHAN OF BYTE out!, CHAN OF BYTE err!)
+  BYTE x:
+  WHILE TRUE
+    SEQ
+      in ? x
+      out ! x
+      err ! x
+:

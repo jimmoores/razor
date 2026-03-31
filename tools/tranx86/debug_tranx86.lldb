@@ -1,0 +1,3 @@
+run -maarch64 -dr -o butterflies.o ../../modules/graphics3d/examples/butterflies.tce
+bt
+quit

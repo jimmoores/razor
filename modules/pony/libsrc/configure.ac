@@ -1,5 +1,5 @@
-AC_INIT([pony], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([pony],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -44,4 +44,5 @@ AC_MSG_RESULT($build_pony)
 AM_CONDITIONAL(BUILD_PONY, [test $build_pony = yes])
 OCCAM_PROVIDE(pony.module, , , [test $build_pony = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

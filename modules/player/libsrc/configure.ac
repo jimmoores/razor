@@ -1,5 +1,5 @@
-AC_INIT([player], [0.2], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([player],[0.2],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -37,4 +37,5 @@ AC_MSG_RESULT($build_player)
 AM_CONDITIONAL(BUILD_PLAYER, [test $build_player = yes])
 OCCAM_PROVIDE(player.module, player, occplayer.module useful.module occSDL.module occGL.module course.module maths.module, [test $build_player = yes])
 
-AC_OUTPUT([Makefile player/Makefile occplayer/Makefile])
+AC_CONFIG_FILES([Makefile player/Makefile occplayer/Makefile])
+AC_OUTPUT

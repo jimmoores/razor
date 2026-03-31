@@ -1,5 +1,5 @@
-AC_INIT([time], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([time],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -9,4 +9,5 @@ OCCAM_OCCBUILD
 
 OCCAM_PROVIDE(time.module)
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

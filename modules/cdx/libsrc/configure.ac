@@ -1,5 +1,5 @@
-AC_INIT([cdx], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([cdx],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -24,4 +24,5 @@ AC_MSG_RESULT($build_cdx)
 AM_CONDITIONAL(BUILD_CDX, [test $build_cdx = yes])
 OCCAM_PROVIDE(cdx.module netbar.module, , , [test $build_cdx = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

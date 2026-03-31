@@ -1,5 +1,5 @@
-AC_INIT([moa], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([moa],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -29,4 +29,5 @@ AC_MSG_RESULT($build_moa)
 AM_CONDITIONAL(BUILD_MOA, [test $build_moa = yes])
 OCCAM_PROVIDE(moa.module, , , [test $build_moa = yes])
 
-AC_OUTPUT([Makefile doc/Makefile])
+AC_CONFIG_FILES([Makefile doc/Makefile])
+AC_OUTPUT

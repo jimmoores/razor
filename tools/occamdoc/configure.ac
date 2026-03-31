@@ -1,5 +1,5 @@
-AC_INIT([occamdoc], [4.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([occamdoc],[4.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -7,4 +7,5 @@ AC_PROG_MAKE_SET
 
 OCCAM_ENABLE_OCCAMDOC
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

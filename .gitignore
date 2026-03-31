@@ -240,3 +240,15 @@ Makefile
 .deps
 
 
+/runtime/libkrocif/io/.dirstamp
+/runtime/libkrocif/rts/.dirstamp
+/runtime/libkrocif/support/.dirstamp
+/tools/occ21/arglib/.dirstamp
+/tools/occ21/be/.dirstamp
+/tools/occ21/extlib/.dirstamp
+/tools/occ21/fe/.dirstamp
+/tools/occ21/fnilib/.dirstamp
+/tools/occ21/maplib/.dirstamp
+/tools/occ21/misc/.dirstamp
+/tools/occ21/suplib/.dirstamp
+/tools/occ21/tcofflib/.dirstamp

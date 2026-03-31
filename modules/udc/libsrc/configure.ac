@@ -1,5 +1,5 @@
-AC_INIT([udc], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([udc],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -26,4 +26,5 @@ AC_MSG_RESULT($build_udc)
 AM_CONDITIONAL(BUILD_UDC, [test $build_udc = yes])
 OCCAM_PROVIDE(udc.module, , , [test $build_udc = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

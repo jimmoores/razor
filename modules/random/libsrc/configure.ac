@@ -1,5 +1,5 @@
-AC_INIT([random], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([random],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -12,4 +12,5 @@ OCCAM_INCLUDE([maths.module], ,
               [AC_MSG_ERROR(Required modules not found)])
 OCCAM_PROVIDE(random.module)
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

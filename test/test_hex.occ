@@ -1,0 +1,15 @@
+PROC main(CHAN OF BYTE in?, out!, err!)
+  VAL hex.dig IS "0123456789ABCDEF":
+  INT val:
+  SEQ
+    val := 42
+    out ! '#'
+    SEQ i = 0 FOR 8
+      SEQ
+        INT digit:
+        SEQ
+          digit := (val >> ((7-i)*4)) /\ #F
+          out ! hex.dig[digit]
+    out ! '*n'
+    out ! #FF
+:

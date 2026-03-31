@@ -1,0 +1,14 @@
+#!/bin/bash
+pushd ../tools/tranx86/
+make clean
+make install
+popd
+pushd ../runtime/libkrocif
+make clean
+make install
+popd
+pushd ../runtime/ccsp
+make clean
+make install
+popd
+echo Done!

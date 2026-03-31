@@ -1,0 +1,4 @@
+#PRAGMA EXTERNAL "PROC C.out.stderr (VAL []BYTE buffer) = 0"
+PROC main ()
+  C.out.stderr ("Hello, World!*n")
+:

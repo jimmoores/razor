@@ -1,5 +1,5 @@
-AC_INIT([trap], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([trap],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -18,4 +18,5 @@ AC_MSG_RESULT($build_trap)
 AM_CONDITIONAL(BUILD_TRAP, [test $build_trap = yes])
 OCCAM_PROVIDE(selector.module trap.module, , , [test $build_trap = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

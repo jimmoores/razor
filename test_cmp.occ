@@ -1,0 +1,10 @@
+PROC main (CHAN BYTE kyb?, scr!, err!)
+  INT64 i:
+  SEQ
+    i := 0 (INT64)
+    IF
+      i <> 0
+        SKIP
+      TRUE
+        SKIP
+:

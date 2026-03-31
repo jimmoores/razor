@@ -1,0 +1,11 @@
+(lldb) target create "./sdltest"
+Current executable set to '/Users/jim/razor/kroc64/kroc/modules/sdlraster/examples/sdltest' (arm64).
+(lldb) run
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x9f28b8030, scr_chan=0x9f28b8090, err_chan=0x9f28b80f0
+DEBUG: scr_ws before loop = 0x100660490
+DEBUG: scr_ws after loop = 0x100660490
+DEBUG: kbd_ws=0x1006579d0, scr_ws=0x100660490, err_ws=0x100659390
+DEBUG: Detected 64-bit target (BPW=8)
+raster width?: 

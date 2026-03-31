@@ -1,5 +1,5 @@
-AC_INIT([bsclib], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([bsclib],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -84,4 +84,5 @@ OCCAM_PROVIDE(http.module, httplib, file.module sock.module, [test $build_sockli
 OCCAM_PROVIDE(proc.module, proclib, file.module, [test $build_proclib = yes])
 OCCAM_PROVIDE(sock.module, socklib, none, [test $build_socklib = yes])
 
-AC_OUTPUT([Makefile socklib/Makefile filelib/Makefile proclib/Makefile httplib/Makefile cspdrvlib/Makefile])
+AC_CONFIG_FILES([Makefile socklib/Makefile filelib/Makefile proclib/Makefile httplib/Makefile cspdrvlib/Makefile])
+AC_OUTPUT

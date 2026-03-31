@@ -504,14 +504,14 @@ int rtl_trace_regs (rtl_chain *rtl_code)
 
 	reg_starts = (ins_chain **)smalloc ((last_reg + 1) * sizeof (ins_chain *));
 	reg_ends = (ins_chain **)smalloc ((last_reg + 1) * sizeof (ins_chain *));
-	for (i=0; i<=last_reg; i++) {
-		reg_starts[i] = NULL;
-		reg_ends[i] = NULL;
-	}
 
-	/* scan */
+	/* scan block-by-block */
 	for (tmp_rtl = rtl_code; tmp_rtl; tmp_rtl=tmp_rtl->next) {
 		if (tmp_rtl->type == RTL_CODE) {
+			for (i=0; i<=last_reg; i++) {
+				reg_starts[i] = NULL;
+				reg_ends[i] = NULL;
+			}
 			for (tmp_ins = tmp_rtl->u.code.head; tmp_ins; tmp_ins = tmp_ins->next) {
 				for (i=0; tmp_ins->in_args[i]; i++) {
 					arg = tmp_ins->in_args[i];
@@ -574,37 +574,37 @@ int rtl_trace_regs (rtl_chain *rtl_code)
 					}
 				}
 			}
-		}
-	}
-
-	/* drop in starts/ends on registers (ignore before FIRST_VIRTUAL_REG -- special) */
-	for (i=FIRST_VIRTUAL_REG; i<=last_reg; i++) {
-		if (reg_starts[i] && reg_ends[i]) {
-			/* trace this small chunk for sanity */
-			for (tmp_ins = reg_starts[i]; tmp_ins && tmp_ins != reg_ends[i]; tmp_ins = tmp_ins->next);
-			if (!tmp_ins) {
-				fprintf (stderr, "%s: error: register %d is muddled (end does not follow start)\n", progname, i);
-				return -1;
+			/* drop in starts/ends on registers (ignore before FIRST_VIRTUAL_REG -- special) */
+			for (i=FIRST_VIRTUAL_REG; i<=last_reg; i++) {
+				if (reg_starts[i] && reg_ends[i]) {
+					/* trace this small chunk for sanity */
+					for (tmp_ins = reg_starts[i]; tmp_ins && tmp_ins != reg_ends[i]; tmp_ins = tmp_ins->next);
+					if (!tmp_ins) {
+						fprintf (stderr, "%s: error: register %d is muddled (end does not follow start in block)\n", progname, i);
+						return -1;
+					}
+					tmp_ins = compose_ins (INS_START_REG, 1, 0, ARG_REG, i);
+					tmp_ins->rtl = reg_starts[i]->rtl;
+					rtl_insert_instr_before (tmp_ins, reg_starts[i]);
+					tmp_ins = compose_ins (INS_END_REG, 1, 0, ARG_REG, i);
+					tmp_ins->rtl = reg_ends[i]->rtl;
+					rtl_insert_instr_after (tmp_ins, reg_ends[i]);
+				} else if (reg_ends[i]) {
+					fprintf (stderr, "%s: error: register %d has end but no start in block\n", progname, i);
+					return -1;
+				} else if (reg_starts[i]) {
+					fprintf (stderr, "%s: error: register %d has start but no end in block\n", progname, i);
+					return -1;
+				}
 			}
-			tmp_ins = compose_ins (INS_START_REG, 1, 0, ARG_REG, i);
-			tmp_ins->rtl = reg_starts[i]->rtl;
-			rtl_insert_instr_before (tmp_ins, reg_starts[i]);
-			tmp_ins = compose_ins (INS_END_REG, 1, 0, ARG_REG, i);
-			tmp_ins->rtl = reg_ends[i]->rtl;
-			rtl_insert_instr_after (tmp_ins, reg_ends[i]);
-		} else if (reg_ends[i]) {
-			fprintf (stderr, "%s: error: register %d has end but no start\n", progname, i);
-			return -1;
-		} else if (reg_starts[i]) {
-			fprintf (stderr, "%s: error: register %d has start but no end\n", progname, i);
-			return -1;
 		}
 	}
 
+	last_virtual_register = last_reg;
 	sfree (reg_starts);
 	sfree (reg_ends);
 
-	return last_reg;
+	return 0;
 }
 /*}}}*/
 /*{{{  void rtl_refix_codeblocks (rtl_chain *rtl_code)*/

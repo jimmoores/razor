@@ -1,5 +1,5 @@
-AC_INIT([sdlraster], [2.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([sdlraster],[2.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -18,4 +18,5 @@ AC_MSG_RESULT($build_sdlraster)
 AM_CONDITIONAL(BUILD_SDLRASTER, [test $build_sdlraster = yes])
 OCCAM_PROVIDE(sdlraster.module miniraster.module, , , [test $build_sdlraster = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

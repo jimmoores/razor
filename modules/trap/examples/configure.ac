@@ -1,5 +1,5 @@
-AC_INIT([trap-examples], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([trap-examples],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -16,4 +16,5 @@ AC_MSG_CHECKING([whether to build trap examples])
 AC_MSG_RESULT($build_trap_examples)
 AM_CONDITIONAL([BUILD_TRAP_EXAMPLES], [test $build_trap_examples = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

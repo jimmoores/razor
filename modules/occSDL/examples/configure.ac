@@ -1,5 +1,5 @@
-AC_INIT([occSDL-examples], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([occSDL-examples],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -23,4 +23,5 @@ AC_MSG_CHECKING([whether to build occSDLsound examples])
 AC_MSG_RESULT($build_occSDLsound_examples)
 AM_CONDITIONAL([BUILD_OCCSDLSOUND_EXAMPLES], [test $build_occSDLsound_examples = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

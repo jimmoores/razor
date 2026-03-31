@@ -1,5 +1,5 @@
-AC_INIT([nocclibs], [0.1.4], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([nocclibs],[0.1.4],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -10,4 +10,5 @@ AC_CHECK_PROG(LD, ld, ld)
 
 dnl Checks for occam modules.
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

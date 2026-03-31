@@ -1,6 +1,6 @@
-AC_INIT([occ21], [1.4.1], [kroc-bugs@kent.ac.uk])
+AC_INIT([occ21],[1.4.1],[kroc-bugs@kent.ac.uk])
 AC_CONFIG_HEADERS([config.h])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -189,7 +189,15 @@ AC_SUBST(CC)
 dnl Checks for libraries.
 
 dnl Checks for header files.
-AC_HEADER_STDC
+m4_warn([obsolete],
+[The preprocessor macro 'STDC_HEADERS' is obsolete.
+  Except in unusual embedded environments, you can safely include all
+  C89 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_CHECK_HEADERS(string.h stdlib.h string.h strings.h limits.h malloc.h sys/types.h sys/stat.h stdarg.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
@@ -221,4 +229,5 @@ AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(strspn strstr strtol strrchr)
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

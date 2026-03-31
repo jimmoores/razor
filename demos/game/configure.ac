@@ -1,5 +1,5 @@
-AC_INIT([game-demo], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([game-demo],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -19,4 +19,5 @@ AC_MSG_CHECKING([whether to build game])
 AC_MSG_RESULT($build_game)
 AM_CONDITIONAL([BUILD_GAME], [test $build_game = yes])
 
-AC_OUTPUT([Makefile data/Makefile])
+AC_CONFIG_FILES([Makefile data/Makefile])
+AC_OUTPUT

@@ -1,5 +1,5 @@
-AC_INIT([video], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([video],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -23,4 +23,5 @@ AC_MSG_RESULT($build_video)
 AM_CONDITIONAL(BUILD_VIDEO, [test $build_video = yes])
 OCCAM_PROVIDE(video.module, , , [test $build_video = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

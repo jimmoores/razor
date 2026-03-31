@@ -1,5 +1,5 @@
-AC_INIT([graphics3d], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([graphics3d],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -19,4 +19,5 @@ AC_MSG_RESULT($build_graphics3d)
 AM_CONDITIONAL(BUILD_GRAPHICS3D, [test $build_graphics3d = yes])
 OCCAM_PROVIDE(graphics3d.module, , , [test $build_graphics3d = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

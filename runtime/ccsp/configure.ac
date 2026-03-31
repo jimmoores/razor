@@ -1,6 +1,6 @@
-AC_INIT([ccsp], [1.6.3], [kroc-bugs@kent.ac.uk])
+AC_INIT([ccsp],[1.6.3],[kroc-bugs@kent.ac.uk])
 AC_CONFIG_HEADERS([config.h])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -120,22 +120,22 @@ dnl Do checks to make sure CPU timers can be supported (has rdtsc instruction)
 
 case "$host_cpu" in
 i386 | i486 | i586 | i686 | x86_64)
-  AC_TRY_RUN([
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
   int main (void)
   {
    unsigned int hi, lo;
    __asm__ __volatile__ ("rdtsc\n\t" : "=a" (hi), "=d" (lo));
    return 0;
-  }], [cpu_timers_supported=yes], [cpu_timers_supported=no], [cpu_timers_supported=no])
+  }]])],[cpu_timers_supported=yes],[cpu_timers_supported=no],[cpu_timers_supported=no])
   ;;
 aarch64 | arm64)
-  AC_TRY_RUN([
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
   int main (void)
   {
    unsigned long long counter;
    __asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (counter));
    return 0;
-  }], [cpu_timers_supported=yes], [cpu_timers_supported=no], [cpu_timers_supported=no])
+  }]])],[cpu_timers_supported=yes],[cpu_timers_supported=no],[cpu_timers_supported=no])
   ;;
 *)
   cpu_timers_supported=no
@@ -148,12 +148,12 @@ esac
 AC_MSG_CHECKING([for SSE2 support])
 case "$host_cpu" in
 i386 | i486 | i586 | i686 | x86_64)
-  AC_TRY_RUN([
+  AC_RUN_IFELSE([AC_LANG_SOURCE([[
   int main (void)
   {
    __asm__ __volatile__ ("mfence\nlfence\nsfence\n" : : : "memory" );
    return 0;
-  }], [have_ia32_sse2=yes], [have_ia32_sse2=no], [have_ia32_sse2=no])
+  }]])],[have_ia32_sse2=yes],[have_ia32_sse2=no],[have_ia32_sse2=no])
   if test "$have_ia32_sse2" = yes; then
    if test "$KROC_CCSP_ENABLE_SSE2" = yes; then
     AC_DEFINE([HAVE_IA32_SSE2], 1, [CPU supports SSE2 instructions])
@@ -524,7 +524,7 @@ AC_MSG_CHECKING(whether to use thread-local-storage)
 if test "$enable_tls" = no || test "$KROC_CCSP_ENABLE_MP" = no || test "x$KROC_RMOX" != "x"; then
  AC_MSG_RESULT(no)
 else
- AC_TRY_RUN([
+ AC_RUN_IFELSE([AC_LANG_SOURCE([[
   __thread int bar;
 
   void foo (void)
@@ -536,7 +536,7 @@ else
   {
    foo (); 
    return bar - 42;
-  }], [tls_supported=yes], [tls_supported=no], [tls_supported=no])
+  }]])],[tls_supported=yes],[tls_supported=no],[tls_supported=no])
  if test "$tls_supported" = yes; then
   AC_MSG_RESULT(yes)
   AC_DEFINE([USE_TLS],1,[define to enable use of thread-local-storage])
@@ -677,5 +677,6 @@ AC_SUBST(EXTRA_DEFS)
 AC_SUBST(EXTRA_LDFLAGS)
 
 AC_CONFIG_HEADERS([include/ccsp_config.h])
-AC_OUTPUT([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile include/aarch64/Makefile include/x64/Makefile kernel/Makefile utils/Makefile])
+AC_CONFIG_FILES([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile include/aarch64/Makefile include/x64/Makefile kernel/Makefile utils/Makefile])
+AC_OUTPUT
 

@@ -1,5 +1,5 @@
-AC_INIT([graphics3d-examples], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([graphics3d-examples],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -21,4 +21,5 @@ AM_CONDITIONAL([BUILD_GRAPHICS3D_EXAMPLES], [test $build_graphics3d_examples = y
 AM_CONDITIONAL([USE_GNUCHESS], [test $GNUCHESS != no])
 AC_SUBST(GNUCHESS)
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

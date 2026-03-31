@@ -1,5 +1,5 @@
-AC_INIT([video-examples], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([video-examples],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -16,4 +16,5 @@ AC_MSG_CHECKING([whether to build video examples])
 AC_MSG_RESULT($build_video_examples)
 AM_CONDITIONAL([BUILD_VIDEO_EXAMPLES], [test $build_video_examples = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

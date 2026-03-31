@@ -1,0 +1,5 @@
+PROC main (CHAN BYTE kyb, scr, err)
+  SEQ
+    err ! 'x'
+    err ! '*n'
+:

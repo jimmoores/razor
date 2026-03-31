@@ -1,5 +1,5 @@
-AC_INIT([useful-examples], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([useful-examples],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -10,4 +10,5 @@ dnl Checks for occam modules.
 OCCAM_INCLUDE([useful.module], ,
               [AC_MSG_ERROR(Required modules were not found)])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

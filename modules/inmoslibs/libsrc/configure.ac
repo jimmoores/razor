@@ -1,5 +1,5 @@
-AC_INIT([inmoslibs], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([inmoslibs],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -17,4 +17,5 @@ OCCAM_PROVIDE(maths.module, maths, dblmath.module snglmath.module)
 OCCAM_PROVIDE(stream.module, streamio, convert.module hostio.module)
 OCCAM_PROVIDE(string.module, string, convert.module)
 
-AC_OUTPUT([Makefile forall/Makefile convert/Makefile string/Makefile hostio/Makefile hostsp/Makefile streamio/Makefile maths/Makefile])
+AC_CONFIG_FILES([Makefile forall/Makefile convert/Makefile string/Makefile hostio/Makefile hostsp/Makefile streamio/Makefile maths/Makefile])
+AC_OUTPUT

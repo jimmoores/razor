@@ -1,0 +1,8 @@
+PROC main (CHAN BYTE out!)
+  [4]BYTE a:
+  INT i:
+  SEQ
+    i := 2
+    a[i] := 'J'
+    out ! a[i]
+:

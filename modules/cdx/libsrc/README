@@ -32,7 +32,7 @@ is being calculated by which client.
 ## Compiling
 
 You'll need at least KRoC 1.3.4-pre8, and the SDL development headers
-(libsdl1.2-dev on Debian/Ubuntu).
+(libsdl12-compat-dev on Debian/Ubuntu).
 
 You will need to tweak some options in the source code before you compile. The
 first is the names of the hosts that are going to be running cdxview and

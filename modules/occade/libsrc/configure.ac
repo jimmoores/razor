@@ -1,5 +1,5 @@
-AC_INIT([occade], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([occade],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -17,4 +17,5 @@ AC_MSG_RESULT($build_occade)
 AM_CONDITIONAL(BUILD_OCCADE, [test $build_occade = yes])
 OCCAM_PROVIDE(occade.module miniraster.module, , , [test $build_occade = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

@@ -31,7 +31,7 @@ On Debian-based systems, we suggest installing the following packages:
 
 ```bash
 apt-get install bash gcc binutils gawk make automake autoconf pkg-config \
-libc6-dev libsdl1.2-dev libsdl-sound1.2-dev libgl1-mesa-dev \
+libc6-dev libsdl12-compat-dev libsdl-sound1.2-dev libgl1-mesa-dev \
 libmysqlclient15-dev libpng12-dev libxmu-dev libxi-dev \
 libplayercore2-dev libplayerc2-dev libltdl3-dev \
 perl python xsltproc git

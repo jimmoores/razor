@@ -1,5 +1,5 @@
-AC_INIT([raster], [0.1], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([raster],[0.1],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -43,4 +43,5 @@ OCCAM_PROVIDE(rastergraphics.module, graphics, , [test $build_raster = yes])
 OCCAM_PROVIDE(rasterio.module, io, , [test $build_rasterio = yes])
 OCCAM_PROVIDE(rastertext.module, text, , [test $build_raster = yes])
 
-AC_OUTPUT([Makefile base/Makefile graphics/Makefile io/Makefile text/Makefile])
+AC_CONFIG_FILES([Makefile base/Makefile graphics/Makefile io/Makefile text/Makefile])
+AC_OUTPUT

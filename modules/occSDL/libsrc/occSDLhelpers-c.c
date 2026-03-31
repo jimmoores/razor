@@ -42,10 +42,10 @@
 /*}}}*/
 
 /* C.occ.SDL.make.surface (VAL [][]INT pixels, RESULT SDL.Surface surface) */
-PUBLIC void _occ_SDL_make_surface (int w[])
+PUBLIC void _occ_SDL_make_surface (word w[])
 {
 	int *pixels = (int *) w[0];
-	int height = w[1], width = w[2];
+	int height = (int) w[1], width = (int) w[2];
 	SDL_Surface **surface = (SDL_Surface **) w[3];
 
 	*surface = SDL_CreateRGBSurfaceFrom (pixels, width, height, 32, width * 4,

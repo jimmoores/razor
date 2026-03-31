@@ -1,0 +1,6 @@
+PROC main(CHAN OF BYTE in?, CHAN OF BYTE out!, CHAN OF BYTE err!)
+  SEQ
+    SEQ i=0 FOR 10
+      out ! 'J'
+    out ! #FF
+:

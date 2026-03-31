@@ -1,5 +1,5 @@
-AC_INIT([tvm-arduino], [1.0.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([tvm-arduino],[1.0.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -17,8 +17,7 @@ UPLOAD_RATE=57600
 FIRMWARE_NAME=firmware.hex
 
 AC_ARG_WITH([target-board],
-            AC_HELP_STRING([--with-target-board=...],
-                           [target board (arduino, bare644, arduinomega, seeedmega)]),
+            AS_HELP_STRING([--with-target-board=...],[target board (arduino, bare644, arduinomega, seeedmega)]),
             [target_board=$withval], [target_board=arduino])
 if test "x$target_board" = "xbare644" 
 then
@@ -52,28 +51,22 @@ fi
 
 
 AC_ARG_WITH([bytecode-addr],
-            AC_HELP_STRING([--with-bytecode-addr=...],
-                           [bytecode load address]),
+            AS_HELP_STRING([--with-bytecode-addr=...],[bytecode load address]),
             [BYTECODE_ADDR=$withval])
 AC_ARG_WITH([fcpu],
-            AC_HELP_STRING([--with-fcpu=...],
-                           [AVR CPU frequency, in Hz]),
+            AS_HELP_STRING([--with-fcpu=...],[AVR CPU frequency, in Hz]),
             [F_CPU=$withval])
 AC_ARG_WITH([mcu],
-            AC_HELP_STRING([--with-mcu=...],
-                           [AVR MCU type]),
+            AS_HELP_STRING([--with-mcu=...],[AVR MCU type]),
             [MCU=$withval])
 AC_ARG_WITH([upload-port],
-            AC_HELP_STRING([--with-upload-port=...],
-                           [serial port to upload through]),
+            AS_HELP_STRING([--with-upload-port=...],[serial port to upload through]),
             [UPLOAD_PORT=$withval])
 AC_ARG_WITH([upload-rate],
-            AC_HELP_STRING([--with-upload-rate=...],
-                           [serial rate to upload at]),
+            AS_HELP_STRING([--with-upload-rate=...],[serial rate to upload at]),
             [UPLOAD_RATE=$withval])
 AC_ARG_WITH([firmware-name],
-	    AC_HELP_STRING([--with-firmware-name=...],
-			   [name of the generated firmware file]),
+	    AS_HELP_STRING([--with-firmware-name=...],[name of the generated firmware file]),
             [FIRMWARE_NAME=$withval])
 
 
@@ -89,4 +82,5 @@ CFLAGS="-g -Wall -Os -mmcu=$MCU"
 AVRDUDE_FLAGS='-V -F -p $(MCU) -P $(UPLOAD_PORT) -b $(UPLOAD_RATE) -c arduino'
 AC_SUBST(AVRDUDE_FLAGS)
 
-AC_OUTPUT([Makefile config.mk])
+AC_CONFIG_FILES([Makefile config.mk])
+AC_OUTPUT

@@ -1,7 +1,7 @@
-AC_INIT([tranx86], [1.4.1], [kroc-bugs@kent.ac.uk])
+AC_INIT([tranx86],[1.4.1],[kroc-bugs@kent.ac.uk])
 AC_CONFIG_SRCDIR([main.c])
 AC_CONFIG_HEADERS([config.h])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -45,7 +45,7 @@ case "$host_cpu" in
 
   saved_CFLAGS="$CFLAGS"
   CFLAGS="$ARCH_DEFS $CFLAGS"
-  AC_TRY_COMPILE(,[__asm__ __volatile__ ("\n\tfucom\n\tfildl (%eax)\n\tfildd (%ebx)\n");],old_as=no,old_as=yes)
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[__asm__ __volatile__ ("\n\tfucom\n\tfildl (%eax)\n\tfildd (%ebx)\n");]])],[old_as=no],[old_as=yes])
   CFLAGS="$saved_CFLAGS"
   AC_ARG_ENABLE([force-old-as], AS_HELP_STRING([--enable-force-old-as], [force generation of .byte codes for certain i386 instructions]), [old_as=$enableval], [])
   AC_MSG_CHECKING(whether assembler fails to understand some mnemonics)
@@ -164,12 +164,21 @@ fi
 dnl Checks for libraries.
 
 dnl Checks for header files.
-AC_HEADER_STDC
+m4_warn([obsolete],
+[The preprocessor macro 'STDC_HEADERS' is obsolete.
+  Except in unusual embedded environments, you can safely include all
+  C89 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_CHECK_HEADERS(string.h malloc.h stdarg.h stdlib.h string.h strings.h unistd.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 
 dnl Checks for library functions.
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
 

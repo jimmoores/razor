@@ -13,6 +13,19 @@
 #IF NOT DEFINED (WRAPPERS.occSDLsound.INC)
 #DEFINE WRAPPERS.occSDLsound.INC
 --{{{  data types
+#IF DEFINED (TARGET.WORD.BITS)
+-- 64-bit targets: opaque C pointer/struct types need INT64
+--* Foreign enumeration type [@text Sound_SampleFlags].
+DATA TYPE Sound.SampleFlags IS INT:
+--* Foreign struct type [@text Sound_AudioInfo].
+DATA TYPE Sound.AudioInfo IS INT64:
+--* Foreign struct type [@text Sound_Version].
+DATA TYPE Sound.Version IS INT64:
+--* Foreign struct type [@text Sound_Sample].
+DATA TYPE Sound.Sample IS INT64:
+--* Foreign struct type [@text Sound_DecoderInfo].
+DATA TYPE Sound.DecoderInfo IS INT64:
+#ELSE
 --* Foreign enumeration type [@text Sound_SampleFlags].
 DATA TYPE Sound.SampleFlags IS INT:
 --* Foreign struct type [@text Sound_AudioInfo].
@@ -23,6 +36,7 @@ DATA TYPE Sound.Version IS INT:
 DATA TYPE Sound.Sample IS INT:
 --* Foreign struct type [@text Sound_DecoderInfo].
 DATA TYPE Sound.DecoderInfo IS INT:
+#ENDIF
 --}}}
 --  not wrapped: typedef Uint8
 --  not wrapped: typedef Sint8

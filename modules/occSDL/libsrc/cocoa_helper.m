@@ -26,8 +26,14 @@ extern OSErr    CPSEnableForegroundOperation( CPSProcessSerNum *psn, UInt32
 _arg2, UInt32 _arg3, UInt32 _arg4, UInt32 _arg5);
 extern OSErr    CPSSetFrontProcess( CPSProcessSerNum *psn);
 
+__attribute__((constructor))
 void SDLCocoaInit()
 {
+     /* Avoid running more than once */
+     static int initialized = 0;
+     if (initialized) return;
+     initialized = 1;
+
      NSAutoreleasePool  *pool = [[NSAutoreleasePool alloc] init];
      [ NSApplication sharedApplication ];
      [ NSApp setMainMenu:[[NSMenu alloc] init] ];

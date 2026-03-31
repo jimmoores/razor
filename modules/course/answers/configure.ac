@@ -1,5 +1,5 @@
-AC_INIT([course-answers], [1.0], [kroc-bugs@kent.ac.uk])
-AC_CANONICAL_SYSTEM
+AC_INIT([course-answers],[1.0],[kroc-bugs@kent.ac.uk])
+AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE
 
@@ -22,4 +22,5 @@ AC_MSG_CHECKING([whether to build course answers])
 AC_MSG_RESULT($build_course_answers)
 AM_CONDITIONAL([BUILD_COURSE_ANSWERS], [test $build_course_answers = yes])
 
-AC_OUTPUT([Makefile])
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
