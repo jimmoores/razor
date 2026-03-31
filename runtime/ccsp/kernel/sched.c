@@ -4939,6 +4939,7 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 	byte *destination_address, *source_address;
 	word temp;
 
+	DT_LOG("chan_io", Wptr, (word)channel_address, (word)pointer, flags | (count << 16));
 	temp = atw_val (channel_address);
 
 	if (temp == NotProcess_p || (temp & 1)) {
