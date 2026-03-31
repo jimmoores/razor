@@ -401,7 +401,7 @@ static void build_occam_call_ws (word *ws, int argc, ...)
 	do {							\
 		ccsp_sched_t *sched	= ccsp_scheduler;	\
 		const int top		= (ARGC) + 1;		\
-		word ws[(SS) + CIF_PROCESS_WORDS + top + 1];	\
+		word ws[(SS) + CIF_PROCESS_WORDS + top + 3];	\
 		word *p = &(ws[(SS) + CIF_PROCESS_WORDS]);	\
 		build_occam_call_ws (p, ARGC, ## ARGV);		\
 		ccsp_cif_occam_call (sched, sched->stack, p, FUNC, top); \

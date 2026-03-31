@@ -631,19 +631,30 @@ def gen_aarch64_header(f):
 	f.indent()
 
 	f.begin_asm()
-	f.line("\tstp x29, x30, [sp, #-16]!")
+	# Save x29, x30 and SP to the workspace (NOT sched->stack which is shared).
+	# ws[top] = saved SP, ws[top+1] = saved x29, ws[top+2] = saved x30
 	f.line("\tmov x28, %0")
 	f.line("\tadd x28, x28, %4")
-	f.line("\tstr x1, [x28]")
+	f.line("\tmov x3, sp")
+	f.line("\tstr x3, [x28]")		# ws[top] = sp
+	f.line("\tstr x29, [x28, #8]")		# ws[top+1] = x29
+	f.line("\tstr x30, [x28, #16]")	# ws[top+2] = x30
 	f.line("\tsub x28, x28, %4")
-	f.line("\tmov x1, x2")
 	f.line("\tadr x3, 0f")
-	f.line("\tstr x3, [x28]")
-	f.line("\tbr x0")
+	f.line("\tstr x3, [x28]")		# ws[0] = return label
+	# Switch to private workspace stack before jumping to occam.
+	# This prevents the occam function's C calls from using sched->stack
+	# where other processes would overwrite saved state.
+	f.line("\tsub x3, x28, #256")
+	f.line("\tand x3, x3, #-16")
+	f.line("\tmov sp, x3")
+	f.line("\tbr x0")			# jump to occam function
 	f.line("0:")
-	f.line("\tadd x28, x28, %5")
-	f.line("\tldr x1, [x28]")
-	f.line("\tldp x29, x30, [sp], #16")
+	f.line("\tadd x28, x28, %4")		# x28 = ws + top*sizeof(word)
+	f.line("\tldr x3, [x28]")		# x3 = saved SP
+	f.line("\tmov sp, x3")			# restore SP
+	f.line("\tldr x29, [x28, #8]")		# restore x29
+	f.line("\tldr x30, [x28, #16]")	# restore x30
 	f.end_asm()
 	f.line(": \"=r\" (d0), \"=r\" (sched), \"=r\" (d1), \"=r\" (d2)")
 	f.line(": \"i\" (top * sizeof(word)),")
