@@ -32,10 +32,12 @@
 
 /*{{{  architecture dependent kernel call declarations */
 /* AArch64 doesn't have regparm, use standard calling convention */
+/* noinline prevents the compiler from inlining kernel entry points,
+ * which would cause K_CALL_HEADER's x30 capture to read the wrong LR. */
 #define _K_CALL_DEFINE(X) \
-	void kernel_##X (word param0, sched_t *sched, word *Wptr)
+	__attribute__((noinline)) void kernel_##X (word param0, sched_t *sched, word *Wptr)
 #define _K_CALL_DEFINE_O(X) \
-	word kernel_##X (word param0, sched_t *sched, word *Wptr)
+	__attribute__((noinline)) word kernel_##X (word param0, sched_t *sched, word *Wptr)
 #define K_CALL_DEFINE_0_0(X) _K_CALL_DEFINE(X)
 #define K_CALL_DEFINE_1_0(X) _K_CALL_DEFINE(X)
 #define K_CALL_DEFINE_2_0(X) _K_CALL_DEFINE(X)
@@ -52,9 +54,15 @@
 #define K_CALL_PTR(X) \
 	((void *) (kernel_##X))
 
+/* Capture the return address (LR / x30) directly via inline asm.
+ * __builtin_return_address(0) is unreliable on AArch64 with -O2 because
+ * the compiler may inline kernel functions, causing it to return the
+ * WRONG caller's return address (e.g., mt_release_simple instead of
+ * the occam code's return point). Direct x30 capture is immune to
+ * inlining because x30 always holds the link register at function entry. */
 #define K_CALL_HEADER \
-	__attribute__ ((unused)) \
-	unsigned long return_address = (unsigned long) __builtin_return_address (0);
+	unsigned long return_address; \
+	__asm__ volatile ("mov %0, x30" : "=r" (return_address));
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
 /*}}}*/

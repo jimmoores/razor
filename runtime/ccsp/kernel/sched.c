@@ -89,7 +89,7 @@
 
 #ifdef DISPATCH_TRACE
 #include <stdio.h>
-#define DT_BUF_SIZE 256
+#define DT_BUF_SIZE 512
 typedef struct {
 	const char *event;
 	unsigned long wptr;
