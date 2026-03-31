@@ -27,7 +27,7 @@ if hasattr(sys, "frozen") and sys.frozen == "console_exe":
 	DATADIR = sys.path[0]
 	XSLTPROC = os.path.join(DATADIR, "xsltproc")
 else:
-	DATADIR = "/Users/jim/kroc64-install/share/kroc/occamdoc"
+	DATADIR = "/usr/local/share/kroc/occamdoc"
 	XSLTPROC = "xsltproc"
 
 def run_command(cmd):

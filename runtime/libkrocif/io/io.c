@@ -145,12 +145,12 @@ int init_occam_io (int tlpiface)
 #if defined(__aarch64__) && defined(__APPLE__)
 	asm ("adrp %0, _O_kroc_keyboard_process@PAGE\n\t"
 		 "add  %0, %0, _O_kroc_keyboard_process@PAGEOFF" : "=r" (kbd_ws[-1]));
-	#elif defined(__aarch64__)
+#elif defined(__aarch64__)
 	asm ("adrp %0, O_kroc_keyboard_process\n\t"
 		 "add  %0, %0, :lo12:O_kroc_keyboard_process" : "=r" (kbd_ws[-1]));
-	#elif defined(__i386__)
+#elif defined(__i386__)
 	asm ("movl $O_kroc_keyboard_process, %0" : "=r" (kbd_ws[-1]));
-	#endif
+#endif
 	for (i = -10; i <= 2; i++) {
 		if (i != -1) kbd_ws[i] = 0;
 	}
@@ -165,15 +165,15 @@ int init_occam_io (int tlpiface)
 	}
 	scr_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
-	#if defined(__aarch64__) && defined(__APPLE__)
+#if defined(__aarch64__) && defined(__APPLE__)
 	asm ("adrp %0, _O_kroc_screen_process@PAGE\n\t"
 	     "add  %0, %0, _O_kroc_screen_process@PAGEOFF" : "=r" (scr_ws[-1]));
-	#elif defined(__aarch64__)
+#elif defined(__aarch64__)
 	asm ("adrp %0, O_kroc_screen_process\n\t"
 	     "add  %0, %0, :lo12:O_kroc_screen_process" : "=r" (scr_ws[-1]));
-	#elif defined(__i386__)
+#elif defined(__i386__)
 	asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[-1]));
-	#endif
+#endif
 	scr_ws[1] = (word) scr_chan;
 
 	err_ws = &(err_workspace_bottom[ERR_WORKSPACE_WORDS - 4]);
@@ -182,15 +182,15 @@ int init_occam_io (int tlpiface)
 	}
 	err_ws[-2] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
-	#if defined(__aarch64__) && defined(__APPLE__)
+#if defined(__aarch64__) && defined(__APPLE__)
 	asm ("adrp %0, _O_kroc_error_process@PAGE\n\t"
 	     "add  %0, %0, _O_kroc_error_process@PAGEOFF" : "=r" (err_ws[-1]));
-	#elif defined(__aarch64__)
+#elif defined(__aarch64__)
 	asm ("adrp %0, O_kroc_error_process\n\t"
 	     "add  %0, %0, :lo12:O_kroc_error_process" : "=r" (err_ws[-1]));
-	#elif defined(__i386__)
+#elif defined(__i386__)
 	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[-1]));
-	#endif
+#endif
 	err_ws[1] = (word) err_chan;
 
 	fprintf(stderr, "DEBUG: kbd_ws=%p, scr_ws=%p, err_ws=%p\n", kbd_ws, scr_ws, err_ws);

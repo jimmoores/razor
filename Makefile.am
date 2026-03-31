@@ -60,3 +60,12 @@ display-message:
 	printf "Please report problems with KRoC to <$(PACKAGE_BUGREPORT)>.\n\n"
 
 DISTCLEANFILES = in-tree-modules
+
+# Thorough cleanup of all generated occam build artifacts across the tree.
+# The per-directory clean-local targets use occbuild --clean which can
+# silently fail (e.g. on permission errors).  This catches anything missed.
+# Uses git ls-files to avoid deleting tracked source files (.lbb, .module).
+clean-local:
+	cd $(srcdir) && git ls-files --others --ignored --exclude-standard \
+		-- '*.tce' '*.lib' '*.lbb' '*.module' 'liboccam_*.a' \
+		'liboccam_*.so' 'liboccam_*.dylib' | xargs rm -f 2>/dev/null; true

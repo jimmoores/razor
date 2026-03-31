@@ -2061,7 +2061,13 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 	init_sched_t (sched);
 	memcpy (sched->calltable, ccsp_calltable, sizeof(void *) * K_MAX_SUPPORTED);
 	sched->allocator 	= allocator;
-	sched->stack		= stack;
+	/* Set the kernel stack pointer to the top of the sched_t allocation.
+	 * K_ZERO_OUT_JRET loads SP from sched->stack before dispatching
+	 * processes.  The kernel's C call frames grow DOWN from this point.
+	 * By pointing to the top of sched_t (rather than the base), the
+	 * kernel stack grows into the sched structure's cache-line padding
+	 * rather than into CIF workspace arrays below sched on the C stack. */
+	sched->stack		= stack + sizeof(sched_t);
 	sched->priofinity	= BuildPriofinity (0, (MAX_PRIORITY_LEVELS / 2));
 	
 	set_local_scheduler (sched);

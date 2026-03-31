@@ -10,6 +10,7 @@ EXTRA_DIST = \
 	README \
 	cdx.occ \
 	cdxclient.c \
+	cdx.inc \
 	cdxclient.h \
 	cdxoccam.c \
 	cdxview.c \
@@ -24,7 +25,7 @@ cdx_lib_objs = \
 	cdxoccam.o
 
 cdx_libs = cdx.lib
-cdx_includes = $(srcdir)/cdxclient.h
+cdx_includes = $(srcdir)/cdx.inc $(srcdir)/cdxclient.h
 cdx_programs = cdxview
 cdxview_LDADD = @SDL_LIBS@ @SOCK_LIBS@
 
@@ -44,7 +45,7 @@ includes = $(cdx_includes) $(netbar_includes)
 all-local: $(libs) $(includes)
 
 cdx.lib: $(cdx_lib_objs)
-	$(OCCBUILD) --library cdx.lib $(cdx_lib_objs)
+	$(OCCBUILD) --library cdx.lib --include cdx.inc $(cdx_lib_objs)
 
 netbar.lib: $(netbar_lib_objs)
 	$(OCCBUILD) --library netbar.lib --need sock --include netbar.inc $(netbar_lib_objs)

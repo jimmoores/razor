@@ -159,7 +159,7 @@ case "$target_cpu" in
 		proc_class=""
 		;;
 	aarch64)
-		occopts="$occopts -AARCH64"
+		occopts="$occopts -AARCH64 -zcxdiv -zcxrem -zzs"
 		proc_class=""
 		;;
 	sparc*)

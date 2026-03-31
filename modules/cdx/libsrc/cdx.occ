@@ -18,16 +18,18 @@
 --	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 --
 
-#PRAGMA EXTERNAL "PROC C.cdxclient.new (VAL []BYTE host, VAL INT port, width, height, RESULT INT handle) = 0"
-#PRAGMA EXTERNAL "PROC C.cdxclient.send (VAL INT handle, VAL INT frame, offset, VAL []INT data, RESULT INT rc) = 0"
-#PRAGMA EXTERNAL "PROC C.cdxclient.close (VAL INT handle, RESULT INT rc) = 0"
+#INCLUDE "cdx.inc"
 
-PROC cdxclient.new (VAL []BYTE host, VAL INT port, width, height, RESULT INT handle)
+#PRAGMA EXTERNAL "PROC C.cdxclient.new (VAL []BYTE host, VAL INT port, width, height, RESULT CDX.HANDLE handle) = 0"
+#PRAGMA EXTERNAL "PROC C.cdxclient.send (VAL CDX.HANDLE handle, VAL INT frame, offset, VAL []INT data, RESULT INT rc) = 0"
+#PRAGMA EXTERNAL "PROC C.cdxclient.close (VAL CDX.HANDLE handle, RESULT INT rc) = 0"
+
+PROC cdxclient.new (VAL []BYTE host, VAL INT port, width, height, RESULT CDX.HANDLE handle)
   C.cdxclient.new (host, port, width, height, handle)
 :
-PROC cdxclient.send (VAL INT handle, VAL INT frame, offset, VAL []INT data, RESULT INT rc)
+PROC cdxclient.send (VAL CDX.HANDLE handle, VAL INT frame, offset, VAL []INT data, RESULT INT rc)
   C.cdxclient.send (handle, frame, offset, data, rc)
 :
-PROC cdxclient.close (VAL INT handle, RESULT INT rc)
+PROC cdxclient.close (VAL CDX.HANDLE handle, RESULT INT rc)
   C.cdxclient.close (handle, rc)
 :

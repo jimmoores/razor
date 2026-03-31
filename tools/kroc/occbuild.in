@@ -308,7 +308,10 @@ def is_stub(file):
 def delete(file):
 	"""Delete a file, if it exists."""
 	if exists(file):
-		os.unlink(file)
+		try:
+			os.unlink(file)
+		except OSError as e:
+			print("occbuild: warning: cannot remove %s: %s" % (file, e.strerror), file=sys.stderr)
 
 def install(file, dir, is_exec = False):
 	"""Install a file (if it exists) into a directory. Make the directory

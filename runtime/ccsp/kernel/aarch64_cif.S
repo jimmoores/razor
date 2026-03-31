@@ -15,7 +15,9 @@ ccsp_cif_call_asm:
 
     mov x19, sp           // save sp
 
-    mov sp, x0            // switch to wptr
+    // Switch to kernel stack via sched->stack (offset 0)
+    ldr x9, [x1, #0]
+    mov sp, x9
 
     // setup KRoC kernel arguments: x0=param0, x1=sched, x2=wptr
     mov x8, x0            // x8 = wptr
@@ -49,32 +51,41 @@ ccsp_cif_call_asm_resched:
     stp x25, x26, [sp, #-16]!
     stp x27, x28, [sp, #-16]!
 
-    str x1, [x0, #-56]    // wptr[-7] = sched
+    str x1, [x0, #-56]    // wptr[-7] = sched (SchedPtr)
 
     mov x28, x0           // x28 = wptr
 
     // setup KRoC kernel arguments: x0=param0, x1=sched, x2=wptr
-    mov x8, x0            // x8 = wptr
+    mov x8, x0            // x8 = wptr (saved)
     mov x0, x2            // x0 = param0
     mov x2, x8            // x2 = wptr
     // x1 is already sched
 
-    // Save current C stack pointer into wptr[0]
+    // Save current C stack pointer at Wptr[-10] (byte offset -80).
+    // This is a dedicated slot below the CIF reserved region (words -9..-7)
+    // and won't be overwritten by save_return (word -1), channel ops, or
+    // process parameters.  K_CIF_PROC uses Wptr[0] for initial C stack
+    // but the save_return Iptr at Wptr[-1] and params at Wptr[1..n] are safe.
     mov x9, sp
-    str x9, [x28, #0]     // wptr[0] = sp
+    stur x9, [x28, #-80]  // wptr[-10] = sp
 
-    // Switch stack to KRoC kernel stack (sched)
-    mov sp, x1
+    // Switch stack to KRoC kernel stack.
+    // Use sched->stack (offset 0) which points to the top of the sched_t
+    // allocation, giving the kernel stack room to grow downward.
+    ldr x9, [x1, #0]
+    mov sp, x9
 
     // Call KRoC function
     blr x3
 
-    // Restore C stack pointer from wptr[0].
-    // If we are rescheduled, KRoC sets x28 to wptr before jumping here!
-    ldr x9, [x28, #0]
+    // After return from kernel (possibly after context switch):
+    // K_ZERO_OUT_JRET restores x28=Wptr before jumping to Wptr[Iptr].
+    // save_return() set Wptr[Iptr] to point here, so we resume correctly.
+    // Restore C stack pointer from wptr[-10] (byte -80).
+    ldur x9, [x28, #-80]
     mov sp, x9
 
-    // Reload sched from wptr[-7] (which might have changed)
+    // Reload sched from wptr[-7]
     ldr x1, [x28, #-56]
 
     // Restore ALL callee-saved registers

@@ -1081,20 +1081,28 @@ static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name,
 
 /*{{{  static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)*/
 /*
- *\tGenerates code for C interface calls
+ *\tGenerates code for C interface calls.
+ *\tMirrors compose_cif_call_i386 with offsets scaled for 64-bit words.
+ *
+ *\ti386: Wptr += 1 word, saves at words -9/-8/-7, net Wptr += 4 words.
+ *\tAArch64: same logic, 8-byte words. The CIF assembly stub saves the
+ *\tC stack pointer at Wptr[-10] (byte -80), a dedicated slot below
+ *\tthe CIF reserved region (-9..-7) that won't conflict with
+ *\tsave_return (Wptr[-1]) or process parameters (Wptr[1..n]).
  */
 static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_chain **pst_first, ins_chain **pst_last)
 {
 	char sbuf[256];
 
-	/* Adjust Wptr like i386 CIF call: Wptr += 4 (one word) */
-	*pst_first = compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, (intptr_t)4, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
+	/* Adjust Wptr: +1 word (8 bytes), matching i386 */
+	*pst_first = compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(1 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	add_to_ins_chain (*pst_first);
 
-	/* Save resumption label and sched pointer for restoration after call */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-36)));
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(-1), ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-32)));
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-28)));
+	/* Save resumption label and sched pointer for restoration after call.
+	 * Word offsets: -9 (EscapePtr/FLABEL), -8 (marker), -7 (SchedPtr) */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-9 << WSH)));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(-1), ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-8 << WSH)));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-7 << WSH)));
 
 	/* Pass Wptr in x0 (AArch64 first argument register) */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X0));
@@ -1105,12 +1113,13 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 	sprintf (sbuf, "@%s%s", options.extref_prefix ? options.extref_prefix : "", name + 4);
 	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (sbuf)));
 
-	/* Restore state after CIF call */
+	/* Restore state after CIF call (or after kernel reschedule via save_return) */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-28), ARG_REG, REG_SCHED));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-7 << WSH), ARG_REG, REG_SCHED));
 
-	/* Restore Wptr: subtract back the 4 we added */
-	*pst_last = compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, (intptr_t)4, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
+	/* Undo +1 word, then advance 4 words. Net: Wptr += 4 words from original. */
+	add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(1 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)(4 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	add_to_ins_chain (*pst_last);
 }
 /*}}}*/
