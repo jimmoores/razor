@@ -13,7 +13,11 @@ ccsp_cif_call_asm:
     mov x29, sp
     stp x19, x20, [sp, #-16]!
 
-    mov x19, sp           // save sp (no stack switch - run on C stack)
+    mov x19, sp           // save sp
+
+    // Switch to kernel stack
+    ldr x9, [x1, #0]
+    mov sp, x9
 
     // setup KRoC kernel arguments: x0=param0, x1=sched, x2=wptr
     mov x8, x0            // x8 = wptr
@@ -61,14 +65,11 @@ ccsp_cif_call_asm_resched:
     mov x9, sp
     stur x9, [x28, #-80]  // wptr[-10] = sp
 
-    // Reserve large guard space below the saved callee-saved registers.
-    // The kernel function runs on the C stack and its frames grow
-    // downward.  After K_ZERO_OUT_JRET dispatches another process and
-    // that process makes kernel calls, SP stays at sched->stack.
-    // But when THIS process resumes, SP is restored from wptr[-10].
-    // The guard ensures the kernel's initial frames (before any
-    // K_ZERO_OUT_JRET) don't collide with saved registers above.
-    sub sp, sp, #4096
+    // Switch to the kernel stack for the kernel call.
+    // sched->stack points well below the CIF C stack frames, so the
+    // kernel frames won't collide with our saved callee-saved registers.
+    ldr x9, [x1, #0]      // x9 = sched->stack
+    mov sp, x9
 
     // Call KRoC function
     blr x3
