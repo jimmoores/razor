@@ -61,10 +61,14 @@ ccsp_cif_call_asm_resched:
     mov x9, sp
     stur x9, [x28, #-80]  // wptr[-10] = sp
 
-    // Do NOT switch to the kernel stack here.  The kernel function runs
-    // on the current C stack.  K_ZERO_OUT_JRET will switch SP to
-    // sched->stack when dispatching a process.  When this process
-    // resumes, SP is restored from wptr[-10] above.
+    // Reserve large guard space below the saved callee-saved registers.
+    // The kernel function runs on the C stack and its frames grow
+    // downward.  After K_ZERO_OUT_JRET dispatches another process and
+    // that process makes kernel calls, SP stays at sched->stack.
+    // But when THIS process resumes, SP is restored from wptr[-10].
+    // The guard ensures the kernel's initial frames (before any
+    // K_ZERO_OUT_JRET) don't collide with saved registers above.
+    sub sp, sp, #4096
 
     // Call KRoC function
     blr x3
