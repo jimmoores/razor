@@ -1129,8 +1129,10 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-6 << WSH), ARG_REG, REG_SCHED));
 
-	/* Advance Wptr by 4 words (net adjustment matching ccall/bcall).
-	 * The I_CALL AJW already did -4 words. Combined: -4 + 4 = 0 net. */
+	/* Advance Wptr by 4 words.  Together with the separate I_CALL return
+	 * (also +4 words), this gives +8 total from the I_CALL position,
+	 * or +4 from the original position.  This is needed so that the
+	 * Magic Screen shutdown block reads Wptr[-4] = original[0]. */
 	*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)(4 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	add_to_ins_chain (*pst_last);
 }
