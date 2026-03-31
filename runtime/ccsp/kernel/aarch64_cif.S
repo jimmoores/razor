@@ -75,14 +75,17 @@ ccsp_cif_call_asm_resched:
     blr x3
 
     // After return from kernel (possibly after context switch):
-    // K_ZERO_OUT_JRET restores x28=Wptr before jumping to Wptr[Iptr].
-    // save_return() set Wptr[Iptr] to point here, so we resume correctly.
-    // Restore C stack pointer from wptr[-10] (byte -80).
+    // K_ZERO_OUT_JRET restores x28=Wptr.  The kernel received Wptr from
+    // x2 which was set to x0 (= wptr = x28+8 at entry).  So x28 here
+    // equals x28 at entry (both are wptr = original_x28+8).
+    // The C SP was saved at [x28, #-80] above.  Restore from same offset:
     ldur x9, [x28, #-80]
     mov sp, x9
 
-    // Reload sched from wptr[-7]
-    ldr x1, [x28, #-56]
+    // Reload sched.  The asm stub entry saved sched at [x0, #-56] where
+    // x0 = wptr.  K_ZERO_OUT_JRET restores x28 = Wptr = wptr (same value).
+    // So reload from [x28, #-56]:
+    ldur x1, [x28, #-56]
 
     // Restore ALL callee-saved registers
     ldp x27, x28, [sp], #16
@@ -92,4 +95,5 @@ ccsp_cif_call_asm_resched:
     ldp x19, x20, [sp], #16
 
     ldp x29, x30, [sp], #16
-    ret
+    // Use br x30 instead of ret to bypass PAC verification
+    br x30
