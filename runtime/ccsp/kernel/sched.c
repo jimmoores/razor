@@ -632,6 +632,7 @@ static HOT void enqueue_to_batch_with_hint (batch_t *batch, word *Wptr, bool fro
 /*{{{  static HOT void enqueue_to_batch (batch_t *batch, word *Wptr)*/
 static HOT void enqueue_to_batch (batch_t *batch, word *Wptr)
 {
+	DT_LOG("enqueue", Wptr, Wptr ? Wptr[Iptr] : 0, batch->Fptr, batch->size);
 	Wptr[Link] = NotProcess_p;
 
 	if (batch->Fptr == NotProcess_p) {
@@ -661,6 +662,7 @@ static WARM void enqueue_to_batch_front (batch_t *batch, word *Wptr)
 static HOT word *dequeue_from_batch (batch_t *batch)
 {
 	word *Wptr = batch->Fptr;
+	DT_LOG("dequeue", Wptr, Wptr ? Wptr[Iptr] : 0, (word *)Wptr[Link], batch->size);
 	word size = batch->size;
 
 	batch->Fptr = (word *) Wptr[Link];
