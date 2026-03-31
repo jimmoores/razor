@@ -135,6 +135,7 @@ LABEL_TYPE( ,X) \
 	} while (0)
 #define K_ZERO_OUT_JRET() \
 	do { \
+		DT_LOG("JRET", Wptr, Wptr ? Wptr[Iptr] : 0, sched, 0); \
 		TRACE_RETURN (Wptr[Iptr]); \
 		__asm__ __volatile__ ("\t\t\t\n" \
 			"\tmov x28, %0\t\n" \

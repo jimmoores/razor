@@ -82,6 +82,56 @@
 	#include <dtrace.h>
 #endif
 
+/*{{{  dispatch trace infrastructure */
+#if defined(__aarch64__)
+#define DISPATCH_TRACE
+#endif
+
+#ifdef DISPATCH_TRACE
+#include <stdio.h>
+#define DT_BUF_SIZE 256
+typedef struct {
+	const char *event;
+	unsigned long wptr;
+	unsigned long iptr;
+	unsigned long other;
+	unsigned long extra;
+} dt_entry_t;
+static dt_entry_t dt_buf[DT_BUF_SIZE];
+static volatile int dt_idx = 0;
+volatile int dt_stop = 0;
+
+#define DT_LOG(ev, w, ip, oth, ext) do { \
+	if (!dt_stop) { \
+		int _i = __sync_fetch_and_add(&dt_idx, 1) & (DT_BUF_SIZE - 1); \
+		dt_buf[_i].event = (ev); \
+		dt_buf[_i].wptr = (unsigned long)(w); \
+		dt_buf[_i].iptr = (unsigned long)(ip); \
+		dt_buf[_i].other = (unsigned long)(oth); \
+		dt_buf[_i].extra = (unsigned long)(ext); \
+	} \
+} while (0)
+
+void dt_dump(void) {
+	int end = dt_idx;
+	int start = (end > DT_BUF_SIZE) ? (end - DT_BUF_SIZE) : 0;
+	fprintf(stderr, "\n=== DISPATCH TRACE (last %d entries) ===\n", end - start);
+	for (int i = start; i < end; i++) {
+		dt_entry_t *e = &dt_buf[i & (DT_BUF_SIZE - 1)];
+		fprintf(stderr, "[%3d] %-12s W=%016lx I=%016lx o=%016lx x=%016lx\n",
+			i, e->event, e->wptr, e->iptr, e->other, e->extra);
+	}
+	fprintf(stderr, "=== END TRACE ===\n");
+	fflush(stderr);
+}
+
+#define DT_STOP_AND_DUMP() do { dt_stop = 1; dt_dump(); } while (0)
+#else
+#define DT_LOG(ev, w, ip, oth, ext)
+#define DT_STOP_AND_DUMP()
+#endif
+/*}}}*/
+
 #if DEFAULT_SCHED_POLICY == SCHED_POLICY_US
 	#define SCHED_POLICY(me,other) QUEUE(other)
 #elif DEFAULT_SCHED_POLICY == SCHED_POLICY_OTHER
@@ -553,6 +603,7 @@ static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)
 /*{{{  static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address)*/
 static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address)
 {
+	DT_LOG("save_ret", Wptr, return_address, sched, 0);
 	Wptr[Iptr] = (word) return_address;
 }
 /*}}}*/
@@ -1008,6 +1059,7 @@ static WARM word *schedule_point (sched_t *sched, word *Wptr, word *other)
 /*{{{  static WARM word *reschedule_point (sched_t *sched, word *Wptr, word *other)*/
 static WARM word *reschedule_point (sched_t *sched, word *Wptr, word *other)
 {
+	DT_LOG("rp_in", Wptr, Wptr ? Wptr[Iptr] : 0, other, other ? other[Iptr] : 0);
 	if (sched->priofinity != other[Priofinity]) {
 		if (PPriority (other[Priofinity]) < PPriority (sched->priofinity)) {
 			enqueue_process (sched, other);
@@ -2061,13 +2113,7 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 	init_sched_t (sched);
 	memcpy (sched->calltable, ccsp_calltable, sizeof(void *) * K_MAX_SUPPORTED);
 	sched->allocator 	= allocator;
-	/* Set the kernel stack pointer to the top of the sched_t allocation.
-	 * K_ZERO_OUT_JRET loads SP from sched->stack before dispatching
-	 * processes.  The kernel's C call frames grow DOWN from this point.
-	 * By pointing to the top of sched_t (rather than the base), the
-	 * kernel stack grows into the sched structure's cache-line padding
-	 * rather than into CIF workspace arrays below sched on the C stack. */
-	sched->stack		= stack + sizeof(sched_t);
+	sched->stack		= stack;
 	sched->priofinity	= BuildPriofinity (0, (MAX_PRIORITY_LEVELS / 2));
 	
 	set_local_scheduler (sched);
@@ -2160,6 +2206,8 @@ K_CALL_DEFINE_0_0 (Y_shutdown)
 /*{{{  static void kernel_common_error (...) */
 static void kernel_common_error (word *Wptr, sched_t *sched, word return_address, char *name)
 {
+	DT_LOG("ERROR", Wptr, return_address, sched, 0);
+	DT_STOP_AND_DUMP();
 #if defined(DYNAMIC_PROCS) && !defined(RMOX_BUILD)
 	d_process *kr_dptr;
 #endif
@@ -3834,6 +3882,7 @@ static void kernel_bsc_dispatch (sched_t *sched, word return_address, word *Wptr
 	job->bsc.iptr	= (word) return_address;
 	job->bsc.adjust	= adjust;
 
+	DT_LOG("bsc_disp", Wptr, return_address, b_func, b_param);
 	bsyscall_dispatch (job);
 	
 	kernel_scheduler (sched);
@@ -4934,10 +4983,12 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 	}
 	
 	if (!(flags & CIO_EXTENDED)) {
+		DT_LOG("chan_rp", Wptr, temp, channel_address, flags);
 		weak_write_barrier ();
 		Wptr = reschedule_point (sched, Wptr, (word *) temp);
 	}
 
+	DT_LOG("chan_jret", Wptr, Wptr ? Wptr[Iptr] : 0, sched, 0);
 	K_ZERO_OUT_JRET ();
 }
 #define BUILD_CHANNEL_IO(symbol,count,flags) \

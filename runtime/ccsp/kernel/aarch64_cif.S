@@ -13,11 +13,7 @@ ccsp_cif_call_asm:
     mov x29, sp
     stp x19, x20, [sp, #-16]!
 
-    mov x19, sp           // save sp
-
-    // Switch to kernel stack via sched->stack (offset 0)
-    ldr x9, [x1, #0]
-    mov sp, x9
+    mov x19, sp           // save sp (no stack switch - run on C stack)
 
     // setup KRoC kernel arguments: x0=param0, x1=sched, x2=wptr
     mov x8, x0            // x8 = wptr
@@ -62,18 +58,13 @@ ccsp_cif_call_asm_resched:
     // x1 is already sched
 
     // Save current C stack pointer at Wptr[-10] (byte offset -80).
-    // This is a dedicated slot below the CIF reserved region (words -9..-7)
-    // and won't be overwritten by save_return (word -1), channel ops, or
-    // process parameters.  K_CIF_PROC uses Wptr[0] for initial C stack
-    // but the save_return Iptr at Wptr[-1] and params at Wptr[1..n] are safe.
     mov x9, sp
     stur x9, [x28, #-80]  // wptr[-10] = sp
 
-    // Switch stack to KRoC kernel stack.
-    // Use sched->stack (offset 0) which points to the top of the sched_t
-    // allocation, giving the kernel stack room to grow downward.
-    ldr x9, [x1, #0]
-    mov sp, x9
+    // Do NOT switch to the kernel stack here.  The kernel function runs
+    // on the current C stack.  K_ZERO_OUT_JRET will switch SP to
+    // sched->stack when dispatching a process.  When this process
+    // resumes, SP is restored from wptr[-10] above.
 
     // Call KRoC function
     blr x3

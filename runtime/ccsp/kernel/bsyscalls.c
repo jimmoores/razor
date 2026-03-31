@@ -207,7 +207,12 @@ static void bsc_cleanup_job (void *arg)
 
 	job->wptr[Priofinity] 	= job->priofinity;
 	job->wptr[Iptr] 	= job->bsc.iptr;
-	
+
+#if defined(__aarch64__)
+	fprintf(stderr, "bsc_clean: wptr=%p iptr=%016lx\n", (void*)job->wptr, (unsigned long)job->bsc.iptr);
+	fflush(stderr);
+#endif
+
 	if (job->bsc.adjust != 0) {
 		atw_set ((word *) job->bsc.ws_arg[-1], 0);
 	}

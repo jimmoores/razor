@@ -318,9 +318,19 @@ void user_trap_handler (int sig)
 {
 	if (sig == SIGSEGV) {
 		BMESSAGE ("Segmentation fault.\n");
+	} else if (sig == SIGBUS) {
+		BMESSAGE ("Bus error (SIGBUS, signal %d) - likely unaligned access.\n", sig);
 	} else {
 		BMESSAGE ("Range error / STOP executed (signal %d)\n", sig);
 	}
+#if defined(__aarch64__)
+	{
+		extern void dt_dump(void);
+		extern volatile int dt_stop;
+		dt_stop = 1;
+		dt_dump();
+	}
+#endif
 	if (!faulted) {
 		faulted = 1;
 		userproc_exit (1, 1);
