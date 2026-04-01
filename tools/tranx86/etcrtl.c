@@ -4417,6 +4417,27 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		/*{{{  I_CCNT1 -- range check*/
 	case I_CCNT1:
 		if (!options.disable_checking) {
+#if (BytesPerWord > 4)
+			/* On 64-bit, the count operand (old_a) may have stale
+			 * upper 32 bits from IN32 (which writes only 4 bytes
+			 * into an 8-byte workspace slot).  Zero-extend both
+			 * operands before the unsigned range check.
+			 * Force constmap to materialize register values first. */
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCAL) {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH,
+					ARG_REG, ts->stack->old_a_reg));
+				constmap_remove (ts->stack->old_a_reg);
+			}
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			if (constmap_typeof (ts->stack->old_b_reg) == VALUE_LOCAL) {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH,
+					ARG_REG, ts->stack->old_b_reg));
+				constmap_remove (ts->stack->old_b_reg);
+			}
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+#endif
 			translate_range_check (ts, 1, arch, REOP_CCNT1);
 		}
 		break;
@@ -5057,14 +5078,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			 * With zero-extended MOSTNEG, the algorithm works because
 			 * MOSTNEG<<1 doesn't wrap in 64-bit. */
 			if (BytesPerWord > 4) {
-				add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
-				/* Zero-extend the value (old_b) too.  On 64-bit with
-				 * 32-bit INT, workspace slots may contain stale upper
-				 * bits from prior pointer storage.  The ADD below
-				 * propagates them, causing the range check to fail.
-				 * translate_range_check skips TRUNCATE32 for CWORD
-				 * because old_a (MOSTNEG<<1) needs 33+ bits. */
-				add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+				add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
@@ -5296,12 +5310,30 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*}}}*/
 		/*{{{  I_IN32 -- word input from channel*/
 	case I_IN32:
+		{
+#if (BytesPerWord > 4)
+		/* On 64-bit, IN32 writes 4 bytes into workspace slots that
+		 * are 8 bytes wide.  If the destination is a workspace variable
+		 * (VALUE_LOCAL), zero the upper 4 bytes BEFORE the channel input
+		 * so that subsequent word-sized loads see a clean value.
+		 * tstack: old_a = channel, old_b = data pointer */
+		if (constmap_typeof (ts->stack->old_b_reg) == VALUE_LOCALPTR) {
+			intptr_t slot = constmap_regconst (ts->stack->old_b_reg);
+			/* Zero the entire word slot before IN32 writes 4 bytes.
+			 * This ensures the upper 4 bytes are clean for subsequent
+			 * word-sized loads (LDL). */
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+				ARG_CONST, (intptr_t) 0,
+				ARG_REGIND | ARG_DISP, REG_WPTR, slot << WSH));
+		}
+#endif
 		if ((options.inline_options & INLINE_IN2) && arch->compose_inline_in_2) {
 			arch->compose_inline_in_2 (ts, 32);
 		} else if ((options.inline_options & INLINE_IN) && arch->compose_inline_in) {
 			arch->compose_inline_in (ts, 32);
 		} else {
 			arch->compose_deadlock_kcall (ts, K_IN32, 2, 0);
+		}
 		}
 		break;
 		/*}}}*/
@@ -6228,36 +6260,36 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 		 * them to regular register values so the default reg-reg CMP
 		 * path handles them.  For register operands, just truncate
 		 * in place.  Constants don't need truncation. */
+		/* For VALUE_LOCAL operands, materialize them into registers
+		 * so the default reg-reg CMP path handles them.
+		 * Do NOT truncate to 32 bits -- CWORD operates on values that
+		 * may be sign-extended (e.g., INT16 values extended to INT via
+		 * SXTH).  Truncating corrupts the MOSTNEG-based algorithm. */
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCAL) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
 				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH,
 				ARG_REG, ts->stack->old_a_reg));
-			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 			constmap_remove (ts->stack->old_a_reg);
-		} else if (constmap_typeof (ts->stack->old_a_reg) != VALUE_CONST) {
-			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 		}
 		if (constmap_typeof (ts->stack->old_b_reg) == VALUE_LOCAL) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
 				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH,
 				ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 			constmap_remove (ts->stack->old_b_reg);
-		} else if (constmap_typeof (ts->stack->old_b_reg) != VALUE_CONST) {
-			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 		}
 #endif
 		/* generate check */
 #if (BytesPerWord > 4)
-		/* Ensure both operands are zero-extended to 32 bits before the
-		 * unsigned comparison.  Prior arithmetic (ADD for INT16 range
-		 * shifting) can propagate garbage upper bits from 64-bit workspace
-		 * loads.  The earlier TRUNCATE32 block handles some cases, but
-		 * misses cases where constmap tracks an ADD result as VALUE_CONST
-		 * even though it contains a runtime value in a register.
-		 * Unconditionally truncate all register operands. */
-		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		/* Zero-extend both operands before unsigned comparison.
+		 * INT values loaded from workspace after IN32 may have stale
+		 * upper 32 bits.  Use INS_AND (not INS_TRUNCATE32 which the
+		 * optimizer may remove). */
+		if (constmap_typeof (ts->stack->old_a_reg) != VALUE_CONST) {
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		}
+		if (constmap_typeof (ts->stack->old_b_reg) != VALUE_CONST) {
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		}
 #endif
 		switch (constmap_typeof (ts->stack->old_b_reg)) {
 		default:
@@ -6344,9 +6376,15 @@ static void translate_range_check (tstate *ts, int lwb, arch_t *arch, int ecode)
 	 * unsigned comparison.  See translate_csub0 for full explanation.
 	 * Skip for CWORD which intentionally uses 64-bit values
 	 * (MOSTNEG<<1 = 0x100000000). */
+	/* For CCNT1/CSUB0: zero-extend operands before unsigned comparison.
+	 * INT values loaded from workspace after IN32 may have stale upper
+	 * 32 bits (IN32 writes 4 bytes into 8-byte slots).
+	 * Use INS_AND (not INS_TRUNCATE32 which optimizer may remove).
+	 * Skip for CWORD: its MOSTNEG-based algorithm requires the full
+	 * sign-extended representation to work correctly. */
 	if (ecode != REOP_CWORD) {
-		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 	}
 #endif
 	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));

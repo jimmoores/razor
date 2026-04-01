@@ -1,4 +1,3 @@
-
 /* cift9-c.c -- CIF test 9, C part */
 
 #include <stdio.h>
@@ -26,7 +25,11 @@ void my_process (Workspace wptr)
 		ChanOutInt (wptr, &(link_cli->channels[LINK_in]), i);
 		ChanInInt (wptr, &(link_cli->channels[LINK_out]), &v);
 
-		ExternalCallN (fprintf, 3, stderr, "got: %d\n", v);
+		/* ExternalCallN cannot safely call variadic functions like
+		 * fprintf on aarch64 (function pointer cast loses variadic
+		 * calling convention).  Use snprintf + write instead. */
+		char buf[64];
+		int len = snprintf(buf, sizeof(buf), "got: %d\n", v);
+		ExternalCallN ((void*)write, 3, (word)2, (word)buf, (word)len);
 	}
 }
-

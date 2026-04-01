@@ -306,16 +306,28 @@ static word ExternalCallN (void *func, word argc, ...)
 	}
 	va_end (ap);
 
+	/* Cast to typed function pointers so the compiler generates
+	 * correct calling convention code (especially for variadic
+	 * target functions like fprintf on aarch64). */
+	typedef word (*fn0_t)(void);
+	typedef word (*fn1_t)(word);
+	typedef word (*fn2_t)(word, word);
+	typedef word (*fn3_t)(word, word, word);
+	typedef word (*fn4_t)(word, word, word, word);
+	typedef word (*fn5_t)(word, word, word, word, word);
+	typedef word (*fn6_t)(word, word, word, word, word, word);
+	typedef word (*fn7_t)(word, word, word, word, word, word, word);
+	typedef word (*fn8_t)(word, word, word, word, word, word, word, word);
 	switch (argc) {
-		case 0: result = ((word (*)())func) (); break;
-		case 1: result = ((word (*)())func) (args[0]); break;
-		case 2: result = ((word (*)())func) (args[0], args[1]); break;
-		case 3: result = ((word (*)())func) (args[0], args[1], args[2]); break;
-		case 4: result = ((word (*)())func) (args[0], args[1], args[2], args[3]); break;
-		case 5: result = ((word (*)())func) (args[0], args[1], args[2], args[3], args[4]); break;
-		case 6: result = ((word (*)())func) (args[0], args[1], args[2], args[3], args[4], args[5]); break;
-		case 7: result = ((word (*)())func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
-		case 8: result = ((word (*)())func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
+		case 0: result = ((fn0_t)func) (); break;
+		case 1: result = ((fn1_t)func) (args[0]); break;
+		case 2: result = ((fn2_t)func) (args[0], args[1]); break;
+		case 3: result = ((fn3_t)func) (args[0], args[1], args[2]); break;
+		case 4: result = ((fn4_t)func) (args[0], args[1], args[2], args[3]); break;
+		case 5: result = ((fn5_t)func) (args[0], args[1], args[2], args[3], args[4]); break;
+		case 6: result = ((fn6_t)func) (args[0], args[1], args[2], args[3], args[4], args[5]); break;
+		case 7: result = ((fn7_t)func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
+		case 8: result = ((fn8_t)func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
 	}
 	return result;
 #else

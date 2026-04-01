@@ -4337,19 +4337,13 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
 							long val = (long)ins->in_args[0]->regconst;
 							unsigned long uval = (unsigned long)val;
-							/* Special case: AND with 0xFFFFFFFF is a 32-to-64
-							 * zero extension.  Use 'mov wd, ws' which is the
-							 * idiomatic aarch64 way to clear upper 32 bits. */
-							if (uval == 0xFFFFFFFFUL || uval == 0xFFFFFFFFFFFFFFFFUL) {
-								/* Might be 0xFFFFFFFF sign-extended to all-ones */
-								char w_out[8], w_in[8];
-								const char *out_reg = aarch64_get_register_name (ins->out_args[0]->regconst);
-								const char *in_reg = aarch64_get_register_name (ins->in_args[1]->regconst);
-								if (out_reg[0] == 'x') snprintf(w_out, sizeof(w_out), "w%s", out_reg + 1);
-								else snprintf(w_out, sizeof(w_out), "%s", out_reg);
-								if (in_reg[0] == 'x') snprintf(w_in, sizeof(w_in), "w%s", in_reg + 1);
-								else snprintf(w_in, sizeof(w_in), "%s", in_reg);
-								fprintf (stream, "\tmov\t%s, %s\n", w_out, w_in);
+							/* AND with 0xFFFFFFFF zero-extends 32 to 64 bits.
+							 * Use real 'and' (not 'mov wd,ws') so the RTL
+							 * optimizer cannot remove it as a no-op. */
+							if (uval == 0xFFFFFFFFUL) {
+								fprintf (stream, "\tand\t%s, %s, #0xffffffff\n",
+									aarch64_get_register_name (ins->out_args[0]->regconst),
+									aarch64_get_register_name (ins->in_args[1]->regconst));
 								break;
 							}
 							aarch64_emit_large_immediate (stream, val, "x16");

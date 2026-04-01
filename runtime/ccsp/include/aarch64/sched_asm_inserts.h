@@ -224,14 +224,14 @@ LABEL_TYPE( ,X) \
 		"\tldr x25, [x28, #-56]\t\n" \
 		"\tldr x9, [x25, #0]\t\n" \
 		"\tmov sp, x9\t\n" \
-		"\tldur x0, [x28, %2]\t\n" \
+		"\tsub x0, x28, %2\t\n" \
 		"\tmov x1, x25\t\n" \
 		"\tmov x2, x28\t\n" \
 		"\tldr x9, [x25, %1]\t\n" \
 		"\tbr x9\t\t\n" \
 		"1:\t\t\t\t\n" \
 		: "=r" (address) \
-		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
+		: "i" (offsetof(sched_t, calltable[call])), "i" (-(offset) * (int)sizeof(word)) \
 		: "memory", "x0", "x9")
 #define K_CIF_PROC_IND(address, call, offset) \
 	__asm__ __volatile__ ("\t\t\t\t\n" \
@@ -254,7 +254,7 @@ LABEL_TYPE( ,X) \
 		"\tbr x9\t\t\n" \
 		"1:\t\t\t\t\n" \
 		: "=r" (address) \
-		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
+		: "i" (offsetof(sched_t, calltable[call])), "i" ((offset) * (int)sizeof(word)) \
 		: "memory", "x0", "x9")
 /*}}}*/
 

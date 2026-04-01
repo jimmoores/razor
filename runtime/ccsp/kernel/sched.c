@@ -4910,8 +4910,9 @@ static INLINE void kernel_chan_io_static (word flags, byte *src, byte *dst, unsi
 			break;
 #if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64)
 		case 4:
-			/* 32-bit INT transfer on 64-bit target: zero-extend to word */
-			*((word *)dst) = (word) *((unsigned int *)src);
+			/* 32-bit INT transfer on 64-bit target.
+			 * Copy exactly 4 bytes. */
+			*((unsigned int *)dst) = *((unsigned int *)src);
 			break;
 #endif
 		case (sizeof(word)):
