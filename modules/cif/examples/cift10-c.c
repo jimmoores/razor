@@ -27,7 +27,7 @@ void my_process (Workspace wptr)
 	cli = svr = MTAllocChanType (wptr, LINK_num_chans, false);
 
 	/* communicate client end back to occam */
-	MTChanOut (wptr, link_out, &cli);
+	MTChanOut (wptr, link_out, (void **)&cli);
 
 	/* now serve it */
 	for (i = 0; i < 5; i++) {

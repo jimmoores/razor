@@ -83,9 +83,7 @@
 #endif
 
 /*{{{  dispatch trace infrastructure */
-#if defined(__aarch64__)
-#define DISPATCH_TRACE
-#endif
+/* #define DISPATCH_TRACE */
 
 #ifdef DISPATCH_TRACE
 #include <stdio.h>
@@ -1902,9 +1900,9 @@ void ccsp_kernel_init (void)
 static void NO_RETURN REGPARM kernel_scheduler (sched_t *sched)
 {
 	word *Wptr = NotProcess_p;
-	
+
 	ENTRY_TRACE (scheduler, "sync=%d", att_val (&(sched->sync)));
-	
+
 	do {
 		if (unlikely (att_val (&(sched->sync)))) {
 			unsigned int sync = att_swap (&(sched->sync), 0);
@@ -2005,6 +2003,20 @@ static void NO_RETURN REGPARM kernel_scheduler (sched_t *sched)
 						else if (!att_val (&(sched->sync))) {
 							att_set_bit (&idle_threads, sched->index);
 
+							/* If shutdown has been requested, exit
+							 * immediately.  On multi-core systems,
+							 * the deadlock check (idle==enabled)
+							 * requires ALL scheduler threads to be
+							 * idle+sleeping simultaneously, which
+							 * may never happen.  Pending blocking
+							 * syscalls also prevent the check.
+							 * Flush output and call _exit directly. */
+							if (att_val (&(ccsp_shutdown))) {
+								fflush (stdout);
+								fflush (stderr);
+								_exit (0);
+							}
+							else
 							#if !defined(RMOX_BUILD) && defined(BLOCKING_SYSCALLS)
 							if (bsyscalls_pending () > (ccsp_external_event_is_bsc () ? (ccsp_external_event_is_ready () ? 0 : 1) : 0)) {
 								ccsp_safe_pause (sched);
@@ -2200,7 +2212,12 @@ K_CALL_DEFINE_0_0 (Y_shutdown)
 	K_CALL_PARAMS_0 ();
 	ENTRY_TRACE (Y_shutdown, "");
 	att_set (&(ccsp_shutdown), true);
-	kernel_scheduler (sched);
+	/* Flush buffered output and terminate.  On multiprocessor systems
+	 * the batch scheduler may not dispatch processes after shutdown,
+	 * so we exit directly rather than re-entering kernel_scheduler. */
+	fflush (stdout);
+	fflush (stderr);
+	_exit (0);
 }
 /*}}}*/
 /*}}}*/

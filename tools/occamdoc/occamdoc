@@ -568,7 +568,7 @@ def parse_file(f, include_private = False, include_undocumented = False):
 		if s != "":
 			(old_level, pos, old_decl, old_private) = level_stack[-1]
 			level = measure_indent(l)
-			if level < old_level:
+			if old_level is not None and level < old_level:
 				raise OccamDocException("Missed end of declaration -- started at " + pos)
 			elif level == old_level:
 				if s != ":":

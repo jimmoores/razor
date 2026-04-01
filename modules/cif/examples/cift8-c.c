@@ -21,14 +21,14 @@ void my_process (Workspace wptr)
 	for (i = 0; i < 5; i++) {
 		mt_array_t *da_in = NULL, *da_out;
 
-		MTChanIn (wptr, in, &da_in);
+		MTChanIn (wptr, in, (void **)&da_in);
 
 		da_out = MTAllocArray (wptr, MT_MAKE_NUM (MT_NUM_BYTE),
 		                       1, da_in->dimensions[0] + 4);
 		memcpy (da_out->data, da_in->data, da_in->dimensions[0]);
 		memcpy (da_out->data + da_in->dimensions[0], " :) ", 4);
 
-		MTChanOut (wptr, out, &da_out);
+		MTChanOut (wptr, out, (void **)&da_out);
 
 		MTRelease (wptr, da_in);
 	}

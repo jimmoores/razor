@@ -146,6 +146,18 @@ ccsp_cif_process_call:
     // x0 = wptr (Wptr+1, passed by compose_cif_call)
     // x1 = func address
     // x28 = Wptr (from occam, callee-saved)
+    // x30 = LR (return address to compose_cif_call code)
+
+    // Save LR to wptr[-23] (byte -184 from x0).
+    // blr x1 will overwrite x30, and the CIF C function's channel
+    // calls go through ccsp_cif_call_asm_resched which saves/restores
+    // x30 from its own workspace slots.  After all kernel scheduling,
+    // x30 will hold the asm_resched's LR, not our original LR.
+    // We use offset -23 because:
+    //   wptr[-1..-9]  = kernel workspace (Iptr, Link, Pointer, SchedPtr, etc.)
+    //   wptr[-10..-22] = ccsp_cif_call_asm_resched callee-saved register saves
+    //   wptr[-23]     = our LR save (safe, within CIF_PROCESS_WORDS=24)
+    stur x30, [x0, #-184]
 
     // Save current SP (= sched->stack) to wptr[-5] (byte -40 from x0)
     mov x9, sp
@@ -162,11 +174,10 @@ ccsp_cif_process_call:
     // Call the CIF C function: func(wptr)
     blr x1
 
-    // CIF function returned.  Restore SP from wptr[-5].
+    // CIF function returned.  Restore SP and LR from workspace.
     // x28 is callee-saved and should still be Wptr (from occam).
-    // x0 was Wptr+8 at entry, also callee-saved by the C function.
-    // But we need wptr to reload SP.  x28+8 = wptr.
     add x9, x28, #8             // x9 = Wptr + 8 = wptr
+    ldur x30, [x9, #-184]       // restore LR from wptr[-23]
     ldur x9, [x9, #-40]         // x9 = wptr[-5] = saved SP
     mov sp, x9                  // restore shared sched->stack
 

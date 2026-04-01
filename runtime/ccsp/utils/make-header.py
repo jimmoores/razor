@@ -617,6 +617,11 @@ def gen_aarch64_header(f):
 	f.outdent()
 	
 	# ccsp_cif_occam_call
+	# Use register variables for deterministic register assignment.
+	# The occam function destroys ALL callee-saved registers (x19-x28),
+	# so they must be in the clobber list.  With generic "=r" constraints,
+	# GCC might assign operands to those same registers, causing corruption.
+	# Fixed-register variables avoid this entirely.
 	f.begin_macro()
 
 	f.begin_line()
@@ -624,48 +629,62 @@ def gen_aarch64_header(f):
 
 	f.indent()
 	f.line("do {")
-	
+
 	f.indent()
-	f.line("word d0, d1, d2;")
+	f.line("register word __r_ws __asm__(\"x0\") = (word)(ws);")
+	f.line("register word __r_sched __asm__(\"x1\") = (word)(sched);")
+	f.line("register word __r_func __asm__(\"x9\") = (word)(func);")
+	f.line("(void)(stack);")
 	f.line("__asm__ __volatile__ (\"\\n\"")
 	f.indent()
 
 	f.begin_asm()
-	# Save x29, x30 and SP to the workspace (NOT sched->stack which is shared).
-	# ws[top] = saved SP, ws[top+1] = saved x29, ws[top+2] = saved x30
-	f.line("\tmov x28, %0")
-	f.line("\tadd x28, x28, %4")
-	f.line("\tmov x3, sp")
-	f.line("\tstr x3, [x28]")		# ws[top] = sp
-	f.line("\tstr x29, [x28, #8]")		# ws[top+1] = x29
-	f.line("\tstr x30, [x28, #16]")	# ws[top+2] = x30
-	f.line("\tsub x28, x28, %4")
+	# Save SP, x29, x30 to workspace at ws[top..top+2]
+	f.line("\tmov x28, x0")			# x28 = ws (Wptr)
+	f.line("\tadd x3, x28, %3")		# x3 = ws + top*sizeof(word)
+	f.line("\tmov x10, sp")
+	f.line("\tstr x10, [x3]")		# ws[top] = SP
+	f.line("\tstr x29, [x3, #8]")		# ws[top+1] = x29
+	f.line("\tstr x30, [x3, #16]")		# ws[top+2] = x30
+	# Store return label at ws[0] (Iptr) and ws[-1] (backup)
 	f.line("\tadr x3, 0f")
 	f.line("\tstr x3, [x28]")		# ws[0] = return label
+	f.line("\tstur x3, [x28, #-8]")		# ws[-1] = return label
 	# Switch to private workspace stack before jumping to occam.
 	# This prevents the occam function's C calls from using sched->stack
 	# where other processes would overwrite saved state.
 	f.line("\tsub x3, x28, #256")
 	f.line("\tand x3, x3, #-16")
 	f.line("\tmov sp, x3")
-	f.line("\tbr x0")			# jump to occam function
+	# Set scheduler pointer for occam code (x25 = sched)
+	f.line("\tmov x25, x1")			# x25 = sched
+	f.line("\tbr x9")			# jump to func
 	f.line("0:")
-	f.line("\tadd x28, x28, %4")		# x28 = ws + top*sizeof(word)
-	f.line("\tldr x3, [x28]")		# x3 = saved SP
-	f.line("\tmov sp, x3")			# restore SP
-	f.line("\tldr x29, [x28, #8]")		# restore x29
-	f.line("\tldr x30, [x28, #16]")	# restore x30
+	# Return from occam: x28 = ws + 32 due to I_RET frame pop.
+	# compose_aarch64_return always pops 32 bytes (4 words) for the
+	# I_CALL frame that OccamCall doesn't push. Undo that shift.
+	f.line("\tsub x28, x28, #32")		# undo I_RET frame pop
+	f.line("\tadd x3, x28, %3")		# x3 = ws + top*sizeof(word)
+	f.line("\tldr x10, [x3]")		# x10 = saved SP
+	f.line("\tmov sp, x10")			# restore SP
+	f.line("\tldr x29, [x3, #8]")		# restore x29
+	f.line("\tldr x30, [x3, #16]")		# restore x30
 	f.end_asm()
-	f.line(": \"=r\" (d0), \"=r\" (sched), \"=r\" (d1), \"=r\" (d2)")
-	f.line(": \"i\" (top * sizeof(word)),")
-	f.line("  \"i\" ((top - 4) * sizeof(word)),")
-	f.line("  \"0\" (ws), \"1\" (sched), \"2\" (stack), \"3\" (func)")
-	f.line(": \"cc\", \"memory\", \"x0\", \"x1\", \"x2\", \"x3\"")
+	f.line(": \"+r\" (__r_ws), \"+r\" (__r_sched), \"+r\" (__r_func)")
+	f.line(": \"i\" (top * sizeof(word))")
+	# Clobber ALL registers the occam function may modify.
+	# Operands use x0, x1, x9 (+r).  We save/restore x29, x30.
+	# Everything else is fair game for the occam function.
+	f.line(": \"cc\", \"memory\",")
+	f.line("  \"x2\", \"x3\", \"x4\", \"x5\", \"x6\", \"x7\", \"x8\", \"x10\",")
+	f.line("  \"x11\", \"x12\", \"x13\", \"x14\", \"x15\", \"x16\", \"x17\",")
+	f.line("  \"x19\", \"x20\", \"x21\", \"x22\", \"x23\", \"x24\", \"x25\",")
+	f.line("  \"x26\", \"x27\", \"x28\"")
 
 	f.outdent()
 	f.line(");")
 	f.outdent()
-	
+
 	f.begin_line()
 	f.add ("} while (0)")
 	f.end_line(end_macro = True)

@@ -109,18 +109,8 @@ static unsigned int quantum;
 /*
  *	local exit function
  */
-static void userproc_exit (int exit_status, bool dump_core) 
+static void userproc_exit (int exit_status, bool dump_core)
 {
-	if (RTS_TRACING) {
-		MESSAGE ("USERPROC: Exit %d\n", exit_status);
-		FFLUSH (stderr);
-	}
-
-	if (RTS_TRACING) {
-		MESSAGE ("USERPROC: About to kill KBDPROC\n");
-		FFLUSH (stderr);
-	}
-
 	#if defined(RMOX_BUILD) && defined(BLOCKING_SYSCALLS)
 	bsyscalls_destroy_clones ();
 	#endif
@@ -323,14 +313,7 @@ void user_trap_handler (int sig)
 	} else {
 		BMESSAGE ("Range error / STOP executed (signal %d)\n", sig);
 	}
-#if defined(__aarch64__)
-	{
-		extern void dt_dump(void);
-		extern volatile int dt_stop;
-		dt_stop = 1;
-		dt_dump();
-	}
-#endif
+/* DISPATCH_TRACE dump removed — enable in sched.c if needed */
 	if (!faulted) {
 		faulted = 1;
 		userproc_exit (1, 1);
