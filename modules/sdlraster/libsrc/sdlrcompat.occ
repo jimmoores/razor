@@ -133,7 +133,7 @@ PROC SDLRaster (VAL []BYTE dispname, VAL INT width, height, nbuffers, CHAN RASTE
             ready ! TRUE
             buffer ? r
             IF
-              (SIZE r[0]) > 0
+              ((SIZE r) > 0) AND ((SIZE r[0]) > 0)
                 out ! r
               TRUE
                 done := TRUE
