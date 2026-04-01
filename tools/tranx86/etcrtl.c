@@ -5058,6 +5058,13 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			 * MOSTNEG<<1 doesn't wrap in 64-bit. */
 			if (BytesPerWord > 4) {
 				add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t) (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+				/* Zero-extend the value (old_b) too.  On 64-bit with
+				 * 32-bit INT, workspace slots may contain stale upper
+				 * bits from prior pointer storage.  The ADD below
+				 * propagates them, causing the range check to fail.
+				 * translate_range_check skips TRUNCATE32 for CWORD
+				 * because old_a (MOSTNEG<<1) needs 33+ bits. */
+				add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
@@ -6241,6 +6248,17 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 		}
 #endif
 		/* generate check */
+#if (BytesPerWord > 4)
+		/* Ensure both operands are zero-extended to 32 bits before the
+		 * unsigned comparison.  Prior arithmetic (ADD for INT16 range
+		 * shifting) can propagate garbage upper bits from 64-bit workspace
+		 * loads.  The earlier TRUNCATE32 block handles some cases, but
+		 * misses cases where constmap tracks an ADD result as VALUE_CONST
+		 * even though it contains a runtime value in a register.
+		 * Unconditionally truncate all register operands. */
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+#endif
 		switch (constmap_typeof (ts->stack->old_b_reg)) {
 		default:
 			switch (constmap_typeof (ts->stack->old_a_reg)) {
