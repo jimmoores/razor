@@ -52,38 +52,38 @@ fi
 #
 
 #{{{  set $SED and $progname
-SED="@SED@"
+SED="sed"
 
 progname=$(printf '%s' "$0" | $SED 's/^.*\///')
 
 #}}}
 #{{{  setup various variables
 
-CC=@CC@
-LD=@LD@
-ARCH_LDFLAGS="@KROC_CCSP_LDFLAGS@"
-ARCH_ASFLAGS="@KROC_CCSP_ASFLAGS@"
+CC=gcc
+LD=ld
+ARCH_LDFLAGS="-lpthread"
+ARCH_ASFLAGS=""
 
 # Only the 'kroc' program need be in the users path
 #PATH=$KROC/bin:$PATH
 
-package_version="@VERSION@"
+package_version="1.6.1-pre0"
 
-if [ "x@KROC_RMOX@" = "x" ]; then
+if [ "x" = "x" ]; then
   dversion='2.0'
 else
   dversion='2.0 (RMoX)'
 fi
-target_canonical="@KROC_CANONICAL_TARGET@"
-target_cpu="@KROC_TARGET_CPU@"
-target_os="@KROC_TARGET_OS@"
+target_canonical="aarch64-apple-darwin25.2.0"
+target_cpu="aarch64"
+target_os="darwin25.2.0"
 # -kc : cgr-mp CCSP interface
-octranopts="-kc @KROC_CCSP_TRANFLAGS@"
-ccopts="@KROC_CCSP_CFLAGS@"
+octranopts="-kc -mp"
+ccopts="-fomit-frame-pointer -fno-defer-pop -DTARGET_64BIT -DHOSTOS_DARWIN -mdynamic-no-pic -fno-pie -no-pie -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS"
 deplibs=""
 ocllibs=""
-ocrtslibs="-lm @KROC_CCSP_LIBS@"
-extcflags="@KROC_CCSP_CFLAGS@"
+ocrtslibs="-lm -lpthread"
+extcflags="-fomit-frame-pointer -fno-defer-pop -DTARGET_64BIT -DHOSTOS_DARWIN -mdynamic-no-pic -fno-pie -no-pie -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS"
 dtraces=0
 
 case "$target_cpu" in
@@ -148,7 +148,7 @@ tsuffix='tce'
 
 # Default: medium warnings
 occwopts=
-occopts="-w -y -znd -znec -udo -zncc -init -xin -mobiles -mpt @KROC_CCSP_OCCFLAGS@"
+occopts="-w -y -znd -znec -udo -zncc -init -xin -mobiles -mpt "
 
 case "$target_cpu" in
 	i386 | i486 | i586 | i686)
@@ -265,8 +265,8 @@ skip_link=
 debugkroc=0
 dumpxml=
 usenocc=
-nocc="@NOCCHOME@/nocc"
-noccopts="--specs-file @NOCCHOME@/nocc.specs.xml"
+nocc="/nocc"
+noccopts="--specs-file /nocc.specs.xml"
 linkstatic=0
 
 
@@ -787,11 +787,11 @@ done
 
 #}}}
 #{{{  directory configuration
-kroc_archbindir="@KROC_ARCHBINDIR@"
-kroc_archlibdir="@KROC_ARCHLIBDIR@"
-kroc_archincdir="@KROC_ARCHINCDIR@"
-kroc_mandir="@KROC_MANDIR@"
-kroc_krocdir="@KROC_KROCDIR@"
+kroc_archbindir="/usr/local/bin"
+kroc_archlibdir="/usr/local/lib"
+kroc_archincdir="/usr/local/include/kroc"
+kroc_mandir="/usr/local/share/man"
+kroc_krocdir="/usr/local/share/kroc"
 #}}}
 #{{{  path-dependant options
 
@@ -817,7 +817,7 @@ fi
 #}}}
 #{{{  build colon-separated search path for libraries
 if [ "$intree" = "" ]; then
-  ocspath="$kroc_krocdir/@KROC_TARGET_PREFIX@vtlib:$kroc_krocdir/@KROC_TARGET_PREFIX@vtinclude"
+  ocspath="$kroc_krocdir/vtlib:$kroc_krocdir/vtinclude"
 else
   ocspath="$intree/modules/inmoslibs/libsrc/forall"
 fi
@@ -830,8 +830,8 @@ if [ "$intree" = "" ]; then
   oclibpath="-L$kroc_archlibdir"
   cincludepath="-I$kroc_archincdir"
 else
-  oclibpath="@KROC_CCSP_LIBPATH@ -L$intree/modules/inmoslibs/libsrc/forall"
-  cincludepath="@KROC_CCSP_CINCPATH@"
+  oclibpath="-L/Users/jim/razor/kroc64/kroc/runtime/ccsp -L/Users/jim/razor/kroc64/kroc/runtime/libkrocif -L$intree/modules/inmoslibs/libsrc/forall"
+  cincludepath="-I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/ocuda/libsrc"
 fi
 
 #}}}
@@ -976,24 +976,24 @@ if [ $showkrocpath ]; then
 	exit 0
 fi
 if [ $showautovars ]; then
-	printf 'KROC_CCSP_CFLAGS="%s";\n' "@KROC_CCSP_CFLAGS@"
-	printf 'KROC_CCSP_CINCPATH="%s";\n' "@KROC_CCSP_CINCPATH@"
-	printf 'KROC_CCSP_OCCFLAGS="%s";\n' "@KROC_CCSP_OCCFLAGS@"
-	printf 'KROC_CCSP_TRANFLAGS="%s";\n' "@KROC_CCSP_TRANFLAGS@"
-	printf 'KROC_CCSP_ASFLAGS="%s";\n' "@KROC_CCSP_ASFLAGS@"
-	printf 'KROC_CCSP_LDFLAGS="%s";\n' "@KROC_CCSP_LDFLAGS@"
-	printf 'KROC_CCSP_LIBPATH="%s";\n' "@KROC_CCSP_LIBPATH@"
-	printf 'KROC_CCSP_LIBS="%s";\n' "@KROC_CCSP_LIBS@"
+	printf 'KROC_CCSP_CFLAGS="%s";\n' "-fomit-frame-pointer -fno-defer-pop -DTARGET_64BIT -DHOSTOS_DARWIN -mdynamic-no-pic -fno-pie -no-pie -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS"
+	printf 'KROC_CCSP_CINCPATH="%s";\n' "-I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/ocuda/libsrc"
+	printf 'KROC_CCSP_OCCFLAGS="%s";\n' ""
+	printf 'KROC_CCSP_TRANFLAGS="%s";\n' "-mp"
+	printf 'KROC_CCSP_ASFLAGS="%s";\n' ""
+	printf 'KROC_CCSP_LDFLAGS="%s";\n' "-lpthread"
+	printf 'KROC_CCSP_LIBPATH="%s";\n' "-L/Users/jim/razor/kroc64/kroc/runtime/ccsp -L/Users/jim/razor/kroc64/kroc/runtime/libkrocif"
+	printf 'KROC_CCSP_LIBS="%s";\n' "-lpthread"
 
-	printf 'KROC_CCSP_ENABLE_PTHREADS="%s";\n' "@KROC_CCSP_ENABLE_PTHREADS@"
-	printf 'KROC_CCSP_ENABLE_MP="%s";\n' "@KROC_CCSP_ENABLE_MP@"
-	printf 'KROC_CCSP_ENABLE_CTTD="%s";\n' "@KROC_CCSP_ENABLE_CTTD@"
-	printf 'KROC_CCSP_ENABLE_PONY="%s";\n' "@KROC_CCSP_ENABLE_PONY@"
-	printf 'KROC_CCSP_ENABLE_DYNPROC="%s";\n' "@KROC_CCSP_ENABLE_DYNPROC@"
-	printf 'KROC_CCSP_ENABLE_SSE2="%s";\n' "@KROC_CCSP_ENABLE_SSE2@"
-	printf 'KROC_CCSP_ENABLE_CPUTIMERS="%s";\n' "@KROC_CCSP_ENABLE_CPUTIMERS@"
+	printf 'KROC_CCSP_ENABLE_PTHREADS="%s";\n' "yes"
+	printf 'KROC_CCSP_ENABLE_MP="%s";\n' "yes"
+	printf 'KROC_CCSP_ENABLE_CTTD="%s";\n' "no"
+	printf 'KROC_CCSP_ENABLE_PONY="%s";\n' "no"
+	printf 'KROC_CCSP_ENABLE_DYNPROC="%s";\n' "yes"
+	printf 'KROC_CCSP_ENABLE_SSE2="%s";\n' "yes"
+	printf 'KROC_CCSP_ENABLE_CPUTIMERS="%s";\n' ""
 
-	printf 'KROC_RMOX="%s";\n' "@KROC_RMOX@"
+	printf 'KROC_RMOX="%s";\n' ""
 
 	exit 0
 fi
