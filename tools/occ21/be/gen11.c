@@ -1633,10 +1633,18 @@ printtreenl (stderr, 4, var);
 		loadmobile (ASBaseOf (var));
 		genprimary (I_LDNLP, (ASOffsetOf (var) / bytesperword));
 	} else if (TagOf (var) == S_ARRAYITEM) {
-		/* loading pointer of nested MOBILE -- EXP is always a BYTE offset now */
+		/* loading pointer of nested MOBILE */
 		treenode *type = gettype (var);
 
 		texp_main (ASExpOf (var), MAXREGS, FALSE);
+		/* On 64-bit targets where bytesperword > sizeof(INT), WSUB
+		 * shifts by log2(sizeof(INT)) not WSH=log2(bytesperword).
+		 * Mobile array elements are word-sized, so add an extra
+		 * shift to account for the size difference:
+		 * WSH - log2(sizeof(INT)) = 3 - 2 = 1 on 64-bit/32-bit-INT */
+		if (bytesperword > 4) {
+			genshiftimmediate (I_SHL, 1);
+		}
 		loadmobile (ASBaseOf (var));
 		if (isdynamicmobilechantype (type)) {
 			gensecondary (I_WSUB);
@@ -1694,10 +1702,12 @@ printtreenl (stderr, 4, type);
 			if (isdynamicmobilechantype (type)) {
 				if (regsfor (ASIndexOf (var)) > 1) {
 					texp_main (ASIndexOf (var), MAXREGS - 1, FALSE);
+					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					loadmobile (ASBaseOf (var));
 				} else {
 					loadmobile (ASBaseOf (var));
 					texp_main (ASIndexOf (var), MAXREGS - 2, FALSE);
+					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					gensecondary (I_REV);
 				}
 				gensecondary (I_WSUB);
@@ -1730,10 +1740,12 @@ printtreenl (stderr, 4, type);
 
 				if (regsfor (asexp) > 1) {
 					texp_main (asexp, MAXREGS - 1, FALSE);
+					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					loadmobile (ASBaseOf (var));
 				} else {
 					loadmobile (ASBaseOf (var));
 					texp_main (asexp, MAXREGS - 2, FALSE);
+					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					gensecondary (I_REV);
 				}
 				gensecondary (I_WSUB);
@@ -1744,10 +1756,12 @@ printtreenl (stderr, 4, type);
 				/* ASExp is the BYTE offset for these, so BSUB it .. */
 				if (regsfor (ASExpOf (var)) > 1) {
 					texp_main (ASExpOf (var), MAXREGS - 1, FALSE);
+					if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					loadmobile (ASBaseOf (var));
 				} else {
 					loadmobile (ASBaseOf (var));
 					texp_main (ASExpOf (var), MAXREGS - 2, FALSE);
+					if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					gensecondary (I_REV);
 				}
 
@@ -1807,13 +1821,15 @@ printtreenl (stderr, 4, var);
 				/* ASExp is the BYTE offset for these, so BSUB it .. */
 				if (regsfor (ASExpOf (var)) > 1) {
 					texp_main (ASExpOf (var), MAXREGS - 1, FALSE);
+					if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					loadmobile (ASBaseOf (var));
 				} else {
 					loadmobile (ASBaseOf (var));
 					texp_main (ASExpOf (var), MAXREGS - 2, FALSE);
+					if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					gensecondary (I_REV);
 				}
-				
+
 				gensecondary (bsub ? I_BSUB : I_WSUB);
 				genprimary (I_LDNL, 0); /* dereference to get real pointer */
 			} else {
@@ -1902,17 +1918,19 @@ printtreenl (stderr, 4, type);
 
 		if (isdynamicmobilearraytype (type)) {
 			const BOOL bsub = TagOf (ASExpOf (nptr)) == S_TIMES;
-			
+
 			/* ASExp is the BYTE offset for these, so BSUB it .. */
 			if (regsfor (ASExpOf (nptr)) > 1) {
 				texp_main (ASExpOf (nptr), MAXREGS - 1, FALSE);
+				if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 				loadmobile (ASBaseOf (nptr));
 			} else {
 				loadmobile (ASBaseOf (nptr));
 				texp_main (ASExpOf (nptr), MAXREGS - 2, FALSE);
+				if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 				gensecondary (I_REV);
 			}
-			
+
 			gensecondary (bsub ? I_BSUB : I_WSUB);
 		} else {
 			geninternal_is (GEN_ERROR_IN_ROUTINE, 3, "loaddynmobilesize -- unexpected MOBILE type");
@@ -1999,35 +2017,41 @@ printtreenl (stderr, 4, ASExpOf (var));
 			if (useindex || !ASExpOf (var)) {
 				if (regsfor (ASIndexOf (var)) > 1) {
 					texp_main (ASIndexOf (var), MAXREGS - 1, FALSE);
+					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					loadmobile (ASBaseOf (var));
 				} else {
 					loadmobile (ASBaseOf (var));
 					texp_main (ASIndexOf (var), MAXREGS - 2, FALSE);
+					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					gensecondary (I_REV);
 				}
 			} else {
 				if (regsfor (ASExpOf (var)) > 1) {
 					texp_main (ASExpOf (var), MAXREGS - 1, FALSE);
+					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					loadmobile (ASBaseOf (var));
 				} else {
 					loadmobile (ASBaseOf (var));
 					texp_main (ASExpOf (var), MAXREGS - 2, FALSE);
+					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					gensecondary (I_REV);
 				}
 			}
-			gensecondary (I_WSUB);		/* frmb: this should be WSUB, not BSUB.. */
+			gensecondary (I_WSUB);
 		} else if (isdynamicmobilearraytype (type)) {
 			const BOOL bsub = TagOf (ASExpOf (var)) == S_TIMES;
-			
+
 			if (regsfor (ASExpOf (var)) > 1) {
 				texp_main (ASExpOf (var), MAXREGS - 1, FALSE);
+				if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 				loadmobile (ASBaseOf (var));
 			} else {
 				loadmobile (ASBaseOf (var));
 				texp_main (ASExpOf (var), MAXREGS - 2, FALSE);
+				if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 				gensecondary (I_REV);
 			}
-			
+
 			gensecondary (bsub ? I_BSUB : I_WSUB);
 		} else {
 			geninternal_is (GEN_ERROR_IN_ROUTINE, 1, "storemobile: unexpected MOBILE type");
@@ -2071,10 +2095,12 @@ printtreenl (stderr, 4, var);
 
 			if (regsfor (ASExpOf (var)) > 1) {
 				texp_main (ASExpOf (var), MAXREGS - 1, FALSE);
+				if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 				loadmobile (ASBaseOf (var));
 			} else {
 				loadmobile (ASBaseOf (var));
 				texp_main (ASExpOf (var), MAXREGS - 2, FALSE);
+				if (!bsub && bytesperword > 4) genshiftimmediate (I_SHL, 1);
 				gensecondary (I_REV);
 			}
 
@@ -3430,6 +3456,10 @@ printtreenl (stderr, 4, ASExpOf (tptr));
 #endif
 		if (ASExpOf (tptr)) {
 			texpopd (P_EXP, ASExpOf (tptr), regs);
+			/* On 64-bit, scale index for word-sized mobile elements */
+			if (bytesperword > 4 && isubscript == I_WSUB) {
+				genshiftimmediate (I_SHL, 1);
+			}
 			genprimary (I_LDL, 0);
 			gensecondary (isubscript);
 		}
