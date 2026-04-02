@@ -33,10 +33,14 @@
 
 typedef struct _atomic_t atomic_t;
 struct _atomic_t {
+	/* Use 64-bit value on aarch64 to maintain alignment of
+	 * subsequent fields in packed structures (batch_t, tqnode_t).
+	 * With unsigned int (4 bytes), packed structs get misaligned
+	 * pointers after the atomic field, causing wrong field offsets. */
 	#if MAX_RUNTIME_THREADS > 1
-	volatile unsigned int value;
+	volatile unsigned long value;
 	#else
-	unsigned int value;
+	unsigned long value;
 	#endif
 } _PACK_STRUCT;
 
