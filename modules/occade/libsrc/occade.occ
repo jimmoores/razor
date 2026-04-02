@@ -565,6 +565,9 @@ PROC occade.display.server (OCCADE? svr, VAL OCCADE.PARAMS params, VAL []BYTE ap
   SEQ
     --{{{ start up
     SETPRI (PRI.DISPLAY)
+    -- Pin display server to scheduler thread 0 (main OS thread).
+    -- macOS Cocoa requires all GUI/event operations on the main thread.
+    SETAFF (1)
 
     occ.SDL.Init (SDL.INIT.VIDEO, result)
     occade.check.sdl (result = 0, "SDL startup failed")
