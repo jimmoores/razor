@@ -1861,9 +1861,8 @@ PUBLIC void tinstance (treenode *tptr)
 #if 0
 fprintf (stderr, "tinstance (forked): nparams = %d, alloc_ws_slots = %d, alloc_vs_slots = %d, alloc_ms_slots = %d, proc_ws = %d\n",
 	nparams, alloc_ws_slots, alloc_vs_slots, alloc_ms_slots, proc_ws);
-fprintf (stderr, "tinstance (forked): NPMaxwspOf(iname) = %d, recparamslots = %d, MAXREGS = %d, proc_ws = %d, proc_vs = %d, proc_ms = %d. tptr =",
+fprintf (stderr, "tinstance (forked): NPMaxwspOf(iname) = %d, recparamslots = %d, MAXREGS = %d, proc_ws = %d, proc_vs = %d, proc_ms = %d\n",
 		NPMaxwspOf(iname), recparamslots, MAXREGS, proc_ws, proc_vs, proc_ms);
-printtreenl (stderr, 4, tptr);
 #endif
 		/*}}}*/
 		/*{{{  allocate workspace and vectorspace*/

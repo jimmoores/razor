@@ -5465,7 +5465,6 @@ static void aarch64_emit_symbol_reference(FILE *stream, const char *symbol, cons
 static void aarch64_emit_large_immediate (FILE *stream, long value, const char *temp_reg)
 {
 	unsigned long uval = (unsigned long)value;
-	if (uval > 0xFFFFFFFFUL) fprintf(stderr, "DBG: large_imm=0x%lx\n", uval);
 	fprintf (stream, "\tmovz\t%s, #%lu\n", temp_reg, uval & 0xFFFF);
 	if (uval > 0xFFFF) {
 		fprintf (stream, "\tmovk\t%s, #%lu, lsl #16\n", temp_reg, (uval >> 16) & 0xFFFF);

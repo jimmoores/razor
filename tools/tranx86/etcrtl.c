@@ -4646,6 +4646,19 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		ts->stack->must_set_cmp_flags = 1;
 		break;
 		/*}}}*/
+		/*{{{  I_XSWORD -- sign-extend 32-bit INT to 64-bit word*/
+	case I_XSWORD:
+		/* On 64-bit targets, sign-extend a 32-bit INT value in a register
+		 * to a full 64-bit word. This is needed after I_LW loads a signed
+		 * INT field from a record.
+		 * Note: do NOT modify constmap or must_set_cmp_flags here.
+		 * The constmap entry remains valid (sign-extending doesn't change
+		 * the logical value for values that fit in 32 bits), and clearing
+		 * must_set_cmp_flags would break subsequent CASE comparison code
+		 * that relies on flags from the preceding I_LW. */
+		add_to_ins_chain (compose_ins (INS_SIGNEXT32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		break;
+		/*}}}*/
 		/*{{{  I_AND -- bitwise and*/
 	case I_AND:
 		generate_constmapped_21instr (ts, EtcSecondary (I_AND), INS_AND, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 0);
