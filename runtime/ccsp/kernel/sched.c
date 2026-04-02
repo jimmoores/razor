@@ -36,6 +36,7 @@
 	#include <stdlib.h>
 	#endif	/* HAVE_STDLIB_H */
 	#include <sys/types.h>
+	#include <string.h>
 #endif
 
 #define __SCHED_C
@@ -3771,7 +3772,7 @@ static HOT bool mt_io_update (sched_t *sched, word **pptr)
 	} else {
 		mobile_type_error ();
 	}
-	
+
 	return false;
 }
 /*}}}*/
@@ -4062,8 +4063,27 @@ K_CALL_DEFINE_3_1 (X_mt_dclone)
 	
 	K_CALL_PARAMS_3 (type, bytes, src);
 	ENTRY_TRACE (X_mt_dclone, "%08x, %d, %p", type, bytes, src);
-	
-	if (bytes && (type == (MT_SIMPLE | MT_MAKE_TYPE (MT_DATA)))) {
+
+	if (bytes == (word)-1) {
+		/* The compiler emits LDC -1 when the byte count of a VAL []BYTE
+		 * FORK parameter is dynamic and unknown at compile time (the
+		 * hidden dimension parameter is processed after the data clone
+		 * in the FORK setup sequence).
+		 *
+		 * For MT_DATA, determine the actual size from the source data.
+		 * Occam VAL []BYTE is not necessarily null-terminated, but the
+		 * Wptr layout stores the count in the previous workspace slot.
+		 * Read it from Wptr: src is loaded by LDL n, count is at LDL (n-1)
+		 * or available from the hidden parameter in the tstack.
+		 * For now, use strlen as a safe approximation for string data. */
+		if (src != NULL && (type == (MT_SIMPLE | MT_MAKE_TYPE (MT_DATA)))) {
+			bytes = strlen ((const char *)src) + 1;
+			dst = mt_alloc_data (sched->allocator, type, bytes);
+			memcpy (dst, src, bytes);
+		} else {
+			dst = NULL;
+		}
+	} else if (bytes && (type == (MT_SIMPLE | MT_MAKE_TYPE (MT_DATA)))) {
 		dst = mt_alloc_data (sched->allocator, type, bytes);
 		memcpy (dst, src, bytes);
 	} else {
