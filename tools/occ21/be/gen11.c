@@ -1637,14 +1637,10 @@ printtreenl (stderr, 4, var);
 		treenode *type = gettype (var);
 
 		texp_main (ASExpOf (var), MAXREGS, FALSE);
-		/* On 64-bit targets where bytesperword > sizeof(INT), WSUB
-		 * shifts by log2(sizeof(INT)) not WSH=log2(bytesperword).
-		 * Mobile array elements are word-sized, so add an extra
-		 * shift to account for the size difference:
-		 * WSH - log2(sizeof(INT)) = 3 - 2 = 1 on 64-bit/32-bit-INT */
-		if (bytesperword > 4) {
-			genshiftimmediate (I_SHL, 1);
-		}
+		/* On 64-bit, ASExpOf is already element-scaled (in INT-word
+		 * units). WSUB shifts by WShift=2 (x4). For word-sized mobile
+		 * elements, ASExpOf = index*2 (8/4), so WSUB gives index*8
+		 * = correct stride. Do NOT add SHL 1 — that would double it. */
 		loadmobile (ASBaseOf (var));
 		if (isdynamicmobilechantype (type)) {
 			gensecondary (I_WSUB);
@@ -1732,6 +1728,10 @@ printtreenl (stderr, 4, type);
 			if (isdynamicmobilechantype (type)) {
 				/* always indexed by WSUB -- may not have a sensible expression, so use index */
 				treenode *asexp = ASExpOf (var) ? ASExpOf (var) : ASIndexOf (var);
+				/* On 64-bit, only add SHL 1 when using the logical index
+				 * (ASIndexOf). ASExpOf is already element-scaled, so WSUB
+				 * alone provides the correct byte offset. */
+				const BOOL need_shl = (bytesperword > 4) && !ASExpOf (var);
 
 				if (!ASExpOf (var)) {
 					/* this is a bad sign.. */
@@ -1740,12 +1740,12 @@ printtreenl (stderr, 4, type);
 
 				if (regsfor (asexp) > 1) {
 					texp_main (asexp, MAXREGS - 1, FALSE);
-					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
+					if (need_shl) genshiftimmediate (I_SHL, 1);
 					loadmobile (ASBaseOf (var));
 				} else {
 					loadmobile (ASBaseOf (var));
 					texp_main (asexp, MAXREGS - 2, FALSE);
-					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
+					if (need_shl) genshiftimmediate (I_SHL, 1);
 					gensecondary (I_REV);
 				}
 				gensecondary (I_WSUB);

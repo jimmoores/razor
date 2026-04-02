@@ -2179,7 +2179,7 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 		#endif /* defined (RMOX_BUILD) */
 
 		att_set_bit (&enabled_threads, sched->index);
-		
+
 		ccsp_start_threads ();
 	} else {
 		/* copy calibration from another thread */
@@ -4834,7 +4834,11 @@ K_CALL_DEFINE_1_0 (Y_setaff)
 		}
 	}
 
-	if (affinity != PAffinity (sched->priofinity)) {
+	if (affinity != PAffinity (sched->priofinity) ||
+	    (affinity && !(affinity & sched->id))) {
+		/* Migrate if affinity changed OR if process is on the wrong
+		 * scheduler (e.g., started by STARTP which bypasses affinity
+		 * routing but inherits the parent's priofinity). */
 		Wptr[Priofinity] = BuildPriofinity (affinity, PPriority (sched->priofinity));
 		save_return (sched, Wptr, return_address);
 		enqueue_process (sched, Wptr);
