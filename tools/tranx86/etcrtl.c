@@ -4682,6 +4682,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		generate_constmapped_21instr (ts, EtcSecondary (I_ADD), INS_ADD, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 1);
 		ts->stack->must_set_cmp_flags = 0;
 		generate_overflow_code (ts, PMOP_ADD, arch);
+		emit_int_truncate (ts, ts->stack->a_reg);
 		break;
 		/*}}}*/
 		/*{{{  I_SUB -- subtraction*/
@@ -4689,6 +4690,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		generate_constmapped_21instr (ts, EtcSecondary (I_SUB), INS_SUB, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 1);
 		ts->stack->must_set_cmp_flags = 0;
 		generate_overflow_code (ts, PMOP_SUB, arch);
+		emit_int_truncate (ts, ts->stack->a_reg);
 		break;
 		/*}}}*/
 		/*{{{  I_MUL -- multiply*/
@@ -4696,6 +4698,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		generate_constmapped_21instr (ts, EtcSecondary (I_MUL), INS_MUL, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 1);
 		ts->stack->must_set_cmp_flags = 0;
 		generate_overflow_code (ts, PMOP_MUL, arch);
+		emit_int_truncate (ts, ts->stack->a_reg);
 		break;
 		/*}}}*/
 		/*{{{  I_DIV -- divide*/
@@ -5089,9 +5092,16 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			 * arithmetic so that MOSTNEG<<1 produces the correct value
 			 * (e.g. 0x100000000 instead of 0xFFFFFFFF00000000).
 			 * With zero-extended MOSTNEG, the algorithm works because
-			 * MOSTNEG<<1 doesn't wrap in 64-bit. */
+			 * MOSTNEG<<1 doesn't wrap in 64-bit.
+			 *
+			 * The VALUE (old_b) must be sign-extended so that negative
+			 * INT values produce correct results with 64-bit ADD.
+			 * E.g. -4 as zero-extended 0x00000000FFFFFFFC would give
+			 * wrong ADD result; sign-extended 0xFFFFFFFFFFFFFFFC is
+			 * correct. */
 			if (BytesPerWord > 4) {
 				add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+				emit_int_signext (ts, ts->stack->old_b_reg);
 			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, tmp_reg));
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));

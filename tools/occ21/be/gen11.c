@@ -501,18 +501,7 @@ PRIVATE void movepointer (const int dirn, const int inonlocal, const INT32 word,
 			tbyteoffset(word * 4);
 		}
 		if (dirn != MOVEDIRN_LOADPTR) {
-			if (dirn == MOVEDIRN_STORE) {
-				gensecondary (I_SW);
-			} else {
-				gensecondary (I_LW);
-				/* Sign-extend signed INT types after 32-bit load.
-				 * I_LW zero-extends, but signed values need sign-extension
-				 * so that subsequent 64-bit arithmetic and range checks
-				 * produce correct results. */
-				if (type == S_INT || type == S_INT32) {
-					gensecondary (I_XSWORD);
-				}
-			}
+			gensecondary ((dirn == MOVEDIRN_STORE) ? I_SW : I_LW);
 		}
 		/*}}}*/
 	} else
