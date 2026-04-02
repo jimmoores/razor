@@ -602,6 +602,10 @@ PROC occade.display.server (OCCADE? svr, VAL OCCADE.PARAMS params, VAL []BYTE ap
       occade.image.cache (to.cache?, from.cache!)
       --{{{ main loop
       SEQ
+        -- Pin the main loop to scheduler thread 0 (main OS thread).
+        -- The PAR starts this branch as a new process without affinity.
+        -- macOS Cocoa requires SDL event polling on the main thread.
+        SETAFF (1)
         tim ? next.update
         INITIAL BOOL running IS TRUE:
         WHILE running
