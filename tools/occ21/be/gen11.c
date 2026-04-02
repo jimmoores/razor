@@ -2026,14 +2026,18 @@ printtreenl (stderr, 4, ASExpOf (var));
 					gensecondary (I_REV);
 				}
 			} else {
+				/* ASExpOf is already element-scaled (in INT-word units).
+				 * On 64-bit, WSUB shifts by WShift=2 (x4). ASExpOf for
+				 * word-sized elements is index*2 (8/4=2), so WSUB gives
+				 * index*2*4 = index*8 = correct stride.
+				 * Do NOT add extra SHL 1 here — that would double the
+				 * stride to index*16. */
 				if (regsfor (ASExpOf (var)) > 1) {
 					texp_main (ASExpOf (var), MAXREGS - 1, FALSE);
-					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					loadmobile (ASBaseOf (var));
 				} else {
 					loadmobile (ASBaseOf (var));
 					texp_main (ASExpOf (var), MAXREGS - 2, FALSE);
-					if (bytesperword > 4) genshiftimmediate (I_SHL, 1);
 					gensecondary (I_REV);
 				}
 			}
