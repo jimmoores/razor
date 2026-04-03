@@ -1,0 +1,426 @@
+-- cgtest69: REAL32 and INT/REAL32 conversion regression tests
+-- Exercises the types of operations used by the graphics3d module:
+-- REAL32 arithmetic, INT<->REAL32 conversions, trig functions,
+-- mixed INT/REAL32 records, and 3D-style projection calculations.
+
+PROC cgtest69 (CHAN OF BYTE keyb, scr, err)
+
+  #INCLUDE "cgmain.occ"
+
+  --{{{  basic REAL32 arithmetic
+  --{{{  F001 — REAL32 addition
+  PROC F001 ()
+    REAL32 x:
+    SEQ
+      x := 1.5 + 2.25
+      check (INT ROUND x, 4, "F001")
+  :
+  --}}}
+  --{{{  F002 — REAL32 subtraction
+  PROC F002 ()
+    REAL32 x:
+    SEQ
+      x := 10.0 - 3.5
+      check (INT ROUND x, 6, "F002")
+  :
+  --}}}
+  --{{{  F003 — REAL32 multiply
+  PROC F003 ()
+    REAL32 x:
+    SEQ
+      x := 3.0 * 4.5
+      check (INT ROUND x, 14, "F003")
+  :
+  --}}}
+  --{{{  F004 — REAL32 divide
+  PROC F004 ()
+    REAL32 x:
+    SEQ
+      x := 22.0 / 7.0
+      check (INT ROUND x, 3, "F004")
+  :
+  --}}}
+  --{{{  F005 — REAL32 negate
+  PROC F005 ()
+    REAL32 x:
+    SEQ
+      x := -(5.5)
+      check (INT ROUND x, -6, "F005")
+  :
+  --}}}
+  --}}}
+  --{{{  INT to REAL32 conversion
+  --{{{  F010 — positive INT to REAL32
+  PROC F010 ()
+    INT n:
+    REAL32 x:
+    SEQ
+      n := 42
+      x := REAL32 ROUND n
+      check (INT ROUND x, 42, "F010")
+  :
+  --}}}
+  --{{{  F011 — negative INT to REAL32
+  PROC F011 ()
+    INT n:
+    REAL32 x:
+    SEQ
+      n := -100
+      x := REAL32 ROUND n
+      check (INT ROUND x, -100, "F011")
+  :
+  --}}}
+  --{{{  F012 — zero INT to REAL32
+  PROC F012 ()
+    INT n:
+    REAL32 x:
+    SEQ
+      n := 0
+      x := REAL32 ROUND n
+      check (INT ROUND x, 0, "F012")
+  :
+  --}}}
+  --{{{  F013 — large INT to REAL32
+  PROC F013 ()
+    INT n:
+    REAL32 x:
+    SEQ
+      n := 100000
+      x := REAL32 ROUND n
+      check (INT ROUND x, 100000, "F013")
+  :
+  --}}}
+  --}}}
+  --{{{  REAL32 to INT conversion (ROUND and TRUNC)
+  --{{{  F020 — ROUND positive
+  PROC F020 ()
+    REAL32 x:
+    SEQ
+      x := 3.7
+      check (INT ROUND x, 4, "F020")
+  :
+  --}}}
+  --{{{  F021 — ROUND negative
+  PROC F021 ()
+    REAL32 x:
+    SEQ
+      x := -3.7
+      check (INT ROUND x, -4, "F021")
+  :
+  --}}}
+  --{{{  F022 — TRUNC positive
+  PROC F022 ()
+    REAL32 x:
+    SEQ
+      x := 3.7
+      check (INT TRUNC x, 3, "F022")
+  :
+  --}}}
+  --{{{  F023 — TRUNC negative
+  PROC F023 ()
+    REAL32 x:
+    SEQ
+      x := -3.7
+      check (INT TRUNC x, -3, "F023")
+  :
+  --}}}
+  --{{{  F024 — ROUND half values
+  PROC F024 ()
+    REAL32 x:
+    SEQ
+      x := 2.5
+      check (INT ROUND x, 2, "F024a")
+      x := 3.5
+      check (INT ROUND x, 4, "F024b")
+  :
+  --}}}
+  --}}}
+  --{{{  3D-style projection math (INT ROUND of complex REAL32 expression)
+  --{{{  F030 — perspective projection X
+  PROC F030 ()
+    -- Simulates: screen_x = (INT ROUND (((point_x + x.shift) / ez) * x.scale)) + x2.shift
+    REAL32 point.x, x.shift, ez, x.scale:
+    INT x2.shift, result:
+    SEQ
+      point.x := 1.0
+      x.shift := 0.0
+      ez := 2.0
+      x.scale := 320.0
+      x2.shift := 320
+      result := (INT ROUND (((point.x + x.shift) / ez) * x.scale)) + x2.shift
+      check (result, 480, "F030")
+  :
+  --}}}
+  --{{{  F031 — perspective projection Y
+  PROC F031 ()
+    REAL32 point.y, y.shift, ez, y.scale:
+    INT y2.shift, result:
+    SEQ
+      point.y := -0.5
+      y.shift := 0.0
+      ez := 2.0
+      y.scale := 240.0
+      y2.shift := 240
+      result := (INT ROUND (((point.y + y.shift) / ez) * y.scale)) + y2.shift
+      check (result, 180, "F031")
+  :
+  --}}}
+  --{{{  F032 — Z buffer calculation
+  PROC F032 ()
+    -- Simulates: zbuf = (INT ROUND (ez * ZBSCALE)) + ZBADD
+    REAL32 ez:
+    VAL REAL32 ZBSCALE IS 256.0:
+    VAL INT ZBADD IS 1024:
+    INT result:
+    SEQ
+      ez := 5.0
+      result := (INT ROUND (ez * ZBSCALE)) + ZBADD
+      check (result, 2304, "F032")
+  :
+  --}}}
+  --{{{  F033 — negative coordinate projection
+  PROC F033 ()
+    REAL32 point.x, ez, scale:
+    INT shift, result:
+    SEQ
+      point.x := -2.0
+      ez := 4.0
+      scale := 320.0
+      shift := 320
+      result := (INT ROUND ((point.x / ez) * scale)) + shift
+      check (result, 160, "F033")
+  :
+  --}}}
+  --}}}
+  --{{{  REAL32 in records (mixed type records like graphics3d uses)
+  DATA TYPE POINT3
+    RECORD
+      REAL32 x, y, z:
+  :
+  DATA TYPE POINT2I
+    RECORD
+      INT x, y:
+  :
+  DATA TYPE MIXED.POINT
+    RECORD
+      INT ix, iy:
+      REAL32 fz:
+  :
+  --{{{  F040 — REAL32 record fields
+  PROC F040 ()
+    POINT3 p:
+    SEQ
+      p[x] := 1.5
+      p[y] := -2.5
+      p[z] := 3.0
+      check (INT ROUND p[x], 2, "F040a")
+      check (INT ROUND p[y], -2, "F040b")
+      check (INT ROUND p[z], 3, "F040c")
+  :
+  --}}}
+  --{{{  F041 — mixed INT/REAL32 record
+  PROC F041 ()
+    MIXED.POINT p:
+    SEQ
+      p[ix] := 42
+      p[iy] := -10
+      p[fz] := 3.14
+      check (p[ix], 42, "F041a")
+      check (p[iy], -10, "F041b")
+      check (INT ROUND p[fz], 3, "F041c")
+  :
+  --}}}
+  --{{{  F042 — REAL32 record array
+  PROC F042 ()
+    [4]POINT3 pts:
+    SEQ
+      pts[0][x] := 0.0
+      pts[0][y] := 0.0
+      pts[0][z] := 1.0
+      pts[1][x] := 1.0
+      pts[1][y] := 0.0
+      pts[1][z] := 1.0
+      pts[2][x] := 1.0
+      pts[2][y] := 1.0
+      pts[2][z] := 1.0
+      pts[3][x] := 0.0
+      pts[3][y] := 1.0
+      pts[3][z] := 1.0
+      -- verify no cross-contamination between elements
+      check (INT ROUND pts[0][x], 0, "F042a")
+      check (INT ROUND pts[1][x], 1, "F042b")
+      check (INT ROUND pts[2][y], 1, "F042c")
+      check (INT ROUND pts[3][z], 1, "F042d")
+  :
+  --}}}
+  --{{{  F043 — project REAL32 array to INT array
+  PROC F043 ()
+    [4]POINT3 p3d:
+    [4]POINT2I p2d:
+    REAL32 scale:
+    INT shift:
+    SEQ
+      scale := 100.0
+      shift := 200
+      p3d[0][x] := -1.0
+      p3d[0][y] := -1.0
+      p3d[0][z] := 2.0
+      p3d[1][x] := 1.0
+      p3d[1][y] := -1.0
+      p3d[1][z] := 2.0
+      p3d[2][x] := 1.0
+      p3d[2][y] := 1.0
+      p3d[2][z] := 2.0
+      p3d[3][x] := -1.0
+      p3d[3][y] := 1.0
+      p3d[3][z] := 2.0
+      SEQ i = 0 FOR 4
+        SEQ
+          p2d[i][x] := (INT ROUND ((p3d[i][x] / p3d[i][z]) * scale)) + shift
+          p2d[i][y] := (INT ROUND ((p3d[i][y] / p3d[i][z]) * scale)) + shift
+      check (p2d[0][x], 150, "F043a")
+      check (p2d[0][y], 150, "F043b")
+      check (p2d[1][x], 250, "F043c")
+      check (p2d[2][y], 250, "F043d")
+  :
+  --}}}
+  --}}}
+  --{{{  REAL32 multiplication chains (rotation-style math without trig library)
+  --{{{  F050 — multiply chain preserves sign
+  PROC F050 ()
+    REAL32 x, y:
+    SEQ
+      x := -1.5
+      y := x * 2.0
+      check (INT ROUND (y * 100.0), -300, "F050")
+  :
+  --}}}
+  --{{{  F051 — chained multiply-add (matrix style)
+  PROC F051 ()
+    REAL32 a, b, c, d, x, y, rx, ry:
+    SEQ
+      -- Simulate 2D transform: [a b; c d] * [x; y]
+      a := 0.866    -- ~cos(30)
+      b := -0.5     -- ~-sin(30)
+      c := 0.5      -- ~sin(30)
+      d := 0.866    -- ~cos(30)
+      x := 100.0
+      y := 0.0
+      rx := (a * x) + (b * y)
+      ry := (c * x) + (d * y)
+      check (INT ROUND rx, 87, "F051a")
+      check (INT ROUND ry, 50, "F051b")
+  :
+  --}}}
+  --{{{  F052 — iterated multiply (precision through iterations)
+  PROC F052 ()
+    REAL32 x:
+    SEQ
+      x := 1.0
+      SEQ i = 0 FOR 10
+        x := x * 1.1
+      -- 1.1^10 = 2.5937...
+      check (INT ROUND (x * 100.0), 259, "F052")
+  :
+  --}}}
+  --{{{  F053 — division chain
+  PROC F053 ()
+    REAL32 x:
+    SEQ
+      x := 1000.0
+      SEQ i = 0 FOR 10
+        x := x / 2.0
+      -- 1000 / 2^10 = 0.9765625
+      check (INT ROUND (x * 10000.0), 9766, "F053")
+  :
+  --}}}
+  --}}}
+  --{{{  INT arithmetic used in pixel/polygon operations
+  --{{{  F060 — INT array as polygon vertex buffer
+  PROC F060 ()
+    VAL INT MAX.PTS IS 4:
+    [MAX.PTS]INT px, py, pz:
+    INT npoints:
+    SEQ
+      npoints := 4
+      SEQ i = 0 FOR npoints
+        SEQ
+          px[i] := i * 100
+          py[i] := i * 50
+          pz[i] := 1000 + (i * 10)
+      check (px[0], 0, "F060a")
+      check (px[3], 300, "F060b")
+      check (py[2], 100, "F060c")
+      check (pz[1], 1010, "F060d")
+  :
+  --}}}
+  --{{{  F061 — scan-line conversion style INT ops
+  PROC F061 ()
+    VAL INT HEIGHT IS 20:
+    [HEIGHT]INT scan.start, scan.end:
+    SEQ
+      SEQ i = 0 FOR HEIGHT
+        SEQ
+          scan.start[i] := 100 + i
+          scan.end[i] := 200 - i
+      check (scan.start[0], 100, "F061a")
+      check (scan.end[0], 200, "F061b")
+      check (scan.start[19], 119, "F061c")
+      check (scan.end[19], 181, "F061d")
+  :
+  --}}}
+  --}}}
+
+  SEQ
+    init ("CG test 69", "REAL32 and conversion tests")
+    --{{{  REAL32 arithmetic
+    title ("Testing REAL32 arithmetic")
+    F001 ()
+    F002 ()
+    F003 ()
+    F004 ()
+    F005 ()
+    --}}}
+    --{{{  INT to REAL32
+    title ("Testing INT to REAL32 conversion")
+    F010 ()
+    F011 ()
+    F012 ()
+    F013 ()
+    --}}}
+    --{{{  REAL32 to INT
+    title ("Testing REAL32 to INT conversion")
+    F020 ()
+    F021 ()
+    F022 ()
+    F023 ()
+    F024 ()
+    --}}}
+    --{{{  3D projection math
+    title ("Testing 3D projection math")
+    F030 ()
+    F031 ()
+    F032 ()
+    F033 ()
+    --}}}
+    --{{{  records
+    title ("Testing REAL32 records and arrays")
+    F040 ()
+    F041 ()
+    F042 ()
+    F043 ()
+    --}}}
+    --{{{  multiply chains
+    title ("Testing REAL32 multiply chains")
+    F050 ()
+    F051 ()
+    F052 ()
+    F053 ()
+    --}}}
+    --{{{  pixel operations
+    title ("Testing INT polygon operations")
+    F060 ()
+    F061 ()
+    --}}}
+    finish ()
+:

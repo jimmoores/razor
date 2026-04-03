@@ -505,7 +505,7 @@ EXTRA_DIST = \
 	cgtest50.occ cgtest51.occ cgtest52.occ cgtest53.occ cgtest54.occ \
 	cgtest55.occ cgtest56.occ cgtest57.occ cgtest58.occ cgtest59.occ \
 	cgtest60.occ cgtest61.occ cgtest62.occ cgtest63.occ cgtest64.occ \
-	cgtest65.occ cgtest66.occ cgtest67.occ cgtest68.occ \
+	cgtest65.occ cgtest66.occ cgtest67.occ cgtest68.occ cgtest69.occ \
 	cgtest70.occ cgtest71.occ cgtest72.occ cgtest73.occ cgtest74.occ \
 	cgtest75.occ cgtest76.occ cgtest77.occ cgtest78.occ cgtest79.occ \
 	cgtest80.occ cgtest81.occ cgtest82.occ cgtest83.occ cgtest84.occ \
@@ -524,7 +524,7 @@ tests = \
 	cgtest50 cgtest51 cgtest52 cgtest53 cgtest54 \
 	cgtest55 cgtest56 cgtest57 cgtest58 cgtest59 \
 	cgtest60 cgtest61 cgtest62 cgtest63 cgtest64 \
-	cgtest65 cgtest66 cgtest67 cgtest68 \
+	cgtest65 cgtest66 cgtest67 cgtest68 cgtest69 \
 	cgtest70 cgtest71 cgtest72 cgtest73 cgtest74 \
 	cgtest75 cgtest76 cgtest77 cgtest78 cgtest79 \
 	cgtest80 cgtest81 cgtest82 cgtest83 cgtest84 \
@@ -1071,6 +1071,13 @@ cgtest67.log: cgtest67
 cgtest68.log: cgtest68
 	@p='cgtest68'; \
 	b='cgtest68'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+cgtest69.log: cgtest69
+	@p='cgtest69'; \
+	b='cgtest69'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -1704,6 +1711,9 @@ cgtest67: cgtest67.occ cglib.lib
 cgtest68: cgtest68.occ cglib.lib
 	$(OCCBUILD) --program $(srcdir)/cgtest68.occ cglib.o
 
+cgtest69: cgtest69.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest69.occ cglib.o
+
 cgtest70: cgtest70.occ cglib.lib
 	$(OCCBUILD) --program $(srcdir)/cgtest70.occ cglib.o
 
@@ -1892,6 +1902,7 @@ $(srcdir)/cgtest67.occ: $(srcdir)/cg67cplx.occ
 $(srcdir)/cgtest67.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest67.occ: $(srcdir)/cgreal.occ
 $(srcdir)/cgtest68.occ: $(srcdir)/cgmain.occ
+$(srcdir)/cgtest69.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest70.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest70.occ: $(srcdir)/cgreal.occ
 $(srcdir)/cgtest71.occ: $(srcdir)/cgmain.occ
