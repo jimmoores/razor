@@ -572,8 +572,11 @@ int ccsp_sdl_poll_bounce (void *event)
 	return result;
 }
 
-static void process_sdl_poll_request (void)
+void process_sdl_poll_request (void)
 {
+	/* Fast lockless check — only take the mutex when a request is pending.
+	 * This is called from the scheduler hot path so must be cheap. */
+	if (!_sdl_poll_req) return;
 	pthread_mutex_lock (&_sdl_poll_mutex);
 	if (_sdl_poll_req && _sdl_poll_func) {
 		_sdl_poll_result = _sdl_poll_func (_sdl_poll_event);
@@ -637,7 +640,7 @@ void ccsp_safe_pause_timeout (sched_t *sched)
 		if (usecs < min_sleep) {
 			while (!(sync = att_safe_swap (&(sched->sync), 0))) {
 				int i = 10;
-				
+
 				while (i--) {
 					idle_cpu ();
 				}
@@ -646,6 +649,11 @@ void ccsp_safe_pause_timeout (sched_t *sched)
 					break;
 				}
 
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+				if (sched->index == 0) {
+					process_sdl_poll_request ();
+				}
+#endif
 				serialise ();
 			}
 

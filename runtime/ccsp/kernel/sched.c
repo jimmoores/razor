@@ -1910,6 +1910,16 @@ static void NO_RETURN REGPARM kernel_scheduler (sched_t *sched)
 	ENTRY_TRACE (scheduler, "sync=%d", att_val (&(sched->sync)));
 
 	do {
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+		/* Process cross-thread SDL poll requests on the main thread.
+		 * This must be checked in the scheduler loop, not just in
+		 * safe_pause, because the main thread may be busy dispatching
+		 * processes and never enter the idle path. */
+		if (sched->index == 0) {
+			extern void process_sdl_poll_request (void);
+			process_sdl_poll_request ();
+		}
+#endif
 		if (unlikely (att_val (&(sched->sync)))) {
 			unsigned int sync = att_swap (&(sched->sync), 0);
 
