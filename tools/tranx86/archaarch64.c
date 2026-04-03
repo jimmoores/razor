@@ -1751,7 +1751,10 @@ static arch_t aarch64_arch = {
 	.compose_inline_mout = NULL,
 	.compose_inline_enbc = compose_inline_enbc_aarch64,
 	.compose_inline_disc = compose_inline_disc_aarch64,
-	.compose_inline_altwt = compose_inline_altwt_aarch64,
+	.compose_inline_altwt = NULL, /* disabled: inline ALTWT doesn't save priofinity, so
+	                               * Wptr[Priofinity] has stale data when the process is
+	                               * woken via trigger_alt_guard -> enqueue_process.  The
+	                               * kernel Y_altwt correctly calls save_priofinity. */
 	.compose_inline_stlx = compose_inline_stlx_aarch64,
 	.compose_inline_malloc = compose_inline_malloc_aarch64,
 	.compose_inline_startp = compose_inline_startp_aarch64,

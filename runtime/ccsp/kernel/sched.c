@@ -980,7 +980,12 @@ static HOT void enqueue_process (sched_t *sched, word *Wptr)
 {
 	word priofinity = Wptr[Priofinity];
 
-	if (sched->priofinity == priofinity) {
+	if (sched->priofinity == priofinity
+	    && (!PHasAffinity (priofinity) || (PAffinity (priofinity) & sched->id))) {
+		/* Fast path: same priofinity AND scheduler matches affinity.
+		 * Without the affinity check, a process with affinity=1 could
+		 * be enqueued on the wrong scheduler when its priofinity value
+		 * happens to match (e.g., another affine process ran there). */
 		enqueue_to_batch (&(sched->curb), Wptr);
 	} else {
 		enqueue_far_process (sched, priofinity, Wptr);
@@ -1036,7 +1041,7 @@ static TRIVIAL word *dequeue_from_curb (sched_t *sched)
 static WARM word *schedule_point (sched_t *sched, word *Wptr, word *other)
 {
 #if DEFAULT_SCHED_POLICY == SCHED_POLICY_US
-	enqueue_process_nopri (sched, other);
+	enqueue_process (sched, other);
 #elif DEFAULT_SCHED_POLICY == SCHED_POLICY_OTHER
 	save_priofinity (sched, Wptr);
 	enqueue_process_nopri (sched, Wptr);
