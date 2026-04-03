@@ -7048,23 +7048,22 @@ SWIGEXPORT void _SDL_PollEvent (word occ_args[]) {
   {
     arg1 = (SDL_Event *) occ_args[0];
   }
-#if defined(__APPLE__)
-  /* macOS Cocoa requires event polling on the main thread.  SETAFF
-   * pins the display server to scheduler 0 (main thread), but under
-   * certain scheduling patterns the process can briefly migrate.
-   * Skip the poll and return 0 (no event) when not on main thread.
-   * The next event loop iteration will retry.  This is rare after
-   * the enqueue_process affinity fix (typically < 1% of calls). */
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  /* macOS Cocoa requires event polling on the main thread.  When the
+   * CCSP scheduler dispatches us on a non-main thread, bounce the call
+   * to the main thread via the scheduler's idle loop.  This blocks
+   * until the main thread processes the request and returns the result. */
   {
     extern int pthread_main_np(void);
     if (!pthread_main_np()) {
-      result = 0;
+      extern int ccsp_sdl_poll_bounce(void *event);
+      result = ccsp_sdl_poll_bounce(arg1);
       goto sdl_done;
     }
   }
 #endif
   result = (int)SDL_PollEvent(arg1);
-#if defined(__APPLE__)
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
 sdl_done:
 #endif
   {

@@ -516,14 +516,73 @@ void ccsp_init_signal_pipe (sched_t *sched)
 
 	sched->signal_in = fds[1];
 	sched->signal_out = fds[0];
-	
+
 	if ((ret = fcntl(sched->signal_in, F_SETFL, O_NONBLOCK)) < 0) {
 		BMESSAGE ("unable to make signalling pipe unblocking [%p] (%d)\n", sched, ret);
 		userproc_exit (1, 0);
 	}
+
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+	/* Save scheduler 0's signal_in for the SDL poll bounce mechanism */
+	if (sched->index == 0) {
+		extern void ccsp_sdl_poll_set_fd (int fd);
+		ccsp_sdl_poll_set_fd (sched->signal_in);
+	}
+#endif
 }
 /*}}}*/
 /*{{{  void ccsp_safe_pause (sched_t *sched)*/
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+#include <sys/select.h>
+/*
+ * Cross-thread SDL event poll mechanism for macOS.
+ * When SDL_PollEvent is called from a non-main thread, the request
+ * is bounced to the main thread via this mechanism.  The main thread
+ * processes the request during its idle loop (ccsp_safe_pause).
+ */
+#include <pthread.h>
+static pthread_mutex_t _sdl_poll_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  _sdl_poll_done  = PTHREAD_COND_INITIALIZER;
+static volatile int    _sdl_poll_req   = 0;
+static void           *_sdl_poll_event = NULL;
+static int             _sdl_poll_result = 0;
+static int             _sdl_poll_sched_fd = -1;
+
+void ccsp_sdl_poll_set_fd (int fd) { _sdl_poll_sched_fd = fd; }
+
+int ccsp_sdl_poll_bounce (void *event)
+{
+	int result;
+	pthread_mutex_lock (&_sdl_poll_mutex);
+	_sdl_poll_event = event;
+	_sdl_poll_req = 1;
+	/* Wake the main thread's scheduler */
+	if (_sdl_poll_sched_fd >= 0) {
+		unsigned int data = 0;
+		write (_sdl_poll_sched_fd, &data, 1);
+	}
+	/* Wait for the main thread to process our request */
+	while (_sdl_poll_req) {
+		pthread_cond_wait (&_sdl_poll_done, &_sdl_poll_mutex);
+	}
+	result = _sdl_poll_result;
+	pthread_mutex_unlock (&_sdl_poll_mutex);
+	return result;
+}
+
+static void process_sdl_poll_request (void)
+{
+	extern int SDL_PollEvent (void *);
+	pthread_mutex_lock (&_sdl_poll_mutex);
+	if (_sdl_poll_req) {
+		_sdl_poll_result = SDL_PollEvent (_sdl_poll_event);
+		_sdl_poll_req = 0;
+		pthread_cond_signal (&_sdl_poll_done);
+	}
+	pthread_mutex_unlock (&_sdl_poll_mutex);
+}
+#endif /* __APPLE__ && __aarch64__ */
+
 void ccsp_safe_pause (sched_t *sched)
 {
 	unsigned int buffer, sync;
@@ -531,8 +590,30 @@ void ccsp_safe_pause (sched_t *sched)
 	#ifdef DEBUG_RTS
 	fprintf(stderr, "USERPROC: ccsp_safe_pause() entered\n");
 	#endif
-	
+
 	while (!(sync = att_safe_swap (&(sched->sync), 0))) {
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+		/* On the main thread, use select() with a short timeout
+		 * so we can process cross-thread SDL poll requests.
+		 * Other scheduler threads use blocking read() as before. */
+		if (sched->index == 0) {
+			fd_set rfds;
+			struct timeval tv;
+
+			process_sdl_poll_request ();
+
+			FD_ZERO (&rfds);
+			FD_SET (sched->signal_out, &rfds);
+			tv.tv_sec = 0;
+			tv.tv_usec = 1000; /* 1ms timeout */
+			serialise ();
+			if (select (sched->signal_out + 1, &rfds, NULL, NULL, &tv) > 0) {
+				read (sched->signal_out, &buffer, 1);
+			}
+			serialise ();
+			continue;
+		}
+#endif
 		serialise ();
 		read (sched->signal_out, &buffer, 1);
 		serialise ();
