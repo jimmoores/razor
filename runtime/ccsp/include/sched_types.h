@@ -189,6 +189,12 @@ static inline void init_mwindow_t (mwindow_t *mw) {
 /*{{{  tqnode_t */
 struct _tqnode_t {
 	Time		time;
+	/* Pad time to word alignment so that bnext and state align with
+	 * batch_t.next and batch_t.state.  Both structures use _PACK_STRUCT
+	 * and share the same allocation pool.  Without padding, a sub-word
+	 * Time (e.g., 4-byte int on 64-bit) shifts all subsequent fields,
+	 * corrupting the batch_t overlay used by the timer queue allocator. */
+	char		_time_pad[sizeof(word) - sizeof(Time)];
 	tqnode_t	*next;
 	tqnode_t	*prev;
 	batch_t		*bnext; /* must match location of next in batch_t */
