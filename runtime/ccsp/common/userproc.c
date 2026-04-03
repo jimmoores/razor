@@ -593,31 +593,17 @@ void ccsp_safe_pause (sched_t *sched)
 	#endif
 
 	while (!(sync = att_safe_swap (&(sched->sync), 0))) {
-#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-		/* On the main thread, use select() with a short timeout
-		 * so we can process cross-thread SDL poll requests.
-		 * Other scheduler threads use blocking read() as before. */
-		if (sched->index == 0) {
-			fd_set rfds;
-			struct timeval tv;
-
-			process_sdl_poll_request ();
-
-			FD_ZERO (&rfds);
-			FD_SET (sched->signal_out, &rfds);
-			tv.tv_sec = 0;
-			tv.tv_usec = 1000; /* 1ms timeout */
-			serialise ();
-			if (select (sched->signal_out + 1, &rfds, NULL, NULL, &tv) > 0) {
-				read (sched->signal_out, &buffer, 1);
-			}
-			serialise ();
-			continue;
-		}
-#endif
 		serialise ();
 		read (sched->signal_out, &buffer, 1);
 		serialise ();
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+		/* Check for cross-thread SDL poll requests after waking.
+		 * The bounce mechanism writes to our signal pipe to wake us,
+		 * so we process the request here before re-checking sync. */
+		if (sched->index == 0) {
+			process_sdl_poll_request ();
+		}
+#endif
 	}
 
 	/* restore detected flags */
