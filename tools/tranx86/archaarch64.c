@@ -1983,19 +1983,19 @@ static ins_chain *compose_aarch64_kjump (tstate *ts, const int instr, const int 
 /*{{{  static void compose_aarch64_deadlock_kcall (tstate *ts, const int call, const int regs_in, const int regs_out)*/
 static void compose_aarch64_deadlock_kcall (tstate *ts, const int call, const int regs_in, const int regs_out)
 {
-	/* Set up deadlock debugging information if enabled */
-	if (options.debug_options & DEBUG_DEADLOCK) {
-		/* Store current workspace pointer for debugging */
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REGIND, REG_WPTR));
-	}
+	/* On aarch64, do NOT save Wptr to Wptr[0] for deadlock debugging.
+	 * The ETC code uses Wptr[0] (the IptrSucc/Temp slot) to store the
+	 * channel address between sequential protocol reads (e.g., tag read
+	 * via I_IN8 followed by data read via I_MT_IN).  Overwriting Wptr[0]
+	 * here clobbers the channel address, causing null-pointer crashes on
+	 * the second read.  The i386 version uses a different slot layout
+	 * and doesn't have this conflict.
+	 *
+	 * The kernel already has the process's Wptr in the function argument
+	 * (x2), so no additional save is needed for deadlock detection. */
 
 	/* Perform the actual kernel call */
 	compose_aarch64_kcall (ts, call, regs_in, regs_out);
-
-	if (options.debug_options & DEBUG_DEADLOCK) {
-		/* Clear link field after rescheduling */
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND, REG_WPTR));
-	}
 }
 /*}}}*/
 

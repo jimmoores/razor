@@ -547,8 +547,10 @@ static volatile int    _sdl_poll_req   = 0;
 static void           *_sdl_poll_event = NULL;
 static int             _sdl_poll_result = 0;
 static int             _sdl_poll_sched_fd = -1;
+static int           (*_sdl_poll_func)(void *) = NULL;
 
 void ccsp_sdl_poll_set_fd (int fd) { _sdl_poll_sched_fd = fd; }
+void ccsp_sdl_poll_set_func (int (*func)(void *)) { _sdl_poll_func = func; }
 
 int ccsp_sdl_poll_bounce (void *event)
 {
@@ -572,10 +574,9 @@ int ccsp_sdl_poll_bounce (void *event)
 
 static void process_sdl_poll_request (void)
 {
-	extern int SDL_PollEvent (void *);
 	pthread_mutex_lock (&_sdl_poll_mutex);
-	if (_sdl_poll_req) {
-		_sdl_poll_result = SDL_PollEvent (_sdl_poll_event);
+	if (_sdl_poll_req && _sdl_poll_func) {
+		_sdl_poll_result = _sdl_poll_func (_sdl_poll_event);
 		_sdl_poll_req = 0;
 		pthread_cond_signal (&_sdl_poll_done);
 	}

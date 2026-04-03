@@ -110,13 +110,20 @@
 SWIGEXPORT void _SDL_Init (word occ_args[]) {
   Uint32 arg1 ;
   int result;
-  
+
   {
-    arg1 = * ((Uint32 *) &occ_args[0]); 
+    arg1 = * ((Uint32 *) &occ_args[0]);
   }result = (int)SDL_Init(arg1);
   {
-    *((word *) occ_args[1]) = result; 
+    *((word *) occ_args[1]) = result;
   }
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  /* Register SDL_PollEvent with the main-thread bounce mechanism */
+  {
+    extern void ccsp_sdl_poll_set_func(int (*func)(void *));
+    ccsp_sdl_poll_set_func((int (*)(void *))SDL_PollEvent);
+  }
+#endif
 }
 
 
