@@ -555,6 +555,8 @@ void ccsp_sdl_poll_set_func (int (*func)(void *)) { _sdl_poll_func = func; }
 int ccsp_sdl_poll_bounce (void *event)
 {
 	int result;
+	struct timespec ts;
+
 	pthread_mutex_lock (&_sdl_poll_mutex);
 	_sdl_poll_event = event;
 	_sdl_poll_req = 1;
@@ -563,11 +565,25 @@ int ccsp_sdl_poll_bounce (void *event)
 		unsigned int data = 0;
 		write (_sdl_poll_sched_fd, &data, 1);
 	}
-	/* Wait for the main thread to process our request */
-	while (_sdl_poll_req) {
-		pthread_cond_wait (&_sdl_poll_done, &_sdl_poll_mutex);
+	/* Wait with timeout — if the main thread is busy running a process
+	 * it can't service our request until it returns to the scheduler.
+	 * Rather than deadlock, return "no event" after 5ms. */
+	clock_gettime (CLOCK_REALTIME, &ts);
+	ts.tv_nsec += 5000000; /* 5ms */
+	if (ts.tv_nsec >= 1000000000) {
+		ts.tv_sec += 1;
+		ts.tv_nsec -= 1000000000;
 	}
-	result = _sdl_poll_result;
+	if (_sdl_poll_req) {
+		pthread_cond_timedwait (&_sdl_poll_done, &_sdl_poll_mutex, &ts);
+	}
+	if (_sdl_poll_req) {
+		/* Timed out — main thread couldn't service in time */
+		_sdl_poll_req = 0;
+		result = 0; /* no event */
+	} else {
+		result = _sdl_poll_result;
+	}
 	pthread_mutex_unlock (&_sdl_poll_mutex);
 	return result;
 }
