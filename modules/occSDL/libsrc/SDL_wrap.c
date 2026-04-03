@@ -7044,10 +7044,27 @@ SWIGEXPORT void _SDL_PeepEvents (word occ_args[]) {
 SWIGEXPORT void _SDL_PollEvent (word occ_args[]) {
   SDL_Event *arg1 = (SDL_Event *) 0 ;
   int result;
-  
   {
-    arg1 = (SDL_Event *) occ_args[0]; 
-  }result = (int)SDL_PollEvent(arg1);
+    arg1 = (SDL_Event *) occ_args[0];
+  }
+#if defined(__APPLE__)
+  /* macOS Cocoa requires event polling on the main thread.
+   * The CCSP scheduler attempts to pin this process to the main thread
+   * via SETAFF, but under heavy multi-threaded scheduling the affinity
+   * can be temporarily lost.  Rather than crash, skip the poll and
+   * return 0 (no event).  The next iteration will retry. */
+  {
+    extern int pthread_main_np(void);
+    if (!pthread_main_np()) {
+      result = 0;
+      goto done;
+    }
+  }
+#endif
+  result = (int)SDL_PollEvent(arg1);
+#if defined(__APPLE__)
+done:
+#endif
   {
     *((word *) occ_args[1]) = result; 
   }
