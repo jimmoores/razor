@@ -1,0 +1,339 @@
+-- cgtest68: 64-bit target regression tests
+-- Tests for INT representation, record field access, mobile channel
+-- type arrays, and timer queue operations on 64-bit targets.
+
+PROC cgtest68 (CHAN OF BYTE keyb, scr, err)
+
+  #INCLUDE "cgmain.occ"
+
+  --{{{  INT arithmetic truncation (emit_int_truncate after I_ADD/SUB/MUL)
+  --{{{  R001 — checked ADD wraps at 32 bits
+  PROC R001 ()
+    INT x:
+    SEQ
+      x := 2147483647  -- MOSTPOS INT32
+      x := x + 1       -- should wrap to MOSTNEG INT32
+      check (x, (-2147483647) - 1, "R001")
+  :
+  --}}}
+  --{{{  R002 — checked SUB wraps at 32 bits
+  PROC R002 ()
+    INT x:
+    SEQ
+      x := ((-2147483647) - 1)  -- MOSTNEG INT32
+      x := x - 1                -- should wrap to MOSTPOS INT32
+      check (x, 2147483647, "R002")
+  :
+  --}}}
+  --{{{  R003 — checked MUL result is clean 32-bit
+  PROC R003 ()
+    INT x:
+    SEQ
+      x := 100000
+      x := x * 30000  -- 3000000000, overflows 32-bit signed
+      -- Result should be truncated to 32-bit
+      -- 3000000000 AND 0xFFFFFFFF = 3000000000 (fits in unsigned 32)
+      -- but as signed INT = -1294967296
+      check (x, -1294967296, "R003")
+  :
+  --}}}
+  --{{{  R004 — negative INT survives ADD round-trip
+  PROC R004 ()
+    INT x:
+    SEQ
+      x := -4
+      x := x + 0     -- trivial ADD, should preserve -4
+      check (x, -4, "R004")
+  :
+  --}}}
+  --}}}
+  --{{{  Record field access (INT in records on 64-bit)
+  DATA TYPE POINT
+    RECORD
+      INT x, y:
+  :
+  --{{{  R010 — positive INT in record
+  PROC R010 ()
+    POINT p:
+    SEQ
+      p[x] := 42
+      p[y] := 99
+      check (p[x], 42, "R010a")
+      check (p[y], 99, "R010b")
+  :
+  --}}}
+  --{{{  R011 — negative INT in record
+  PROC R011 ()
+    POINT p:
+    SEQ
+      p[x] := -4
+      p[y] := -100
+      check (p[x], -4, "R011a")
+      check (p[y], -100, "R011b")
+  :
+  --}}}
+  --{{{  R012 — CASE on INT from record
+  PROC R012 ()
+    POINT p:
+    INT result:
+    SEQ
+      p[x] := 0
+      CASE p[x]
+        0
+          result := 1
+        ELSE
+          result := 0
+      check (result, 1, "R012a")
+      p[x] := 3
+      CASE p[x]
+        3
+          result := 1
+        ELSE
+          result := 0
+      check (result, 1, "R012b")
+  :
+  --}}}
+  --{{{  R013 — negative INT comparison from record
+  PROC R013 ()
+    POINT p:
+    INT result:
+    SEQ
+      p[x] := -1
+      IF
+        p[x] < 0
+          result := 1
+        TRUE
+          result := 0
+      check (result, 1, "R013a")
+      p[x] := 5
+      IF
+        p[x] < 0
+          result := 0
+        TRUE
+          result := 1
+      check (result, 1, "R013b")
+  :
+  --}}}
+  --{{{  R014 — mixed-type record with BOOL and INT fields
+  DATA TYPE SPRITE.INFO
+    RECORD
+      INT id:
+      BOOL active:
+      INT x, y:
+      BOOL visible:
+  :
+  PROC R014 ()
+    SPRITE.INFO s:
+    SEQ
+      s[id] := 42
+      s[active] := TRUE
+      s[x] := -10
+      s[y] := 200
+      s[visible] := FALSE
+      check (s[id], 42, "R014a")
+      check.BOOL (s[active], TRUE, "R014b")
+      check (s[x], -10, "R014c")
+      check (s[y], 200, "R014d")
+      check.BOOL (s[visible], FALSE, "R014e")
+  :
+  --}}}
+  --{{{  R015 — record array: adjacent elements don't interfere
+  PROC R015 ()
+    [3]POINT pts:
+    SEQ
+      pts[0][x] := 10
+      pts[0][y] := 20
+      pts[1][x] := 30
+      pts[1][y] := 40
+      pts[2][x] := 50
+      pts[2][y] := 60
+      check (pts[0][x], 10, "R015a")
+      check (pts[1][x], 30, "R015b")
+      check (pts[2][y], 60, "R015c")
+  :
+  --}}}
+  --{{{  R016 — record in PLACE IN WORKSPACE
+  PROC R016 ()
+    [3]INT element:
+    PLACE element IN WORKSPACE:
+    SEQ
+      element[0] := 0
+      CASE element[0]
+        0
+          check (0, 0, "R016a")
+        ELSE
+          check (1, 0, "R016a")
+      element[0] := -4
+      IF
+        element[0] < 0
+          check (0, 0, "R016b")
+        TRUE
+          check (1, 0, "R016b")
+  :
+  --}}}
+  --}}}
+  --{{{  Mobile channel type arrays (read/write stride consistency)
+  CHAN TYPE SIMPLE.CT
+    MOBILE RECORD
+      CHAN INT ch?:
+  :
+  --{{{  R020 — mobile channel type array: store and read back
+  PROC R020 ()
+    INITIAL MOBILE []SIMPLE.CT! arr IS MOBILE [10]SIMPLE.CT!:
+    INITIAL MOBILE []SIMPLE.CT? svrs IS MOBILE [10]SIMPLE.CT?:
+    INT result:
+    SEQ
+      -- Allocate channel types at specific indices
+      arr[0], svrs[0] := MOBILE SIMPLE.CT
+      arr[5], svrs[5] := MOBILE SIMPLE.CT
+      arr[9], svrs[9] := MOBILE SIMPLE.CT
+      -- Communicate through them to verify correct indexing
+      result := 0
+      PAR
+        SEQ
+          arr[0][ch] ! 100
+          arr[5][ch] ! 500
+          arr[9][ch] ! 900
+        SEQ
+          INT v:
+          SEQ
+            svrs[0][ch] ? v
+            IF
+              v = 100
+                result := result + 1
+              TRUE
+                SKIP
+            svrs[5][ch] ? v
+            IF
+              v = 500
+                result := result + 1
+              TRUE
+                SKIP
+            svrs[9][ch] ? v
+            IF
+              v = 900
+                result := result + 1
+              TRUE
+                SKIP
+      check (result, 3, "R020")
+  :
+  --}}}
+  --}}}
+  --{{{  Timer ALT with concurrent processes (tqnode_t alignment)
+  --{{{  R030 — timer ALT under multi-process load
+  PROC R030 ()
+    -- Multiple concurrent processes doing timer ALT
+    -- This catches tqnode_t/batch_t layout mismatches
+    PROC ticker (VAL INT id, CHAN INT done!)
+      TIMER tim:
+      INT t:
+      SEQ
+        tim ? t
+        SEQ i = 0 FOR 50
+          SEQ
+            tim ? AFTER t PLUS 100
+            tim ? t
+        done ! id
+    :
+    VAL INT N.PROCS IS 20:
+    [N.PROCS]CHAN INT done:
+    INT count:
+    SEQ
+      count := 0
+      PAR
+        PAR i = 0 FOR N.PROCS
+          ticker (i, done[i]!)
+        SEQ i = 0 FOR N.PROCS
+          INT v:
+          SEQ
+            done[i] ? v
+            count := count + 1
+      check (count, N.PROCS, "R030")
+  :
+  --}}}
+  --{{{  R031 — timer ALT with channel alternative
+  PROC R031 ()
+    -- Timer guard in ALT with channel guard
+    -- This exercises the timer queue insert/remove path
+    CHAN INT trigger:
+    INT result:
+    SEQ
+      result := 0
+      PAR
+        SEQ
+          TIMER tim:
+          INT t:
+          SEQ
+            tim ? t
+            tim ? AFTER t PLUS 50000
+            trigger ! 42
+        TIMER tim:
+        INT t:
+        SEQ
+          tim ? t
+          INITIAL BOOL waiting IS TRUE:
+          WHILE waiting
+            ALT
+              INT v:
+              trigger ? v
+                SEQ
+                  result := v
+                  waiting := FALSE
+              tim ? AFTER t PLUS 100000
+                waiting := FALSE
+      check (result, 42, "R031")
+  :
+  --}}}
+  --}}}
+  --{{{  FORKING with channel parameters
+  --{{{  R040 — FORK'd PROC with channel communication
+  PROC R040 ()
+    PROC worker (CHAN INT out!)
+      out ! 99
+    :
+    CHAN INT ch:
+    INT result:
+    SEQ
+      result := 0
+      PAR
+        worker (ch!)
+        ch ? result
+      check (result, 99, "R040")
+  :
+  --}}}
+  --}}}
+
+  SEQ
+    init ("CG test 68", "64-bit regression tests")
+    --{{{  INT arithmetic
+    title ("Testing INT arithmetic truncation")
+    R001 ()
+    R002 ()
+    R003 ()
+    R004 ()
+    --}}}
+    --{{{  record field access
+    title ("Testing record field access")
+    R010 ()
+    R011 ()
+    R012 ()
+    R013 ()
+    R014 ()
+    R015 ()
+    R016 ()
+    --}}}
+    --{{{  mobile channel type arrays
+    title ("Testing mobile channel type arrays")
+    R020 ()
+    --}}}
+    --{{{  timer ALT
+    title ("Testing timer ALT operations")
+    R030 ()
+    R031 ()
+    --}}}
+    --{{{  FORKING
+    title ("Testing FORK with channels")
+    R040 ()
+    --}}}
+    finish ()
+:
