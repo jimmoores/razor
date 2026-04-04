@@ -6303,16 +6303,14 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 #endif
 		/* generate check */
 #if (BytesPerWord > 4)
-		/* Zero-extend both operands before unsigned comparison.
-		 * INT values loaded from workspace after IN32 may have stale
-		 * upper 32 bits.  Use INS_AND (not INS_TRUNCATE32 which the
-		 * optimizer may remove). */
-		if (constmap_typeof (ts->stack->old_a_reg) != VALUE_CONST) {
-			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
-		}
-		if (constmap_typeof (ts->stack->old_b_reg) != VALUE_CONST) {
-			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-		}
+		/* On 64-bit with 32-bit INT, truncate both operands to 32 bits
+		 * before the unsigned comparison.  Workspace slots may have
+		 * stale upper 32 bits from prior pointer storage, sub-word
+		 * channel I/O, or C function results.  Use INS_TRUNCATE32
+		 * unconditionally (regardless of constmap) to guarantee clean
+		 * 32-bit values for the comparison. */
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 #endif
 		switch (constmap_typeof (ts->stack->old_b_reg)) {
 		default:

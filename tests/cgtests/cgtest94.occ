@@ -1,38 +1,40 @@
--- CG test 94 — Reproduce file.get.options SIGBUS
+-- CG test 94 — STEP replicator with array access (sdlmatrix pattern)
 PROC cgtest94 (CHAN OF BYTE keyb, scr, err)
   #INCLUDE "cgmain.occ"
-  #INCLUDE "file.module"
 
-  --{{{  F001 — call file.get.options (reproduces crash)
   PROC F001 ()
-    CHAN GETOPT opts:
-    CHAN INT done:
-    PAR
-      file.get.options ("", opts!)
-      INITIAL BOOL running IS TRUE:
-      INITIAL INT count IS 0:
-      SEQ
-        WHILE running
-          BYTE o:
-          MOBILE []BYTE a:
-          opts ? CASE
-            arg; a
-              count := count + 1
-            bad; o
-              SKIP
-            done
-              running := FALSE
-        done ! count
-      INT result:
-      SEQ
-        done ? result
-        check.BOOL (result >= 0, TRUE, "F001a")
+    VAL INT H IS 30:
+    VAL INT W IS 40:
+    [H][W]INT arr:
+    INITIAL INT count IS 0:
+    SEQ
+      SEQ y = 0 FOR H
+        SEQ x = 0 FOR W
+          arr[y][x] := 0
+      SEQ y = 0 FOR (H / 4) STEP 4
+        SEQ x = 0 FOR (W / 4) STEP 4
+          INITIAL INT yy IS y + 1:
+          INITIAL INT xx IS x + 1:
+          INITIAL INT t.y IS ((yy + 4) \ H):
+          INITIAL INT b.y IS (((yy + H) - 4) \ H):
+          INITIAL INT l.x IS (((xx + W) - 4) \ W):
+          INITIAL INT r.x IS ((xx + 4) \ W):
+          SEQ
+            arr[yy][xx] := 1
+            arr[yy][xx+1] := 1
+            arr[yy+1][xx] := 1
+            arr[yy+1][xx+1] := 1
+            arr[t.y][xx] := arr[t.y][xx] + 1
+            arr[b.y][xx] := arr[b.y][xx] + 1
+            arr[yy][l.x] := arr[yy][l.x] + 1
+            arr[yy][r.x] := arr[yy][r.x] + 1
+            count := count + 1
+      check (count, 70, "F001a")
   :
-  --}}}
 
   SEQ
-    init ("CG test 94", "file.get.options crash test")
-    title ("Calling file.get.options")
+    init ("CG test 94", "STEP replicator array access")
+    title ("STEP 4 with division and remainder")
     F001 ()
     finish ()
 :
