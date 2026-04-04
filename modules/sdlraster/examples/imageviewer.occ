@@ -40,13 +40,15 @@ PROC main (CHAN BYTE err!)
           in ? r
           out ! image
           --}}}
-          --{{{  wait for space bar
+          --{{{  wait for space bar or window close
           INITIAL BOOL running IS TRUE:
           WHILE running
             SEQ
               events ? event
               IF
                 (event[type] = RASTER.ET.KEYDOWN) AND (event[id] = ' ')
+                  running := FALSE
+                event[type] = RASTER.ET.QUIT
                   running := FALSE
                 TRUE
                   SKIP

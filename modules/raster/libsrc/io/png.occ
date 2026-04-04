@@ -22,8 +22,14 @@
 #INCLUDE "raster.module"
 
 --{{{  externals
+-- magic holds a C pointer: INT on 32-bit, INT64 on 64-bit
+#IF DEFINED (TARGET.WORD.BITS)
 #PRAGMA EXTERNAL "PROC C.read.raster.png.1 (VAL []BYTE filename, RESULT INT height, width, RESULT INT64 magic) = 0"
 #PRAGMA EXTERNAL "PROC C.read.raster.png.2 (VAL INT64 magic, [][]INT raster, INT rc) = 0"
+#ELSE
+#PRAGMA EXTERNAL "PROC C.read.raster.png.1 (VAL []BYTE filename, RESULT INT height, width, magic) = 0"
+#PRAGMA EXTERNAL "PROC C.read.raster.png.2 (VAL INT magic, [][]INT raster, INT rc) = 0"
+#ENDIF
 #PRAGMA EXTERNAL "PROC C.write.raster.png (VAL []BYTE filename, VAL [][]INT raster, RESULT INT rc) = 0"
 --}}}
 
@@ -31,7 +37,11 @@
 --* Load a PNG file as a raster.
 PROC read.raster.png (VAL []BYTE filename, RESULT RASTER raster)
   INT height, width, rc:
+  #IF DEFINED (TARGET.WORD.BITS)
   INT64 magic:
+  #ELSE
+  INT magic:
+  #ENDIF
   SEQ
     C.read.raster.png.1 (filename, height, width, magic)
     raster := MOBILE [height][width]INT
