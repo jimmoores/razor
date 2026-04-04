@@ -415,6 +415,8 @@ PRIVATE void tbyteoffset (const INT32 offset)
 		genprimary (I_LDNLP, offset / 2 /* bytesperword */ );
 	else if ((bytesperword == 4) && ((offset & 0x3) == 0))
 		genprimary (I_LDNLP, offset / 4 /* bytesperword */ );
+	else if ((bytesperword == 8) && ((offset & 0x7) == 0))
+		genprimary (I_LDNLP, offset / 8 /* bytesperword */ );
 	else if (use_bsub_not_adc) {	/* T9000 optimisation 18/7/91 */
 		genprimary (I_LDC, offset);
 		gensecondary (I_BSUB);
@@ -2870,7 +2872,6 @@ printtreenl (stderr, 4, base_type);
 PRIVATE void add_scaled_offset (treenode * const tptr, const INT32 offset)
 {
 	const int isubscript = return_subscript (tptr);
-
 	if (isubscript == I_BSUB) {
 		tbyteoffset (offset);
 	} else if (isubscript == I_SSUB) {	/* T9000 shorts 17/7/91 */
@@ -2973,11 +2974,11 @@ PRIVATE INT32 loadarraypointer (treenode * const tptr, const INT32 word, const i
 
 	BETRACE ("gen11: loadarraypointer (enter): tptr=%p, word=%d, regs=%d", tptr, (int)word, regs);
 #if 0
-fprintf (stderr, "loadarraypointer: word = %d, regs = %d, tptr = ", word, regs);
+fprintf (stderr, "loadarraypointer: word = %d, regs = %d, tptr = ", (int)word, regs);
 printtreenl (stderr, 4, tptr);
 fprintf (stderr, "  segmentitem = %d, isubscript = %d, nptr = ", segmentitem, isubscript);
 printtreenl (stderr, 4, nptr);
-fprintf (stderr, "  offset = %d, subscriptexp = ", offset);
+fprintf (stderr, "  offset = %d, subscriptexp = ", (int)offset);
 printtreenl (stderr, 4, subscriptexp);
 #endif
 	if (directload (P_EXP, tptr, be_lexlevel)) {
@@ -3104,7 +3105,7 @@ printtreenl (stderr, 4, tptr);
 	} else {
 		if (((dirn & (MOVEDIRN_LOADEXT | MOVEDIRN_LOAD)) != 0) && directload (P_EXP, tptr, be_lexlevel)) {
 #if 0
-fprintf (stderr, "gen11: movearrayitem: doing loadname (nptr, %d + %d)\n", ASOffsetOf (tptr), word);
+fprintf (stderr, "gen11: movearrayitem: doing loadname (nptr, %d + %d)\n", (int)ASOffsetOf (tptr), (int)word);
 #endif
 			loadname (nptr, ASOffsetOf (tptr) + word);
 		} else if ((dirn == MOVEDIRN_STORE) && directstore (P_EXP, tptr, be_lexlevel)) {
@@ -3114,7 +3115,7 @@ fprintf (stderr, "gen11: movearrayitem: doing loadname (nptr, %d + %d)\n", ASOff
 			INT32 offset = loadarraypointer (tptr, word, regs);
 
 #if 0
-fprintf (stderr, "gen11: movearrayitem: after loadarraypointer(), offset = %d\n", offset);
+fprintf (stderr, "gen11: movearrayitem: after loadarraypointer(), offset = %d\n", (int)offset);
 #endif
 			if ((dirn == MOVEDIRN_LOADPTR) || (bytesinscalar (type) < bytesperword)) {
 				add_scaled_offset (tptr, offset);

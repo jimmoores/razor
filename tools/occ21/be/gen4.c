@@ -1087,6 +1087,11 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 	 * truncates results to 32 bits after arithmetic (for INT correctness).
 	 * Emit I_WIDE prefix to tell the translator to skip truncation.
 	 * Only needed for ops where the translator calls emit_int_truncate. */
+/* On 64-bit targets, emit I_WIDE before operations whose results
+ * should NOT be truncated to 32 bits by emit_int_truncate in tranx86.
+ * Only INT/INT32/UINT32 operations produce 32-bit results that need
+ * truncation.  Everything else (INT64, BYTE via word ops, arrays
+ * packed into words, etc.) should preserve the full 64-bit result. */
 #define EMIT_WIDE_IF_INT64() \
 	do { if (bytesperword > 4 && (type == S_INT64 || type == S_UINT64)) gensecondary (I_WIDE); } while(0)
 
@@ -1153,6 +1158,7 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		if (has_dup && !T9000_instruction_timings && isconst (right) && (LoValOf (right) == 2)) {	/* bug 1168 22/8/91 */
 			texp (left, regs);
 			gensecondary (I_DUP);
+			EMIT_WIDE_IF_INT64();
 			gensecondary (I_ADD);
 			toverflowcheck (signed_short, byte_short);	/* check still in range */
 			return;
@@ -1413,12 +1419,29 @@ PUBLIC void tdop (const int op, const int type, treenode * left, treenode * righ
 		break;
 		/*}}} */
 	case S_DIV:
+		/* On 64-bit with 32-bit INT, sign-extend both operands before
+		 * sdiv.  The zero-extended INT invariant means negative INTs
+		 * have bit 31 set but bits 32-63 clear; 64-bit sdiv would
+		 * treat them as large positive numbers.  INT64 operands
+		 * are already correctly signed in 64-bit registers. */
+		if (bytesperword > 4 && type != S_INT64 && type != S_UINT64) {
+			gensecondary (I_XSWORD);
+			gensecondary (I_REV);
+			gensecondary (I_XSWORD);
+			gensecondary (I_REV);
+		}
 		if (t450a_workarounds)
 			t450_divrem_workaround (I_DIV);
 		else
 			gensecondary (I_DIV);
 		break;
 	case S_REM:
+		if (bytesperword > 4 && type != S_INT64 && type != S_UINT64) {
+			gensecondary (I_XSWORD);
+			gensecondary (I_REV);
+			gensecondary (I_XSWORD);
+			gensecondary (I_REV);
+		}
 		if (t450a_workarounds)
 			t450_divrem_workaround (I_REM);
 		else
@@ -1696,9 +1719,15 @@ printtreenl (stderr, 4, tptr);
 			 */
 			treenode *e = OpOf (tptr);
 			int r = (regs == MANY_REGS) ? MAXREGS : regs;
+			/* On 64-bit, I_SUB/I_ADC truncate to 32 bits.  Emit I_WIDE
+			 * prefix for INT64 to suppress truncation. */
+			const int neg_type = ntypeof (tptr);
+			const BOOL neg_wide = (bytesperword > 4 &&
+				(neg_type == S_INT64 || neg_type == S_UINT64));
 			if (regsfor (e) >= r) {
 				/*{{{  need all registers, so use option 1 */
 				texp (e, regs);
+				if (neg_wide) gensecondary (I_WIDE);
 				gensecondary (I_NOT);
 				genprimary (I_ADC, 1);
 				/*}}} */
@@ -1710,11 +1739,13 @@ printtreenl (stderr, 4, tptr);
 					/*{{{  we have the registers for    ldc 0; e; sub    so generate it */
 					genprimary (I_LDC, 0);
 					texp (e, r - 1);
+					if (neg_wide) gensecondary (I_WIDE);
 					gensecondary (I_SUB);
 					/*}}} */
 				} else {
 					/*{{{  option 2 uses more 'rev' operations, so generate option 1 */
 					texp (e, regs);
+					if (neg_wide) gensecondary (I_WIDE);
 					gensecondary (I_NOT);
 					genprimary (I_ADC, 1);
 					/*}}} */

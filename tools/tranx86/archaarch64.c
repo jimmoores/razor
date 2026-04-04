@@ -1448,7 +1448,6 @@ static void compose_aarch64_shift (tstate *ts, int sec, int r1, int r2, int r3) 
 }
 
 static void compose_aarch64_division (tstate *ts, int dividend, int divisor, int quotient) {
-	/* Basic division */
 	add_to_ins_chain (compose_ins (INS_DIV, 2, 1, ARG_REG, dividend, ARG_REG, divisor, ARG_REG, quotient));
 }
 
@@ -2638,10 +2637,12 @@ static void aarch64_fp_emit_push (tstate *ts)
 {
 	int i;
 	for (i = aarch64_fp_stack_depth - 1; i > 0; i--) {
-		/* Move slot i-1 to slot i */
+		/* Move slot i-1 to slot i.
+		 * After aarch64_fp_push, prec[i] has old prec[i-1] —
+		 * use prec[i] (the OLD value's precision) so we emit the
+		 * correct width fmov (d for REAL64, s for REAL32). */
 		char buf[128];
-		int p = aarch64_fp_stack_prec[i - 1];
-		/* After aarch64_fp_push, prec[i] has old prec[i-1] */
+		int p = aarch64_fp_stack_prec[i];
 		snprintf (buf, sizeof(buf), "\tfmov\t%s, %s",
 			aarch64_fp_regname (i, p),
 			aarch64_fp_regname (i - 1, p));

@@ -1437,17 +1437,28 @@ printtreenl (stderr, 4, tptr);
 			const int type = ntypeof (tptr);
 			if (ASExpOf (tptr) != NULL) {
 				treenode *name = nameof (tptr);
-				texp (ASExpOf (tptr), regs);
-#if 0
-				loadnamepointer (name, 0);
-#else /* new version, fixing bug 570 CO'N 23/7/90 */
-				if (ispointer (name)) {
+				const INT32 off = ASOffsetOf (tptr);
+				if (bytesperword > 4 && bytesinscalar (type) < (int)bytesperword && off != 0) {
+					/* On 64-bit, ASOffsetOf for sub-word types (e.g. REAL32)
+					 * is in bytes.  Fold the byte offset into the subscript
+					 * expression so FPLDNLSNI gets: base + (subscript + offset).
+					 * Use explicit LDC + SUM to avoid checked-arithmetic
+					 * interaction issues with the eval stack. */
+					genprimary (I_LDC, off);
+					texp (ASExpOf (tptr), regs - 1);
+					gensecondary (I_SUM);
 					loadnamepointer (name, 0);
-					genprimary (I_LDNLP, ASOffsetOf (tptr));
 				} else {
-					loadnamepointer (name, ASOffsetOf (tptr));
+					texp (ASExpOf (tptr), regs);
+					/* bug 570 CO'N 23/7/90 */
+					if (ispointer (name)) {
+						loadnamepointer (name, 0);
+						if (off != 0)
+							genprimary (I_LDNLP, off);
+					} else {
+						loadnamepointer (name, off);
+					}
 				}
-#endif
 				gensecondary ((type == S_REAL32) ? I_FPLDNLSNI : I_FPLDNLDBI);
 			} else {
 				/* Note that this adds in ASOffsetOf itself - CO'N 13/12/90 */

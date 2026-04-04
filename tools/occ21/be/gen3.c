@@ -337,10 +337,13 @@ printtreenl (stderr, 4, rhs);
 	/*}}} */
 	/*{{{  zero subscript into array via pointer */
 	if (istargetintsize (basetype (NTypeOf (name))) &&
+	    (bytesinscalar (basetype (NTypeOf (name))) >= bytesperword) &&
 	    (TagOf (rhs) == S_ARRAYITEM || TagOf (rhs) == S_RECORDITEM) &&
 	    islocal (rhs_name, my_lexlevel) && !is_temp (TagOf (rhs_name)) && (ASExpOf (rhs) == NULL) && (ASOffsetOf (rhs) == 0))
 		/* Optimisation to allow word-sized elements at zero offset
-		   of an array accessed via a local pointer to be used directly */
+		   of an array accessed via a local pointer to be used directly.
+		   On 64-bit with 32-bit INT, element must be word-sized to
+		   avoid 8-byte read/write corrupting adjacent elements. */
 		return (AM_ISRHS);
 	/*}}} */
 	/*{{{  miscellaneous odd VAL bits */
