@@ -1,0 +1,214 @@
+-- CG test 93 — 64-bit regression tests for code generation fixes
+-- Tests mixed-precision FP, record field offsets, INT64 arithmetic,
+-- signed division, and abbreviation modes that had bugs on 64-bit.
+PROC cgtest93 (CHAN OF BYTE keyb, scr, err)
+  #INCLUDE "cgmain.occ"
+
+  PROC check.INT64 (VAL INT64 val1, val2, VAL []BYTE msg)
+    IF
+      val1 = val2
+        check (1, 1, msg)
+      TRUE
+        check (0, 1, msg)
+  :
+
+  DATA TYPE POINT3
+    RECORD
+      REAL32 x, y, z:
+  :
+
+  --{{{  F001 — mixed REAL32/REAL64 expression (FP stack precision)
+  -- Bug: pushing REAL32 onto FP stack containing REAL64 used wrong
+  -- register width, zeroing upper 32 bits of the REAL64 value.
+  PROC F001 ()
+    REAL32 result:
+    SEQ
+      -- COS range reduction uses mixed REAL32/REAL64 internally.
+      -- This expression replicates the pattern that was broken.
+      VAL REAL64 DPi RETYPES #400921FB54442D18(INT64):
+      VAL REAL64 DInvPi RETYPES #3FD45F306DC9C883(INT64):
+      VAL REAL64 DPiBy2 RETYPES #3FF921FB54442D18(INT64):
+      VAL INT32 two IS 2(INT32):
+      VAL INT32 one IS 1(INT32):
+      REAL32 XWork:
+      INT32 N:
+      SEQ
+        XWork := 0.0(REAL32)
+        N := INT32 ROUND (((REAL64 XWork) + DPiBy2) * DInvPi)
+        check (INT N, 0, "F001a")
+        -- Full combined expression (was returning 0 instead of ~pi/2)
+        XWork := REAL32 ROUND ((REAL64 XWork) -
+                  (((REAL64 ROUND ((N TIMES two) - one)) / 2.0(REAL64)) * DPi))
+        check (INT ROUND (XWork * 100.0(REAL32)), 157, "F001b")
+  :
+  --}}}
+  --{{{  F002 — REAL32 record field with variable subscript (gen12.c offset fix)
+  -- Bug: ASOffsetOf (bytes) was passed as word offset to I_LDNLP,
+  -- so field z at byte 8 became offset 64 on 64-bit.
+  PROC F002 ()
+    MOBILE []POINT3 pts:
+    SEQ
+      pts := MOBILE [4]POINT3
+      pts[0] := [10.0(REAL32), 20.0(REAL32), 30.0(REAL32)] (POINT3)
+      pts[1] := [40.0(REAL32), 50.0(REAL32), 60.0(REAL32)] (POINT3)
+      SEQ i = 0 FOR 2
+        SEQ
+          check (INT ROUND pts[i][x], 10 + (i * 30), "F002x")
+          -- y at byte 4 (non-word-aligned)
+          check (INT ROUND pts[i][y], 20 + (i * 30), "F002y")
+          -- z at byte 8 (word-aligned)
+          check (INT ROUND pts[i][z], 30 + (i * 30), "F002z")
+  :
+  --}}}
+  --{{{  F003 — INT64 unary minus (S_NEG I_WIDE fix)
+  -- Bug: I_NOT in negation lacked I_WIDE prefix, truncating result.
+  PROC F003 ()
+    INT64 a, b:
+    SEQ
+      b := 85(INT64)
+      a := (- b)
+      check.INT64 (a, -85(INT64), "F003a")
+      b := 1000000(INT64)
+      a := (- b)
+      check.INT64 (a, -1000000(INT64), "F003b")
+      -- MINUS operator
+      a := (MINUS b)
+      check.INT64 (a, MINUS 1000000(INT64), "F003c")
+  :
+  --}}}
+  --{{{  F004 — INT64 multiply by 2 (DUP;ADD optimization I_WIDE fix)
+  -- Bug: x*2 optimized to DUP;ADD bypassed EMIT_WIDE_IF_INT64.
+  PROC F004 ()
+    INT64 FUNCTION double (VAL INT64 val) IS val * 2(INT64) :
+    INT64 v:
+    SEQ
+      v := (MOSTPOS INT64) >> 1
+      check.INT64 (double (v), (MOSTPOS INT64) - 1(INT64), "F004a")
+      v := 100000(INT64)
+      check.INT64 (double (v), 200000(INT64), "F004b")
+      check.INT64 (double (double (v)), 400000(INT64), "F004c")
+  :
+  --}}}
+  --{{{  F005 — user-defined INT64 type alias (type resolution)
+  -- Bug: DATA TYPE wrappers could bypass INT64 detection.
+  PROC F005 ()
+    DATA TYPE myint64 IS INT64 :
+    myint64 FUNCTION negate (VAL myint64 val) IS -val :
+    myint64 FUNCTION double (VAL myint64 val) IS val * 2(myint64) :
+    myint64 FUNCTION add (VAL myint64 a, b) IS a + b :
+    myint64 a, b:
+    SEQ
+      a := 16(myint64)
+      b := negate (a)
+      check.INT64 (INT64 b, -16(INT64), "F005a")
+      b := double (a)
+      check.INT64 (INT64 b, 32(INT64), "F005b")
+      b := add (double (negate (a)), double (negate (a)))
+      check.INT64 (INT64 b, -64(INT64), "F005c")
+  :
+  --}}}
+  --{{{  F006 — signed INT division and remainder (I_XSWORD fix)
+  -- Bug: zero-extended negative INTs appeared positive to 64-bit sdiv.
+  PROC F006 ()
+    INT a, b, q, r:
+    SEQ
+      -- Negative dividend
+      a := -10
+      b := 3
+      q := a / b
+      r := a REM b
+      check (q, -3, "F006a")
+      check (r, -1, "F006b")
+      -- Negative divisor
+      a := 10
+      b := -3
+      q := a / b
+      r := a REM b
+      check (q, -3, "F006c")
+      check (r, 1, "F006d")
+      -- Both negative
+      a := -10
+      b := -3
+      q := a / b
+      r := a REM b
+      check (q, 3, "F006e")
+      check (r, -1, "F006f")
+      -- Modular remainder (\ operator)
+      a := -7
+      b := 3
+      check (a \ b, -1, "F006g")
+  :
+  --}}}
+  --{{{  F007 — abbreviation of array element (AM_ISRHS fix)
+  -- Bug: abbrevmode allowed 8-byte word access to 4-byte INT elements,
+  -- corrupting adjacent array entries.
+  PROC F007 ()
+    [3]INT FUNCTION addx (VAL [3]INT arr, VAL INT x)
+      [3]INT res:
+      VALOF
+        SEQ
+          res := arr
+          abbr0 IS res[0] :
+          abbr0 := abbr0 + x
+          abbr1 IS res[1] :
+          abbr1 := abbr1 + x
+          abbr2 IS res[2] :
+          abbr2 := abbr2 + x
+        RESULT res
+    :
+    [3]INT result:
+    SEQ
+      result := addx ([9, 10, 11], 4)
+      check (result[0], 13, "F007a")
+      check (result[1], 14, "F007b")
+      check (result[2], 15, "F007c")
+  :
+  --}}}
+  --{{{  F008 — REAL32 record rotation (full graphics3d pattern)
+  -- Combines FP stack, record field access, and FP arithmetic.
+  PROC F008 ()
+    MOBILE []POINT3 blk, nblk:
+    SEQ
+      blk := MOBILE [2]POINT3
+      nblk := MOBILE [2]POINT3
+      blk[0] := [1.0(REAL32), 0.0(REAL32), 0.0(REAL32)] (POINT3)
+      blk[1] := [0.0(REAL32), 1.0(REAL32), 0.0(REAL32)] (POINT3)
+      -- 90-degree rotation around Z: cos=0, sin=1
+      -- new_x = x*cos + y*sin = y
+      -- new_y = y*cos - x*sin = -x
+      VAL REAL32 cos.val IS 0.0(REAL32):
+      VAL REAL32 sin.val IS 1.0(REAL32):
+      SEQ i = 0 FOR 2
+        SEQ
+          nblk[i][x] := (blk[i][x] * cos.val) + (blk[i][y] * sin.val)
+          nblk[i][y] := (blk[i][y] * cos.val) - (blk[i][x] * sin.val)
+          nblk[i][z] := blk[i][z]
+      -- pt[0] (1,0,0) rotated 90deg -> (0,-1,0)
+      check (INT ROUND (nblk[0][x] * 10.0(REAL32)), 0, "F008a")
+      check (INT ROUND (nblk[0][y] * 10.0(REAL32)), -10, "F008b")
+      -- pt[1] (0,1,0) rotated 90deg -> (1,0,0)
+      check (INT ROUND (nblk[1][x] * 10.0(REAL32)), 10, "F008c")
+      check (INT ROUND (nblk[1][y] * 10.0(REAL32)), 0, "F008d")
+  :
+  --}}}
+
+  SEQ
+    init ("CG test 93", "64-bit code generation regression tests")
+    title ("Mixed REAL32/REAL64 FP stack")
+    F001 ()
+    title ("REAL32 record field offsets")
+    F002 ()
+    title ("INT64 unary minus")
+    F003 ()
+    title ("INT64 multiply by 2")
+    F004 ()
+    title ("User-defined INT64 type alias")
+    F005 ()
+    title ("Signed INT division/remainder")
+    F006 ()
+    title ("Array element abbreviation")
+    F007 ()
+    title ("REAL32 record rotation pattern")
+    F008 ()
+    finish ()
+:

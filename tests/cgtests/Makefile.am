@@ -32,6 +32,7 @@ EXTRA_DIST = \
 	cgtest80.occ cgtest81.occ cgtest82.occ cgtest83.occ cgtest84.occ \
 	cgtest85.occ cgtest86.occ cgtest87.occ cgtest88.occ cgtest89.occ \
 	cgtest90.occ cgtest91.occ cgtest92.occ \
+	cgtest68.occ cgtest69.occ cgtest93.occ \
 	config.inc \
 	run-tests
 
@@ -45,12 +46,12 @@ tests = \
 	cgtest50 cgtest51 cgtest52 cgtest53 cgtest54 \
 	cgtest55 cgtest56 cgtest57 cgtest58 cgtest59 \
 	cgtest60 cgtest61 cgtest62 cgtest63 cgtest64 \
-	cgtest65 cgtest66 cgtest67 \
+	cgtest65 cgtest66 cgtest67 cgtest68 cgtest69 \
 	cgtest70 cgtest71 cgtest72 cgtest73 cgtest74 \
 	cgtest75 cgtest76 cgtest77 cgtest78 cgtest79 \
 	cgtest80 cgtest81 cgtest82 cgtest83 cgtest84 \
 	cgtest85 cgtest86 cgtest87 cgtest88 cgtest89 \
-	cgtest90 cgtest91 cgtest92
+	cgtest90 cgtest91 cgtest92 cgtest93
 
 TESTS_ENVIRONMENT = $(OCCBUILD) --run
 TESTS = $(tests)
@@ -439,3 +440,9 @@ $(srcdir)/cgtest91.occ: $(srcdir)/cgreal.occ
 $(srcdir)/cgtest92.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest92.occ: $(srcdir)/cgreal.occ
 ## end pideps dependencies
+cgtest68: cgtest68.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest68.occ cglib.o
+cgtest69: cgtest69.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest69.occ cglib.o
+cgtest93: cgtest93.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest93.occ cglib.o
