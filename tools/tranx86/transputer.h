@@ -22,7 +22,11 @@
 #define __TRANSPUTER_H
 
 
-#define WSH		3		/* ws shift (x4) */
+#if defined(__x86_64__) || defined(__aarch64__) || defined(_LP64)
+#define WSH		3		/* ws shift: 8 bytes per word on 64-bit */
+#else
+#define WSH		2		/* ws shift: 4 bytes per word on 32-bit */
+#endif
 #define BytesPerWord	(1<<WSH)
 #define BitsPerWord	(BytesPerWord * 8)
 #define ByteSelectMask	(~(-1 << WSH))
