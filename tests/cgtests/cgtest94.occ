@@ -1,40 +1,55 @@
--- CG test 94 — STEP replicator with array access (sdlmatrix pattern)
+-- CG test 94 — Exact sdlmatrix FORKING pattern
 PROC cgtest94 (CHAN OF BYTE keyb, scr, err)
   #INCLUDE "cgmain.occ"
 
+  --{{{  F001 — 10-param FORK with shared raster (matches sdlmatrix.cell exactly)
   PROC F001 ()
-    VAL INT H IS 30:
-    VAL INT W IS 40:
-    [H][W]INT arr:
-    INITIAL INT count IS 0:
+    PROC cell (INT t1, t2, t3, t4, left, right, top, bottom, MOBILE BARRIER timer, BOOL running)
+      #PRAGMA SHARED running
+      SEQ
+        t1 := 1
+        t2 := 2
+        t3 := 3
+        t4 := 4
+        SYNC timer
+    :
+    MOBILE [][]INT r:
+    #PRAGMA SHARED r
+    INITIAL MOBILE BARRIER b IS MOBILE BARRIER:
+    BOOL running:
+    #PRAGMA SHARED running
+    INT r.w, r.h:
     SEQ
-      SEQ y = 0 FOR H
-        SEQ x = 0 FOR W
-          arr[y][x] := 0
-      SEQ y = 0 FOR (H / 4) STEP 4
-        SEQ x = 0 FOR (W / 4) STEP 4
-          INITIAL INT yy IS y + 1:
-          INITIAL INT xx IS x + 1:
-          INITIAL INT t.y IS ((yy + 4) \ H):
-          INITIAL INT b.y IS (((yy + H) - 4) \ H):
-          INITIAL INT l.x IS (((xx + W) - 4) \ W):
-          INITIAL INT r.x IS ((xx + 4) \ W):
-          SEQ
-            arr[yy][xx] := 1
-            arr[yy][xx+1] := 1
-            arr[yy+1][xx] := 1
-            arr[yy+1][xx+1] := 1
-            arr[t.y][xx] := arr[t.y][xx] + 1
-            arr[b.y][xx] := arr[b.y][xx] + 1
-            arr[yy][l.x] := arr[yy][l.x] + 1
-            arr[yy][r.x] := arr[yy][r.x] + 1
-            count := count + 1
-      check (count, 70, "F001a")
+      running := TRUE
+      r := MOBILE [30][40]INT
+      r.h := SIZE r
+      r.w := SIZE r[0]
+      SEQ y = 0 FOR r.h
+        SEQ x = 0 FOR r.w
+          r[y][x] := 0
+      FORKING
+        SEQ
+          SEQ y = 0 FOR (r.h / 4) STEP 4
+            SEQ x = 0 FOR (r.w / 4) STEP 4
+              INITIAL INT yy IS y + 1:
+              INITIAL INT xx IS x + 1:
+              INITIAL INT t.y IS ((yy + 4) \ r.h):
+              INITIAL INT b.y IS (((yy + r.h) - 4) \ r.h):
+              INITIAL INT l.x IS (((xx + r.w) - 4) \ r.w):
+              INITIAL INT r.x IS ((xx + 4) \ r.w):
+              FORK cell (r[yy][xx], r[yy][xx+1], r[yy+1][xx], r[yy+1][xx+1],
+                         r[yy][l.x], r[yy][r.x], r[t.y][xx], r[b.y][xx], b, running)
+          SYNC b
+      check (r[1][1], 1, "F001a")
+      check (r[1][2], 2, "F001b")
+      check (r[2][1], 3, "F001c")
+      check (r[2][2], 4, "F001d")
   :
+  --}}}
 
   SEQ
-    init ("CG test 94", "STEP replicator array access")
-    title ("STEP 4 with division and remainder")
+    init ("CG test 94", "sdlmatrix FORKING pattern")
+    title ("10-param FORK with shared raster")
     F001 ()
     finish ()
 :

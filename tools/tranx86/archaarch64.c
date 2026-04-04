@@ -1032,6 +1032,9 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 
 	*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// bcall complete"));
 	add_to_ins_chain (*pst_last);
+
+	/* Blocking call clobbers volatile registers — invalidate constmap */
+	constmap_clearall ();
 }
 /*}}}*/
 
@@ -1074,6 +1077,11 @@ static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name,
 		*pst_last = compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// external ccall complete"));
 	}
 	add_to_ins_chain (*pst_last);
+
+	/* External C call clobbers all volatile registers (x0-x18).
+	 * Invalidate cached register values to prevent subsequent code
+	 * from using stale data in comparisons or address calculations. */
+	constmap_clearall ();
 }
 /*}}}*/
 
@@ -1151,6 +1159,9 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 	 * Magic Screen shutdown block reads Wptr[-4] = original[0]. */
 	*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)(4 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	add_to_ins_chain (*pst_last);
+
+	/* CIF call clobbers volatile registers — invalidate constmap */
+	constmap_clearall ();
 }
 /*}}}*/
 

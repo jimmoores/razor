@@ -6020,21 +6020,27 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_PROC_MT_COPY -- copy a mobile type to a workspace*/
 	case I_PROC_MT_COPY:
 		arch->compose_kcall (ts, K_PROC_MT_COPY, 3, 0);
+		/* kcall clobbers volatile registers; invalidate cached values
+		 * so subsequent CSUB0 range checks don't use stale data */
+		constmap_clearall ();
 		break;
 		/*}}}*/
 		/*{{{  I_PROC_MT_MOVE -- move a mobile type to a workspace*/
 	case I_PROC_MT_MOVE:
 		arch->compose_kcall (ts, K_PROC_MT_MOVE, 3, 0);
+		constmap_clearall ();
 		break;
 		/*}}}*/
 		/*{{{  I_PROC_START -- start a process allocated with PROC_ALLOC*/
 	case I_PROC_START:
 		arch->compose_kcall (ts, K_PROC_START, 3, 0);
+		constmap_clearall ();
 		break;
 		/*}}}*/
 		/*{{{  I_PROC_END -- end a process started by PROC_START*/
 	case I_PROC_END:
 		arch->compose_kcall (ts, K_PROC_END, 1, 0);
+		constmap_clearall ();
 		break;
 		/*}}}*/
 		/*{{{  I_GETPRI -- get processor affinity*/
