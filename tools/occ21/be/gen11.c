@@ -3108,12 +3108,14 @@ printtreenl (stderr, 4, tptr);
 	    ((type == S_INT16) || (type == S_UINT16)) && (targetintsize != S_INT16)) {
 		badtag (genlocn, type, "movearrayitem");
 	} else {
-		if (((dirn & (MOVEDIRN_LOADEXT | MOVEDIRN_LOAD)) != 0) && directload (P_EXP, tptr, be_lexlevel)) {
+		if (((dirn & (MOVEDIRN_LOADEXT | MOVEDIRN_LOAD)) != 0) && directload (P_EXP, tptr, be_lexlevel)
+		    && !(bytesperword > 4 && bytesinscalar (type) < bytesperword)) {
 #if 0
 fprintf (stderr, "gen11: movearrayitem: doing loadname (nptr, %d + %d)\n", (int)ASOffsetOf (tptr), (int)word);
 #endif
 			loadname (nptr, ASOffsetOf (tptr) + word);
-		} else if ((dirn == MOVEDIRN_STORE) && directstore (P_EXP, tptr, be_lexlevel)) {
+		} else if ((dirn == MOVEDIRN_STORE) && directstore (P_EXP, tptr, be_lexlevel)
+		    && !(bytesperword > 4 && bytesinscalar (type) < bytesperword)) {
 			storeinname (nptr, ASOffsetOf (tptr) + word);
 		} else {
 			/*{{{  ldptr item; load/store */
