@@ -36,6 +36,19 @@
 
 #include <dirent.h>
 
+/*{{{  64-bit RESULT INT helper */
+/* On 64-bit targets, RESULT INT parameters point to 8-byte workspace
+ * slots, but the C inline functions write only 4 bytes (int).  The
+ * upper 4 bytes retain garbage, which corrupts subsequent occam code
+ * that loads the full 8-byte word.  This macro writes the result as
+ * a full word to clear the upper bytes. */
+#if defined(__LP64__) || defined(_LP64) || defined(__aarch64__) || defined(__x86_64__)
+#define WSET(ws, idx, val) do { *((intptr_t *)(ws[idx])) = (intptr_t)(val); } while(0)
+#else
+#define WSET(ws, idx, val) do { *((int *)(ws[idx])) = (int)(val); } while(0)
+#endif
+/*}}}*/
+
 /*{{{  occam constants */
 /* MUST MATCH filelib.inc */
 #define OCC_O_RDONLY	0x00000000
@@ -459,7 +472,7 @@ static __inline__ void r_fcntl0 (int fd, int cmd, int *result)
 	}
 #endif
 }
-void _fl_fcntl0 (intptr_t *ws) { r_fcntl0 ((int)(ws[0]), (int)(ws[1]), (int *)(ws[2])); }
+void _fl_fcntl0 (intptr_t *ws) { WSET(ws,2,0); r_fcntl0 ((int)(ws[0]), (int)(ws[1]), (int *)(ws[2])); }
 /*}}}*/
 /*{{{  PROC C.fl.fcntl1 (VAL INT fd, cmd, arg, RESULT INT result) */
 static __inline__ void r_fcntl1 (int fd, int cmd, int arg, int *result)
@@ -478,7 +491,7 @@ static __inline__ void r_fcntl1 (int fd, int cmd, int arg, int *result)
 	}
 #endif
 }
-void _fl_fcntl1 (intptr_t *ws) { r_fcntl1 ((int)(ws[0]), (int)(ws[1]), (int)(ws[2]), (int *)(ws[3])); }
+void _fl_fcntl1 (intptr_t *ws) { WSET(ws,3,0); r_fcntl1 ((int)(ws[0]), (int)(ws[1]), (int)(ws[2]), (int *)(ws[3])); }
 /*}}}*/
 /*{{{  PROC [BC].fl.select ([]INT read.set, write.set, except.set, VAL INT high.fd, timeout, RESULT INT result) */
 static __inline__ void r_select (int *rs, int n_rs, int *ws, int n_ws, int *es, int n_es, int high_fd,
@@ -541,7 +554,7 @@ static __inline__ void r_select (int *rs, int n_rs, int *ws, int n_ws, int *es, 
 	}
 #endif
 }
-void _fl_select (intptr_t *ws) { r_select ((int *)(ws[0]), (int)(ws[1]), (int *)(ws[2]), (int)(ws[3]), (int *)(ws[4]), (int)(ws[5]), (int)(ws[6]), (int)(ws[7]), (int *)(ws[8])); }
+void _fl_select (intptr_t *ws) { WSET(ws,8,0); r_select ((int *)(ws[0]), (int)(ws[1]), (int *)(ws[2]), (int)(ws[3]), (int *)(ws[4]), (int)(ws[5]), (int)(ws[6]), (int)(ws[7]), (int *)(ws[8])); }
 /*}}}*/
 
 /*{{{  command-line access stuff */
@@ -570,7 +583,7 @@ static __inline__ void r_num_args (int *n)
 	*n = kroc_argc;
 	return;
 }
-void _fl_num_args (intptr_t *ws) { r_num_args ((int *)(ws[0])); }
+void _fl_num_args (intptr_t *ws) { WSET(ws, 0, 0); r_num_args ((int *)(ws[0])); }
 
 /* PROC C.fl.nth.arg (VAL INT n, RESULT []BYTE arg, RESULT INT len) */
 static __inline__ void r_nth_arg (int n, char *arg, int arglen, int *len)
@@ -590,7 +603,7 @@ static __inline__ void r_nth_arg (int n, char *arg, int arglen, int *len)
 
 	return;
 }
-void _fl_nth_arg (intptr_t *ws) { r_nth_arg ((int)(ws[0]), (char *)(ws[1]), (int)(ws[2]), (int *)(ws[3])); }
+void _fl_nth_arg (intptr_t *ws) { WSET(ws, 3, 0); r_nth_arg ((int)(ws[0]), (char *)(ws[1]), (int)(ws[2]), (int *)(ws[3])); }
 /*}}}*/
 
 /*{{{  struct occam_stat */
@@ -774,28 +787,30 @@ static __inline__ void r_fsync (int fd, int *result)
 /*}}}*/
 
 /*{{{  interface functions*/
-void _fl_check_access (intptr_t *w)				{ r_check_access ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_size (intptr_t *w)					{ r_size ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_open (intptr_t *w)					{ r_open ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_open3 (intptr_t *w)					{ r_open3 ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
-void _fl_pipe (intptr_t *w)					{ r_pipe ((int *)(w[0]), (int *)(w[1]), (int *)(w[2])); }
-void _fl_dup2 (intptr_t *w)					{ r_dup2 ((int)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_read (intptr_t *w)					{ r_read ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_write (intptr_t *w)					{ r_write ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_seek (intptr_t *w)					{ r_seek ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_close (intptr_t *w)					{ r_close ((int)(w[0]), (int *)(w[1])); }
-void _fl_mkdir (intptr_t *w)					{ r_mkdir ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_rmdir (intptr_t *w)					{ r_rmdir ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_unlink (intptr_t *w)				{ r_unlink ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_fd_fd_copy (intptr_t *w)				{ r_fd_fd_copy ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_sendfile (intptr_t *w)				{ r_sendfile ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3]), (int *)(w[4])); }
-void _fl_stat(intptr_t *w)					{ r_stat ((char *)(w[0]), (int)(w[1]), (struct occam_stat *)(w[2]), (int *)(w[3])); }
-void _fl_lstat(intptr_t *w)					{ r_lstat ((char *)(w[0]), (int)(w[1]), (struct occam_stat *)(w[2]), (int *)(w[3])); }
-void _fl_fstat(intptr_t *w)					{ r_fstat ((int)(w[0]), (struct occam_stat *)(w[1]), (int *)(w[2])); }
-void _fl_opendir(intptr_t *w)				{ r_opendir ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
-void _fl_readdir(intptr_t *w)				{ r_readdir ((int)(w[0]), (struct occam_dirent *)(w[1]), (int *)(w[2])); }
-void _fl_closedir(intptr_t *w)				{ r_closedir ((int)(w[0]), (int *)(w[1])); }
-void _fl_chmod(intptr_t *w)					{ r_chmod ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
-void _fl_fsync(intptr_t *w)					{ r_fsync ((int)(w[0]), (int *)(w[1])); }
+/* WSET clears upper bytes of RESULT INT slots on 64-bit before the
+ * inline function writes only 4 bytes via int* */
+void _fl_check_access (intptr_t *w)				{ WSET(w,3,0); r_check_access ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_size (intptr_t *w)					{ WSET(w,2,0); r_size ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_open (intptr_t *w)					{ WSET(w,3,0); r_open ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_open3 (intptr_t *w)					{ WSET(w,4,0); r_open3 ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int)(w[3]), (int *)(w[4])); }
+void _fl_pipe (intptr_t *w)					{ WSET(w,0,0); WSET(w,1,0); WSET(w,2,0); r_pipe ((int *)(w[0]), (int *)(w[1]), (int *)(w[2])); }
+void _fl_dup2 (intptr_t *w)					{ WSET(w,2,0); r_dup2 ((int)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_read (intptr_t *w)					{ WSET(w,3,0); r_read ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_write (intptr_t *w)					{ WSET(w,3,0); r_write ((int)(w[0]), (char *)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_seek (intptr_t *w)					{ WSET(w,3,0); r_seek ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_close (intptr_t *w)					{ WSET(w,1,0); r_close ((int)(w[0]), (int *)(w[1])); }
+void _fl_mkdir (intptr_t *w)					{ WSET(w,3,0); r_mkdir ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_rmdir (intptr_t *w)					{ WSET(w,2,0); r_rmdir ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_unlink (intptr_t *w)				{ WSET(w,2,0); r_unlink ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_fd_fd_copy (intptr_t *w)				{ WSET(w,3,0); r_fd_fd_copy ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_sendfile (intptr_t *w)				{ WSET(w,3,0); WSET(w,4,0); r_sendfile ((int)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3]), (int *)(w[4])); }
+void _fl_stat(intptr_t *w)					{ WSET(w,3,0); r_stat ((char *)(w[0]), (int)(w[1]), (struct occam_stat *)(w[2]), (int *)(w[3])); }
+void _fl_lstat(intptr_t *w)					{ WSET(w,3,0); r_lstat ((char *)(w[0]), (int)(w[1]), (struct occam_stat *)(w[2]), (int *)(w[3])); }
+void _fl_fstat(intptr_t *w)					{ WSET(w,2,0); r_fstat ((int)(w[0]), (struct occam_stat *)(w[1]), (int *)(w[2])); }
+void _fl_opendir(intptr_t *w)				{ WSET(w,2,0); r_opendir ((char *)(w[0]), (int)(w[1]), (int *)(w[2])); }
+void _fl_readdir(intptr_t *w)				{ WSET(w,2,0); r_readdir ((int)(w[0]), (struct occam_dirent *)(w[1]), (int *)(w[2])); }
+void _fl_closedir(intptr_t *w)				{ WSET(w,1,0); r_closedir ((int)(w[0]), (int *)(w[1])); }
+void _fl_chmod(intptr_t *w)					{ WSET(w,3,0); r_chmod ((char *)(w[0]), (int)(w[1]), (int)(w[2]), (int *)(w[3])); }
+void _fl_fsync(intptr_t *w)					{ WSET(w,1,0); r_fsync ((int)(w[0]), (int *)(w[1])); }
 /*}}}*/
 

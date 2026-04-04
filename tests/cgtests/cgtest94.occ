@@ -1,0 +1,38 @@
+-- CG test 94 — Reproduce file.get.options SIGBUS
+PROC cgtest94 (CHAN OF BYTE keyb, scr, err)
+  #INCLUDE "cgmain.occ"
+  #INCLUDE "file.module"
+
+  --{{{  F001 — call file.get.options (reproduces crash)
+  PROC F001 ()
+    CHAN GETOPT opts:
+    CHAN INT done:
+    PAR
+      file.get.options ("", opts!)
+      INITIAL BOOL running IS TRUE:
+      INITIAL INT count IS 0:
+      SEQ
+        WHILE running
+          BYTE o:
+          MOBILE []BYTE a:
+          opts ? CASE
+            arg; a
+              count := count + 1
+            bad; o
+              SKIP
+            done
+              running := FALSE
+        done ! count
+      INT result:
+      SEQ
+        done ? result
+        check.BOOL (result >= 0, TRUE, "F001a")
+  :
+  --}}}
+
+  SEQ
+    init ("CG test 94", "file.get.options crash test")
+    title ("Calling file.get.options")
+    F001 ()
+    finish ()
+:
