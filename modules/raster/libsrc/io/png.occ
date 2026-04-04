@@ -22,15 +22,16 @@
 #INCLUDE "raster.module"
 
 --{{{  externals
-#PRAGMA EXTERNAL "PROC C.read.raster.png.1 (VAL []BYTE filename, RESULT INT height, width, magic) = 0"
-#PRAGMA EXTERNAL "PROC C.read.raster.png.2 (VAL INT magic, [][]INT raster, INT rc) = 0"
+#PRAGMA EXTERNAL "PROC C.read.raster.png.1 (VAL []BYTE filename, RESULT INT height, width, RESULT INT64 magic) = 0"
+#PRAGMA EXTERNAL "PROC C.read.raster.png.2 (VAL INT64 magic, [][]INT raster, INT rc) = 0"
 #PRAGMA EXTERNAL "PROC C.write.raster.png (VAL []BYTE filename, VAL [][]INT raster, RESULT INT rc) = 0"
 --}}}
 
 --{{{  PROC read.raster.png
 --* Load a PNG file as a raster.
 PROC read.raster.png (VAL []BYTE filename, RESULT RASTER raster)
-  INT height, width, magic, rc:
+  INT height, width, rc:
+  INT64 magic:
   SEQ
     C.read.raster.png.1 (filename, height, width, magic)
     raster := MOBILE [height][width]INT

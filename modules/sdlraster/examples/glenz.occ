@@ -347,18 +347,23 @@ PROC glenz.poly.render (RASTER r, VAL []INT start, end, VAL INT vp.height, pixel
 -- @param vp.height Viewport height
 -- @param colourmap Set of 12 pixel values to use
 PROC glenz.cube (CHAN RASTER in?, out!, CHAN POLY.SCANS data?, VAL INT vp.height, VAL []INT colourmap)
+  INITIAL BOOL running IS TRUE:
   SEQ
 
-    WHILE TRUE
+    WHILE running
       RASTER r:
       SEQ
         in ? r
 
-        SEQ i = 0 FOR 12
-          MOBILE []INT start, end:
-          SEQ
-            data ? start; end
-            glenz.poly.render (r, start, end, vp.height, colourmap[i])
+        IF
+          (SIZE r) = 0
+            running := FALSE
+          TRUE
+            SEQ i = 0 FOR 12
+              MOBILE []INT start, end:
+              SEQ
+                data ? start; end
+                glenz.poly.render (r, start, end, vp.height, colourmap[i])
 
         out ! r
 :
@@ -456,10 +461,12 @@ PROC glenz.cube.network.pulse (CHAN RASTER r.in?, r.out!, VAL INT xoffs, yoffs, 
 -- @param in Rasters in
 -- @param out Rasters out
 PROC raster.buffer (CHAN RASTER in?, out!)
-  WHILE TRUE
+  INITIAL BOOL running IS TRUE:
+  WHILE running
     RASTER r:
     SEQ
       in ? r
+      running := (SIZE r) > 0
       out ! r
 :
 --}}}
@@ -477,13 +484,20 @@ PROC raster.timed.buffer (CHAN RASTER in?, out!, VAL INT fps)
     tim ? t
 
     VAL INT to IS (1000000 / fps):
-    WHILE TRUE
+    INITIAL BOOL running IS TRUE:
+    WHILE running
       RASTER r:
       SEQ
         in ? r
+        running := (SIZE r) > 0
         out ! r
-        t := t PLUS to
-        tim ? AFTER t
+        IF
+          running
+            SEQ
+              t := t PLUS to
+              tim ? AFTER t
+          TRUE
+            SKIP
 :
 --}}}
 --{{{  PROC raster.fader (CHAN RASTER in?, out!)
@@ -492,19 +506,24 @@ PROC raster.timed.buffer (CHAN RASTER in?, out!, VAL INT fps)
 -- @param in Rasters in
 -- @param out Rasters out
 PROC raster.fader (CHAN RASTER in?, out!)
-  WHILE TRUE
+  INITIAL BOOL running IS TRUE:
+  WHILE running
     RASTER r:
     SEQ
       in ? r
-      SEQ y = 0 FOR SIZE r
-        SEQ x = 0 FOR SIZE r[0]
-          [4]BYTE val RETYPES r[y][x]:
-          SEQ i = 0 FOR 4
-            IF
-              val[i] > #30
-                val [i] := val[i] - #18
-              TRUE
-                val[i] := #00
+      IF
+        (SIZE r) = 0
+          running := FALSE
+        TRUE
+          SEQ y = 0 FOR SIZE r
+            SEQ x = 0 FOR SIZE r[0]
+              [4]BYTE val RETYPES r[y][x]:
+              SEQ i = 0 FOR 4
+                IF
+                  val[i] > #30
+                    val [i] := val[i] - #18
+                  TRUE
+                    val[i] := #00
       out ! r
 :
 --}}}
@@ -514,11 +533,16 @@ PROC raster.fader (CHAN RASTER in?, out!)
 -- @param in Rasters in
 -- @param out Rasters out
 PROC raster.clearer (CHAN RASTER in?, out!)
-  WHILE TRUE
+  INITIAL BOOL running IS TRUE:
+  WHILE running
     RASTER r:
     SEQ
       in ? r
-      raster.clear (r, #00000000)
+      IF
+        (SIZE r) = 0
+          running := FALSE
+        TRUE
+          raster.clear (r, #00000000)
       out ! r
 :
 --}}}
