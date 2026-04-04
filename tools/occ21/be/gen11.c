@@ -958,13 +958,9 @@ printtreenl (stderr, 4, dest);
 					break;
 				case S_INT:
 				case S_UINT:
-					switch (WSH) {
-						case 0: i_type = MT_NUM_BYTE; break;
-						case 1: i_type = MT_NUM_INT16; break;
-						case 2: i_type = MT_NUM_INT32; break;
-						case 3: i_type = MT_NUM_INT64; break;
-					}
-					shift = WSH;
+					/* INT is always 32-bit, even on 64-bit targets where WSH=3 */
+					i_type = MT_NUM_INT32;
+					shift = 2;
 					break;
 				default:
 					/* Treat everything that's left as just a big array of
@@ -1287,6 +1283,15 @@ printtreenl (stderr, 4, count_exp);
 		}
 
 		texp (lcount, regs);
+		/* On 64-bit, ensure dimension values are zero-extended to word size.
+		 * Dimension values are INT (32-bit) but workspace slots are word-sized.
+		 * If the value was loaded from a workspace slot that had garbage in the
+		 * upper 32 bits (e.g. from C call clobbering), the SUM with 0 triggers
+		 * emit_int_truncate in the translator (mov wN, wN on aarch64). */
+		if (bytesperword > 4) {
+			genprimary (I_LDC, 0);
+			gensecondary (I_SUM);
+		}
 		storemobilesize (rdest, idim + 1);
 	}
 #if 0

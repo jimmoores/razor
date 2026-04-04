@@ -6000,6 +6000,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*{{{  I_PROC_ALLOC -- allocate a process workspace*/
 	case I_PROC_ALLOC:
 		arch->compose_kcall (ts, K_PROC_ALLOC, 2, 1);
+		constmap_clearall ();
 		break;
 		/*}}}*/
 		/*{{{  I_PROC_PARAM -- copy a parameter to a workspace*/
