@@ -1,0 +1,72 @@
+-- CG test 96 -- Replicated PAR scalability (workspace layout)
+#OPTION "A"
+PROC cgtest96 (CHAN OF BYTE keyb, scr, err)
+  #INCLUDE "cgmain.occ"
+
+  --{{{  F001 -- small ring (10 processes)
+  PROC F001 ()
+    VAL INT N IS 10:
+    [N]CHAN INT right:
+    INITIAL INT result IS 0:
+    SEQ
+      PAR
+        PAR i = 0 FOR N
+          INT v:
+          SEQ
+            right[i] ? v
+            right[(i+1) \ N] ! (v PLUS 1)
+        SEQ
+          right[0] ! 0
+          right[0] ? result
+      check (result, N, "F001")
+  :
+  --}}}
+
+  --{{{  F002 -- medium ring (500 processes)
+  PROC F002 ()
+    VAL INT N IS 500:
+    [N]CHAN INT right:
+    INITIAL INT result IS 0:
+    SEQ
+      PAR
+        PAR i = 0 FOR N
+          INT v:
+          SEQ
+            right[i] ? v
+            right[(i+1) \ N] ! (v PLUS 1)
+        SEQ
+          right[0] ! 0
+          right[0] ? result
+      check (result, N, "F002")
+  :
+  --}}}
+
+  --{{{  F003 -- large ring (5000 processes)
+  PROC F003 ()
+    VAL INT N IS 5000:
+    [N]CHAN INT right:
+    INITIAL INT result IS 0:
+    SEQ
+      PAR
+        PAR i = 0 FOR N
+          INT v:
+          SEQ
+            right[i] ? v
+            right[(i+1) \ N] ! (v PLUS 1)
+        SEQ
+          right[0] ! 0
+          right[0] ? result
+      check (result, N, "F003")
+  :
+  --}}}
+
+  SEQ
+    init ("CG test 96", "Replicated PAR scalability")
+    title ("10-process ring")
+    F001 ()
+    title ("500-process ring")
+    F002 ()
+    title ("5000-process ring")
+    F003 ()
+    finish ()
+:

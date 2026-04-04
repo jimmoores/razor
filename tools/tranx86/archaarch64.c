@@ -233,16 +233,17 @@ static void aarch64_emit_mem_op(FILE *stream, const char *op, const char *val_re
 		/* Unsigned scaled 12-bit offset for 64-bit loads/stores */
 		fprintf(stream, "\t%s	%s, [%s, #%ld]\n", op, val_reg, base_reg, disp);
 	} else if (disp >= 0 && disp <= 4095) {
-		fprintf(stream, "\tadd	x16, %s, #%ld\n", base_reg, disp);
-		fprintf(stream, "\t%s	%s, [x16]\n", op, val_reg);
+		fprintf(stream, "\tadd	x17, %s, #%ld\n", base_reg, disp);
+		fprintf(stream, "\t%s	%s, [x17]\n", op, val_reg);
 	} else if (disp < 0 && disp >= -4095) {
-		fprintf(stream, "\tsub	x16, %s, #%ld\n", base_reg, -disp);
-		fprintf(stream, "\t%s	%s, [x16]\n", op, val_reg);
+		fprintf(stream, "\tsub	x17, %s, #%ld\n", base_reg, -disp);
+		fprintf(stream, "\t%s	%s, [x17]\n", op, val_reg);
 	} else {
-		/* Fallback for very large offsets */
-		aarch64_emit_large_immediate(stream, disp, "x16");
-		fprintf(stream, "\tadd	x16, %s, x16\n", base_reg);
-		fprintf(stream, "\t%s	%s, [x16]\n", op, val_reg);
+		/* Fallback for very large offsets: use x17 as temp to avoid
+		 * clobbering x16, which may hold the value for a store. */
+		aarch64_emit_large_immediate(stream, disp, "x17");
+		fprintf(stream, "\tadd	x17, %s, x17\n", base_reg);
+		fprintf(stream, "\t%s	%s, [x17]\n", op, val_reg);
 	}
 }
 

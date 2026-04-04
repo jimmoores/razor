@@ -44,6 +44,16 @@ int genhdr_ds_min (void)
 	slots = 2;
 #endif
 	slots += L_process;
+	/* On 64-bit targets, the CCSP MP scheduler uses additional
+	 * below-workspace slots for process state (Pointer at -4,
+	 * TLink at -5, Time_f at -6).  Even simple channel I/O
+	 * writes to Wptr[Pointer] (-4) during blocking.  Increase
+	 * the minimum to prevent workspace overlap in dense PARs. */
+	if (bytesperword > 4) {
+		if (slots < 6) {
+			slots = 6;
+		}
+	}
 	return slots;
 }
 /*}}}*/
