@@ -48,5 +48,8 @@ extern void *ccsp_mt_alloc (word type, word size);
 extern void ccsp_mt_release (void *ptr);
 extern word *ccsp_proc_alloc (word flags, word stack);
 
+extern void ccsp_set_sched_poll_hook (unsigned int sched_index, void (*callback)(void));
+extern bool ccsp_sched_poll (unsigned int index);
+
 #endif	/* !__CCSP_IF_H */
 

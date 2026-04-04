@@ -134,6 +134,26 @@ void ccsp_set_external_event_hook (bool bsc, bool (*blocked)(void), bool (*ready
 }
 /*}}}*/
 
+/*{{{  scheduler poll hook */
+static void (*sp_callback)(void)	= NULL;
+static unsigned int sp_sched_index	= 0;
+
+void ccsp_set_sched_poll_hook (unsigned int sched_index, void (*callback)(void))
+{
+	sp_callback	= callback;
+	sp_sched_index	= sched_index;
+}
+
+bool ccsp_sched_poll (unsigned int index)
+{
+	if (sp_callback != NULL && index == sp_sched_index) {
+		sp_callback ();
+		return true;
+	}
+	return false;
+}
+/*}}}*/
+
 /*{{{  void ccsp_default_exit_handler (int status, bool core)*/
 void ccsp_default_exit_handler (int status, bool core)
 {

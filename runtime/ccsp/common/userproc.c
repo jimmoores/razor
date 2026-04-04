@@ -603,6 +603,8 @@ void process_sdl_poll_request (void)
 }
 #endif /* __APPLE__ && __aarch64__ */
 
+extern bool ccsp_sched_poll (unsigned int);
+
 void ccsp_safe_pause (sched_t *sched)
 {
 	unsigned int buffer, sync;
@@ -615,14 +617,7 @@ void ccsp_safe_pause (sched_t *sched)
 		serialise ();
 		read (sched->signal_out, &buffer, 1);
 		serialise ();
-#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-		/* Check for cross-thread SDL poll requests after waking.
-		 * The bounce mechanism writes to our signal pipe to wake us,
-		 * so we process the request here before re-checking sync. */
-		if (sched->index == 0) {
-			process_sdl_poll_request ();
-		}
-#endif
+		ccsp_sched_poll (sched->index);
 	}
 
 	/* restore detected flags */
@@ -665,11 +660,7 @@ void ccsp_safe_pause_timeout (sched_t *sched)
 					break;
 				}
 
-#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-				if (sched->index == 0) {
-					process_sdl_poll_request ();
-				}
-#endif
+				ccsp_sched_poll (sched->index);
 				serialise ();
 			}
 

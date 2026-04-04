@@ -118,10 +118,16 @@ SWIGEXPORT void _SDL_Init (word occ_args[]) {
     *((word *) occ_args[1]) = result;
   }
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-  /* Register SDL_PollEvent with the main-thread bounce mechanism */
+  /* Register SDL_PollEvent with the main-thread bounce mechanism,
+   * and hook it into the generic scheduler poll callback so the
+   * scheduler services cross-thread poll requests without
+   * SDL-specific knowledge. */
   {
     extern void ccsp_sdl_poll_set_func(int (*func)(void *));
+    extern void ccsp_set_sched_poll_hook(unsigned int, void (*)(void));
+    extern void process_sdl_poll_request(void);
     ccsp_sdl_poll_set_func((int (*)(void *))SDL_PollEvent);
+    ccsp_set_sched_poll_hook(0, process_sdl_poll_request);
   }
 #endif
 }

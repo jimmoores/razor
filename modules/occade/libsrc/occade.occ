@@ -517,7 +517,7 @@ PROC occade.display.server (OCCADE? svr, VAL OCCADE.PARAMS params, VAL []BYTE ap
 
   TIMER tim:
   INT next.update:
-  INITIAL INT frame.time IS 1000000 / 30:
+  INITIAL INT frame.time IS 1000000 / 120:
   VAL INT UPDATE.SPRITES IS 1 << 0:
   VAL INT UPDATE.ALL IS 1 << 1:
   INITIAL INT need.update IS 0:
@@ -851,7 +851,6 @@ PROC occade.display.server (OCCADE? svr, VAL OCCADE.PARAMS params, VAL []BYTE ap
               SEQ
                 update.display ()
                 process.input.events ()
-
                 next.update := next.update PLUS frame.time
               --}}}
       --}}}

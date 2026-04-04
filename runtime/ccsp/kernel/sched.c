@@ -908,7 +908,7 @@ static TEPID void mail_process (word affinity, word *Wptr)
 	
 		if (unlikely (targets == 0)) {
 			BMESSAGE (
-				"impossible affinity detected: %08x (Wptr = %p, Iptr = %p).\n", 
+				"impossible affinity detected: %08x (Wptr = %p, Iptr = %p).\n",
 				affinity, Wptr, Wptr != NULL ? (void *) Wptr[Iptr] : 0
 			);
 			ccsp_show_last_debug_insert ();
@@ -1910,16 +1910,10 @@ static void NO_RETURN REGPARM kernel_scheduler (sched_t *sched)
 	ENTRY_TRACE (scheduler, "sync=%d", att_val (&(sched->sync)));
 
 	do {
-#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-		/* Process cross-thread SDL poll requests on the main thread.
-		 * This must be checked in the scheduler loop, not just in
-		 * safe_pause, because the main thread may be busy dispatching
-		 * processes and never enter the idle path. */
-		if (sched->index == 0) {
-			extern void process_sdl_poll_request (void);
-			process_sdl_poll_request ();
+		{
+			extern bool ccsp_sched_poll (unsigned int);
+			ccsp_sched_poll (sched->index);
 		}
-#endif
 		if (unlikely (att_val (&(sched->sync)))) {
 			unsigned int sync = att_swap (&(sched->sync), 0);
 
