@@ -28,7 +28,7 @@
 /* aarch64 doesn't have regparm attribute */
 #define REGPARM
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__aarch64__) && !defined(__x86_64__)
 #define _PACK_STRUCT __attribute__ ((packed))
 #else
 #define _PACK_STRUCT

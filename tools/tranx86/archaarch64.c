@@ -1148,7 +1148,12 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, string_dup (func_sbuf), ARG_REG, REG_X1));
 	}
 	/* Call the wrapper: ccsp_cif_process_call(wptr, func_addr) */
-	add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup ("@_ccsp_cif_process_call")));
+		{
+		char cif_call_buf[64];
+		snprintf (cif_call_buf, sizeof(cif_call_buf), "@%sccsp_cif_process_call",
+			  options.extref_prefix ? options.extref_prefix : "");
+		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (cif_call_buf)));
+	}
 
 	/* Restore state after CIF call. */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));

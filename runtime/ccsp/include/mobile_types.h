@@ -22,7 +22,7 @@
 
 /*{{{  structure packing */
 #if defined(MT_DEFINES) && !defined(_PACK_STRUCT)
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__aarch64__) && !defined(__x86_64__)
 #define _PACK_STRUCT __attribute__ ((packed))
 #else
 #warning "Unable to enforce alignment and packing on structures."
