@@ -912,13 +912,18 @@ restart:
 				/* CRITICAL FIX: Handle the "single instruction" error properly */
 				if (nodes[i]->start_ins && nodes[i]->end_ins) {
 					/* Check if this is the problematic "single instruction" case */
-					if (nodes[i]->start_ins != nodes[i]->end_ins && 
+					if (nodes[i]->start_ins != nodes[i]->end_ins &&
 					    nodes[i]->start_ins->next && nodes[i]->end_ins->prev &&
 					    nodes[i]->start_ins->next != nodes[i]->end_ins) {
 						/* Normal case - color the fragment */
+						fprintf (stderr, "DEBUG_COLOUR: vreg=%d rreg=%d start_next=%p end_prev=%p\n",
+							nodes[i]->vreg, nodes[i]->rreg, (void*)nodes[i]->start_ins->next, (void*)nodes[i]->end_ins->prev);
 						colour_code_fragment (nodes[i]->start_ins->next, nodes[i]->end_ins->prev, nodes[i]->vreg, nodes[i]->rreg);
 					} else {
 						/* Single instruction or adjacent instructions - skip coloring but don't error */
+						fprintf (stderr, "DEBUG_COLOUR: SKIPPED vreg=%d rreg=%d start=%p end=%p start_next=%p\n",
+							nodes[i]->vreg, nodes[i]->rreg, (void*)nodes[i]->start_ins, (void*)nodes[i]->end_ins,
+							nodes[i]->start_ins ? (void*)nodes[i]->start_ins->next : NULL);
 						if (options.verbose) {
 							fprintf (stderr, "%s: info: skipping fragment coloring for register %d (single/adjacent instructions)\n", progname, nodes[i]->vreg);
 						}
