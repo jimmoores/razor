@@ -1,9 +1,0 @@
-DEBUG: main starting
-DEBUG: init_occam_io called with tlpiface=7
-DEBUG: kbd_chan=0x100b19990, scr_chan=0x100b199f0, err_chan=0x100b19a50
-DEBUG: kbd_ws=0x100b1a140, scr_ws=0x100b1a340, err_ws=0x100b1a540
-CG test 91  --  RECURSIVE PROCsbsc_clean: wptr=0x100b1a100 iptr=00000001005b46b8
-
-^^^ Passed : CG test 91: All 21 tests passed OK
-Time = 1282 ticks
-PASS cgtest91 (exit status: 0)

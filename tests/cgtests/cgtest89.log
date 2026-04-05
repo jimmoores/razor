@@ -1,9 +1,0 @@
-DEBUG: main starting
-DEBUG: init_occam_io called with tlpiface=7
-DEBUG: kbd_chan=0x1032f9a10, scr_chan=0x1032f9a70, err_chan=0x1032f9ad0
-DEBUG: kbd_ws=0x1032fa1c0, scr_ws=0x1032fa3c0, err_ws=0x1032fa5c0
-CG test 89  --  BARRIERs
-bsc_clean: wptr=0x1032fa180 iptr=0000000102a9aa48
-^^^ Passed : CG test 89: All 1 tests passed OK
-Time = 66361 ticks
-PASS cgtest89 (exit status: 0)

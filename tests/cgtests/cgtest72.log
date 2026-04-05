@@ -1,10 +1,0 @@
-DEBUG: main starting
-DEBUG: init_occam_io called with tlpiface=7
-DEBUG: kbd_chan=0x105359a10, scr_chan=0x105359a70, err_chan=0x105359ad0
-DEBUG: kbd_ws=0x10535a1c0, scr_ws=0x10535a3c0, err_ws=0x10535a5c0
-CG test 72  --  User Defined Operators 3
-Testing open array parameters (fixed return arrays)bsc_clean: wptr=0x10535a180 iptr=0000000104b30dd8
-
-^^^ Passed : CG test 72: All 36 tests passed OK
-Time = 65 ticks
-PASS cgtest72 (exit status: 0)

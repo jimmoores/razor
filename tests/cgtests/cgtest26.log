@@ -1,9 +1,0 @@
-DEBUG: main starting
-DEBUG: init_occam_io called with tlpiface=7
-DEBUG: kbd_chan=0x100b719d0, scr_chan=0x100b71a30, err_chan=0x100b71a90
-DEBUG: kbd_ws=0x100b72180, scr_ws=0x100b72380, err_ws=0x100b72580
-CG test 26  --  More Procedure parameter combinationsbsc_clean: wptr=0x100b72140 iptr=00000001002b39d8
-
-^^^ Passed : CG test 26: All 1 tests passed OK
-Time = 943 ticks
-PASS cgtest26 (exit status: 0)
