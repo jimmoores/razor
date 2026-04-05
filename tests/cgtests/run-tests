@@ -26,6 +26,26 @@ TIMEOUT = 30.0
 # Tests that are known not to work.
 KNOWN_BROKEN = []
 
+def build_intree_env():
+	"""Return an environment dict with in-tree runtime libraries prepended
+	to LD_LIBRARY_PATH, if this script is being run from the source tree."""
+	# Script lives at tests/cgtests/; runtime libs are two levels up.
+	script_dir = os.path.dirname(os.path.abspath(__file__))
+	lib_dirs = [
+		os.path.join(script_dir, "..", "..", "runtime", "ccsp"),
+		os.path.join(script_dir, "..", "..", "runtime", "libkrocif"),
+	]
+	intree = [d for d in lib_dirs if os.path.isdir(d)]
+	if not intree:
+		return os.environ.copy()
+	env = os.environ.copy()
+	existing = env.get("LD_LIBRARY_PATH", "")
+	parts = intree + ([existing] if existing else [])
+	env["LD_LIBRARY_PATH"] = ":".join(parts)
+	return env
+
+CHILD_ENV = build_intree_env()
+
 def status(s):
 	sys.stderr.write(s)
 	sys.stderr.flush()
@@ -55,7 +75,7 @@ def run_test(name, verbose, interpreter):
 		os.dup2(null, 0)
 		os.dup2(pw, 1)
 		os.dup2(pw, 2)
-		os.execvp(cmd[0], cmd)
+		os.execvpe(cmd[0], cmd, CHILD_ENV)
 		os._exit(111)
 	os.close(null)
 	os.close(pw)
