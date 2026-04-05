@@ -875,6 +875,21 @@ restart:
 		}
 		if (!rdepth && first && last && n_nodes) {
 			/* have something suitable for colouring */
+			/* DEBUG: print all nodes in this block if any are in range 2224-2230 */
+			{
+				int _has_target = 0;
+				for (i=0; i<n_nodes; i++) {
+					if (nodes[i]->vreg >= 2224 && nodes[i]->vreg <= 2230) { _has_target = 1; break; }
+				}
+				if (_has_target) {
+					fprintf(stderr, "DEBUG_BLOCK: n_nodes=%d\n", n_nodes);
+					for (i=0; i<n_nodes; i++) {
+						fprintf(stderr, "  node[%d]: vreg=%d rreg=%d constrain_ins=%p start=%p end=%p\n",
+							i, nodes[i]->vreg, nodes[i]->rreg, (void*)nodes[i]->constrain_ins,
+							(void*)nodes[i]->start_ins, (void*)nodes[i]->end_ins);
+					}
+				}
+			}
 			/*{{{  build links between nodes first*/
 			for (i=0; i<n_nodes; i++) {
 				nodes[i]->n_links = count_edges (low_edge_table, high_edge_table, edge_cur, nodes[i]->vreg);
