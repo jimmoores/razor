@@ -596,7 +596,15 @@ static TRIVIAL void release_tqnode (sched_t *sched, tqnode_t *tn)
 /*{{{  static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)*/
 static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)
 {
-	Wptr[Priofinity] = sched->priofinity;
+	unsigned int current = (unsigned int) Wptr[Priofinity];
+	if (PHasAffinity (current)) {
+		/* Process has explicit affinity (e.g. from SETAFF).
+		 * Preserve affinity bits; only update priority. */
+		Wptr[Priofinity] = (word) BuildPriofinity (
+			PAffinity (current), PPriority (sched->priofinity));
+	} else {
+		Wptr[Priofinity] = sched->priofinity;
+	}
 }
 /*}}}*/
 /*{{{  static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address)*/
@@ -2222,12 +2230,12 @@ K_CALL_DEFINE_0_0 (Y_shutdown)
 	K_CALL_PARAMS_0 ();
 	ENTRY_TRACE (Y_shutdown, "");
 	att_set (&(ccsp_shutdown), true);
-	/* Flush buffered output and terminate.  On multiprocessor systems
-	 * the batch scheduler may not dispatch processes after shutdown,
-	 * so we exit directly rather than re-entering kernel_scheduler. */
+	/* Flush buffered output and terminate.  Route through ccsp_kernel_exit
+	 * so the registered exit handler (e.g. restore_tty_state) is called
+	 * before the process exits. */
 	fflush (stdout);
 	fflush (stderr);
-	_exit (0);
+	ccsp_kernel_exit (0, 0);
 }
 /*}}}*/
 /*}}}*/

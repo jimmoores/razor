@@ -532,15 +532,17 @@ void ccsp_init_signal_pipe (sched_t *sched)
 }
 /*}}}*/
 /*{{{  void ccsp_safe_pause (sched_t *sched)*/
-#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
-#include <sys/select.h>
 /*
- * Cross-thread SDL event poll mechanism for macOS.
- * When SDL_PollEvent is called from a non-main thread, the request
- * is bounced to the main thread via this mechanism.  The main thread
- * processes the request during its idle loop (ccsp_safe_pause).
+ * Cross-thread SDL event poll mechanism.
+ * On macOS, SDL/Cocoa requires SDL_PollEvent on the main OS thread.
+ * When called from a non-main thread, the request is bounced to the
+ * main thread via this mechanism.  The main thread processes the
+ * request during its scheduler idle loop (ccsp_safe_pause).
+ *
+ * On other platforms the bounce mechanism compiles but is inactive:
+ * _sdl_poll_sched_fd is -1 (never set) and _sdl_poll_func is NULL
+ * (never registered), so all paths short-circuit at runtime.
  */
-#include <pthread.h>
 static pthread_mutex_t _sdl_poll_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  _sdl_poll_done  = PTHREAD_COND_INITIALIZER;
 static volatile int    _sdl_poll_req   = 0;
@@ -601,7 +603,6 @@ void process_sdl_poll_request (void)
 	}
 	pthread_mutex_unlock (&_sdl_poll_mutex);
 }
-#endif /* __APPLE__ && __aarch64__ */
 
 extern bool ccsp_sched_poll (unsigned int);
 

@@ -104,9 +104,6 @@ int init_occam_io (int tlpiface)
 {
 	int i;
 
-	fprintf(stderr, "DEBUG: init_occam_io called with tlpiface=%d\n", tlpiface);
-	fflush(stderr);
-
 	#if defined(DM_DEBUG) && (DM_DEBUG == 1)
 		extadd_ord_mem (_kbd_workspace_bottom, 13 * sizeof(word), MODE_READ | MODE_WRITE);
 		extadd_ord_mem (_scr_workspace_bottom, 128 * sizeof(word), MODE_READ | MODE_WRITE);
@@ -134,9 +131,6 @@ int init_occam_io (int tlpiface)
 	kbd_chan = setup_chan (0x00020001); /* server shared not claimed, client unshared */
 	scr_chan = setup_chan (0x00010002); /* client shared not claimed, server unshared */
 	err_chan = setup_chan (0x00010002); /* client shared not claimed, server unshared */
-
-	fprintf(stderr, "DEBUG: kbd_chan=%p, scr_chan=%p, err_chan=%p\n", kbd_chan, scr_chan, err_chan);
-	fflush(stderr);
 
 	kbd_ws = &(kbd_workspace_bottom[KBD_WORKSPACE_WORDS - 4]);
 	kbd_ws[-3] = 0;
@@ -193,8 +187,6 @@ int init_occam_io (int tlpiface)
 #endif
 	err_ws[1] = (word) err_chan;
 
-	fprintf(stderr, "DEBUG: kbd_ws=%p, scr_ws=%p, err_ws=%p\n", kbd_ws, scr_ws, err_ws);
-	fflush(stderr);
 	return 0;
 }
 /*}}}*/
