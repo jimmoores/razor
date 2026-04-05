@@ -97,8 +97,6 @@ __attribute__ ((weak))
 #endif
 int main (int argc, char **argv)
 {
-	fprintf(stderr, "DEBUG: main starting\n");
-	fflush(stderr);
 	kroc_argc = argc;
 
 	kroc_argv = argv;

@@ -166,6 +166,19 @@ static void user_stop_signal (int sig)
 }
 /*}}}*/
 
+/*{{{  static void user_crash_signal (int sig)*/
+/*
+ *	crash signal handler -- restore tty before core dump
+ */
+static void user_crash_signal (int sig)
+{
+	if (stdin_is_tty && occam_uses_keyboard ()) {
+		restore_tty_state ();
+	}
+	signal (sig, SIG_DFL);
+	kill (getpid (), sig);
+}
+/*}}}*/
 /*{{{  static void set_user_process_signals (void)*/
 /*
  *	sets up signal handling for KRoC
@@ -193,6 +206,11 @@ static void set_user_process_signals (void)
 	if (signal (SIGTSTP, SIG_IGN) == SIG_DFL) {
 		signal (SIGTSTP, user_stop_signal);
 	}
+
+	/* crash signals -- restore tty state before core dump */
+	signal (SIGSEGV, user_crash_signal);
+	signal (SIGBUS, user_crash_signal);
+	signal (SIGABRT, user_crash_signal);
 }
 /*}}}*/
 
