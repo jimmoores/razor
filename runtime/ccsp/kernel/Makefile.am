@@ -9,5 +9,8 @@ AUTOMAKE_OPTIONS=foreign
 
 DEFS=@DEFS@ @EXTRA_DEFS@ -fno-defer-pop -Wall -fPIC
 
-libkernel_a_SOURCES = bsyscalls.c deadlock.c dynproc.c entry.c sched.c stats.c aarch64_cif.S
+libkernel_a_SOURCES = bsyscalls.c deadlock.c dynproc.c entry.c sched.c stats.c
+if CCSP_AARCH64
+libkernel_a_SOURCES += aarch64_cif.S
+endif
 

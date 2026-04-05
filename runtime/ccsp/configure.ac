@@ -596,6 +596,7 @@ aarch64 | arm64)
   ARCH_DIR=aarch64
   AC_SUBST(ARCH_DIR)
   AC_DEFINE([TARGET_CPU_AARCH64],1,[define if aarch64 target])
+  ccsp_aarch64=yes
   bigendian=no
   ;;
 # XXX: If you're resurrecting any of the entries below, some of this will need
@@ -676,6 +677,7 @@ EXTRA_DEFS="$EXTRA_CFLAGS $FRAMEPTR_CFLAGS $RMOX_CFLAGS -DSIGNAL_TYPE_SYSV"
 AC_SUBST(EXTRA_DEFS)
 AC_SUBST(EXTRA_LDFLAGS)
 
+AM_CONDITIONAL([CCSP_AARCH64], [test x$ccsp_aarch64 = xyes])
 AC_CONFIG_HEADERS([include/ccsp_config.h])
 AC_CONFIG_FILES([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile include/aarch64/Makefile include/x64/Makefile kernel/Makefile utils/Makefile])
 AC_OUTPUT
