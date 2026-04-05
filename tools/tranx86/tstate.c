@@ -87,7 +87,7 @@ void tstate_initialise (tstate *state, etc_chain *etc_code)
 	state->file_cur = state->file_max = 0;
 	state->proc_cur = state->proc_max = 0;
 	state->ws_size = state->vs_size = state->ms_size = 0;
-	state->ws_adjust = 32;
+	state->ws_adjust = 4 << WSH;	/* RET 4 adjustment: 4 words * BytesPerWord */
 	state->stack_drift = 0;
 	state->end_of_module = 0;
 	state->last_lab = 0;
