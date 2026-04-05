@@ -546,8 +546,7 @@ static int merge_multiple_constraints (ins_chain *code)
 					} else if (reg_next_c) {
 						/* impending register collision */
 						if (0 && options.verbose) {
-							fprintf (stderr, "%s: message: potential conflict on register %d (constrained to %d and %d)\n", progname, reg, c_reg, reg_next_c->in_args[1]->regconst);
-						}
+							fprintf (stderr, "%s: message: potential conflict on register %d (constrained to %d and %ld)\n", progname, reg, c_reg, (long)reg_next_c->in_args[1]->regconst);						}
 						tmp_reg = rtl_get_newvreg ();
 						if (0 && options.verbose) {
 							fprintf (stderr, "%s: message: spilling register %d to register %d\n", progname, reg, tmp_reg);
@@ -637,8 +636,7 @@ restart:
 			if (i == arch_rmax) {
 				/* CRITICAL FIX: Auto-generate missing START_REG instruction */
 				if (options.verbose) {
-					fprintf (stderr, "%s: warning: auto-generating missing START_REG for register %d\n", progname, tmp->in_args[0]->regconst);
-				}
+					fprintf (stderr, "%s: warning: auto-generating missing START_REG for register %ld\n", progname, (long)tmp->in_args[0]->regconst);				}
 				/* Find a free slot and add the register */
 				for (i=0; (i<arch_rmax) && (active_regs[i] > -1); i++);
 				if (i == arch_rmax) {
@@ -656,8 +654,8 @@ restart:
 			}
 			if (j < arch_rmax) {
 				if (options.diagnostics) {
-					fprintf (stderr, "constrained reg %d (to %d) conflicts with reg %d (to %d) -- constrain_instrs[j] = %p\n", active_regs[j],
-						constrain_regs[j], active_regs[i], tmp->in_args[1]->regconst, constrain_instrs[j]);
+					fprintf (stderr, "constrained reg %d (to %d) conflicts with reg %d (to %ld) -- constrain_instrs[j] = %p\n", active_regs[j],
+						constrain_regs[j], active_regs[i], (long)tmp->in_args[1]->regconst, constrain_instrs[j]);
 				}
 				if (!constrain_instrs[j]) {
 					/*{{{  active_regs[i] constrains before active_regs[j] -- split active_regs[j] before constraint */
@@ -717,8 +715,7 @@ restart:
 		case INS_UNCONSTRAIN_REG:
 			for (i=0; (i<arch_rmax) && (active_regs[i] != tmp->in_args[0]->regconst); i++);
 			if (i == arch_rmax) {
-				fprintf (stderr, "%s: colour_code_block: INS_UNCONSTRAIN_REG encountered for unseen register %d\n", progname, tmp->in_args[0]->regconst);
-				goto out_error;
+				fprintf (stderr, "%s: colour_code_block: INS_UNCONSTRAIN_REG encountered for unseen register %ld\n", progname, (long)tmp->in_args[0]->regconst);				goto out_error;
 			}
 			unconstrain_instrs[i] = tmp;
 			break;
@@ -727,8 +724,7 @@ restart:
 		case INS_END_REG:
 			for (i=0; (i<arch_rmax) && (active_regs[i] != tmp->in_args[0]->regconst); i++);
 			if (i == arch_rmax) {
-				fprintf (stderr, "%s: colour_code_block: INS_END_REG encountered for unseen register %d\n", progname, tmp->in_args[0]->regconst);
-				goto out_error;
+				fprintf (stderr, "%s: colour_code_block: INS_END_REG encountered for unseen register %ld\n", progname, (long)tmp->in_args[0]->regconst);				goto out_error;
 			}
 			if (constrain_regs[i] != -1) {
 				/*{{{  check other active registers for a possible overlapping constraint*/
@@ -819,8 +815,7 @@ restart:
 			if (i == n_nodes) {
 				/* CRITICAL FIX: Auto-generate missing graph node */
 				if (options.verbose) {
-					fprintf (stderr, "%s: warning: auto-generating missing graph node for register %d\n", progname, tmp->in_args[0]->regconst);
-				}
+					fprintf (stderr, "%s: warning: auto-generating missing graph node for register %ld\n", progname, (long)tmp->in_args[0]->regconst);				}
 				if (n_nodes == arch_nodemax) {
 					fprintf (stderr, "%s: colour_code_block: too many nodes in graph (arch_nodemax = %d)\n", progname, arch_nodemax);
 					goto out_error;
@@ -851,8 +846,7 @@ restart:
 				}
 			}
 			if (i == n_nodes) {
-				fprintf (stderr, "%s: colour_code_block: INS_END_REG encountered for unseen register %d\n", progname, tmp->in_args[0]->regconst);
-				goto out_error;
+				fprintf (stderr, "%s: colour_code_block: INS_END_REG encountered for unseen register %ld\n", progname, (long)tmp->in_args[0]->regconst);				goto out_error;
 			} else {
 				this_node = nodes[i];
 			}
@@ -860,8 +854,7 @@ restart:
 			/* mark inactive */
 			for (i=0; (i<arch_rmax) && (active_regs[i] != tmp->in_args[0]->regconst); i++);
 			if (i == arch_rmax) {
-				fprintf (stderr, "%s: colour_code_block: INS_END_REG encountered for inactive register %d\n", progname, tmp->in_args[0]->regconst);
-				goto out_error;
+				fprintf (stderr, "%s: colour_code_block: INS_END_REG encountered for inactive register %ld\n", progname, (long)tmp->in_args[0]->regconst);				goto out_error;
 			}
 			active_regs[i] = -1;
 			if (!--rdepth) {

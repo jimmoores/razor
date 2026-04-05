@@ -3591,7 +3591,7 @@ static int rtl_validate_instr_i386 (ins_chain *ins)
 			return 0;
 		}
 		if ((ArgReg (ins->out_args[0]) != REG_CC) || !ArgIsImplied (ins->out_args[0])) {
-			fprintf (stderr, "error: CMP output register invalid: %d\n", ArgReg (ins->out_args[0]));
+			fprintf (stderr, "error: CMP output register invalid: %ld\n", (long)ArgReg (ins->out_args[0]));
 			return 0;
 		}
 		break;
@@ -3605,7 +3605,7 @@ static int rtl_validate_instr_i386 (ins_chain *ins)
 			return 0;
 		}
 		if ((ArgReg (ins->out_args[0]) != REG_CC) || !ArgIsImplied (ins->out_args[0])) {
-			fprintf (stderr, "error: SAHF output register invalid: %d\n", ArgReg (ins->out_args[0]));
+			fprintf (stderr, "error: SAHF output register invalid: %ld\n", (long)ArgReg (ins->out_args[0]));
 			return 0;
 		}
 		break;
@@ -3614,22 +3614,22 @@ static int rtl_validate_instr_i386 (ins_chain *ins)
 			ins_chain *setting = rtl_scan_setscc_backward (ins, 1);
 
 			if (!setting && !(options.debug_options & (DEBUG_OVERFLOW | DEBUG_RANGESTOP | DEBUG_FLOAT | DEBUG_MEMCHK))) {
-				fprintf (stderr, "warning: didn\'t find a CC-setting instruction before CJUMP (cond %d to ", ArgCC (ins->in_args[0]));
+				fprintf (stderr, "warning: didn\'t find a CC-setting instruction before CJUMP (cond %ld to ", (long)ArgCC (ins->in_args[0]));
 				switch (ArgMode (ins->in_args[1])) {
 				case ARG_LABEL:
-					fprintf (stderr, "L%d", ArgLabel (ins->in_args[1]));
+					fprintf (stderr, "L%ld", (long)ArgLabel (ins->in_args[1]));
 					break;
 				case ARG_FLABEL:
-					fprintf (stderr, "%df", ArgLabel (ins->in_args[1]));
+					fprintf (stderr, "%ldf", (long)ArgLabel (ins->in_args[1]));
 					break;
 				case ARG_BLABEL:
-					fprintf (stderr, "%db", ArgLabel (ins->in_args[1]));
+					fprintf (stderr, "%ldb", (long)ArgLabel (ins->in_args[1]));
 					break;
 				case ARG_NAMEDLABEL:
 					fprintf (stderr, "%s", ArgName (ins->in_args[1]));
 					break;
 				case ARG_INSLABEL:
-					fprintf (stderr, "IL%d", ArgLabel ((ArgInsLab (ins->in_args[1]))->in_args[0]));
+					fprintf (stderr, "IL%ld", (long)ArgLabel ((ArgInsLab (ins->in_args[1]))->in_args[0]));
 					break;
 				default:
 					fprintf (stderr, "..=%d", ArgMode (ins->in_args[1]));

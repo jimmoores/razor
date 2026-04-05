@@ -167,38 +167,38 @@ static int drop_arg (ins_arg *arg, FILE *outstream)
 	}
 	switch (arg->flags & ARG_MODEMASK) {
 	case ARG_REG:
-		fprintf (outstream, "%s", (arg->regconst < 0) ? "??" : regset[arg->regconst]);
+		fprintf (outstream, "%s", ((long)arg->regconst < 0) ? "??" : regset[(long)arg->regconst]);
 		break;
 	case ARG_FREG:
-		fprintf (outstream, "%s", (arg->regconst < 0) ? "??" : intel_fregs[arg->regconst]);
+		fprintf (outstream, "%s", ((long)arg->regconst < 0) ? "??" : intel_fregs[(long)arg->regconst]);
 		break;
 	case ARG_REGIND:
-		fprintf (outstream, "(%s)", (arg->regconst < 0) ? "??" : regset[arg->regconst]);
+		fprintf (outstream, "(%s)", ((long)arg->regconst < 0) ? "??" : regset[(long)arg->regconst]);
 		break;
 	case ARG_CONST:
-		fprintf (outstream, "%d", arg->regconst);
+		fprintf (outstream, "%ld", (long)arg->regconst);
 		break;
 	case ARG_LABEL:
-		fprintf (outstream, LBLPFX "%d", arg->regconst);
+		fprintf (outstream, LBLPFX "%ld", (long)arg->regconst);
 		break;
 	case ARG_INSLABEL:
-		fprintf (outstream, LBLPFX "%d", ((ins_chain *)arg->regconst)->in_args[0]->regconst);
+		fprintf (outstream, LBLPFX "%ld", (long)((ins_chain *)(long)arg->regconst)->in_args[0]->regconst);
 		break;
 	case ARG_FLABEL:
-		fprintf (outstream, "%df", arg->regconst);
+		fprintf (outstream, "%ldf", (long)arg->regconst);
 		break;
 	case ARG_BLABEL:
-		fprintf (outstream, "%db", arg->regconst);
+		fprintf (outstream, "%ldb", (long)arg->regconst);
 		break;
 	case ARG_NAMEDLABEL:
-		fprintf (outstream, "%s", modify_name ((char *)arg->regconst));
+		fprintf (outstream, "%s", modify_name ((char *)(long)arg->regconst));
 		break;
 	case ARG_TEXT:
-		for (tptr = (char *)arg->regconst; (*tptr == ' ') || (*tptr == '\t'); tptr++);
+		for (tptr = (char *)(long)arg->regconst; (*tptr == ' ') || (*tptr == '\t'); tptr++);
 		fprintf (outstream, "%s", tptr);
 		break;
 	case ARG_REGINDSIB:
-		t_sib = (ins_sib_arg *)arg->regconst;
+		t_sib = (ins_sib_arg *)(long)arg->regconst;
 		fprintf (outstream, "(%s,%s,%d)", regset[t_sib->base], regset[t_sib->index], t_sib->scale);
 		break;
 	}
@@ -335,7 +335,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			break;
 		case INS_SETFLABEL:
 			/* (very) local label */
-			fprintf (outstream, "%d:\n", tmp->in_args[0]->regconst);
+			fprintf (outstream, "%ld:\n", (long)tmp->in_args[0]->regconst);
 			break;
 		case INS_LOADLABDIFF:
 		case INS_CONSTLABDIFF:
@@ -379,7 +379,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			fprintf (outstream, "\t%s%s\t", codes[tmp->type], setcc_tailcodes[tmp->in_args[0]->regconst]);
 			if ((tmp->out_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
 				if (tmp->out_args[0]->regconst >= 4) {
-					fprintf (stderr, "%s: error: low 8-bit register %d unacceptable! (<4)\n", progname, tmp->out_args[0]->regconst);
+					fprintf (stderr, "%s: error: low 8-bit register %ld unacceptable! (<4)\n", progname, (long)tmp->out_args[0]->regconst);
 				} else {
 					fprintf (outstream, "%s", intel_lregs[tmp->out_args[0]->regconst]);
 				}
@@ -464,7 +464,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			fprintf (outstream, "\t%s\t", codes[tmp->type]);
 			if ((tmp->in_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
 				if (tmp->in_args[0]->regconst != REG_ECX) {
-					fprintf (stderr, "%s: error: SHLD/SHRD shift register %d unacceptable (!cl)\n", progname, tmp->in_args[0]->regconst);
+					fprintf (stderr, "%s: error: SHLD/SHRD shift register %ld unacceptable (!cl)\n", progname, (long)tmp->in_args[0]->regconst);
 				} else {
 					fprintf (outstream, "%s", intel_lregs[tmp->in_args[0]->regconst]);
 				}
@@ -483,7 +483,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			fprintf (outstream, "\t%s\t", codes[tmp->type]);
 			if ((tmp->in_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
 				if (tmp->in_args[0]->regconst != REG_ECX) {
-					fprintf (stderr, "%s: error: SHL/SHR shift register %d unacceptable (!cl)\n", progname, tmp->in_args[0]->regconst);
+					fprintf (stderr, "%s: error: SHL/SHR shift register %ld unacceptable (!cl)\n", progname, (long)tmp->in_args[0]->regconst);
 				} else {
 					fprintf (outstream, "%s", intel_lregs[tmp->in_args[0]->regconst]);
 				}
@@ -535,7 +535,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			switch ((tmp->in_args[0]->flags & ARG_MODEMASK)) {
 			case ARG_REG:
 				if (tmp->in_args[0]->regconst >= 4) {
-					fprintf (stderr, "%s: error: low 8-bit register %d unacceptable! (<4)\n", progname, tmp->in_args[0]->regconst);
+					fprintf (stderr, "%s: error: low 8-bit register %ld unacceptable! (<4)\n", progname, (long)tmp->in_args[0]->regconst);
 				} else {
 					if (tmp->in_args[0]->flags & ARG_IS8HIGH) {
 						fprintf (outstream, "%s", intel_hregs[tmp->in_args[0]->regconst]);
@@ -553,7 +553,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 				switch ((tmp->out_args[0]->flags & ARG_MODEMASK)) {
 				case ARG_REG:
 					if (tmp->out_args[0]->regconst >= 4) {
-						fprintf (stderr, "%s: error: low 8-bit register %d unacceptable! (<4)\n", progname, tmp->out_args[0]->regconst);
+						fprintf (stderr, "%s: error: low 8-bit register %ld unacceptable! (<4)\n", progname, (long)tmp->out_args[0]->regconst);
 					} else {
 						if (tmp->out_args[0]->flags & ARG_IS8HIGH) {
 							fprintf (outstream, "%s", intel_hregs[tmp->out_args[0]->regconst]);
@@ -576,7 +576,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			switch ((tmp->in_args[0]->flags & ARG_MODEMASK)) {
 			case ARG_REG:
 				if (tmp->in_args[0]->regconst >= 4) {
-					fprintf (stderr, "%s: error: low 16-bit register %d unacceptable! (<4)\n", progname, tmp->in_args[0]->regconst);
+					fprintf (stderr, "%s: error: low 16-bit register %ld unacceptable! (<4)\n", progname, (long)tmp->in_args[0]->regconst);
 				} else {
 					fprintf (outstream, "%s", intel_xregs[tmp->in_args[0]->regconst]);
 				}
@@ -590,7 +590,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 				switch ((tmp->out_args[0]->flags & ARG_MODEMASK)) {
 				case ARG_REG:
 					if (tmp->out_args[0]->regconst >= 4) {
-						fprintf (stderr, "%s: error: low 16-bit register %d unacceptable! (<4)\n", progname, tmp->out_args[0]->regconst);
+						fprintf (stderr, "%s: error: low 16-bit register %ld unacceptable! (<4)\n", progname, (long)tmp->out_args[0]->regconst);
 					} else {
 						fprintf (outstream, "%s", intel_xregs[tmp->out_args[0]->regconst]);
 					}
@@ -629,7 +629,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			fprintf (outstream, "\t%s\t", codes[tmp->type]);
 			if ((tmp->out_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
 				if (tmp->out_args[0]->regconst != REG_EAX) {
-					fprintf (stderr, "%s: error: fstsw register not AX (was %d)\n", progname, tmp->out_args[0]->regconst);
+					fprintf (stderr, "%s: error: fstsw register not AX (was %ld)\n", progname, (long)tmp->out_args[0]->regconst);
 				}
 				fprintf (outstream, "%%ax");
 			} else {

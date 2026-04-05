@@ -35,8 +35,12 @@ typedef unsigned char 	byte;
 typedef word	 	bool;
 #endif
 
+#ifndef TRUE
 #define TRUE 	true
+#endif
+#ifndef FALSE
 #define FALSE 	false
+#endif
 
 #define one_if_true(x) ((x) & true)
 #define zero_if_false(x) ((x))

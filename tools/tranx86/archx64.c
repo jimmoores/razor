@@ -729,8 +729,8 @@ static int x64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 				case INS_MOVE:
 					if (ins->out_args[0] && ins->in_args[0]) {
 						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
-							fprintf (stream, "\tmovq\t$%d, %s\n", 
-								ins->in_args[0]->regconst,
+							fprintf (stream, "\tmovq\t$%ld, %s\n", 
+								(long)ins->in_args[0]->regconst,
 								x64_get_register_name (ins->out_args[0]->regconst));
 						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 							fprintf (stream, "\tleaq\t%s(%%rip), %s\n", 
@@ -746,8 +746,8 @@ static int x64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 				case INS_ADD:
 					if (ins->out_args[0] && ins->in_args[0] && ins->in_args[1]) {
 						if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
-							fprintf (stream, "\taddq\t$%d, %s\n",
-								ins->in_args[1]->regconst,
+							fprintf (stream, "\taddq\t$%ld, %s\n",
+								(long)ins->in_args[1]->regconst,
 								x64_get_register_name (ins->out_args[0]->regconst));
 						} else {
 							fprintf (stream, "\taddq\t%s, %s\n",
@@ -759,8 +759,8 @@ static int x64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 				case INS_SUB:
 					if (ins->out_args[0] && ins->in_args[0] && ins->in_args[1]) {
 						if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
-							fprintf (stream, "\tsubq\t$%d, %s\n",
-								ins->in_args[1]->regconst,
+							fprintf (stream, "\tsubq\t$%ld, %s\n",
+								(long)ins->in_args[1]->regconst,
 								x64_get_register_name (ins->out_args[0]->regconst));
 						} else {
 							fprintf (stream, "\tsubq\t%s, %s\n",
@@ -796,7 +796,7 @@ static int x64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					break;
 				case INS_SETLABEL:
 					if (ins->in_args[0] && (ins->in_args[0]->flags & ARG_MODEMASK) == ARG_LABEL) {
-						fprintf (stream, "L%d:\n", ins->in_args[0]->regconst);
+						fprintf (stream, "L%ld:\n", (long)ins->in_args[0]->regconst);
 					}
 					break;
 				case INS_JUMP:
@@ -804,13 +804,13 @@ static int x64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_NAMEDLABEL) {
 							fprintf (stream, "\tjmp\t%s\n", (char *)ins->in_args[0]->regconst);
 						} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_LABEL) {
-							fprintf (stream, "\tjmp\tL%d\n", ins->in_args[0]->regconst);
+							fprintf (stream, "\tjmp\tL%ld\n", (long)ins->in_args[0]->regconst);
 						}
 					}
 					break;
 				case INS_CJUMP:
 					if (ins->in_args[0] && ins->in_args[1] && (ins->in_args[1]->flags & ARG_MODEMASK) == ARG_LABEL) {
-						fprintf (stream, "\tj%s\tL%d\n", 
+						fprintf (stream, "\tj%s\tL%ld\n", 
 							(ins->in_args[0]->regconst == CC_E) ? "e" : "ne",
 							ins->in_args[1]->regconst);
 					}
@@ -818,8 +818,8 @@ static int x64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 				case INS_CMP:
 					if (ins->in_args[0] && ins->in_args[1]) {
 						if ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST) {
-							fprintf (stream, "\tcmpq\t$%d, %s\n",
-								ins->in_args[1]->regconst,
+							fprintf (stream, "\tcmpq\t$%ld, %s\n",
+								(long)ins->in_args[1]->regconst,
 								x64_get_register_name (ins->in_args[0]->regconst));
 						} else {
 							fprintf (stream, "\tcmpq\t%s, %s\n",

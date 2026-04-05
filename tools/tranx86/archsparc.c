@@ -1674,7 +1674,7 @@ static int rtl_validate_instr_sparc (ins_chain *ins)
 			return 0;
 		}
 		if ((ArgReg (ins->out_args[0]) != REG_CC) || !ArgIsImplied (ins->out_args[0])) {
-			fprintf (stderr, "error: CMP output register invalid: %d\n", ArgReg (ins->out_args[0]));
+			fprintf (stderr, "error: CMP output register invalid: %ld\n", (long)ArgReg (ins->out_args[0]));
 			return 0;
 		}
 		break;
@@ -1688,7 +1688,7 @@ static int rtl_validate_instr_sparc (ins_chain *ins)
 			return 0;
 		}
 		if ((ArgReg (ins->out_args[0]) != REG_CC) || !ArgIsImplied (ins->out_args[0])) {
-			fprintf (stderr, "error: SAHF output register invalid: %d\n", ArgReg (ins->out_args[0]));
+			fprintf (stderr, "error: SAHF output register invalid: %ld\n", (long)ArgReg (ins->out_args[0]));
 			return 0;
 		}
 		break;

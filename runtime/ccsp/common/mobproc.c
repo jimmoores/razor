@@ -250,7 +250,7 @@ static void dump_workspace (FILE *stream, void **wsptr, int wsbytes, mp_mapchain
 /*
  *	dumps a workspace map in human-readable form
  */
-static void dump_workspace_mapchain (FILE *stream, mp_mapchain *mc)
+static void __attribute__((unused)) dump_workspace_mapchain (FILE *stream, mp_mapchain *mc)
 {
 	unsigned char *mapptr = mc->mapdata;
 	int maplen = (int)((mapptr[2] << 8) | mapptr[3]);
@@ -260,18 +260,17 @@ static void dump_workspace_mapchain (FILE *stream, mp_mapchain *mc)
 	for (mapptr += 4; mapptr < mapmax;) {
 		int offset = decode_entry (&mapptr);
 		int type = decode_entry (&mapptr);
-		int any;
 		int nslots = 1;
 
 		switch (type & WSMAP_TYPEMASK) {
 		case WSMAP_MOB_DA:
 			nslots = decode_entry (&mapptr);
-			any = decode_entry (&mapptr);
+			(void)decode_entry (&mapptr);
 			break;
 		case WSMAP_MOB_CT:
-			any = decode_entry (&mapptr);
-			any = decode_entry (&mapptr);
-			any = decode_entry (&mapptr);
+			(void)decode_entry (&mapptr);
+			(void)decode_entry (&mapptr);
+			(void)decode_entry (&mapptr);
 			break;
 		}
 		MESSAGETO (stream, "    %-6d %-4d %d\n", offset, nslots, type);
@@ -308,13 +307,12 @@ MESSAGE ("recover_entries (mc = %p, mp = %p): offset = %d, type = %d\n", mc, mp,
 			/*{{{  WSMAP_MOB_DA*/
 		case WSMAP_MOB_DA:
 			{
-				int nslots, basebytes;
-				
-				nslots = decode_entry (&mapptr);
-				basebytes = decode_entry (&mapptr);
+				/* advance mapptr past nslots and basebytes entries */
+				(void)decode_entry (&mapptr);
+				(void)decode_entry (&mapptr);
 
 #if 0
-MESSAGE ("recover_entries: WSMAP_MOB_DA: slots = %d, basebytes = %d\n", nslots, basebytes);
+MESSAGE ("recover_entries: WSMAP_MOB_DA\n");
 #endif
 				if (wsbase[offset + 1]) {
 					/* should be a pointer to free */
@@ -327,15 +325,15 @@ MESSAGE ("recover_entries: WSMAP_MOB_DA: slots = %d, basebytes = %d\n", nslots, 
 			/*{{{  WSMAP_MOB_CT*/
 		case WSMAP_MOB_CT:
 			{
-				int nchans, is_server, is_shared;
+				int nchans;
 				unsigned int *chanwords = (unsigned int *)(wsbase[offset]);
 
 				nchans = decode_entry (&mapptr);
-				is_server = decode_entry (&mapptr);
-				is_shared = decode_entry (&mapptr);
+				(void)decode_entry (&mapptr);		/* is_server -- advance mapptr */
+				(void)decode_entry (&mapptr);		/* is_shared -- advance mapptr */
 
 #if 0
-MESSAGE ("recover_entries: WSMAP_MOB_CT: nchans = %d, is_server = %d, is_shared = %d\n", nchans, is_server, is_shared);
+MESSAGE ("recover_entries: WSMAP_MOB_CT: nchans = %d\n", nchans);
 #endif
 				if (chanwords[nchans] == 1) {
 					/* last reference, can free this */
@@ -444,10 +442,10 @@ static void remap_workspace (mp_ctrlblk *newproc, mp_ctrlblk *oldproc, mp_mapcha
 			/*{{{  WSMAP_MOB_DA*/
 		case WSMAP_MOB_DA:
 			{
-				int nslots, basebytes;
-				
+				int nslots;
+
 				nslots = decode_entry (&mapptr);
-				basebytes = decode_entry (&mapptr);
+				(void)decode_entry (&mapptr);		/* basebytes -- advance mapptr */
 
 				/* blank out the entry, clone happens separately */
 				newws[offset] = NULL;
@@ -460,11 +458,10 @@ static void remap_workspace (mp_ctrlblk *newproc, mp_ctrlblk *oldproc, mp_mapcha
 			/*{{{  WSMAP_MOB_CT*/
 		case WSMAP_MOB_CT:
 			{
-				int nchans, is_server, is_shared;
-
-				nchans = decode_entry (&mapptr);
-				is_server = decode_entry (&mapptr);
-				is_shared = decode_entry (&mapptr);
+				/* advance mapptr past nchans, is_server, is_shared */
+				(void)decode_entry (&mapptr);
+				(void)decode_entry (&mapptr);
+				(void)decode_entry (&mapptr);
 
 				/* blank out the entry, clone happens separately */
 				newws[offset] = NULL;
@@ -578,12 +575,11 @@ MESSAGE ("clone_workspace(): MOB_DA: size = %d, basebytes = %d, nslots = %d\n", 
 		case WSMAP_MOB_CT:
 			{
 				int nchans;
-				int is_server;
 				int is_shared;
 				unsigned int *chanwords;
 
 				nchans = decode_entry (&mapptr);
-				is_server = decode_entry (&mapptr);
+				(void)decode_entry (&mapptr);		/* is_server -- advance mapptr */
 				is_shared = decode_entry (&mapptr);
 #if 0
 MESSAGE ("clone_workspace(): MOB_CT: nchans = %d, is_server = %d, is_shared = %d\n", nchans, is_server, is_shared);
@@ -696,7 +692,7 @@ static void mcache_add (void **cmap, char **nmap, int entries)
 /*
  *	clears all cached maps
  */
-static void mcache_clearall (void)
+static void __attribute__((unused)) mcache_clearall (void)
 {
 	int i;
 
@@ -767,7 +763,11 @@ MESSAGE ("mpcb_add_wsmap: adding workspace map for process block at %p, mapdata 
 	if (!mp || !mapdata) {
 		return;
 	}
+	/* mapchain is pointer-sized and naturally aligned despite __attribute__((packed)) */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 	for (mcp = &(mp->mapchain); *mcp; mcp = &((*mcp)->next));
+#pragma GCC diagnostic pop
 	*mcp = new_mapchain ();
 	(*mcp)->mapdata = mapdata;
 	(*mcp)->mapsize = (int)((mapdata[0] << 8) | mapdata[1]);
@@ -799,7 +799,11 @@ MESSAGE ("mpcb_del_wsmap: removing workspace map for process block at %p, mapdat
 	if (!mp || !mapdata) {
 		return;
 	}
+	/* mapchain is pointer-sized and naturally aligned despite __attribute__((packed)) */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 	for (mcp = &(mp->mapchain); *mcp && ((*mcp)->wsoffset != eoffset) && ((*mcp)->mapsize != mapsize) && !(((*mcp)->mapdata == mapdata) || (!(*mcp)->mapdata)); mcp = &((*mcp)->next));
+#pragma GCC diagnostic pop
 #if 0
 MESSAGE ("mpcb_del_wsmap: mp=%p chain=%p mapdata=%p (%d entries, %d bytes) Wptr=%p\n",
 		mp, mp->mapchain, mapdata, (int)((mapdata[0] << 8) | mapdata[1]), (int)((mapdata[2] << 8) | mapdata[3]), wptr);
@@ -884,7 +888,11 @@ mp_ctrlblk *mpcb_mpp_clone (mp_ctrlblk *mp)
 	tmp->iptr = mp->iptr;
 	tmp->aiptr = mp->aiptr;
 	tmp->mapchain = mp->mapchain;
+	/* mapchain is pointer-sized and naturally aligned despite __attribute__((packed)) */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress-of-packed-member"
 	for (mcp = &(tmp->mapchain); *mcp; mcp = &((*mcp)->next)) {
+#pragma GCC diagnostic pop
 		mp_mapchain *nmc = new_mapchain ();
 
 		nmc->next = (*mcp)->next;
@@ -1203,17 +1211,12 @@ MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_DA: nslots=%d, basebytes=%d, icount=%d
 				/*{{{  WSMAP_MOB_CT*/
 			case WSMAP_MOB_CT:
 				{
-					int nchans, is_server, is_shared;
-
-					nchans = decode_entry (&mapptr);
-					is_server = decode_entry (&mapptr);
-					is_shared = decode_entry (&mapptr);
-#if 0
-MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_CT: nchans=%d, is_server=%d, is_shared=%d\n", nchans, is_server, is_shared);
-#endif
+					/* advance mapptr past nchans, is_server, is_shared */
+					(void)decode_entry (&mapptr);
+					(void)decode_entry (&mapptr);
+					(void)decode_entry (&mapptr);
 
 					/* FIXME! dynamic mobile channel-type */
-				}
 				break;
 				/*}}}*/
 				/*{{{  WSMAP_MOB_PT*/
@@ -1438,11 +1441,10 @@ MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_DA: nslots=%d, basebytes=%d, icount=%d
 				/*{{{  WSMAP_MOB_CT*/
 			case WSMAP_MOB_CT:
 				{
-					int nchans, is_server, is_shared;
-
-					nchans = decode_entry (&mapptr);
-					is_server = decode_entry (&mapptr);
-					is_shared = decode_entry (&mapptr);
+					/* advance mapptr past nchans, is_server, is_shared */
+					(void)decode_entry (&mapptr);
+					(void)decode_entry (&mapptr);
+					(void)decode_entry (&mapptr);
 
 					/* FIXME! dynamic mobile channel-type */
 				}
@@ -1834,11 +1836,10 @@ MESSAGE ("re-serialised dynamic mobile array, pointer at %p for %d bytes (nslots
 					/*{{{  WSMAP_MOB_CT*/
 				case WSMAP_MOB_CT:
 					{
-						int nchans, is_server, is_shared;
-
-						nchans = decode_entry (&mapptr);
-						is_server = decode_entry (&mapptr);
-						is_shared = decode_entry (&mapptr);
+						/* advance mapptr past nchans, is_server, is_shared */
+						(void)decode_entry (&mapptr);
+						(void)decode_entry (&mapptr);
+						(void)decode_entry (&mapptr);
 
 						/* FIXME! dynamic mobile channel-type */
 					}

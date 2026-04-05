@@ -1954,7 +1954,7 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 							}
 						}
 					}
-					add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) -4 << WSH, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+					add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) -(4 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 					tstack_setprim (ts->stack, I_CALL, arch);
 					if ((ts->magic_pending & TS_MAGIC_DOSUBCODEMAP) && ts->cpinfo) {
 						/* add to current if here */

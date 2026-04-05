@@ -31,6 +31,7 @@
 #  include <config.h>
 #endif
 #include <stdio.h>
+#include <stdint.h>
 #include "suplib.h"		/* IMPORTED */
 
 #include "includes.h"
@@ -1792,13 +1793,13 @@ PUBLIC void initallocvars (const BOOL needmap)
  */
 PUBLIC void *sp_saveallocvars (const BOOL needmap)
 {
-	int *saved_vars = (int *)newvec (4 * sizeof (int));
+	intptr_t *saved_vars = (intptr_t *)newvec (4 * sizeof (intptr_t));
 
 #if 0
 fprintf (stderr, "bind3: sp_saveallocvars(): needmap = %d\n", (int)needmap);
 #endif
 	saved_vars[0] = need_wsmap;
-	saved_vars[1] = (int)wsmap;
+	saved_vars[1] = (intptr_t)wsmap;
 	saved_vars[2] = wsmap_cur;
 	saved_vars[3] = wsmap_max;
 
@@ -1816,7 +1817,7 @@ fprintf (stderr, "bind3: sp_saveallocvars(): needmap = %d\n", (int)needmap);
  */
 PUBLIC void sp_restoreallocvars (void *saved)
 {
-	int *saved_vars = (int *)saved;
+	intptr_t *saved_vars = (intptr_t *)saved;
 
 #if 0
 fprintf (stderr, "bind3: sp_restoreallocvars(): current need_wsmap = %d\n", need_wsmap);
@@ -1826,7 +1827,7 @@ fprintf (stderr, "bind3: sp_restoreallocvars(): current need_wsmap = %d\n", need
 	wsmap_cur = saved_vars[2];
 	wsmap_max = saved_vars[3];
 
-	freevec (saved, 4 * sizeof (int));
+	freevec (saved, 4 * sizeof (intptr_t));
 	return;
 }
 /*}}}*/

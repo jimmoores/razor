@@ -149,36 +149,36 @@ static int drop_arg (ins_arg *arg, FILE *outstream)
 	switch (arg->flags & ARG_MODEMASK) {
 		
 	case ARG_REG:
-		fprintf (outstream, "$%d", arg->regconst);
+		fprintf (outstream, "$%d", (long)arg->regconst);
 		break;
 		/*
 	case ARG_FREG:
-		fprintf (outstream, "%s", intel_fregs[arg->regconst]);
+		fprintf (outstream, "%s", intel_fregs[(long)arg->regconst]);
 		break;
 		*/
 	case ARG_REGIND:
-		fprintf (outstream, "($%d)", arg->regconst);
+		fprintf (outstream, "($%d)", (long)arg->regconst);
 		break;
 	case ARG_CONST:
-		fprintf (outstream, "%d", arg->regconst);
+		fprintf (outstream, "%ld", (long)arg->regconst);
 		break;
 	case ARG_LABEL:
-		fprintf (outstream, LBLPFX "%d", arg->regconst);
+		fprintf (outstream, LBLPFX "%ld", (long)arg->regconst);
 		break;
 	case ARG_INSLABEL:
-		fprintf (outstream, LBLPFX "%d", ((ins_chain *)arg->regconst)->in_args[0]->regconst);
+		fprintf (outstream, LBLPFX "%ld", (long)((ins_chain *)(long)arg->regconst)->in_args[0]->regconst);
 		break;
 	case ARG_FLABEL:
-		fprintf (outstream, "%df", arg->regconst);
+		fprintf (outstream, "%ldf", (long)arg->regconst);
 		break;
 	case ARG_BLABEL:
-		fprintf (outstream, "%db", arg->regconst);
+		fprintf (outstream, "%ldb", (long)arg->regconst);
 		break;
 	case ARG_NAMEDLABEL:
-		fprintf (outstream, "%s", modify_name ((char *)arg->regconst));
+		fprintf (outstream, "%s", modify_name ((char *)(long)arg->regconst));
 		break;
 	case ARG_TEXT:
-		for (tptr = (char *)arg->regconst; (*tptr == ' ') || (*tptr == '\t'); tptr++);
+		for (tptr = (char *)(long)arg->regconst; (*tptr == ' ') || (*tptr == '\t'); tptr++);
 		fprintf (outstream, "%s", tptr);
 		break;
 	case ARG_REGINDSIB:
@@ -187,13 +187,13 @@ static int drop_arg (ins_arg *arg, FILE *outstream)
 		break;
 		/*
 	case ARG_REGINDSIB:
-		t_sib = (ins_sib_arg *)arg->regconst;
+		t_sib = (ins_sib_arg *)(long)arg->regconst;
 		fprintf (outstream, "(%s,%s,%d)", regset[t_sib->base], regset[t_sib->index], t_sib->scale);
 		break;
 		*/
 	/* FIXME: Debugging only */
 	default:
-		fprintf (outstream, ".!!!%d!!!.", arg->regconst);
+		fprintf (outstream, ".!!!%d!!!.", (long)arg->regconst);
 	}
 	return 0;
 }
@@ -251,7 +251,7 @@ static int disassemble_code (ins_chain *ins, FILE *outstream)
 				break;
 			case INS_SETFLABEL:
 				/* (very) local label */
-				fprintf (outstream, "%d:\n", tmp->in_args[0]->regconst);
+				fprintf (outstream, "%ld:\n", (long)tmp->in_args[0]->regconst);
 				break;
 			case INS_MOVE: /* 1 */
 				/* Deal with very special cases */

@@ -188,7 +188,7 @@ static int dump_ins (FILE *stream, ins_chain *ins, arch_t *arch)
 				fprintf (stream, "%s", fregs[ins->in_args[i]->regconst]);
 				break;
 			case ARG_CONST:
-				fprintf (stream, "$x%x", ins->in_args[i]->regconst);
+				fprintf (stream, "$x%lx", (unsigned long)ins->in_args[i]->regconst);
 				break;
 			case ARG_REGIND:
 				fprintf (stream, "(%s)", reg_string (ins->in_args[i]->regconst, arch));
@@ -197,10 +197,10 @@ static int dump_ins (FILE *stream, ins_chain *ins, arch_t *arch)
 				fprintf (stream, "_%s_", cc_names[ins->in_args[i]->regconst + 1]);
 				break;
 			case ARG_LABEL:
-				fprintf (stream, "L%d", ins->in_args[i]->regconst);
+				fprintf (stream, "L%ld", (long)ins->in_args[i]->regconst);
 				break;
 			case ARG_INSLABEL:
-				fprintf (stream, "L_%d", ((ins_chain *)ins->in_args[i]->regconst)->in_args[0]->regconst);
+				fprintf (stream, "L_%ld", (long)((ins_chain *)ins->in_args[i]->regconst)->in_args[0]->regconst);
 				break;
 			case ARG_NAMEDLABEL:
 				fprintf (stream, "%s", (char *)ins->in_args[i]->regconst);
@@ -214,10 +214,10 @@ static int dump_ins (FILE *stream, ins_chain *ins, arch_t *arch)
 				fprintf (stream, "%s,%d)", reg_string (t_sib->index, arch), t_sib->scale);
 				break;
 			case ARG_FLABEL:
-				fprintf (stream, "%df", ins->in_args[i]->regconst);
+				fprintf (stream, "%ldf", (long)ins->in_args[i]->regconst);
 				break;
 			case ARG_BLABEL:
-				fprintf (stream, "%db", ins->in_args[i]->regconst);
+				fprintf (stream, "%ldb", (long)ins->in_args[i]->regconst);
 				break;
 			}
 			if (ins->in_args[i]->flags & ARG_IMP) {

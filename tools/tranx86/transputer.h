@@ -29,7 +29,7 @@
 #endif
 #define BytesPerWord	(1<<WSH)
 #define BitsPerWord	(BytesPerWord * 8)
-#define ByteSelectMask	(~(-1 << WSH))
+#define ByteSelectMask	((1 << WSH) - 1)
 #define WShift		2		/* x4 -- INT is always 32-bit (4 bytes) */
 #define DWShift		3		/* x8 */
 
@@ -555,22 +555,22 @@
 
 #ifdef PROCESS_PRIORITY
 	/* priorities shove these (post Iptr) down a slot */
-	#define W_TIME		((-6) << WSH)
-	#define W_TLINK		((-5) << WSH)
-	#define W_STATUS	((-4) << WSH)
-	#define W_POINTER	((-4) << WSH)
-	#define W_PRIORITY	((-3) << WSH)
+	#define W_TIME		(-(6 << WSH))
+	#define W_TLINK		(-(5 << WSH))
+	#define W_STATUS	(-(4 << WSH))
+	#define W_POINTER	(-(4 << WSH))
+	#define W_PRIORITY	(-(3 << WSH))
 #else	/* !PROCESS_PRIORITY */
 	/* These must match the runtime (ccsp_consts.h) which always
 	 * includes the Priofinity slot at -3. */
-	#define W_TIME		((-6) << WSH)
-	#define W_TLINK		((-5) << WSH)
-	#define W_STATUS	((-4) << WSH)
-	#define W_POINTER	((-4) << WSH)
-	#define W_PRIORITY	((-3) << WSH)
+	#define W_TIME		(-(6 << WSH))
+	#define W_TLINK		(-(5 << WSH))
+	#define W_STATUS	(-(4 << WSH))
+	#define W_POINTER	(-(4 << WSH))
+	#define W_PRIORITY	(-(3 << WSH))
 #endif	/* !PROCESS_PRIORITY */
-#define W_LINK		((-2) << WSH)
-#define W_IPTR		((-1) << WSH)
+#define W_LINK		(-(2 << WSH))
+#define W_IPTR		(-(1 << WSH))
 #define W_TEMP		(0)
 
 #define W_COUNT		(1 << WSH)

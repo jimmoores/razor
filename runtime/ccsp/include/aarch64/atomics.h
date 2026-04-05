@@ -138,13 +138,14 @@ static INLINE unsigned int att_unsafe_swap (atomic_t *atval, unsigned int nv) {
 /*{{{  unsigned int att_cas (atomic_t *atval, unsigned int ov, unsigned int nv) */
 static INLINE unsigned int att_safe_cas (atomic_t *atval, unsigned int ov, unsigned int nv)
 {
-	return __atomic_compare_exchange_n(&atval->value, &ov, nv, 0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+	unsigned long expected = ov;
+	return __atomic_compare_exchange_n(&atval->value, &expected, (unsigned long)nv, 0, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
 }
 
 static INLINE unsigned int att_unsafe_cas (atomic_t *atval, unsigned int ov, unsigned int nv)
 {
-	if (atval->value == ov) {
-		atval->value = nv;
+	if (atval->value == (unsigned long)ov) {
+		atval->value = (unsigned long)nv;
 		return 1;
 	}
 	return 0;
