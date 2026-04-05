@@ -307,9 +307,17 @@ PROC cgtest68 (CHAN OF BYTE keyb, scr, err)
     init ("CG test 68", "64-bit regression tests")
     --{{{  INT arithmetic
     title ("Testing INT arithmetic truncation")
-    R001 ()
-    R002 ()
-    R003 ()
+    -- R001/R002/R003 test checked INT arithmetic wrapping at 32-bit boundaries.
+    -- On 64-bit, the compiler emits emit_int_truncate so overflow wraps cleanly.
+    -- On 32-bit, INT is already 32-bit and checked arithmetic STOPs on overflow.
+    IF
+      BYTESIN (INT) = 8
+        SEQ
+          R001 ()
+          R002 ()
+          R003 ()
+      TRUE
+        SKIP
     R004 ()
     --}}}
     --{{{  record field access
