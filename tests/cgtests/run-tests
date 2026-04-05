@@ -34,6 +34,8 @@ def build_intree_env():
 	lib_dirs = [
 		os.path.join(script_dir, "..", "..", "runtime", "ccsp"),
 		os.path.join(script_dir, "..", "..", "runtime", "libkrocif"),
+		os.path.join(script_dir, "..", "..", "runtime", "libtvm"),
+		os.path.join(script_dir, "..", "..", "modules", "inmoslibs", "libsrc", "forall"),
 	]
 	intree = [d for d in lib_dirs if os.path.isdir(d)]
 	if not intree:
