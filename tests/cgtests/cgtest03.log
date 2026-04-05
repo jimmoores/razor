@@ -1,0 +1,13 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x1031dda10, scr_chan=0x1031dda70, err_chan=0x1031ddad0
+DEBUG: kbd_ws=0x1031de1c0, scr_ws=0x1031de3c0, err_ws=0x1031de5c0
+CG test 3  --  Abbreviations
+Simple abbreviations
+bsc_clean: wptr=0x1031de180 iptr=0000000102a00450
+Subscript abbreviations
+Slice abbreviations
+Channel abbreviations
+^^^ Passed : CG test 3: All 57 tests passed OK
+Time = 101 ticks
+PASS cgtest03 (exit status: 0)

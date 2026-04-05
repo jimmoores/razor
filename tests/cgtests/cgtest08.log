@@ -1,0 +1,11 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x104ed1a10, scr_chan=0x104ed1a70, err_chan=0x104ed1ad0
+DEBUG: kbd_ws=0x104ed21c0, scr_ws=0x104ed23c0, err_ws=0x104ed25c0
+CG test 8  --  Timer - Please wait a few seconds
+Testing waits on the timer queue
+bsc_clean: wptr=0x104ed2180 iptr=0000000104748f88
+Testing time channel ALTs
+^^^ Passed : CG test 8: All 134 tests passed OK
+Time = 9751015 ticks
+PASS cgtest08 (exit status: 0)

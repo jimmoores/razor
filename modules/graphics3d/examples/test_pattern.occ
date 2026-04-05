@@ -1,0 +1,60 @@
+-- Test: complex rendering in single-process pipeline
+#INCLUDE "course.module"
+#INCLUDE "sdlraster.module"
+
+PROC main (CHAN BYTE kyb?, SHARED CHAN BYTE scr!)
+  VAL INT W IS 640:
+  VAL INT H IS 480:
+  CHAN RASTER rc1, rc2:
+  PAR
+    raster.display.simple ("Test Pattern", W, H, 2, rc1?, rc2!)
+
+    INITIAL INT frame IS 0:
+    RASTER r:
+    SEQ
+      rc2 ? r
+      WHILE frame < 30000
+        SEQ
+          -- Clear
+          SEQ y = 0 FOR H
+            SEQ x = 0 FOR W
+              r[y][x] := #000000
+          -- Draw white border
+          SEQ x = 0 FOR W
+            SEQ
+              r[0][x] := #FFFFFF
+              r[H - 1][x] := #FFFFFF
+          SEQ y = 0 FOR H
+            SEQ
+              r[y][0] := #FFFFFF
+              r[y][W - 1] := #FFFFFF
+          -- Draw filled colored rectangles at specific positions
+          -- Red rectangle at (50,50)-(200,150)
+          SEQ y = 50 FOR 100
+            SEQ x = 50 FOR 150
+              r[y][x] := #FF0000
+          -- Green rectangle at (300,100)-(500,200)
+          SEQ y = 100 FOR 100
+            SEQ x = 300 FOR 200
+              r[y][x] := #00FF00
+          -- Blue rectangle at (100,300)-(250,400)
+          SEQ y = 300 FOR 100
+            SEQ x = 100 FOR 150
+              r[y][x] := #0000FF
+          -- Yellow diagonal line (simulates the shear pattern)
+          SEQ i = 0 FOR 400
+            IF
+              ((50 + i) < H) AND ((50 + i) < W)
+                r[50 + i][50 + i] := #FFFF00
+              TRUE
+                SKIP
+          -- Center crosshair
+          SEQ x = 310 FOR 20
+            r[240][x] := #FF00FF
+          SEQ y = 230 FOR 20
+            r[y][320] := #FF00FF
+          rc1 ! r
+          rc2 ? r
+          frame := frame + 1
+      raster.shutdown (rc2?, rc1!)
+:

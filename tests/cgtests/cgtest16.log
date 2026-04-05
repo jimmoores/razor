@@ -1,0 +1,9 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x1053219d0, scr_chan=0x105321a30, err_chan=0x105321a90
+DEBUG: kbd_ws=0x105322180, scr_ws=0x105322380, err_ws=0x105322580
+CG test 16  --  Multi-assignment of arraysbsc_clean: wptr=0x105322140 iptr=0000000104a3fac8
+
+^^^ Passed : CG test 16: All 26 tests passed OK
+Time = 179 ticks
+PASS cgtest16 (exit status: 0)

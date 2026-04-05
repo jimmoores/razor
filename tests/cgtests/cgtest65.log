@@ -1,0 +1,10 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x102a0d9d0, scr_chan=0x102a0da30, err_chan=0x102a0da90
+DEBUG: kbd_ws=0x102a0e180, scr_ws=0x102a0e380, err_ws=0x102a0e580
+bsc_clean: wptr=0x102a0e140 iptr=00000001022ea400
+CG test 65  --  MYTYPE: REAL64 arithmetic, coercion
+MYTYPE: REAL64 arithmetic
+^^^ Passed : CG test 65: All 197 tests passed OK
+Time = 231 ticks
+PASS cgtest65 (exit status: 0)

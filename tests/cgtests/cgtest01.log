@@ -1,0 +1,13 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x10104d9d0, scr_chan=0x10104da30, err_chan=0x10104da90
+DEBUG: kbd_ws=0x10104e180, scr_ws=0x10104e380, err_ws=0x10104e580
+bsc_clean: wptr=0x10104e140 iptr=000000010092e458
+CG test 1  --  More misc
+Static chains
+Non local vectors
+More complex tests
+BOOL expressions
+^^^ Passed : CG test 1: All 326 tests passed OK
+Time = 71 ticks
+PASS cgtest01 (exit status: 0)

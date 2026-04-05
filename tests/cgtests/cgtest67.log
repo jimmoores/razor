@@ -1,0 +1,10 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x10345d9b0, scr_chan=0x10345da10, err_chan=0x10345da70
+DEBUG: kbd_ws=0x10345e160, scr_ws=0x10345e360, err_ws=0x10345e560
+bsc_clean: wptr=0x10345e120 iptr=0000000102dbe170
+CG test 67  --  Misc, including COMPLEX
+Implementations of COMPLEX type
+^^^ Passed : CG test 67: All 144 tests passed OK
+Time = 163 ticks
+PASS cgtest67 (exit status: 0)

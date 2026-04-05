@@ -1,0 +1,11 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x10112d9d0, scr_chan=0x10112da30, err_chan=0x10112da90
+DEBUG: kbd_ws=0x10112e180, scr_ws=0x10112e380, err_ws=0x10112e580
+CG test 2  --  Testing SEQ and PAR
+Testing SEQ
+Testing PARbsc_clean: wptr=0x10112e140 iptr=000000010089c460
+
+^^^ Passed : CG test 2: All 54 tests passed OK
+Time = 119 ticks
+PASS cgtest02 (exit status: 0)

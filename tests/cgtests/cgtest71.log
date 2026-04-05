@@ -1,0 +1,10 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x1017ada10, scr_chan=0x1017ada70, err_chan=0x1017adad0
+DEBUG: kbd_ws=0x1017ae1c0, scr_ws=0x1017ae3c0, err_ws=0x1017ae5c0
+CG test 71  --  User Defined Operators 2
+Testing all operators function generation.
+bsc_clean: wptr=0x1017ae180 iptr=0000000100f542b8
+^^^ Passed : CG test 71: All 36 tests passed OK
+Time = 45 ticks
+PASS cgtest71 (exit status: 0)

@@ -1,0 +1,14 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x1012b19b0, scr_chan=0x1012b1a10, err_chan=0x1012b1a70
+DEBUG: kbd_ws=0x1012b2160, scr_ws=0x1012b2360, err_ws=0x1012b2560
+CG test 12  --  Protocolsbsc_clean: wptr=0x1012b2120 iptr=0000000100b9d0f0
+
+Testing channel communication
+Testing simple protocols
+Testing sequential protocols
+Testing variant protocols
+Passing channel parameters
+^^^ Passed : CG test 12: All 210 tests passed OK
+Time = 1903 ticks
+PASS cgtest12 (exit status: 0)

@@ -1,0 +1,25 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x1048699d0, scr_chan=0x104869a30, err_chan=0x104869a90
+DEBUG: kbd_ws=0x10486a180, scr_ws=0x10486a380, err_ws=0x10486a580
+CG test 58  --  More RECORDsbsc_clean: wptr=0x10486a140 iptr=000000010406c480
+
+[2]INT
+[3]INT
+[5]INT
+[5]REAL32
+[5]REAL64
+[5]record
+[5]BYTE
+RECORD, sub is INT
+RECORD, sub is INT,INT, dummy first
+RECORD, sub is INT,INT, dummy last
+RECORD, sub is REAL32,REAL32, dummy last
+RECORD, sub is INT,REAL32, dummy first
+RECORD, sub is [n]INT,[n]INT, dummy first
+RECORD, sub is [n]INT16,[n]INT16, dummy first
+Place in vectorspace
+access to const index into fn result
+^^^ Passed : CG test 58: All 352 tests passed OK
+Time = 296 ticks
+PASS cgtest58 (exit status: 0)

@@ -1,0 +1,62 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x102cdd930, scr_chan=0x102cdd990, err_chan=0x102cdd9f0
+DEBUG: kbd_ws=0x102cde0e0, scr_ws=0x102cde2e0, err_ws=0x102cde4e0
+bsc_clean: wptr=0x102cde0a0 iptr=0000000102641b98
+CG test 52  --  MYTYPE: INT64 arithmetic
+MYTYPE: INT64 arithmetic
+
+output message
+
+check arithmetic and logical operators
+
+check constant folding
+
+check comparison operators
+
+check conversions
+
+check remainder identity
+
+hefty calculations
+
+passing as parameters
+
+arrays
+
+more conversion tests
+
+more constant folding
+
+bug 334
+
+bug 670
+
+bug 1000
+
+bug 1150
+
+bug 1274
+
+bug 1351
+
+bug 1333
+
+bug 1546
+
+bug TS/2020
+
+bug INSdi02195
+
+bug INSdi02423
+
+bug INSdi02439
+
+arrays of user defined types
+
+abbrs of function results and params
+
+CASE statements
+^^^ Passed : CG test 52: All 773 tests passed OK
+Time = 841 ticks
+PASS cgtest52 (exit status: 0)

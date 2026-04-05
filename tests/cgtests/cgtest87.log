@@ -1,0 +1,10 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x1016319d0, scr_chan=0x101631a30, err_chan=0x101631a90
+DEBUG: kbd_ws=0x101632180, scr_ws=0x101632380, err_ws=0x101632580
+CG test 87  --  channel direction specifiers
+parameters and abbreviations
+bsc_clean: wptr=0x101632140 iptr=0000000100fd2c90
+^^^ Passed : CG test 87: All 5 tests passed OK
+Time = 37 ticks
+PASS cgtest87 (exit status: 0)

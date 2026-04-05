@@ -1,0 +1,110 @@
+#INCLUDE "forall.module"
+
+CHAN TYPE MYCTL
+  MOBILE RECORD
+    CHAN INT req?:
+    CHAN INT resp!:
+:
+
+DATA TYPE MYREC
+  RECORD
+    INT id, uid:
+    INT x, y:
+    BOOL vis:
+    BOOL col:
+    INT64 surface:
+    BOOL free:
+    INT w, h:
+    INT ox, oy, ow, oh:
+:
+VAL INT MAXN IS 5000:
+
+PROC server (MYCTL? svr)
+  [MAXN]MYREC items:
+  [MAXN][MAXN]BOOL grid:
+  INT num:
+  BOOL FUNCTION colliding (VAL INT a, b)
+    BOOL r:
+    VALOF
+      VAL INT al IS items[a][x]:
+      VAL INT ar IS al + items[a][w]:
+      VAL INT bl IS items[b][x]:
+      VAL INT br IS bl + items[b][w]:
+      IF
+        (ar < bl) OR (al > br)
+          r := FALSE
+        TRUE
+          r := TRUE
+      RESULT r
+  :
+  INITIAL BOOL running IS TRUE:
+  WHILE running
+    INT cmd:
+    SEQ
+      svr[req] ? cmd
+      IF
+        cmd = (-1)
+          running := FALSE
+        cmd >= 0
+          SEQ
+            num := cmd
+            SEQ i = 0 FOR num
+              SEQ
+                items[i][id] := i
+                items[i][uid] := i + 100
+                items[i][x] := i * 50
+                items[i][y] := 0
+                items[i][vis] := TRUE
+                items[i][col] := FALSE
+                items[i][surface] := INT64 (i + 1000)
+                items[i][free] := FALSE
+                items[i][w] := 40
+                items[i][h] := 40
+                items[i][ox] := 0
+                items[i][oy] := 0
+                items[i][ow] := 0
+                items[i][oh] := 0
+            -- Test colliding function via static link
+            INT bad:
+            SEQ
+              bad := 0
+              SEQ i = 0 FOR num - 1
+                BOOL c:
+                SEQ
+                  c := colliding (i, i + 1)
+                  IF
+                    c
+                      bad := bad + 1
+                    TRUE
+                      SKIP
+              -- With x spacing 50, width 40, no overlap
+              svr[resp] ! bad
+        TRUE
+          SKIP
+:
+
+PROC test.vs (CHAN OF BYTE keyb?, scr!, err!)
+  SHARED MYCTL! ctl:
+  MYCTL? svr:
+  SEQ
+    ctl, svr := MOBILE MYCTL
+    FORKING
+      PAR
+        FORK server (svr)
+        INT reply:
+        SEQ
+          CLAIM ctl
+            SEQ
+              ctl[req] ! 100
+              ctl[resp] ? reply
+          IF
+            reply = 0
+              scr ! 'P'
+            TRUE
+              SEQ
+                scr ! 'F'
+                scr ! ('0' + (BYTE (reply /\ #FF)))
+          CLAIM ctl
+            ctl[req] ! (-1)
+    scr ! '*n'
+:

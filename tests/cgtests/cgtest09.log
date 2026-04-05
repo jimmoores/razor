@@ -1,0 +1,17 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x10139d9b0, scr_chan=0x10139da10, err_chan=0x10139da70
+DEBUG: kbd_ws=0x10139e160, scr_ws=0x10139e360, err_ws=0x10139e560
+CG test 9  --  Array handling
+bsc_clean: wptr=0x10139e120 iptr=0000000100c3a8d0
+Integer arrays
+Abbreviated arrays
+Nested arrays
+Other array types
+Channel arrays
+Multi dimensional arrays
+SIZE operator
+String handling
+^^^ Passed : CG test 9: All 227 tests passed OK
+Time = 190 ticks
+PASS cgtest09 (exit status: 0)

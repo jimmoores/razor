@@ -1,0 +1,14 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x100fd5a10, scr_chan=0x100fd5a70, err_chan=0x100fd5ad0
+DEBUG: kbd_ws=0x100fd61c0, scr_ws=0x100fd63c0, err_ws=0x100fd65c0
+CG test 4  --  Testing WHILE, repl SEQ, IF and repl IFbsc_clean: wptr=0x100fd6180 iptr=0000000100f7cae0
+
+Testing WHILE and replicated SEQ, IF and replicated IF
+Testing WHILE loops
+Testing replicated SEQs
+Testing IF
+Testing replicated IF
+^^^ Passed : CG test 4: All 120 tests passed OK
+Time = 130 ticks
+PASS cgtest04 (exit status: 0)

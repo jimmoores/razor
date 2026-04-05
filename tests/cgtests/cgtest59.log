@@ -1,0 +1,19 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x104f6d9d0, scr_chan=0x104f6da30, err_chan=0x104f6da90
+DEBUG: kbd_ws=0x104f6e180, scr_ws=0x104f6e380, err_ws=0x104f6e580
+CG test 59  --  Misc occam 2.5
+SIZE
+BYTESIN
+OFFSETOF
+PACKED RECORDsbsc_clean: wptr=0x104f6e140 iptr=00000001049a9788
+
+MOSTPOS / MOSTNEG on BYTE
+Untyped literals
+FUNCTIONS in CASE statements
+FROM and FOR
+RESHAPES
+PROTOCOL tags
+^^^ Passed : CG test 59: All 883 tests passed OK
+Time = 546 ticks
+PASS cgtest59 (exit status: 0)

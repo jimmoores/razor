@@ -1,0 +1,17 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x103501a10, scr_chan=0x103501a70, err_chan=0x103501ad0
+DEBUG: kbd_ws=0x1035021c0, scr_ws=0x1035023c0, err_ws=0x1035025c0
+CG test 85  --  dynamic MOBILE arrays
+basic types
+bsc_clean: wptr=0x103502180 iptr=0000000102fd6b48
+int types
+real types
+user-defined types
+BYTESIN
+DEFINED
+RESIZE.MOBILE.ARRAY
+MOBILE arrays of MOBILE arrays
+^^^ Passed : CG test 85: All 155 tests passed OK
+Time = 220 ticks
+PASS cgtest85 (exit status: 0)

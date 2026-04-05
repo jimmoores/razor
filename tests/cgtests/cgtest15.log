@@ -1,0 +1,9 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x100e35950, scr_chan=0x100e359b0, err_chan=0x100e35a10
+DEBUG: kbd_ws=0x100e36100, scr_ws=0x100e36300, err_ws=0x100e36500
+CG test 15  --  Functions and multiple assignment
+Testing complex parameters to PROCs and FNs
+^^^ Passed : CG test 15: All 331 tests passed OK
+Time = 319 ticks
+PASS cgtest15 (exit status: 0)

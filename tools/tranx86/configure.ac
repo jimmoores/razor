@@ -170,7 +170,6 @@ m4_warn([obsolete],
   C89 headers unconditionally.])dnl
 # Autoupdate added the next two lines to ensure that your configure
 # script's behavior did not change.  They are probably safe to remove.
-AC_CHECK_INCLUDES_DEFAULT
 AC_PROG_EGREP
 
 AC_CHECK_HEADERS(string.h malloc.h stdarg.h stdlib.h string.h strings.h unistd.h)

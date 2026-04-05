@@ -1,0 +1,15 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x102ffd970, scr_chan=0x102ffd9d0, err_chan=0x102ffda30
+DEBUG: kbd_ws=0x102ffe120, scr_ws=0x102ffe320, err_ws=0x102ffe520
+bsc_clean: wptr=0x102ffe0e0 iptr=00000001028b57c0
+CG test 86  --  mobile channel types
+simple PROTOCOLs
+counted arrays, named PROTOCOLs
+assignment
+communication
+recursive channel types
+anonymous channel types
+^^^ Passed : CG test 86: All 22 tests passed OK
+Time = 203 ticks
+PASS cgtest86 (exit status: 0)

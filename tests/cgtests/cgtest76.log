@@ -1,0 +1,10 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x102b7d9d0, scr_chan=0x102b7da30, err_chan=0x102b7da90
+DEBUG: kbd_ws=0x102b7e180, scr_ws=0x102b7e380, err_ws=0x102b7e580
+CG test 76  --  User Defined Operators 7
+Testing operators (monadic)bsc_clean: wptr=0x102b7e140 iptr=0000000102508158
+
+^^^ Passed : CG test 76: All 36 tests passed OK
+Time = 94 ticks
+PASS cgtest76 (exit status: 0)

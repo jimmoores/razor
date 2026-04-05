@@ -1,0 +1,10 @@
+DEBUG: main starting
+DEBUG: init_occam_io called with tlpiface=7
+DEBUG: kbd_chan=0x100eb9a10, scr_chan=0x100eb9a70, err_chan=0x100eb9ad0
+DEBUG: kbd_ws=0x100eba1c0, scr_ws=0x100eba3c0, err_ws=0x100eba5c0
+bsc_clean: wptr=0x100eba180 iptr=00000001007692a0
+CG test 6  --  PAR and replicated PAR
+Testing PAR and replicated PAR
+^^^ Passed : CG test 6: All 212 tests passed OK
+Time = 68 ticks
+PASS cgtest06 (exit status: 0)
