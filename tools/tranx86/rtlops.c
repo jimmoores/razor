@@ -600,11 +600,10 @@ int rtl_trace_regs (rtl_chain *rtl_code)
 		}
 	}
 
-	last_virtual_register = last_reg;
 	sfree (reg_starts);
 	sfree (reg_ends);
 
-	return 0;
+	return last_reg;
 }
 /*}}}*/
 /*{{{  void rtl_refix_codeblocks (rtl_chain *rtl_code)*/

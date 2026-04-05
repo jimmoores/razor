@@ -875,21 +875,6 @@ restart:
 		}
 		if (!rdepth && first && last && n_nodes) {
 			/* have something suitable for colouring */
-			/* DEBUG: print all nodes in this block if any are in range 2224-2230 */
-			{
-				int _has_target = 0;
-				for (i=0; i<n_nodes; i++) {
-					if (nodes[i]->vreg >= 2224 && nodes[i]->vreg <= 2230) { _has_target = 1; break; }
-				}
-				if (_has_target) {
-					fprintf(stderr, "DEBUG_BLOCK: n_nodes=%d\n", n_nodes);
-					for (i=0; i<n_nodes; i++) {
-						fprintf(stderr, "  node[%d]: vreg=%d rreg=%d constrain_ins=%p start=%p end=%p\n",
-							i, nodes[i]->vreg, nodes[i]->rreg, (void*)nodes[i]->constrain_ins,
-							(void*)nodes[i]->start_ins, (void*)nodes[i]->end_ins);
-					}
-				}
-			}
 			/*{{{  build links between nodes first*/
 			for (i=0; i<n_nodes; i++) {
 				nodes[i]->n_links = count_edges (low_edge_table, high_edge_table, edge_cur, nodes[i]->vreg);
@@ -926,19 +911,13 @@ restart:
 				}
 				/* CRITICAL FIX: Handle the "single instruction" error properly */
 				if (nodes[i]->start_ins && nodes[i]->end_ins) {
-					/* Check if this is the problematic "single instruction" case */
+					/* CRITICAL FIX: Handle the "single instruction" error properly */
 					if (nodes[i]->start_ins != nodes[i]->end_ins &&
 					    nodes[i]->start_ins->next && nodes[i]->end_ins->prev &&
 					    nodes[i]->start_ins->next != nodes[i]->end_ins) {
-						/* Normal case - color the fragment */
-						fprintf (stderr, "DEBUG_COLOUR: vreg=%d rreg=%d start_next=%p end_prev=%p\n",
-							nodes[i]->vreg, nodes[i]->rreg, (void*)nodes[i]->start_ins->next, (void*)nodes[i]->end_ins->prev);
 						colour_code_fragment (nodes[i]->start_ins->next, nodes[i]->end_ins->prev, nodes[i]->vreg, nodes[i]->rreg);
 					} else {
 						/* Single instruction or adjacent instructions - skip coloring but don't error */
-						fprintf (stderr, "DEBUG_COLOUR: SKIPPED vreg=%d rreg=%d start=%p end=%p start_next=%p\n",
-							nodes[i]->vreg, nodes[i]->rreg, (void*)nodes[i]->start_ins, (void*)nodes[i]->end_ins,
-							nodes[i]->start_ins ? (void*)nodes[i]->start_ins->next : NULL);
 						if (options.verbose) {
 							fprintf (stderr, "%s: info: skipping fragment coloring for register %d (single/adjacent instructions)\n", progname, nodes[i]->vreg);
 						}
