@@ -13,7 +13,7 @@
 GEMINI.md
 CLAUDE.md
 .DS_Store
-
+.claude
 # Dangerous, but we'll do it.
 config.h
 config.log
