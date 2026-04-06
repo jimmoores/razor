@@ -44,40 +44,52 @@ int genhdr_ds_min (void)
 	slots = 2;
 #endif
 	slots += L_process;
-	/* On 64-bit targets, the CCSP MP scheduler uses additional
-	 * below-workspace slots for process state (Pointer at -4,
-	 * TLink at -5, Time_f at -6).  Even simple channel I/O
-	 * writes to Wptr[Pointer] (-4) during blocking.  Increase
-	 * the minimum to prevent workspace overlap in dense PARs. */
-	if (bytesperword > 4) {
-		if (slots < 6) {
-			slots = 6;
-		}
-	}
 	return slots;
 }
 /*}}}*/
 /*{{{  int genhdr_ds_io (void)*/
 /*
- *	for proceses performing IO
+ *	for processes performing I/O
+ *
+ *	On 64-bit targets workspace slots are WORD-sized (8 bytes) but PAR
+ *	per-process allocation uses INT-sized (4 byte) strides.  When a
+ *	process blocks on a channel the CCSP kernel writes WORD-sized fields
+ *	below Wptr: Iptr(-1), Link(-2), Priofinity(-3), Pointer(-4).  For the
+ *	Pointer field not to corrupt a local variable in the adjacent lower
+ *	PAR process (at INT slot DS_IO from that process's Wptr), DS_IO must
+ *	satisfy:  4*DS_IO + 5 > 8*4 = 32,  i.e. DS_IO >= 7.
  */
 int genhdr_ds_io (void)
 {
 	int slots;
 
 	slots = genhdr_ds_min () + 1;
+	if (bytesperword > 4) {
+		if (slots < 7) {
+			slots = 7;
+		}
+	}
 	return slots;
 }
 /*}}}*/
 /*{{{  int genhdr_ds_wait (void)*/
 /*
  *	for processes that wait on the timer queue
+ *
+ *	On 64-bit targets the TLink field at Wptr[-5] requires DS_WAIT >= 9
+ *	to avoid corrupting local variables in adjacent PAR processes.
+ *	Condition: 4*DS_WAIT + 5 > 8*5 = 40, so DS_WAIT >= 9.
  */
 int genhdr_ds_wait (void)
 {
 	int slots;
 
 	slots = genhdr_ds_min () + 3;
+	if (bytesperword > 4) {
+		if (slots < 9) {
+			slots = 9;
+		}
+	}
 	return slots;
 }
 /*}}}*/
