@@ -207,11 +207,14 @@ static void bsc_cleanup_job (void *arg)
 
 	{
 		unsigned int current = (unsigned int) job->wptr[Priofinity];
-		if (PHasAffinity (current)) {
-			/* Process has explicit affinity (e.g. from SETAFF).
+		unsigned int cur_affinity = PHasAffinity (current) ? PAffinity (current) : 0;
+		unsigned int enabled = att_val (&enabled_threads);
+		if (cur_affinity != 0 && (cur_affinity & ~enabled) == 0) {
+			/* Process has valid explicit affinity (e.g. from SETAFF):
+			 * all affinity bits are within the set of enabled schedulers.
 			 * Preserve affinity bits; only update priority. */
 			job->wptr[Priofinity] = (word) BuildPriofinity (
-				PAffinity (current), PPriority (job->priofinity));
+				cur_affinity, PPriority (job->priofinity));
 		} else {
 			job->wptr[Priofinity] = job->priofinity;
 		}

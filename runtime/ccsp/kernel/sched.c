@@ -597,11 +597,14 @@ static TRIVIAL void release_tqnode (sched_t *sched, tqnode_t *tn)
 static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)
 {
 	unsigned int current = (unsigned int) Wptr[Priofinity];
-	if (PHasAffinity (current)) {
-		/* Process has explicit affinity (e.g. from SETAFF).
+	unsigned int cur_affinity = PHasAffinity (current) ? PAffinity (current) : 0;
+	unsigned int enabled = att_val (&enabled_threads);
+	if (cur_affinity != 0 && (cur_affinity & ~enabled) == 0) {
+		/* Process has valid explicit affinity (e.g. from SETAFF):
+		 * all affinity bits are within the set of enabled schedulers.
 		 * Preserve affinity bits; only update priority. */
 		Wptr[Priofinity] = (word) BuildPriofinity (
-			PAffinity (current), PPriority (sched->priofinity));
+			cur_affinity, PPriority (sched->priofinity));
 	} else {
 		Wptr[Priofinity] = sched->priofinity;
 	}
@@ -4500,6 +4503,7 @@ K_CALL_DEFINE_1_0 (X_runp)
 	ENTRY_TRACE (X_runp, "%p", other_workspace);
 
 	other_workspace = (word *)(((word)other_workspace) & (~(sizeof(word) - 1)));
+	save_priofinity (sched, other_workspace);
 	enqueue_process (sched, other_workspace);
 
 	K_ZERO_OUT ();
