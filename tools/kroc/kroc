@@ -61,7 +61,7 @@ progname=$(printf '%s' "$0" | $SED 's/^.*\///')
 
 CC=gcc
 LD=ld
-ARCH_LDFLAGS="-lpthread"
+ARCH_LDFLAGS="-lpthread -lrt"
 ARCH_ASFLAGS=""
 
 # Only the 'kroc' program need be in the users path
@@ -74,16 +74,16 @@ if [ "x" = "x" ]; then
 else
   dversion='2.0 (RMoX)'
 fi
-target_canonical="aarch64-apple-darwin25.2.0"
+target_canonical="aarch64-unknown-linux-gnu"
 target_cpu="aarch64"
-target_os="darwin25.2.0"
+target_os="linux-gnu"
 # -kc : cgr-mp CCSP interface
 octranopts="-kc -mp"
-ccopts="-fomit-frame-pointer -DTARGET_64BIT -DHOSTOS_DARWIN -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS"
+ccopts="-fomit-frame-pointer -fno-defer-pop -DTARGET_64BIT -DKROC_USES_PTHREADS"
 deplibs=""
 ocllibs=""
 ocrtslibs="-lm -lpthread"
-extcflags="-fomit-frame-pointer -DTARGET_64BIT -DHOSTOS_DARWIN -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS"
+extcflags="-fomit-frame-pointer -fno-defer-pop -DTARGET_64BIT -DKROC_USES_PTHREADS"
 dtraces=0
 
 case "$target_cpu" in
@@ -183,7 +183,7 @@ case "$target_os" in
 	darwin*)
 		case "$target_cpu" in
 			aarch64)
-				extraccopts=${EXTRACCOPTS:--arch arm64}
+				extraccopts=${EXTRACCOPTS:--read_only_relocs suppress -arch arm64}
 				;;
 			x86_64)
 				extraccopts=${EXTRACCOPTS:--read_only_relocs suppress -arch x86_64}
@@ -830,8 +830,8 @@ if [ "$intree" = "" ]; then
   oclibpath="-L$kroc_archlibdir"
   cincludepath="-I$kroc_archincdir"
 else
-  oclibpath="-L/Users/jim/razor/kroc64/kroc/runtime/ccsp -L/Users/jim/razor/kroc64/kroc/runtime/libkrocif -L$intree/modules/inmoslibs/libsrc/forall"
-  cincludepath="-I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/ocuda/libsrc"
+  oclibpath="-L/home/jim/razor/kroc64/kroc/runtime/ccsp -L/home/jim/razor/kroc64/kroc/runtime/libkrocif -L$intree/modules/inmoslibs/libsrc/forall"
+  cincludepath="-I/home/jim/razor/kroc64/kroc/runtime/ccsp/include -I/home/jim/razor/kroc64/kroc/runtime/ccsp/include -I/home/jim/razor/kroc64/kroc/modules/cif/libsrc -I/home/jim/razor/kroc64/kroc/modules/cif/libsrc -I/home/jim/razor/kroc64/kroc/modules/ocuda/libsrc"
 fi
 
 #}}}
@@ -976,13 +976,13 @@ if [ $showkrocpath ]; then
 	exit 0
 fi
 if [ $showautovars ]; then
-	printf 'KROC_CCSP_CFLAGS="%s";\n' "-fomit-frame-pointer -DTARGET_64BIT -DHOSTOS_DARWIN -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS"
-	printf 'KROC_CCSP_CINCPATH="%s";\n' "-I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/ocuda/libsrc"
+	printf 'KROC_CCSP_CFLAGS="%s";\n' "-fomit-frame-pointer -fno-defer-pop -DTARGET_64BIT -DKROC_USES_PTHREADS"
+	printf 'KROC_CCSP_CINCPATH="%s";\n' "-I/home/jim/razor/kroc64/kroc/runtime/ccsp/include -I/home/jim/razor/kroc64/kroc/runtime/ccsp/include -I/home/jim/razor/kroc64/kroc/modules/cif/libsrc -I/home/jim/razor/kroc64/kroc/modules/cif/libsrc -I/home/jim/razor/kroc64/kroc/modules/ocuda/libsrc"
 	printf 'KROC_CCSP_OCCFLAGS="%s";\n' ""
 	printf 'KROC_CCSP_TRANFLAGS="%s";\n' "-mp"
 	printf 'KROC_CCSP_ASFLAGS="%s";\n' ""
-	printf 'KROC_CCSP_LDFLAGS="%s";\n' "-lpthread"
-	printf 'KROC_CCSP_LIBPATH="%s";\n' "-L/Users/jim/razor/kroc64/kroc/runtime/ccsp -L/Users/jim/razor/kroc64/kroc/runtime/libkrocif"
+	printf 'KROC_CCSP_LDFLAGS="%s";\n' "-lpthread -lrt"
+	printf 'KROC_CCSP_LIBPATH="%s";\n' "-L/home/jim/razor/kroc64/kroc/runtime/ccsp -L/home/jim/razor/kroc64/kroc/runtime/libkrocif"
 	printf 'KROC_CCSP_LIBS="%s";\n' "-lpthread"
 
 	printf 'KROC_CCSP_ENABLE_PTHREADS="%s";\n' "yes"
