@@ -760,7 +760,7 @@ PRIVATE treenode *gen_abbrv_and_process_for_initials (treenode * temp_decls, tre
 	/*printtree(stderr,0,b); */
 	/*fprintf(stderr,"\n---\n"); */
 	/*}}} */
-	indent = indent;	/* causes usage of it! */
+	(void)indent;
 	prev_ptr = &root;
 	if (TagOf (a) == S_LIST) {
 		while (!EndOfList (a)) {
@@ -962,7 +962,7 @@ PRIVATE treenode *gen_abbrv_and_process_for_results (treenode *temp_decls, treen
 	treenode *root;
 	treenode **prev_ptr;
 
-	indent = indent;	/* causes usage of it! */
+	(void)indent;
 	prev_ptr = &root;
 	root = newdeclnode (S_ABBR, locn, NULL, NULL, NULL);
 	SetDName (root, declname (N_DECL, locn, (wordnode *) a, res_type, root));
@@ -2586,7 +2586,6 @@ fprintf (stderr, "rprocess(1): specflag was %d, a = %p\n", specflag, a);
 					return (procroot);
 					/*}}} */
 				} else {
-					BOOL waslist = FALSE;
 
 					/*{{{  parse variable or variable list followed by action; return */
 					if (symb == S_COMMA) {
@@ -2609,7 +2608,6 @@ fprintf (stderr, "rprocess(1): specflag was %d, a = %p\n", specflag, a);
 							goto error1;
 						}
 						a = newlistnode (S_LIST, locn, a, list);
-						waslist = TRUE;
 						/*}}}*/
 					}
 

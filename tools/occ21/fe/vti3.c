@@ -617,7 +617,7 @@ PUBLIC void addnametrans (treenode * old, treenode * new)
 PRIVATEPARAM int stacklabeldefs (treenode * tptr, void *dummy)
 /* This is used to scope ASM labels correctly when copying a tree */
 {
-	dummy = dummy;
+	(void)dummy;
 	if (TagOf (tptr) == S_LABELDEF) {
 		DEBUG_MSG (("stacklabeldefs: found label name (0x%x)\n", DNameOf (tptr)));
 		/* only create a new name if the user hasn't created a new one already */

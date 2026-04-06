@@ -1185,15 +1185,11 @@ printtreenl (stderr, 4, tptr);
 		case S_FINSTANCE:
 #endif
 		{
-#ifdef MOBILES
-			BOOL ismobile = FALSE;
-#endif
 
 			tptr = chk_gettype (tptr);
 #ifdef MOBILES
 			if (TagOf (tptr) == S_MOBILE) {
 				tptr = MTypeOf (tptr);
-				ismobile = TRUE;
 			}
 #endif
 			while (dimension > 0) {

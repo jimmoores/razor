@@ -31,8 +31,7 @@
 #endif
 #include "toolkit.h"
 
-PUBLIC int str_semicmp (str1, str2)
-char const *str1, *str2;
+PUBLIC int str_semicmp (char const *str1, char const *str2)
 {
   char *s1, *s2;
   int res;

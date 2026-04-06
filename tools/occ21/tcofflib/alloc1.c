@@ -46,8 +46,7 @@ struct s_pointer_list
 PRIVATE struct s_pointer_list *ptr_list = NULL;
 
 /*{{{   PRIVATE static void mk_pointer (ptr)   */
-PRIVATE void mk_pointer (ptr)
-void *ptr;
+PRIVATE void mk_pointer (void *ptr)
 {
   struct s_pointer_list *entry;
   if ((entry = (void *) malloc (sizeof (struct s_pointer_list))) == NULL)
@@ -62,8 +61,7 @@ void *ptr;
 }
 /*}}}*/
 /*{{{   PUBLIC void check_ptr (ptr)   */
-PUBLIC void check_ptr (ptr)
-void *ptr;
+PUBLIC void check_ptr (void *ptr)
 {
   struct s_pointer_list *entry;
   int ok;
@@ -87,8 +85,7 @@ void *ptr;
 }
 /*}}}*/
 /*{{{   PUBLIC void *malloc_debug (mem)   */
-PUBLIC void *malloc_debug (mem)
-size_t mem;
+PUBLIC void *malloc_debug (size_t mem)
 {
   void *res;
   res = (void *) malloc (mem);
@@ -102,8 +99,7 @@ size_t mem;
 }
 /*}}}*/
 /*{{{   PUBLIC void *calloc_debug (n, size)   */
-PUBLIC void *calloc_debug (n, size)
-size_t n, size;
+PUBLIC void *calloc_debug (size_t n, size_t size)
 {
   void *res;
   res = (void *) calloc (n, size);
@@ -117,9 +113,7 @@ size_t n, size;
 }
 /*}}}*/
 /*{{{   PUBLIC void *realloc_debug (ptr, mem)   */
-PUBLIC void *realloc_debug (ptr, mem)
-void *ptr;
-size_t mem;
+PUBLIC void *realloc_debug (void *ptr, size_t mem)
 {
   void *res = NULL;
   struct s_pointer_list *entry;
@@ -164,8 +158,7 @@ size_t mem;
 }
 /*}}}*/
 /*{{{   PUBLIC void free_debug (ptr)   */
-PUBLIC void free_debug (ptr)
-void *ptr;
+PUBLIC void free_debug (void *ptr)
 {
   struct s_pointer_list *entry;
   int ok;

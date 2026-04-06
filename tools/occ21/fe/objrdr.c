@@ -583,7 +583,7 @@ PUBLIC char *readdescriptorline (char *line, const BOOL in_stdlib, int *const li
 						attr = getl_from_tcoff (infile);	/* error mode */
 						lang = getl_from_tcoff (infile);	/* language */
 						/*{{{  get descriptor                     descriptor */
-						if ((lang == LANG_OCCAM) /* && compatible_call(instr, attr) */ ) {
+						if (lang == LANG_OCCAM /* && compatible_call(instr, attr) */ ) {
 							current_descriptor = process_descstring (infile, seek_val, TRUE, instr, attr, in_stdlib);
 							if (current_descriptor != NULL) {
 								in_descriptor = TRUE;
@@ -911,21 +911,6 @@ PRIVATE const char *get_optional_num (const char *ptr, INT32 *res, char c) /*{{{
 	return (ptr);
 }
 /*}}}*/
-PRIVATE const char *get_optional_string (const char *ptr, const char *sptr, int *res) /*{{{*/
-{
-	/* if found, sets 'res' to non-zero, else zero */
-	while (*ptr == ' ') {
-		ptr++;
-	}
-	for (; (*sptr != '\0') && (*sptr == *ptr); sptr++, ptr++);
-	if ((*sptr == '\0') && ((*ptr == ' ') || (*ptr == '\t') || (*ptr == '\n') || (*ptr == '\0'))) {
-		*res = 1;
-	} else {
-		*res = 0;
-	}
-	return (ptr);
-}
-/*}}}*/
 PUBLIC BOOL init_external (const char *string, const int dynext) /*{{{*/
 {
 	wordnode *name = NULL;
@@ -936,7 +921,6 @@ PUBLIC BOOL init_external (const char *string, const int dynext) /*{{{*/
 	INT32 ms = DEFAULT_EXTERNAL_MS;
 #endif
 	int dummy;
-	int does_fork = 0;
 
 	/* PARSE: "PROC P () = 1", or "PROC P () = 1 , 10" */
 	/* for mobiles, parse an extra one */
@@ -949,7 +933,6 @@ PUBLIC BOOL init_external (const char *string, const int dynext) /*{{{*/
 
 		for (; (string[i] == ' ') || (string[i] == '\t'); i++);
 		if (!strncmp (string + i, "FORK", 4)) {
-			does_fork = 1;
 			len = i+3;
 		}
 	}

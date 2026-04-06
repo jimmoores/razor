@@ -30,8 +30,7 @@
 #include "toolkit.h"
 
 /*{{{   PUBLIC char *str_duplicate (str)   */
-PUBLIC char *str_duplicate (str)
-char const *str;
+PUBLIC char *str_duplicate (char const *str)
 {
   int l;
   char *newstr;

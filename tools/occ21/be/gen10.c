@@ -1491,44 +1491,6 @@ printtreenl (stderr, 4, ReplCStepExpOf (aptr));
 	tdespecs (specsptr);
 }
 /*}}}*/
-/*{{{  PRIVATE BOOL talthaspri (treenode *aptr) */
-/*****************************************************************************
- *  talthaspri is used to determine if an ALT involves a PRI ALT at any
- *             point, necessary so we can avoid NDIS[CST] -- not compatible
- *             with replicators and DIS[CST] in a PRI ALT..
- *****************************************************************************/
-PRIVATE BOOL talthaspri (treenode *aptr)
-{
-	treenode *tptr;
-
-	for (tptr = aptr; tptr;) {
-		tptr = skipspecifications (tptr);		/* skip leading specs */
-
-		switch (TagOf (tptr)) {
-		case S_ALT:
-			for (tptr = CBodyOf (tptr); !EndOfList (tptr); tptr = NextItem (tptr)) {
-				if (talthaspri (ThisItem (tptr))) {
-					return TRUE;
-				}
-			}
-			break;
-		case S_REPLALT:
-			tptr = ReplCBodyOf (tptr);
-			break;
-		case S_PRIALT:
-		case S_PRIREPLALT:
-			return TRUE;
-		case S_ALTERNATIVE:
-			tptr = NULL;	/* guard -- end of the line.. */
-			break;
-		default:
-			tptr = NULL;
-			break;
-		}
-	}
-	return FALSE;
-}
-/*}}}  */
 /*{{{  PRIVATE void taltbodies(tptr, joinlab)*/
 /*****************************************************************************
  *
@@ -1868,12 +1830,11 @@ fprintf (stderr, "gen10: mapoutputitem: *outputitem looks complex!\n");
 			outputitemmode = ptrmodeof (outputitemmode);
 			if (s == -1) {
 				/* length is expression */
-				int loadseq;
 				treenode *lengthexp;
 				treenode *rhs = RHSOf (comm);
 
 				lengthexp = scaletreeof (type, 1, be_lexlevel);
-				loadseq = mapload3regs (outputitemmode, outputitem, P_EXP, channel, P_EXP, &lengthexp);
+				(void)mapload3regs (outputitemmode, outputitem, P_EXP, channel, P_EXP, &lengthexp);
 				NewNextItem (addtofront (lengthexp, NULL), rhs);
 			} else {
 				mapload2regs (outputitemmode, outputitem, P_EXP, channel);
@@ -1912,14 +1873,13 @@ fprintf (stderr, "gen10: mapoutputitem: *outputitem looks complex!\n");
 			outputitemmode = ptrmodeof (outputitemmode);
 			if (s == (-1)) {
 				/*{{{  length is an expression */
-				int loadseq;
 				treenode *lengthexp;
 
 				/*int old = switch_to_temp_workspace(); */
 				lengthexp = scaletreeof (type, 1, be_lexlevel);
 				/*switch_to_prev_workspace(old); */
 
-				loadseq = mapload3regs (outputitemmode, outputitem, channelmode, channel, P_EXP, &lengthexp);
+				(void)mapload3regs (outputitemmode, outputitem, channelmode, channel, P_EXP, &lengthexp);
 				/* Ideally we should save this loadseq value on the tree somewhere
 				   so that we don't have to recalculate it in the code generator */
 				{
@@ -2301,11 +2261,10 @@ fprintf (stderr, "mapinputitem: ANYCHANTYPE input!\n");
 				mapexpopd (isplaced ? P_EXP : channelmode, channel);
 			} else {
 				treenode *lengthexp = NULL;
-				int loadseq = -1;
 				treenode *rhs = RHSOf (comm);
 
 				lengthexp = scaletreeof (type, 1, be_lexlevel);
-				loadseq = mapload3regs (inputitemmode, inputitem, isplaced ? P_EXP : channelmode, channel, P_EXP, &lengthexp);
+				(void)mapload3regs (inputitemmode, inputitem, isplaced ? P_EXP : channelmode, channel, P_EXP, &lengthexp);
 				/* Ideally we should save this loadseq value on the tree somewhere
 				   so that we don't have to recalculate it in the code generator */
 
@@ -2328,17 +2287,16 @@ fprintf (stderr, "mapinputitem: ANYCHANTYPE input!\n");
 				mapload2regs (inputitemmode, inputitem, channelmode, channel);
 			} else {
 				treenode *lengthexp = NULL;
-				int loadseq = -1;
 				treenode *rhs = RHSOf (comm);
 
 				lengthexp = scaletreeof (type, 1, be_lexlevel);
-				loadseq = mapload3regs (inputitemmode, inputitem, channelmode, channel, P_EXP, &lengthexp);
+				(void)mapload3regs (inputitemmode, inputitem, channelmode, channel, P_EXP, &lengthexp);
 				/* Ideally we should save this loadseq value on the tree somewhere
 				   so that we don't have to recalculate it in the code generator */
 
 				/* bug TS/1626 24/04/92 - save the length expression */
 				NewNextItem (addtofront (lengthexp, NULL), rhs);
-				loadseq = mapload3regs (inputitemmode, inputitem, channelmode, channel, P_EXP, &lengthexp);
+				(void)mapload3regs (inputitemmode, inputitem, channelmode, channel, P_EXP, &lengthexp);
 			}
 			mapioop (I_XIN, usecall);
 			if (TagOf (x_process) == S_X_FIRST_HALF) {
@@ -2926,14 +2884,12 @@ printtreenl (stderr, 4, comm);
 			int skiplab = (-1);	/* initialised to shut up gcc's optimiser */
 			treenode *dimexp = dimexpof (arrayexp, 0);
 			BOOL zeroed_temp = FALSE;
-			treenode *leftprottype, *rightprottype;
-			/*{{{  set up leftprottype and rightprottype */
+			treenode *leftprottype;
+			/*{{{  set up leftprottype */
 			if (TagOf (prottype) == S_ANY) {
 				leftprottype = prottype;
-				rightprottype = prottype;
 			} else {
 				leftprottype = LeftOpOf (prottype);
-				rightprottype = RightOpOf (prottype);
 			}
 			/*}}} */
 			if (preeval (countmode, countexp))
@@ -3430,20 +3386,18 @@ printtreenl (stderr, 4, comm);
 	if (TagOf (inputitem) == S_COLON2) {
 		/*{{{  do counted input */
 		treenode *countexp = LeftOpOf (inputitem), *arrayexp = RightOpOf (inputitem);
-		treenode *leftprottype, *rightprottype;
+		treenode *leftprottype;
 		treenode *origexp = countexp;	/* added for bug 864 */
 		treenode *origtype = NTypeOf (countexp);	/* ditto */
 		int countmode = P_EXP;
 		const int counttype = ntypeof (countexp);
 		const int skiplab = newlab ();
 
-		/*{{{  set up leftprottype and rightprottype */
+		/*{{{  set up leftprottype */
 		if (TagOf (prottype) == S_ANY) {
 			leftprottype = prottype;
-			rightprottype = prottype;
 		} else {
 			leftprottype = LeftOpOf (prottype);
-			rightprottype = RightOpOf (prottype);
 		}
 		/*}}} */
 		/*{{{  input the count */

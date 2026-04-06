@@ -32,8 +32,7 @@
 #include "toolkit.h"
 
 /*{{{   PUBLIC void *malloc_chk (mem)   */
-PUBLIC void *malloc_chk (mem)
-size_t mem;
+PUBLIC void *malloc_chk (size_t mem)
 {
   void *res;
   res = (void *) malloc (mem);
@@ -46,8 +45,7 @@ size_t mem;
 }
 /*}}}*/
 /*{{{   PUBLIC void *calloc_chk (n, size)   */
-PUBLIC void *calloc_chk (n, size)
-size_t n, size;
+PUBLIC void *calloc_chk (size_t n, size_t size)
 {
   void *res;
   res = (void *) calloc (n, size);
@@ -60,9 +58,7 @@ size_t n, size;
 }
 /*}}}*/
 /*{{{   PUBLIC void *realloc_chk (ptr, mem)   */
-PUBLIC void *realloc_chk (ptr, mem)
-void *ptr;
-size_t mem;
+PUBLIC void *realloc_chk (void *ptr, size_t mem)
 {
   void *res;
 #ifdef NO_ANSI_REALLOC
@@ -80,8 +76,7 @@ size_t mem;
 }
 /*}}}*/
 /*{{{  PUBLIC void free_chk (ptr) */
-PUBLIC void free_chk (ptr)
-void *ptr;
+PUBLIC void free_chk (void *ptr)
 {
   if (ptr != NULL) free (ptr);
 }

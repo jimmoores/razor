@@ -94,8 +94,6 @@ typedef struct TAG_udv_cstk {
 } udv_cstk;
 /*}}}*/
 /*{{{  forwards*/
-PRIVATE int udv_nesting_maxdepth (udv_t *udv);
-PRIVATE int udv_nesting_maxwidth (udv_t *udv);
 PRIVATEPARAM int do_undefinedcheck (treenode *n, void *const voidptr);
 PRIVATE void undefinedcheck_set_decl (treenode *namelist, treenode **revdecllist);
 PRIVATE void undefinedcheck_end_decl (treenode *rdecllist);
@@ -253,50 +251,6 @@ void udv_dump_udvt (FILE *stream, udv_t *var, int slevel)
 		}
 	}
 	return;
-}
-/*}}}*/
-/*{{{  PRIVATE int udv_nesting_maxdepth (udv_t *udv)*/
-/*
- *	returns the maximum nesting depth of a udv_t structure
- */
-PRIVATE int udv_nesting_maxdepth (udv_t *udv)
-{
-	int maxdepth = 0;
-	int i, j;
-
-	if (udv->nested && udv->nested[0]) {
-		for (i=0; udv->nested[i]; i++) {
-			j = udv_nesting_maxdepth (udv->nested[i]);
-			if (j > maxdepth) {
-				maxdepth = j;
-			}
-		}
-		return maxdepth + 1;
-	}
-	return maxdepth;
-}
-/*}}}*/
-/*{{{  PRIVATE int udv_nesting_maxwidth (udv_t *udv)*/
-/*
- *	returns the maximum nesting "width" of a udv_t structure
- */
-PRIVATE int udv_nesting_maxwidth (udv_t *udv)
-{
-	int maxwidth = 0;
-	int i, j;
-
-	if (udv->nested && udv->nested[0]) {
-		for (i=0; udv->nested[i]; i++) {
-			j = udv_nesting_maxwidth (udv->nested[i]);
-			if (j > maxwidth) {
-				maxwidth = j;
-			}
-		}
-		if (i > maxwidth) {
-			maxwidth = i;
-		}
-	}
-	return maxwidth;
 }
 /*}}}*/
 /*{{{  PRIVATE int udv_strofexp (char *buf, int buflen, treenode *exp)*/
@@ -460,6 +414,7 @@ PRIVATE void udv_error_now (int code, SOURCEPOSN locn, const char *string)
 }
 /*}}}*/
 /*{{{  PRIVATE void udv_error_nowi (int code, SOURCEPOSN locn, int v)*/
+#if defined(PD_ATTACH_DYNMOB) && defined(PD_DETACH_DYNMOB)
 /*
  *	generates an error now about something (with an integer argument)
  */
@@ -468,6 +423,7 @@ PRIVATE void udv_error_nowi (int code, SOURCEPOSN locn, int v)
 	msg_out_i (SEV_ERR_JMP, USE, code, locn, v);
 	return;
 }
+#endif
 /*}}}*/
 /*{{{  PRIVATE void udv_new_warning (int code, SOURCEPOSN locn, const char *string)*/
 /*
@@ -978,7 +934,6 @@ PRIVATE void vstack_update_substate (udv_t *udv, int slevel)
 	int n_undefined = 0;
 	int n_unknown = 0;
 	int n_partial = 0;
-	int n_io = 0;
 	int n_defined = 0;
 	int i;
 
@@ -1006,7 +961,6 @@ PRIVATE void vstack_update_substate (udv_t *udv, int slevel)
 		case UDV_INPUTTED:
 		case UDV_OUTPUTTED:
 		case UDV_XINPUTTED:
-			n_io++;
 			break;
 		case UDV_DEFINED:
 			n_defined++;
@@ -2127,7 +2081,6 @@ fprintf (stderr, "do_undefinedcheckexp: S_SIZE in undefined checker.\n");
 		{
 			const int oldmode = udv_defaultmode;
 			udv_udef_t local_undefined = {0, 0, 0, 1};
-			int astate = UDV_DEFINED;
 
 			if (!udv_thingisdynmobile (OpOf (n)) && !udv_thingisdynmobilechantype (OpOf (n))) {
 				udv_error_now (USE_BAD_MOBILE_DEFINED, LocnOf (n), "");
@@ -2137,11 +2090,8 @@ fprintf (stderr, "do_undefinedcheckexp: S_SIZE in undefined checker.\n");
 			udv_defaultmode = EXP_READ;
 			modprewalktree (OpAddr (n), do_undefinedcheckexp, &local_undefined);
 			if (local_undefined.n_undefined) {
-				astate = UDV_UNDEFINED;
 			} else if (local_undefined.n_partial) {
-				astate = UDV_PARTIAL;
 			} else if (local_undefined.n_unknown) {
-				astate = UDV_UNKNOWN;
 			} /* else defined */
 #if 0
 fprintf (stderr, "do_undefinedcheckexp: checked for READ with suppressed warings: undefined = %d, unknown = %d\n", local_undefined.n_undefined, local_undefined.n_unknown);
@@ -3423,15 +3373,12 @@ fprintf (stderr, "do_undefinedcheck: INSTANCE of %s, forked = %d, recursive = %d
 			while (!EmptyList (formallist) && !EmptyList (actuallist)) {
 				treenode *actual = ThisItem (actuallist);
 #ifdef MOBILES
-				int is_cloned = 0;
-
 				local_undefined.n_undefined = 0;
 				local_undefined.n_unknown = 0;
 				local_undefined.n_partial = 0;
 				local_undefined.supress_warn = 0;
 				/* check for chan-type parameters to PROCs, make sure they're writable */
 				if (TagOf (actual) == S_CLONE) {
-					is_cloned = 1;
 					actual = OpOf (actual);
 				}
 #if 0

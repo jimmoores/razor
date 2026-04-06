@@ -1579,7 +1579,7 @@ fprintf (stderr, "gen8: done size fiddling, stored = %d, carried = %d\n", stored
 			/*}}}*/
 		} else if (ptype & PROC_FORKED) {
 			/*{{{  fork parameters*/
-			if ((TagOf (opd) == S_HIDDEN_PARAM)) {
+			if (TagOf (opd) == S_HIDDEN_PARAM) {
 				if (HDimensionOf (opd) == -1) {
 					/* note: assumed tree structure here */
 					if (copy) {
@@ -1591,7 +1591,7 @@ fprintf (stderr, "gen8: done size fiddling, stored = %d, carried = %d\n", stored
 				} else {
 					texpopd_main (opdmode, opd, MANY_REGS, FALSE);
 					trecstoreparam (ptype, paramslot, FALSE, FALSE);
-					if ((TagOf (formaltype) == S_INT)) {
+					if (TagOf (formaltype) == S_INT) {
 						hps_opdmode[hps_ptr] = opdmode;
 						hps_opd[hps_ptr] = opd;
 						hps_ptr++;
@@ -2217,7 +2217,7 @@ printtreenl (stderr, 4, msp_ptr);
 		pclone_list[i] = NULL;
 		mparam_offsets[i] = -255;
 
-		if ((TagOf (*(paramtable[i].pparamexp)) == S_CLONE)) {
+		if (TagOf (*(paramtable[i].pparamexp)) == S_CLONE) {
 			/*{{{  found one, save in list, adjust code-gen expression and generate code to up usage-count of chantype semaphore*/
 			treenode *nptr;
 
@@ -3083,8 +3083,6 @@ PUBLIC int mappredef (treenode * tptr, treenode * destlist)
 	if (pdinline (pdno)) {
 		int loadseq = 0;
 		int i;
-		treenode *lastparam = NULL;
-
 		/*{{{  load parameters into param */
 		i = 0;
 		while (!EndOfList (paramlist)) {
@@ -3092,7 +3090,6 @@ PUBLIC int mappredef (treenode * tptr, treenode * destlist)
 			i++;
 			paramlist = NextItem (paramlist);
 		}
-		lastparam = (i > 0) ? *(param[i-1]) : NULL;
 		/*}}} */
 		/*{{{  load destinations into dest */
 		i = 0;
@@ -3461,8 +3458,6 @@ PUBLIC int mappredef (treenode * tptr, treenode * destlist)
 				int sxmode = P_EXP, symode = P_EXP, dxmode = P_EXP, dymode = P_EXP,
 					widthmode = P_EXP, lengthmode = P_EXP, sourcemode = P_EXP, dstmode = P_EXP;
 				treenode *sourceaddr = NULL, *dstaddr = NULL, *sxcheck = NULL, *sycheck = NULL, *dxcheck = NULL, *dycheck = NULL;
-				int loadseq1;	/* load sequence for move2dinit parameters : we throw it */
-				/* away here and recalculate it during code generation   */
 
 #if 0
 				fprintf (outfile, "original source tree is");
@@ -3536,7 +3531,7 @@ PUBLIC int mappredef (treenode * tptr, treenode * destlist)
 					dstmode = mapevalexp (dstmode, &dstaddr);
 				/*}}} */
 				/*{{{  map the load for move2dinit */
-				loadseq1 = mapload3regs (P_EXP, &sourcestride, P_EXP, &dststride, lengthmode, length);
+				(void)mapload3regs (P_EXP, &sourcestride, P_EXP, &dststride, lengthmode, length);
 				/*}}} */
 				/*{{{  map the load for the move operation proper */
 				loadseq = mapload3regs (sourcemode, &sourceaddr, dstmode, &dstaddr, widthmode, width);

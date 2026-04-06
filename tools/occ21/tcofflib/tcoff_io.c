@@ -143,9 +143,7 @@ PUBLIC long int tcoff_sizel ( long int l )
 }
 /*}}}  */
 /*{{{   PUBLIC unsigned long int tcoff_getul_test (fs, ok)   */
-PUBLIC unsigned long int tcoff_getul_test (fs, ok)
-FILE *fs;
-int *ok;
+PUBLIC unsigned long int tcoff_getul_test (FILE *fs, int *ok)
 {
   int i, c;
   unsigned long int l;
@@ -167,10 +165,7 @@ int *ok;
 }
 /*}}}  */
 /*{{{   PUBLIC char *tcoff_gets_test (fs, len, ok)   */
-PUBLIC char *tcoff_gets_test (fs, len, ok)
-FILE *fs;
-long int *len;
-int *ok;
+PUBLIC char *tcoff_gets_test (FILE *fs, long int *len, int *ok)
 {
   int l, i, c;
   char *str;
@@ -194,9 +189,7 @@ int *ok;
 /*}}}  */
 
 /*{{{   PUBLIC void tcoff_putl (fs, l)   */
-PUBLIC void tcoff_putl (fs, l)
-FILE *fs;
-long int l;
+PUBLIC void tcoff_putl (FILE *fs, long int l)
 {
   int size, i;
   long int n, bytes;
@@ -228,9 +221,7 @@ long int l;
 }
 /*}}}  */
 /*{{{   PUBLIC void tcoff_putul (fs, l)   */
-PUBLIC void tcoff_putul (fs, l)
-FILE *fs;
-unsigned long int l;
+PUBLIC void tcoff_putul (FILE *fs, unsigned long int l)
 {
   int i;
   for (i = 0; i < 4; i++)
@@ -242,10 +233,7 @@ unsigned long int l;
 }
 /*}}}  */
 /*{{{   PUBLIC void tcoff_puts (fs, size, string)   */
-PUBLIC void tcoff_puts (fs, size, string)
-FILE *fs;
-long int size;
-char *string;
+PUBLIC void tcoff_puts (FILE *fs, long int size, char *string)
 {
   tcoff_putl (fs, size);
   if (fwrite (string, (size_t) sizeof (char), (size_t) size, fs) < size) write_error (5);
@@ -261,7 +249,6 @@ va_dcl
 #endif  /* __STDC__ */
 {
   long int res, l;
-  unsigned long int dummy;
   char *p, *fmt;
   res = 0L;
 #ifdef __STDC__
@@ -289,7 +276,7 @@ va_dcl
               break;
             case 'u':
               res += 4L;
-              dummy = (unsigned long int) va_arg (ap, unsigned int);
+              (void) va_arg (ap, unsigned int);
               break;
             default:
               fprintf (stderr, "characters 'l%c' unknown in record string. please report", *p);

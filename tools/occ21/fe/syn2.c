@@ -1487,7 +1487,6 @@ PUBLIC treenode *rexp (void)
 		 * and also for allocating MOBILE processes */
 		{
 			treenode *op, *dimlist;
-			int dimcount = 0;
 
 			dimlist = NULL;
 			nextsymb ();
@@ -1547,7 +1546,6 @@ PUBLIC treenode *rexp (void)
 					nextsymb ();
 
 					/* save dimension expression */
-					dimcount++;
 					dimlist = newlistnode (S_LIST, locn, dimexpr, dimlist);
 				}
 				/*}}}*/
@@ -2119,7 +2117,7 @@ fprintf (stderr, "rtypeetc: returning `a', assuming expression list\n");
 			/*}}} */
 		}
 		/*}}} */
-	} else if ((symb == S_NAME)) {
+	} else if (symb == S_NAME) {
 		/*{{{  could still be conversion or specification */
 		treenode *list = NULL;
 		wordnode *name = rname ();
@@ -4762,9 +4760,6 @@ PRIVATE treenode *rparam (treenode *t, int valparam)
 	SOURCEPOSN locn = flocn;
 	wordnode *name = NULL;
 	treenode *nptr;
-#ifdef MOBILES
-	int chantype_flag = 0;
-#endif
 	int undefined_flag = 0;
 	int fixed_flag = 0;
 	wordnode *undefined_word = lookupword ("UNDEFINED", 9);
@@ -4854,7 +4849,6 @@ if (symb == S_NAME) {
 				SetOpTypeAttr (t, OpTypeAttrOf (t) | TypeAttr_shared);		/* mark as shared */
 				name = NULL;
 				nextsymb ();
-				chantype_flag = 1;
 			} else {
 				synerr_e (SYN_E_CHANTYPEDIRSPEC, flocn, symb);
 				return NULL;
@@ -5048,7 +5042,6 @@ printtreenl (stderr, 4, t);
 						name = NULL;	/* force the next read of name */
 						copy_type_tree = FALSE;
 						valparam = N_PARAM;
-						chantype_flag = 1;
 					}
 				} else
 #endif
@@ -5068,7 +5061,6 @@ printtreenl (stderr, 4, t);
 					name = NULL;	/* force re-read of name */
 					copy_type_tree = FALSE;
 					valparam = N_PARAM;
-					chantype_flag = 1;
 				} else if (((symb == S_COMMA) || (symb == S_RPAREN)) && copy_type_tree) {
 					treenode *ttype;
 

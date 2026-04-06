@@ -3364,7 +3364,7 @@ fprintf (stderr, "scopeandcheck: INSTANCENODE: param checking; ctvar = NULL\n");
 					if ((tag == S_PINSTANCE) && IForkedOf (t)) {
 						if (TagOf (name) == N_INLINEPROCDEF) {
 							chkreport_s (CHK_NO_INLINE_FORK, chklocn, WNameOf (NNameOf (name)));
-						} else if ((TagOf (name) == N_PREDEFPROC)) {
+						} else if (TagOf (name) == N_PREDEFPROC) {
 							chkreport_s (CHK_NO_PREDEF_FORK, chklocn, WNameOf (NNameOf (name)));
 						}
 					}

@@ -19,7 +19,6 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-static char RcsId[] = "$Id: extlong.c,v 1.2 1997/03/25 14:52:40 djb1 Exp $ Copyright INMOS Limited";
 /*}}}*/
 
 /*{{{  include files */

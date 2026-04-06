@@ -34,16 +34,14 @@
 #include "toolkit.h"
 
 /*{{{   PRIVATE int to_lower (k) */
-PRIVATE int to_lower (k)
-char k;
+PRIVATE int to_lower (char k)
 {
   return (isupper(k) ? tolower(k) : k);
 }
 /*}}}*/
 
 /*{{{   PUBLIC int str_semicmp_lc (str1, str2)   */
-PUBLIC int str_semicmp_lc (str1, str2)
-char const *str1, *str2;
+PUBLIC int str_semicmp_lc (char const *str1, char const *str2)
 {
   char *s1, *s2;
   int matched;

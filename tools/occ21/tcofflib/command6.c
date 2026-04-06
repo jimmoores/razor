@@ -29,10 +29,7 @@
 #include "toolkit.h"
 
 /*{{{   PUBLIC void env_to_option (ac, av, env)   */
-PUBLIC void env_to_option (ac, av, env)
-int *ac;
-char const **av[];
-char *env;
+PUBLIC void env_to_option (int *ac, char const **av[], char *env)
 {
   int i, argc2, finished;
   char const **argv; 

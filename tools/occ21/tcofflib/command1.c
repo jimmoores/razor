@@ -30,8 +30,7 @@
 #include "toolkit.h"
 
 /*{{{   PRIVATE int check (c)   */
-PRIVATE int check (c)
-const char c;
+PRIVATE int check (const char c)
 {
   switch (c)
   {
@@ -48,8 +47,7 @@ const char c;
 }
 /*}}}*/
 /*{{{   PUBLIC char *strip_path (string)   */
-PUBLIC char *strip_path (string)
-char const *string;
+PUBLIC char *strip_path (char const *string)
 {
   int i, len;
   char *ptr, *start, *temp;
@@ -71,9 +69,7 @@ char const *string;
 }
 /*}}}*/
 /*{{{   PUBLIC char *derive_string (string, full, extension)   */
-PUBLIC char *derive_string (string, full, extension)
-char const *string, *extension;
-int full;
+PUBLIC char *derive_string (char const *string, int full, char const *extension)
 {
   int i, len;
   char *ptr, *start, *temp;

@@ -33,9 +33,7 @@
 #include "tcofflib.h"
 
 /*{{{   PUBLIC long int lff_getl_test (fs, ok)   */
-PUBLIC long int lff_getl_test (fs, ok)
-FILE *fs;
-int *ok;
+PUBLIC long int lff_getl_test (FILE *fs, int *ok)
 {
   long int val;
   register int c;
@@ -57,10 +55,7 @@ int *ok;
 
 /*}}}  */
 /*{{{   PUBLIC char *lff_gets_test (fs, l, ok)   */
-PUBLIC char *lff_gets_test (fs, l, ok)
-FILE *fs;
-long int *l;
-int *ok;
+PUBLIC char *lff_gets_test (FILE *fs, long int *l, int *ok)
 {
   char *str, *res;
   int n, c, s;

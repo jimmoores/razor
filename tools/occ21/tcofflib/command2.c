@@ -29,11 +29,7 @@
 #endif
 #include "toolkit.h"
 /*{{{   PUBLIC void extract_bool_opts (ac, av, switchars, options, args)   */
-PUBLIC void extract_bool_opts (ac, av, switchars, options, args)
-int *ac;
-char ***av;
-char *switchars, **options;
-int *args[];
+PUBLIC void extract_bool_opts (int *ac, char ***av, char *switchars, char **options, int *args[])
 {
   int i, j, k, l, m;
   char *str, **argv;

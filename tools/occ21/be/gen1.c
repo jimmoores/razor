@@ -371,12 +371,12 @@ printtreenl (stderr, 4, *operands[0]);
 }
 PRIVATEPARAM void tguy (treenode * tptr, void *voidptr)
 {
-	voidptr = voidptr;
+	(void)voidptr;
 	tguy_or_asm (tptr, TRUE);
 }
 PRIVATEPARAM void tasm (treenode * tptr, void *voidptr)
 {
-	voidptr = voidptr;
+	(void)voidptr;
 	tguy_or_asm (tptr, FALSE);
 }
 
@@ -2090,7 +2090,7 @@ PRIVATE void tsetpar_exp (treenode *parcount, int joinlab, int skiplab, treenode
 PRIVATE void tendpar (const int parcount, treenode *tptr)
 {
 	treenode *bar;
-	treenode *declbars, *extbars;
+	treenode *extbars;
 	BOOL is_repl;
 
 	if (((TagOf (tptr) == S_PAR) || (TagOf (tptr) == S_PRIPAR)) && CTempOf (tptr)) {
@@ -2105,16 +2105,13 @@ PRIVATE void tendpar (const int parcount, treenode *tptr)
 	}
 
 	if (bar && (TagOf (bar) == S_BAREXTEND)) {
-		declbars = LeftOpOf (bar);
 		extbars = RightOpOf (bar);
 	} else if (bar && (TagOf (bar) == S_EXTENDS)) {
-		declbars = NULL;
 		extbars = bar;
 	} else if (bar) {
-		declbars = bar;
 		extbars = NULL;
 	} else {
-		declbars = extbars = NULL;
+		extbars = NULL;
 	}
 
 	if (!barrier_rbpe) {
@@ -2138,7 +2135,7 @@ PRIVATE void tendpar (const int parcount, treenode *tptr)
 PRIVATE void tendpar_exp (treenode *parcount, treenode *tptr)
 {
 	treenode *bar;
-	treenode *declbars, *extbars;
+	treenode *extbars;
 	BOOL is_repl;
 
 	if (((TagOf (tptr) == S_PAR) || (TagOf (tptr) == S_PRIPAR)) && CTempOf (tptr)) {
@@ -2153,16 +2150,13 @@ PRIVATE void tendpar_exp (treenode *parcount, treenode *tptr)
 	}
 
 	if (bar && (TagOf (bar) == S_BAREXTEND)) {
-		declbars = LeftOpOf (bar);
 		extbars = RightOpOf (bar);
 	} else if (bar && (TagOf (bar) == S_EXTENDS)) {
-		declbars = NULL;
 		extbars = bar;
 	} else if (bar) {
-		declbars = bar;
 		extbars = NULL;
 	} else {
-		declbars = extbars = NULL;
+		extbars = NULL;
 	}
 
 	if (!barrier_rbpe) {
@@ -3188,13 +3182,11 @@ PRIVATE void tconstrecord (const treenode *type, BYTE *dst, const BYTE *src, con
 			treenode *const field_type = NTypeOf (field_name);
 			const int offset = NVOffsetOf (field_name);
 			treenode *basetype = field_type;
-			BOOL array = FALSE;
 			int bytes = bytesin (field_type);
 
 			while (TagOf (basetype) == S_ARRAY || TagOf (basetype) == N_TYPEDECL) {
 				switch (TagOf (basetype)) {
 					case S_ARRAY:
-						array = TRUE;
 						basetype = ARTypeOf (basetype);
 						break;
 					case N_TYPEDECL:
@@ -3346,8 +3338,8 @@ fprintf (stderr, "tconsttable(): ..\n");
 /*{{{  PRIVATEPARAM void trepl_process*/
 PRIVATEPARAM void trepl_process (treenode * const tptr, void *voidptr, INT32 dummy)
 {
-	voidptr = voidptr;
-	dummy = dummy;
+	(void)voidptr;
+	(void)dummy;
 	tprocess (tptr);
 }
 
@@ -3820,7 +3812,7 @@ PUBLIC void tprocess (treenode * tptr)
 					/*}}}*/
 				} else if (isdynmobilearray (ct_nptr)) {
 					treenode *ct_subtype = follow_user_type (ct_type);
-					int lastchan_offset, is_client, lock;
+					int is_client, lock;
 					/* int soffset, knsf_offset; */
 					int cl_head, cl_tail;
 					int rl_head, rl_tail;
@@ -3842,7 +3834,6 @@ PUBLIC void tprocess (treenode * tptr)
 fprintf (stderr, "gen1: tprocess(): S_CLAIM: think I'm claiming a dynmobilearray, ct_subtype=");
 printtreenl (stderr, 4, ct_subtype);
 #endif
-					lastchan_offset = (bytesin (ct_subtype) / bytesperword);		/* client at this + 1, server at this + 4, maybe more if chantype_desc */
 					is_client = (NTypeAttrOf (ct_subtype) & TypeAttr_marked_out);
 					lock = (is_client ? MT_CB_CLIENT : MT_CB_SERVER);
 					cl_head = newlab ();
@@ -5870,7 +5861,6 @@ PUBLIC void tmain (treenode * tptr)
 	{
 		treenode *nptr = NULL;
 		treenode *t;
-		int num_procs_declared = 0;
 
 		/* set nptr to the last PROC/FUNCTION declared */
 		for (t = tptr; TagOf (t) != S_END; t = DBodyOf (t)) {
@@ -5882,7 +5872,6 @@ PUBLIC void tmain (treenode * tptr)
 			case S_LFUNCDEF:
 			case S_SFUNCDEF:
 				nptr = DNameOf (t);
-				num_procs_declared++;
 				break;
 			default:
 				break;

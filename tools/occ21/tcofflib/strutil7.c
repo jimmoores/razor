@@ -32,8 +32,7 @@
 #include "toolkit.h"
 
 /*{{{   PUBLIC char *str_concat (str1, str2)   */
-PUBLIC char *str_concat (str1, str2)
-char const *str1, *str2;
+PUBLIC char *str_concat (char const *str1, char const *str2)
 {
   char *res;
   int i, l1 = 0, l2 = 0;

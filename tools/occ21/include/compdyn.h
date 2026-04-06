@@ -74,7 +74,6 @@ extern void da_copy (int srccur, int srcmax, void **srcarray, int *dstcur, int *
 #define STATICSTRINGHASH(TYPE,NAME,BITSIZE) static TYPE* SH_TABLE(NAME)[1 << (BITSIZE)]; \
 		static char** SH_KEYS(NAME)[1 << (BITSIZE)]; \
 		static int SH_BSIZES(NAME)[1 << (BITSIZE)]; \
-		static const int SH_SIZE(NAME) = (1 << (BITSIZE)); \
 		static const int SH_BITSIZE(NAME) = (BITSIZE); \
 		static TYPE (*SH_LOOKUP(NAME))(int *, void ***, char ***, int, char *) = (TYPE(*)(int *, void ***, char ***, int, char *))sh_lookup
 #define STRINGHASH(TYPE,NAME,BITSIZE) TYPE* SH_TABLE(NAME)[1 << (BITSIZE)]; \

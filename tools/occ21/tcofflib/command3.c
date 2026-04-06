@@ -29,11 +29,7 @@
 #endif
 #include "toolkit.h"
 /*{{{   PUBLIC void extract_string_opts (ac, av, switchars, options, args)   */
-PUBLIC void extract_string_opts (ac, av, switchars, options, args)
-int *ac;
-char ***av;
-char *switchars, **options;
-char ***args;
+PUBLIC void extract_string_opts (int *ac, char ***av, char *switchars, char **options, char ***args)
 {
   int i, j, k, l, m, n, o;
   char *str, **argv;

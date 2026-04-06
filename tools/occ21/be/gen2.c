@@ -71,12 +71,6 @@ PRIVATE const int libops[N_LIBOPS] = { S_ADD, S_MULT, S_PLUS, S_BITAND, S_BITOR,
 PRIVATE const int libtypes[N_LIBTYPES] =
 	{ S_INT16, S_INT32, S_INT64, S_REAL32, S_REAL64 };
 
-/* 64-bit pointer type support */
-#ifdef TARGET_64BIT
-PRIVATE const int pointer_type = S_INT64;
-#else
-PRIVATE const int pointer_type = S_INT32;
-#endif
 
 PRIVATE const char *const libstrings[N_LIBOPS][N_LIBTYPES] = {
 	/* "bug" 1065 - these are all changed to add %CHK on the end,

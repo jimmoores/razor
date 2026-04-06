@@ -3257,7 +3257,7 @@ PUBLIC treenode *foldexpinto (treenode * const tptr, const int type)
  */
 PRIVATEPARAM int do_foldtree (treenode * t, void *dummy)
 {
-	dummy = dummy;
+	(void)dummy;
 	switch (TagOf (t)) {
 		/*{{{  spec */
 	case S_RETYPE:

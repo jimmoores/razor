@@ -30,10 +30,7 @@
 #include "toolkit.h"
 #define MAX_LINE 256
 /*{{{   PUBLIC void extract_multi_string_opts (ac, av, switchars, options, args)   */
-PUBLIC char **extract_multi_string_opts (ac, av, switchars, options)
-int *ac;
-char ***av;
-char *switchars, *options[];
+PUBLIC char **extract_multi_string_opts (int *ac, char ***av, char *switchars, char *options[])
 {
   char **args;
   int i, j, k, l, m, n, o, p;

@@ -1233,7 +1233,6 @@ PRIVATE void mapguy_or_asm (treenode * tptr, const BOOL guy_not_asm)
 		/*}}} */
 	} else if (((instruction & I_PSEUDO_OP) != 0) && !EndOfList (operand)) {
 		/*{{{  PSEUDO OP with operands */
-		int loadseq;
 		treenode **operands[MAXREGS];
 		int opmodes[MAXREGS];
 		const int ops = setup_asm_operands (operand, operands, opmodes);
@@ -1248,10 +1247,10 @@ PRIVATE void mapguy_or_asm (treenode * tptr, const BOOL guy_not_asm)
 			}
 			break;
 		case I_LDAB:
-			loadseq = mapload2regs (opmodes[0], operands[0], opmodes[1], operands[1]);
+			(void)mapload2regs (opmodes[0], operands[0], opmodes[1], operands[1]);
 			break;
 		case I_LDABC:
-			loadseq = mapload3regs (opmodes[0], operands[0], opmodes[1], operands[1], opmodes[2], operands[2]);
+			(void)mapload3regs (opmodes[0], operands[0], opmodes[1], operands[1], opmodes[2], operands[2]);
 			break;
 		case I_ST:
 		case I_STAB:
@@ -2470,7 +2469,6 @@ fprintf (stderr, "mapblock: allocating workspace for routine %s at lexlevel %d\n
 					}
 					/*}}} */
 					{
-						int loadseq;
 						/* We go to all the trouble of working the load sequence out,
 						   and then throw it away */
 						switch (nregresults) {
@@ -2478,14 +2476,14 @@ fprintf (stderr, "mapblock: allocating workspace for routine %s at lexlevel %d\n
 							break;
 						case 1:
 							mapexpopd (regresults[0].opdmode, regresults[0].opd);
-							loadseq = 1;
+							/* loadseq = 1; (unused) */
 							break;
 						case 2:
-							loadseq = mapload2regs (regresults[1].opdmode, regresults[1].opd,
+							(void)mapload2regs (regresults[1].opdmode, regresults[1].opd,
 										regresults[0].opdmode, regresults[0].opd);
 							break;
 						case 3:
-							loadseq = mapload3regs (regresults[2].opdmode, regresults[2].opd,
+							(void)mapload3regs (regresults[2].opdmode, regresults[2].opd,
 										regresults[1].opdmode, regresults[1].opd,
 										regresults[0].opdmode, regresults[0].opd);
 							break;

@@ -833,7 +833,7 @@ PRIVATE void var_abbreviate (treenode *n, use_mode_t use_mode)
  *****************************************************************************/
 PRIVATEPARAM void var_abbreviate_seg (treenode *n, void *voidptr)
 {
-	voidptr = voidptr;
+	(void)voidptr;
 	if (TagOf (n) == S_SEGMENT) {
 		var_abbreviate (n, EXP_WRITTEN);
 		in_abbrev = TRUE;	/* pretend we're inside an abbreviation for the rhs */

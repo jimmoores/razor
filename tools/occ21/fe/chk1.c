@@ -715,7 +715,7 @@ printtreenl (stderr, 4, atype);
 				/*{{{  allow if the formal is ANYPROCTYPE (MOBILE.PROC) and the actual is a mobile process*/
 				return TRUE;
 				/*}}}*/
-			} else if ((TagOf (ftype) == S_ANYMOBILETYPE)) {
+			} else if (TagOf (ftype) == S_ANYMOBILETYPE) {
 				/*{{{  allow if the formal is ANYMOBILETYPE*/
 				return TRUE;
 				/*}}}*/
@@ -2336,11 +2336,9 @@ fprintf (stderr, "typecheck_main(): S_NEG: checking for UDO tempname = [%s]\n", 
 	#ifdef USER_DEFINED_OPERATORS
 	#include "casemops.h"
 		{
-			BOOL passed;
 			int tempnamelen = 0;
 			char *tempname = NULL;
 
-			passed = 0;
 			modify_check = TRUE;
 			t = typecheck_main (OpOf (tptr), default_type);
 			left_type = t;	/* added by Jim to fix bug */
@@ -5813,12 +5811,10 @@ printtreenl (stderr, 4, aname);
 							int adim = 0;
 							int valid_param = 0;
 #ifdef MOBILES
-							int cloned_param = 0;
 
 							if (TagOf (aname) == S_CLONE) {
 								/* skip over CLONE */
 								aname = OpOf (aname);
-								cloned_param = 1;
 							}
 #endif
 							while ((TagOf (aname) == S_ARRAYSUB) || (TagOf (aname) == S_RECORDSUB) || (TagOf (aname) == S_SEGMENT)) {

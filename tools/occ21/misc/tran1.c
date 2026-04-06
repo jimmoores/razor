@@ -186,7 +186,7 @@ PRIVATE treenode *buildoverlapcheck (treenode * tptr)
 			   in the frontend.
 			 */
 			checktree = foldexp (checktree);
-			if ((TagOf (checktree) == S_CONSTEXP) /*&& (LoValOf(checktree) != 0) */ )
+			if (TagOf (checktree) == S_CONSTEXP /*&& (LoValOf(checktree) != 0) */ )
 				checktree = NULL;	/* remove this check */
 		}
 		if (checktree != NULL)
@@ -613,12 +613,11 @@ and
 	/*{{{  overwrite it with an IF */
 	{
 		const SOURCEPOSN locn = LocnOf (case_stmt);
-		INT32 first_val, second_val;
+		INT32 first_val;
 		treenode *true_body, *false_body;
 		treenode *first_guard, *second_guard, *if_stmt;
 
 		first_val = LoValOf (ThisItem (first_items));
-		second_val = LoValOf (ThisItem (second_items));
 
 		if (first_val != 0) {
 			true_body = CondBodyOf (first);

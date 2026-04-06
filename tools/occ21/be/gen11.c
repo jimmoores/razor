@@ -845,7 +845,6 @@ PRIVATE void gendynmobilearraycreate (treenode *const dest, treenode *const src,
 	const BOOL empty = TypeAttrOf (src) & TypeAttr_empty ? TRUE : FALSE;
 	const int dimcount = dynmobiledimensioncount (dest);
 	int idim;
-	treenode *had_temp = NULL;
 	treenode *basetype = NULL;
 	int basebytes = 0;
 
@@ -1015,7 +1014,6 @@ printtreenl (stderr, 4, rdest);
 		const int loopend = newlab ();
 		treenode *temp = LeftOpOf (ARDimLengthOf (src));
 
-		had_temp = temp;
 
 		loadname (temp, 0);
 		storemobilesize (rdest, 1);

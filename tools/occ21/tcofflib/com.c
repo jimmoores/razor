@@ -75,8 +75,7 @@ PRIVATE int line_number;
 /*}}}  */
 
 /*{{{   PRIVATE command_token *read_a_token (fs)  */
-PRIVATE command_token *read_a_token (fs)
-FILE *fs;
+PRIVATE command_token *read_a_token (FILE *fs)
 {
   command_token *result = NULL; /* init. to avoid gcc warning */
   char string[256];
@@ -178,8 +177,7 @@ FILE *fs;
 }
 /*}}}  */
 /*{{{   PRIVATE command_token *parse_token (fs)  */
-PRIVATE command_token *parse_token (fs)
-FILE *fs;
+PRIVATE command_token *parse_token (FILE *fs)
 {
   command_token *result;
   result = look_a_head; /* we know this isn't NULL when we initialise */
@@ -207,8 +205,7 @@ FILE *fs;
 }
 /*}}}  */
 /*{{{   PRIVATE command_line *parse_line (fs)  */
-PRIVATE command_line *parse_line (fs)
-FILE *fs;
+PRIVATE command_line *parse_line (FILE *fs)
 {
   command_line *result;
   command_token *tok;
@@ -236,9 +233,7 @@ FILE *fs;
 }
 /*}}}  */
 /*{{{   PRIVATE command_line *parse_file (filename, fullname)  */
-PRIVATE command_line *parse_file (filename, fullname)
-char const *filename;
-char *fullname;
+PRIVATE command_line *parse_file (char const *filename, char *fullname)
 {
   command_line *result, *line;
   FILE *fs;
@@ -272,9 +267,7 @@ char *fullname;
 }
 /*}}}  */
 /*{{{   PRIVATE void free_tokens (tok, del_string)  */
-PRIVATE void free_tokens (tok, del_string)
-command_token *tok;
-int del_string;
+PRIVATE void free_tokens (command_token *tok, int del_string)
 {
   command_token *tmp;
   while (tok != NULL)
@@ -287,8 +280,7 @@ int del_string;
 }
 /*}}}  */
 /*{{{   PRIVATE void replace_commands (first, old)  */
-PRIVATE void replace_commands (first, old)
-command_line *old, *first; /* must be non NULL */
+PRIVATE void replace_commands (command_line *first, command_line *old) /* must be non NULL */
 /* insert list 'first' where 'old' used to be */
 {
   command_line *last;
@@ -308,8 +300,7 @@ command_line *old, *first; /* must be non NULL */
 }
 /*}}}  */
 /*{{{   PRIVATE command_line strip_commands (com)  */
-PRIVATE command_line *strip_commands (list)
-command_line *list;
+PRIVATE command_line *strip_commands (command_line *list)
 {
   command_line *tmp, *result;
 
@@ -333,8 +324,7 @@ command_line *list;
 }
 /*}}}  */
 /*{{{   PRIVATE command_line *include_file (filename, pathname, progname, include)  */
-PRIVATE command_line *include_file (filename, pathname, progname, include)
-char const *pathname, *filename, *progname, *include;
+PRIVATE command_line *include_file (char const *filename, char const *pathname, char const *progname, char const *include)
 {
   char fullname[MAX_PATH];
   char const *fname;
@@ -372,9 +362,7 @@ char const *pathname, *filename, *progname, *include;
 }
 /*}}}  */
 /*{{{   PRIVATE int command_parse(file_list, desc)  */
-PRIVATE int command_parse(file_list, desc)
-command_line *file_list;
-command_descriptor const desc[];
+PRIVATE int command_parse(command_line *file_list, command_descriptor const desc[])
 {
   command_token *tok;
   command_descriptor const *dsc;
@@ -447,8 +435,7 @@ command_descriptor const desc[];
 /*}}}  */
 
 /*{{{   PUBLIC void print_command_structure (commands)  */
-PUBLIC void print_command_structure (commands)
-command_line const *commands;
+PUBLIC void print_command_structure (command_line const *commands)
 {
   command_token *tok;
   while (commands != NULL)
@@ -467,8 +454,7 @@ command_line const *commands;
 }
 /*}}}  */
 /*{{{   PUBLIC command_line *mk_command (fname)  */
-PUBLIC command_line *mk_command (fname)
-char const *fname;
+PUBLIC command_line *mk_command (char const *fname)
 {
   command_line *result;
   result = malloc_chk (sizeof (command_line));
@@ -482,8 +468,7 @@ char const *fname;
 }
 /*}}}  */
 /*{{{   PUBLIC command_line *add_command (command, list)  */
-PUBLIC command_line *add_command (command, list)
-command_line *command, *list;
+PUBLIC command_line *add_command (command_line *command, command_line *list)
 {
   command_line *result;
   if (list == NULL) result = command;
@@ -497,10 +482,7 @@ command_line *command, *list;
 }
 /*}}}  */
 /*{{{   PUBLIC command_line *read_indirect_file (fname, search_path, progname, include, desc, ok)  */
-PUBLIC command_line *read_indirect_file (fname, search_path, progname, include, desc, ok)
-char const *fname, *search_path, *progname, *include;
-command_descriptor const desc[];
-int *ok;
+PUBLIC command_line *read_indirect_file (char const *fname, char const *search_path, char const *progname, char const *include, command_descriptor const desc[], int *ok)
 {
   command_line *new_file, *tmp;
 
