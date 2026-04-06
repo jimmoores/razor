@@ -2,7 +2,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT
 AC_CONFIG_SRCDIR([pioneer.inc])
-AC_PREREQ([2.69])
+AC_PREREQ([2.72])
 
 dnl for automake 1.1 
 AC_CANONICAL_TARGET

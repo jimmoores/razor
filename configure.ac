@@ -1,7 +1,7 @@
 # Top-level configure.ac for the KRoC tree.
 
 AC_INIT([kroc],[1.6.1-pre0],[kroc-bugs@kent.ac.uk])
-AC_PREREQ([2.69])
+AC_PREREQ([2.72])
 AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects])

@@ -246,9 +246,9 @@ tx_setprocessor (txlib_t * const tx, const char *const s)
 
 		tx->hastseriesscheduler = !Hseries;
 		tx->hastserieserrors = !Hseries;
-		tx->hastseriesfperrors = !Hseries & tx->hasfpucore;
-		tx->hasfpentry = !Hseries & tx->hasfpucore;
-		tx->hasfpremfirst = !Hseries & tx->hasfpucore;
+		tx->hastseriesfperrors = (!Hseries) & tx->hasfpucore;
+		tx->hasfpentry = (!Hseries) & tx->hasfpucore;
+		tx->hasfpremfirst = (!Hseries) & tx->hasfpucore;
 
 		tx->hast9gammaprobs = Hseries & ((instr & H_INSTR_T9000_GAMMA) != 0);
 		tx->hast9gammaeprobs = Hseries & ((instr & H_INSTR_T9000_GAMMAE) != 0);

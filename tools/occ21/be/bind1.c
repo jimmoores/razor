@@ -1985,7 +1985,7 @@ printtreenl (stderr, 4, fe_lookupname (lookupword ("MPBARSYNC", 9)));
 											if (TagOf (var) == T_TEMP)
 												fprintf (outfile, "$temp%d", NVVarNumOf (var));
 											else
-												fprintf (outfile, WNameOf (NNameOf (var)));
+												fprintf (outfile, "%s", WNameOf (NNameOf (var)));
 											fprintf (outfile, " moved from %ld to workspace offset %ld\n",
 												 (long) oldoffset, (long) NVOffsetOf (var));
 										}

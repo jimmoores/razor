@@ -72,7 +72,7 @@ else
     CC="$CUDA_CC"
 
     rm -f conf.cudatest
-    AC_TRY_RUN([
+    AC_RUN_IFELSE([AC_LANG_SOURCE([
 #include <stdio.h>
 #include <cuda_runtime.h>
 
@@ -102,7 +102,7 @@ int main (int argc, char **argv)
 		return 1;
 	}
 }
-],, no_cuda=yes,[echo $ac_n "cross compiling; assumed OK.. $ac_c"])
+])],, no_cuda=yes,[echo $ac_n "cross compiling; assumed OK.. $ac_c"])
 
     CC="$ac_save_CC"
     CFLAGS="$ac_save_CFLAGS"

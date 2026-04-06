@@ -13,14 +13,6 @@ AC_PROG_RANLIB
 
 AC_C_INLINE
 
-m4_warn([obsolete],
-[The preprocessor macro 'STDC_HEADERS' is obsolete.
-  Except in unusual embedded environments, you can safely include all
-  C89 headers unconditionally.])dnl
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-AC_PROG_EGREP
-
 AC_CHECK_HEADERS([stdlib.h stdio.h string.h])
 AC_CHECK_HEADERS([sys/types.h math.h inttypes.h])
 

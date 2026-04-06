@@ -477,7 +477,8 @@ def parse_comment(lines):
 				level -= 1
 		parts[-1] += l + "\n"
 
-	return parts[0], list(map(lambda s: s.strip(), parts[1:]))
+	desc = parts[0] if parts[0].strip() else None
+	return desc, list(map(lambda s: s.strip(), parts[1:]))
 
 def parse_file(f, include_private = False, include_undocumented = False):
 	"""Extract OccamDoc comments from an occam-pi source file."""
@@ -568,13 +569,14 @@ def parse_file(f, include_private = False, include_undocumented = False):
 		if s != "":
 			(old_level, pos, old_decl, old_private) = level_stack[-1]
 			level = measure_indent(l)
-			if level < old_level:
-				raise OccamDocException("Missed end of declaration -- started at " + pos)
-			elif level == old_level:
-				if s != ":":
-					raise OccamDocException("Expected ':' at end of declaration -- started at " + pos)
-				level_stack.pop()
-				continue
+			if old_level is not None:
+				if level < old_level:
+					raise OccamDocException("Missed end of declaration -- started at " + pos)
+				elif level == old_level:
+					if s != ":":
+						raise OccamDocException("Expected ':' at end of declaration -- started at " + pos)
+					level_stack.pop()
+					continue
 
 		mg = group_start_re.match(l)
 		mh = header_start_re.match(l)
@@ -619,7 +621,7 @@ def parse_file(f, include_private = False, include_undocumented = False):
 def generic_tag_to_xml(doc, text, tags, text_handler):
 	"""Generic converter from tagged text to a DOM node."""
 
-	fields = re.split(r'\s+', text, 1)
+	fields = re.split(r'\s+', text, maxsplit=1)
 	if len(fields) == 0:
 		raise OccamDocException("Expected tag in '[@" + text + "]'")
 	tagname = fields[0]
@@ -636,7 +638,7 @@ def generic_tag_to_xml(doc, text, tags, text_handler):
 		if len(fields) != 2:
 			raise OccamDocException("Too few arguments to tag in '[@" + text + "]'")
 		rest = fields[1]
-		fields = re.split(r'\s', rest, 1)
+		fields = re.split(r'\s', rest, maxsplit=1)
 		if arg is None:
 			text_handler(doc, rest, el)
 		elif type(arg) is type(generic_tag_to_xml):  # i.e. a function
@@ -1040,6 +1042,7 @@ def main(args):
 
 	output_format = "html"
 	output_dir = "doc"
+	encoding = "UTF-8"
 	include_private = False
 	include_undocumented = False
 	verbose = False

@@ -9,14 +9,6 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 
 dnl Checks for header files.
-m4_warn([obsolete],
-[The preprocessor macro 'STDC_HEADERS' is obsolete.
-  Except in unusual embedded environments, you can safely include all
-  C89 headers unconditionally.])dnl
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-AC_PROG_EGREP
-
 AC_CHECK_HEADERS(stdlib.h string.h assert.h errno.h)
 AC_CHECK_HEADERS(stdint.h unistd.h sys/ioctl.h time.h)
 AC_CHECK_HEADERS(ctype.h)

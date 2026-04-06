@@ -1217,6 +1217,7 @@ MESSAGE ("mpcb_mpp_serialise(): WSMAP_MOB_DA: nslots=%d, basebytes=%d, icount=%d
 					(void)decode_entry (&mapptr);
 
 					/* FIXME! dynamic mobile channel-type */
+				}
 				break;
 				/*}}}*/
 				/*{{{  WSMAP_MOB_PT*/

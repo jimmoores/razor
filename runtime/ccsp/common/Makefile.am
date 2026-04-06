@@ -7,7 +7,7 @@ noinst_LIBRARIES=libcommon.a
 
 AUTOMAKE_OPTIONS=foreign
 
-DEFS=@DEFS@ @EXTRA_DEFS@ -fno-defer-pop -Wall -fPIC
+DEFS=@DEFS@ @EXTRA_DEFS@ -Wall -fPIC
 
 EXTRA_DIST = \
 	nmem.c

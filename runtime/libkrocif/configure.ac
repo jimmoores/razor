@@ -28,8 +28,12 @@ cygwin*)
  build_shared="no"
  LIBKROCIF="libkrocif.dylib"
  AC_DEFINE([TARGET_OS_DARWIN],1,[define if using Darwin])
- dnl Disable automatic PIC usage on Apple's GCC
- CFLAGS="$CFLAGS -mdynamic-no-pic"
+ case "$host_cpu" in
+  i386|i486|i586|i686|x86_64)
+   dnl Disable automatic PIC usage on Apple's GCC for x86 only.
+   CFLAGS="$CFLAGS -mdynamic-no-pic"
+   ;;
+ esac
  ;;
 *)
  build_shared="yes"

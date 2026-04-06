@@ -20,7 +20,7 @@ dnl
 dnl Get settings for compiling code against CCSP.
 AC_DEFUN([KROC_CCSP_FLAGS],
 [dnl
-AC_REQUIRE([AC_CANONICAL_SYSTEM])
+AC_REQUIRE([AC_CANONICAL_TARGET])
 AC_REQUIRE([OCCAM_IN_TREE])
 AC_REQUIRE([KROC_RMOX_BUILD])
 
@@ -84,10 +84,16 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
                 KROC_CCSP_ENABLE_CPUTIMERS=$enableval,
                 KROC_CCSP_ENABLE_CPUTIMERS=no)
 
-  KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -fomit-frame-pointer -fno-defer-pop"
+  KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -fomit-frame-pointer"
 
   case "$target_cpu" in
+    i386|i486|i586|i686)
+      # -fno-defer-pop is x86-specific (prevents deferring stack pops after calls)
+      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -fno-defer-pop"
+      ;;
     x86_64)
+      # -fno-defer-pop is x86-specific (no-op on x86_64 but accepted without warning)
+      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -fno-defer-pop"
       # Support both 32-bit and 64-bit modes based on target
       AC_ARG_ENABLE([64bit],
                     AS_HELP_STRING([--enable-64bit],
@@ -123,8 +129,17 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
       KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DHOSTOS_CYGWIN"
       ;;
     darwin*)
-      # Disable automatic PIC usage on Apple's GCC.
-      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DHOSTOS_DARWIN -mdynamic-no-pic -fno-pie -no-pie -fno-stack-protector -fno-ptrauth-calls"
+      KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DHOSTOS_DARWIN -fno-stack-protector -fno-ptrauth-calls"
+      case "$target_cpu" in
+        i386|i486|i586|i686|x86_64)
+          # Disable automatic PIC usage on Apple's GCC for x86 only.
+          KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -mdynamic-no-pic -fno-pie -no-pie"
+          ;;
+      esac
+      ;;
+    linux*)
+      # Allow linking against shared libraries with unresolved symbols (GNU ld only).
+      KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -Wl,--allow-shlib-undefined"
       ;;
   esac
 

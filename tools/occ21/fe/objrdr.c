@@ -329,7 +329,7 @@ fprintf (stderr, "desc_name: desc: %s\n", desc);
 		str++;
 	}
 	end = str;
-	while ((*end != ' ') && (*end != '(') && (end != '\0')) {
+	while ((*end != ' ') && (*end != '(') && (*end != '\0')) {
 		end++;
 	}
 	if (*end == '\0') {

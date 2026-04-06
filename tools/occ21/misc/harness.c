@@ -578,7 +578,7 @@ PRIVATEPARAM void print_memstats(void)
 {
 	#if defined(HOST_OS_IS_UNIX) && !defined(WIN32)
 	if (memstats) {
-		fprintf(outfile, "Memory usage: (current tree %ld) (sbrk %d)\n", tablesize(), sbrk(0) - original_sbrk);
+		fprintf(outfile, "Memory usage: (current tree %ld) (sbrk %td)\n", tablesize(), sbrk(0) - original_sbrk);
 	}
 	#endif
 }

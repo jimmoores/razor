@@ -7,6 +7,29 @@ srcdir = @srcdir@
 VPATH = @srcdir@
 AM_CPPFLAGS = -I. -I@srcdir@/include
 DEFS = @DEFS@ @ARCH_DEFS@
+# Override COMPILE so that AM_CFLAGS (our -Wno-* suppressions) comes AFTER CFLAGS
+# (which contains -Wall). If placed before -Wall, the -Wno-* flags are overridden.
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(CFLAGS) $(AM_CFLAGS)
+# Suppress warnings from legacy 1991-era code that we don't modify for style
+AM_CFLAGS = \
+	-Wno-deprecated-non-prototype \
+	-Wno-unused-but-set-variable \
+	-Wno-unused-variable \
+	-Wno-unused-function \
+	-Wno-unused-const-variable \
+	-Wno-unneeded-internal-declaration \
+	-Wno-self-assign \
+	-Wno-parentheses-equality \
+	-Wno-enum-conversion \
+	-Wno-enum-compare \
+	-Wno-pointer-to-int-cast \
+	-Wno-int-to-pointer-cast \
+	-Wno-void-pointer-to-int-cast \
+	-Wno-int-to-void-pointer-cast \
+	-Wno-switch \
+	-Wno-tautological-constant-out-of-range-compare \
+	-Wno-deprecated-declarations \
+	-Wno-shift-negative-value
 EXTRALDFLAGS = @EXTRA_LDFLAGS@
 
 bin_PROGRAMS = occ21

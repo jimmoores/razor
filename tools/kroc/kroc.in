@@ -183,7 +183,7 @@ case "$target_os" in
 	darwin*)
 		case "$target_cpu" in
 			aarch64)
-				extraccopts=${EXTRACCOPTS:--read_only_relocs suppress -arch arm64}
+				extraccopts=${EXTRACCOPTS:--arch arm64}
 				;;
 			x86_64)
 				extraccopts=${EXTRACCOPTS:--read_only_relocs suppress -arch x86_64}

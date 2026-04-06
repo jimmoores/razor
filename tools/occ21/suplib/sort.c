@@ -33,6 +33,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "suplib.h"
 /* Qsort is implemented using an explicit stack rather than C recursion  */
@@ -46,7 +47,7 @@
 #define exchange(p1, p2, size)                      \
 {                                                   \
     int xsize = size;                               \
-    if (((xsize | (int) p1) & MASK)==0)             \
+    if (((xsize | (uintptr_t) p1) & MASK)==0)             \
     {   do                                          \
         {   int temp = *(int *)p1;                  \
             *(int *)p1 = *(int *)p2;                \
@@ -201,7 +202,7 @@ void sup_qsort(void *base, size_t nmemb, size_t size,
 /* The fact that I do not know how large the objects that are being      */
 /* sorted are is horrible - I do an exchange here copying things one     */
 /* word at a time or one byte at a time depending on the value of size.  */
-        if (((size | (int) b) & MASK)==0)
+        if (((size | (uintptr_t) b) & MASK)==0)
         {   int j;
             for (j=0; j<size; j+=sizeof(int))
             {   char *bx = b + j;

@@ -387,7 +387,7 @@ INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 KROC = /Users/jim/razor/kroc64/kroc/tools/kroc/kroc --in-tree /Users/jim/razor/kroc64/kroc
 KROC_BUILD_ROOT = /Users/jim/razor/kroc64/kroc
 KROC_CCSP_ASFLAGS = 
-KROC_CCSP_CFLAGS =  -fomit-frame-pointer -fno-defer-pop -DTARGET_64BIT -DHOSTOS_DARWIN -mdynamic-no-pic -fno-pie -no-pie -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS
+KROC_CCSP_CFLAGS =  -fomit-frame-pointer -DTARGET_64BIT -DHOSTOS_DARWIN -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS
 KROC_CCSP_CINCPATH =  -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/ocuda/libsrc
 KROC_CCSP_ENABLE_CTTD = no
 KROC_CCSP_ENABLE_DYNPROC = yes
@@ -411,7 +411,7 @@ MKDIR_P = /opt/homebrew/bin/gmkdir -p
 OBJEXT = o
 OCCBUILD = /Users/jim/razor/kroc64/kroc/tools/kroc/occbuild --in-tree /Users/jim/razor/kroc64/kroc --toolchain=kroc
 OCCBUILD_API_VERSION = 3
-OCCBUILD_CFLAGS = -DOCCBUILD_KROC  -fomit-frame-pointer -fno-defer-pop -DTARGET_64BIT -DHOSTOS_DARWIN -mdynamic-no-pic -fno-pie -no-pie -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS  -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/ocuda/libsrc
+OCCBUILD_CFLAGS = -DOCCBUILD_KROC  -fomit-frame-pointer -DTARGET_64BIT -DHOSTOS_DARWIN -fno-stack-protector -fno-ptrauth-calls -DKROC_USES_PTHREADS  -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/runtime/ccsp/include -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/cif/libsrc -I/Users/jim/razor/kroc64/kroc/modules/ocuda/libsrc
 PACKAGE = cgtests
 PACKAGE_BUGREPORT = kroc-bugs@kent.ac.uk
 PACKAGE_NAME = cgtests
@@ -505,12 +505,13 @@ EXTRA_DIST = \
 	cgtest50.occ cgtest51.occ cgtest52.occ cgtest53.occ cgtest54.occ \
 	cgtest55.occ cgtest56.occ cgtest57.occ cgtest58.occ cgtest59.occ \
 	cgtest60.occ cgtest61.occ cgtest62.occ cgtest63.occ cgtest64.occ \
-	cgtest65.occ cgtest66.occ cgtest67.occ cgtest68.occ cgtest69.occ \
+	cgtest65.occ cgtest66.occ cgtest67.occ \
 	cgtest70.occ cgtest71.occ cgtest72.occ cgtest73.occ cgtest74.occ \
 	cgtest75.occ cgtest76.occ cgtest77.occ cgtest78.occ cgtest79.occ \
 	cgtest80.occ cgtest81.occ cgtest82.occ cgtest83.occ cgtest84.occ \
 	cgtest85.occ cgtest86.occ cgtest87.occ cgtest88.occ cgtest89.occ \
 	cgtest90.occ cgtest91.occ cgtest92.occ \
+	cgtest68.occ cgtest69.occ cgtest93.occ \
 	config.inc \
 	run-tests
 
@@ -529,7 +530,7 @@ tests = \
 	cgtest75 cgtest76 cgtest77 cgtest78 cgtest79 \
 	cgtest80 cgtest81 cgtest82 cgtest83 cgtest84 \
 	cgtest85 cgtest86 cgtest87 cgtest88 cgtest89 \
-	cgtest90 cgtest91 cgtest92
+	cgtest90 cgtest91 cgtest92 cgtest93
 
 TESTS_ENVIRONMENT = $(OCCBUILD) --run
 TESTS = $(tests)
@@ -1243,6 +1244,13 @@ cgtest92.log: cgtest92
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+cgtest93.log: cgtest93
+	@p='cgtest93'; \
+	b='cgtest93'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 .test.log:
 	@p='$<'; \
 	$(am__set_b); \
@@ -1708,12 +1716,6 @@ cgtest66: cgtest66.occ cglib.lib
 cgtest67: cgtest67.occ cglib.lib
 	$(OCCBUILD) --program $(srcdir)/cgtest67.occ cglib.o
 
-cgtest68: cgtest68.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest68.occ cglib.o
-
-cgtest69: cgtest69.occ cglib.lib
-	$(OCCBUILD) --program $(srcdir)/cgtest69.occ cglib.o
-
 cgtest70: cgtest70.occ cglib.lib
 	$(OCCBUILD) --program $(srcdir)/cgtest70.occ cglib.o
 
@@ -1901,8 +1903,6 @@ $(srcdir)/cgtest66.occ: $(srcdir)/cgreal.occ
 $(srcdir)/cgtest67.occ: $(srcdir)/cg67cplx.occ
 $(srcdir)/cgtest67.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest67.occ: $(srcdir)/cgreal.occ
-$(srcdir)/cgtest68.occ: $(srcdir)/cgmain.occ
-$(srcdir)/cgtest69.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest70.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest70.occ: $(srcdir)/cgreal.occ
 $(srcdir)/cgtest71.occ: $(srcdir)/cgmain.occ
@@ -1948,6 +1948,12 @@ $(srcdir)/cgtest91.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest91.occ: $(srcdir)/cgreal.occ
 $(srcdir)/cgtest92.occ: $(srcdir)/cgmain.occ
 $(srcdir)/cgtest92.occ: $(srcdir)/cgreal.occ
+cgtest68: cgtest68.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest68.occ cglib.o
+cgtest69: cgtest69.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest69.occ cglib.o
+cgtest93: cgtest93.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest93.occ cglib.o
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

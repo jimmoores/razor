@@ -68,8 +68,7 @@ AC_DEFUN([OCCAM_HAVE_OPENGL],
     GLX_search_list="GLX MesaGLX"
   fi
 
-  AC_LANG_SAVE
-  AC_LANG_C
+  AC_LANG_PUSH([C])
 
   dnl If we are running under X11 then add in the appropriate libraries.
   if test x"$no_x" != xyes; then
@@ -86,11 +85,11 @@ AC_DEFUN([OCCAM_HAVE_OPENGL],
   LIBS="$GL_X_LIBS $OCCAM_MACOS_OPENGL_LDFLAGS"
 
   # Save the "AC_MSG_RESULT file descriptor" to FD 8.
-  exec 8>&AC_FD_MSG
+  exec 8>&AS_MESSAGE_FD
 
   # Temporarily turn off AC_MSG_RESULT so that the user gets pretty
   # messages.
-  exec AC_FD_MSG>/dev/null
+  exec AS_MESSAGE_FD>/dev/null
 
   AC_SEARCH_LIBS(glAccum,          $GL_search_list, have_GL=yes,   have_GL=no)
   AC_SEARCH_LIBS(gluBeginCurve,   $GLU_search_list, have_GLU=yes,  have_GLU=no)
@@ -98,7 +97,7 @@ AC_DEFUN([OCCAM_HAVE_OPENGL],
   AC_SEARCH_LIBS(glutInit,        glut,             have_glut=yes, have_glut=no)
 
   # Restore pretty messages.
-  exec AC_FD_MSG>&8
+  exec AS_MESSAGE_FD>&8
 
   if test -n "$LIBS"; then
     GL_LIBS="$LIBS $OCCAM_MACOS_OPENGL_LDFLAGS"
@@ -115,7 +114,7 @@ AC_DEFUN([OCCAM_HAVE_OPENGL],
   LIBS="$GL_save_LIBS"
   CPPFLAGS="$GL_save_CPPFLAGS"
 
-  AC_LANG_RESTORE
+  AC_LANG_POP()
 ])
 
 dnl Using OpenGL on some versions of MacOS requires some extra linker flags.
