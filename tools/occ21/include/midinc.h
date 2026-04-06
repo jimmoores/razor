@@ -25,6 +25,7 @@
 #include <stdio.h>
 #define IMS_INCLUDED_STDIO_H
 #include <stddef.h>   /* offsetof */
+#include <stdint.h>   /* intptr_t, uintptr_t */
 
 #include "imstype.h"  /* IMPORTED */
 #include "imsvals.h"  /* IMPORTED */

@@ -238,7 +238,7 @@ PRIVATEPARAM void checkcountedinput (treenode * tptr, void *voidptr)
 	varlist *vars_used;
 	SOURCEPOSN oldloc = lastloc;
 	lastloc = LocnOf (tptr);
-	voidptr = voidptr;
+	(void)voidptr;
 
 	/*fprintf(current_fe_data->fe_outfile, "checkcountedinput: Locn: %lX\n", LocnOf(tptr)); */
 
@@ -555,7 +555,7 @@ PRIVATE BOOL check_sync_params (treenode *n)
  */
 PRIVATEPARAM int do_usagecheck_fixedvars (treenode *n, void *const voidptr)
 {
-	int notrashshared = (int)voidptr;
+	int notrashshared = (int)(intptr_t)voidptr;
 #if 0
 fprintf (stderr, "use2: do_usagecheck_fixedvars(): voidptr = 0x%8.8x, n = ", (unsigned int)voidptr);
 printtreenl (stderr, 4, n);
@@ -703,7 +703,6 @@ fprintf (stderr, "use2: do_usagecheck_suspend(): tag = %s, enclosing_par = %p\n"
 			treenode *const saved_enclosing_par = enclosing_par;
 			INT32 *saved_barattrs = NULL;
 			int nbarattrs = 0;
-			treenode *declbars = NULL;
 			treenode *extbars = NULL;
 			treenode *saved_n;
 
@@ -711,13 +710,10 @@ fprintf (stderr, "use2: do_usagecheck_suspend(): tag = %s, enclosing_par = %p\n"
 			/*{{{  check for barriers*/
 			if (CTempOf (n)) {
 				if (TagOf (CTempOf (n)) == S_EXTENDS) {
-					declbars = NULL;
 					extbars = OpOf (CTempOf (n));
 				} else if (TagOf (CTempOf (n)) == S_BAREXTEND) {
-					declbars = LeftOpOf (CTempOf (n));
 					extbars = RightOpOf (CTempOf (n));
 				} else {
-					declbars = CTempOf (n);
 					extbars = NULL;
 				}
 			}

@@ -1025,7 +1025,7 @@ PRIVATE void readline (void)
 
 		if ((lexmode == LEX_SOURCE) || (lexmode == LEX_CSOURCE)) {
 			if (pp_xline) {
-				pp_xline->valdata = (void *)linecount;
+				pp_xline->valdata = (void *)(intptr_t)linecount;
 			}
 			totallines++;
 		}
@@ -1113,7 +1113,7 @@ PRIVATE void suspend_file (const char *const name, const int mode, FILE * const 
 fprintf (stderr, "suspend_file(): filestackptr is %d\n", filestackptr);
 #endif
 		if (pp_xfilestack) {
-			pp_xfilestack->valdata = (void *)filestackptr;
+			pp_xfilestack->valdata = (void *)(intptr_t)filestackptr;
 		}
 	}
 	if ((mode != LEX_EXTERNAL) && (mode != LEX_DEXTERNAL)) {
@@ -1189,7 +1189,7 @@ PRIVATE void resume_file (void)
 fprintf (stderr, "resume_file(): filestackptr is %d\n", filestackptr);
 #endif
 			if (pp_xfilestack) {
-				pp_xfilestack->valdata = (void *)filestackptr;
+				pp_xfilestack->valdata = (void *)(intptr_t)filestackptr;
 			}
 		}
 	}
@@ -1784,7 +1784,7 @@ PRIVATE void preproc_dump_sdefine (pp_dlist_t *item, FILE *fptr)
 		fprintf (fptr, "#DEFINE %s\n", WNameOf (item->name));
 		break;
 	case PP_VAL_INT:
-		fprintf (fptr, "#DEFINE %s %d\n", WNameOf (item->name), (int)(item->valdata));
+		fprintf (fptr, "#DEFINE %s %d\n", WNameOf (item->name), (int)(intptr_t)(item->valdata));
 		break;
 	case PP_VAL_STRING:
 		fprintf (fptr, "#DEFINE %s \"%s\"\n", WNameOf (item->name), (char *)(item->valdata));
@@ -1887,7 +1887,7 @@ PRIVATE int preproc_get_define (wordnode *name)
 	}
 	switch (dltmp->valtype) {
 	case PP_VAL_INT:
-		literalp = sprintf (literalv, "%d", (int)(dltmp->valdata));
+		literalp = sprintf (literalv, "%d", (int)(intptr_t)(dltmp->valdata));
 		return S_UINTLIT;
 	case PP_VAL_STRING:
 		literalp = sprintf (literalv, "%s", (char *)(dltmp->valdata));
@@ -1963,7 +1963,7 @@ PRIVATE BOOL pending_cmdline_define (char *arg)
 		preproc_add_define (lexname, namelen, PP_VAL_NONE, NULL);
 		break;
 	case PP_VAL_INT:
-		preproc_add_define (lexname, namelen, PP_VAL_INT, (void *)valint);
+		preproc_add_define (lexname, namelen, PP_VAL_INT, (void *)(intptr_t)valint);
 		break;
 	case PP_VAL_STRING:
 		ch = (char *)memalloc (vallen + 1);
@@ -2052,8 +2052,8 @@ PRIVATE BOOL preproc_compare (int op, pp_dlist_t *left, pp_dlist_t *right)
 	switch (left->valtype) {
 	case PP_VAL_INT:
 		{
-			const int vleft = (int)left->valdata;
-			const int vright = (int)right->valdata;
+			const int vleft = (int)(intptr_t)left->valdata;
+			const int vright = (int)(intptr_t)right->valdata;
 
 			switch (op) {
 			case PP_OP_EQ:	return (vleft == vright);
@@ -2283,7 +2283,7 @@ PRIVATE BOOL preproc_parse (int err, BOOL *valid_val, BOOL allow_dyadic, const B
 				val += (ch - '0');
 				ch = rch ();
 			}
-			tmpvar.valdata = (void *)val;
+			tmpvar.valdata = (void *)(intptr_t)val;
 			tmpvar.valtype = PP_VAL_INT;
 		} else if (ch == '\"') {
 			static char tstr[128];
@@ -2421,7 +2421,7 @@ PRIVATE void preproc_define (void)
 					v *= 10;
 					v += (int)(val[i] - '0');
 				}
-				preproc_add_define (lexname, len, PP_VAL_INT, (void *)v);
+				preproc_add_define (lexname, len, PP_VAL_INT, (void *)(intptr_t)v);
 			}
 			break;
 		case PP_VAL_STRING:
@@ -2825,7 +2825,7 @@ PRIVATE void preproc_builtin (void)
 	pp_xfilestack->next = pp_dlist;
 	pp_xfilestack->valtype = PP_VAL_NONE;
 	pp_xfilestack->valdata = NULL;
-	preproc_add_define (tw, 9, PP_VAL_INT, (void *)filestackptr);
+	preproc_add_define (tw, 9, PP_VAL_INT, (void *)(intptr_t)filestackptr);
 
 #ifdef PROCESS_PRIORITY
 	/* the number of available process priorities */
@@ -2941,7 +2941,7 @@ PRIVATE void preproc_builtin (void)
 
 		for (i=0; mppnames[i]; i++) {
 			tw = lookupword (mppnames[i], mppnlens[i]);
-			preproc_add_define (tw, mppnlens[i], PP_VAL_INT, (void *)(mppvals[i]));
+			preproc_add_define (tw, mppnlens[i], PP_VAL_INT, (void *)(intptr_t)(mppvals[i]));
 		}
 	}
 

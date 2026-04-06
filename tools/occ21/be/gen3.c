@@ -159,9 +159,9 @@ PUBLIC BOOL is_typed_mostneg (int type, const BIT32 loval, const BIT32 hival)
 	case S_INT16:
 		return (loval == MOSTNEG_INT16);
 	case S_INT32:
-		return (loval == MOSTNEG_INT32);
+		return (loval == (BIT32)MOSTNEG_INT32);
 	case S_INT64:
-		return (loval == 0 && hival == MOSTNEG_INT32);
+		return (loval == 0 && hival == (BIT32)MOSTNEG_INT32);
 	}
 	return (FALSE);		/* Not reached */
 }

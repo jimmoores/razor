@@ -155,7 +155,7 @@ typedef struct {
  *****************************************************************************/
 PRIVATE void cdefsimpleprotocol (treenode * pptr, void *voidptr)
 {
-	voidptr = voidptr;
+	(void)voidptr;
 	switch (TagOf (pptr)) {
 	case S_ANY:		/* bug 1395 30/09/91 */
 #ifdef MOBILES
@@ -1064,7 +1064,7 @@ printtreenl (stderr, 4, tptr);
  *****************************************************************************/
 PRIVATEPARAM void checkprotvariable (treenode *tptr, void *voidptr)
 {
-	voidptr = voidptr;
+	(void)voidptr;
 	if (TagOf (tptr) == S_COLON2) {
 		checkvariable (LeftOpOf (tptr), NULL);
 		checkvariable (RightOpOf (tptr), NULL);
@@ -1227,8 +1227,8 @@ PRIVATE int compvariants_anychantype (const void *const p1, const void *const p2
 {
 	const vntnode_t *const v1 = p1;
 	const vntnode_t *const v2 = p2;
-	const INT32 hash1 = (const INT32)(v1->vnt_tag);
-	const INT32 hash2 = (const INT32)(v2->vnt_tag);
+	const INT32 hash1 = (const INT32)(intptr_t)(v1->vnt_tag);
+	const INT32 hash2 = (const INT32)(intptr_t)(v2->vnt_tag);
 
 	return ((hash1 > hash2) ? 1 : (hash1 == hash2) ? 0 : -1);
 }
@@ -1236,8 +1236,8 @@ PRIVATE int compvariants_anyproctype (const void *const p1, const void *const p2
 {
 	const vntnode_t *const v1 = p1;
 	const vntnode_t *const v2 = p2;
-	const INT32 hash1 = (const INT32)(v1->vnt_tag);
-	const INT32 hash2 = (const INT32)(v2->vnt_tag);
+	const INT32 hash1 = (const INT32)(intptr_t)(v1->vnt_tag);
+	const INT32 hash2 = (const INT32)(intptr_t)(v2->vnt_tag);
 
 	return ((hash1 > hash2) ? 1 : (hash1 == hash2) ? 0 : -1);
 }
@@ -1665,12 +1665,12 @@ fprintf (stderr, "chk2: HERE!\n");
 fprintf (stderr, "adding variant.  typehash = 0x%8.8x, type = ", (unsigned int)typehash (type));
 printtreenl (stderr, 4, type);
 #endif
-							variantptr->vnt_tag = (treenode *)(typehash (type));
+							variantptr->vnt_tag = (treenode *)(intptr_t)(typehash (type));
 						} else if (isapt) {
 							/* tags are type-hashes for mobile process types */
 							treenode *type = chk_gettype_main (thisvarianttag, TRUE);
 
-							variantptr->vnt_tag = (treenode *)(typehash (type));
+							variantptr->vnt_tag = (treenode *)(intptr_t)(typehash (type));
 						} else {
 							if (TagOf (thisvarianttag) == S_CONSTEXP) {
 								thisvarianttag = CExpOf (thisvarianttag);
@@ -3650,14 +3650,12 @@ fprintf (stderr, "cdeclaration: set S_ASINPUT/S_ASOUTPUT, was_input = %d, is_sha
 							if ((TagOf (ntype) == S_MOBILE) && (TagOf (MTypeOf (ntype)) == S_ARRAY) && !ARDimLengthOf (MTypeOf (ntype))) {
 								treenode **mtptr = ARTypeAddr (MTypeOf (ntype));
 								int specattr = 0;
-								int isinput = 0;
 
 								/* call ctype() to make sure.. */
 								ctype (*mtptr);
 
 								if (TagOf (*mtptr) == S_ASINPUT) {
 									specattr = TypeAttr_marked_in;
-									isinput = 1;
 								} else if (TagOf (*mtptr) == S_ASOUTPUT) {
 									specattr = TypeAttr_marked_out;
 								}

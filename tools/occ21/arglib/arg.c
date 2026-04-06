@@ -251,12 +251,12 @@ arg_parse_result arg_env_var_parse
 /*{{{  scan_token */
 /* This function scans a string and picks off the first token */
 
-static arg_parse_result scan_token (char const * const st,
+static arg_control scan_token (char const * const st,
                                     char const * * const en,
                                     arg_descriptor const argd[]
                                    )
 {
-  arg_parse_result res;
+  arg_control res;
   char * new;
 
   res = arg_continue;
@@ -275,7 +275,7 @@ static arg_parse_result scan_token (char const * const st,
           new = arg2_new_string (st);
           if (new == NULL) {
 						(void) do_mem_error (argd);
-						return (arg_parse_error);
+						return (arg_terminate);
 					}
           return (do_syntax ((char const *) new, argd));
         }
@@ -287,7 +287,7 @@ static arg_parse_result scan_token (char const * const st,
       new = arg2_new_string (st);
       if (new == NULL) {
 				(void) do_mem_error (argd);
-				return (arg_parse_error);
+				return (arg_terminate);
 			}
       return (do_syntax ((char const *) new, argd));
     }
@@ -314,7 +314,7 @@ static arg_control parse_string (char const * const str,
                                       arg_descriptor const argd[]
                                      )
 {
-  arg_parse_result res;
+  arg_control res;
   int n;
   char const * st, * en;
 
@@ -423,6 +423,9 @@ static arg_control do_argument (int const argc, char const * argv[],
       case arg_help:
       case arg_error:
         break;                      /* not relevant this time round     */
+
+      default:
+        break;                      /* newer descriptor types -- ignore */
     }
     desc += 1;
   }
@@ -491,6 +494,8 @@ static arg_control do_token (char const * token, arg_descriptor const argd[])
       case arg_end:
         return (do_error (token, argd)); /* could not find argument     */
 
+      default:
+        break;                      /* newer descriptor types -- ignore */
     }
     desc += 1;
   }
@@ -521,6 +526,8 @@ static arg_control do_help (arg_descriptor const argd[])
       case arg_end:
         return (arg_continue);      /* none found - ignore it           */
 
+      default:
+        break;                      /* newer descriptor types -- ignore */
     }
     desc += 1;
   }
@@ -553,6 +560,8 @@ static arg_control do_end (arg_descriptor const argd[])
         else
           return (arg_continue);
 
+      default:
+        break;                      /* newer descriptor types -- ignore */
     }
     desc += 1;
   }

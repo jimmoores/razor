@@ -630,7 +630,7 @@ const treenode *checkread_fn(const treenode *tptr, nodetypeoftag_t nodetype, con
 #endif
 #define SpNestedVSOf(T)    (CHECKREAD(T,SPACENODE)->n_u.sp_s.sp_nestedvs)
 #define SpNamechainOf(T)   (CHECKREAD(T,SPACENODE)->n_u.sp_s.sp_namechain)
-#define SpLabelOf(T)       ((int)CHECKREAD(T,SPACENODE)->n_u.sp_s.sp_namechain)
+#define SpLabelOf(T)       ((int)(intptr_t)CHECKREAD(T,SPACENODE)->n_u.sp_s.sp_namechain)
 #define SpCPOffsetOf(T)    (CHECKREAD(T,SPACENODE)->n_u.sp_s.sp_cpoffset)
 
 #define SetSpBody(T,V)        (CHECKNODE(T,SPACENODE)->n_u.sp_s.sp_body = (V))
@@ -646,7 +646,7 @@ const treenode *checkread_fn(const treenode *tptr, nodetypeoftag_t nodetype, con
 #endif
 #define SetSpNestedVS(T,V)    (CHECKNODE(T,SPACENODE)->n_u.sp_s.sp_nestedvs = (V))
 #define SetSpNamechain(T,V)   (CHECKNODE(T,SPACENODE)->n_u.sp_s.sp_namechain = (V))
-#define SetSpLabel(T,V)       (CHECKNODE(T,SPACENODE)->n_u.sp_s.sp_namechain = (treenode *)(V))
+#define SetSpLabel(T,V)       (CHECKNODE(T,SPACENODE)->n_u.sp_s.sp_namechain = (treenode *)(intptr_t)(V))
 #define SetSpCPOffset(T,V)    (CHECKNODE(T,SPACENODE)->n_u.sp_s.sp_cpoffset = (V))
 
 #define SpBodyAddr(T)        (&(CHECKNODE(T,SPACENODE)->n_u.sp_s.sp_body))

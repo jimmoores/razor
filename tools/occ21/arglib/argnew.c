@@ -96,7 +96,7 @@ static arg_control arg2_do_token (
 		arg2_descriptor const argd[],
 		int *token_num);
 
-static arg_parse_result arg2_scan_token (
+static arg_control arg2_scan_token (
 		char const *const st,
 		char const **const en,
 		arg2_descriptor const argd[]);
@@ -777,12 +777,12 @@ static arg_control arg2_do_token (
 /*{{{  arg2_scan_token */
 /* This function scans a string and picks off the first token */
 
-static arg_parse_result arg2_scan_token (
+static arg_control arg2_scan_token (
 		char const *const st,
 		char const **const en,
 		arg2_descriptor const argd[]) {
 
-	arg_parse_result res;
+	arg_control res;
 	char * new;
 
 	res = arg_continue;
@@ -797,7 +797,7 @@ static arg_parse_result arg2_scan_token (
 					new = arg2_new_string (st);
 					if (new == NULL) {
 						(void) arg2_do_mem_error (argd);
-						return (arg_parse_error);
+						return (arg_terminate);
 					}
 					return (arg2_do_syntax ((char const *) new, argd));
 				}
@@ -808,7 +808,7 @@ static arg_parse_result arg2_scan_token (
 			new = arg2_new_string (st);
 			if (new == NULL) {
 				(void) arg2_do_mem_error (argd);
-				return (arg_parse_error);
+				return (arg_terminate);
 			}
 			return (arg2_do_syntax ((char const *) new, argd));
 		}
@@ -834,7 +834,7 @@ static arg_control arg2_parse_string (
 		char const ***const argv,
 		arg2_descriptor const argd[]) {
 
-	arg_parse_result res;
+	arg_control res;
 	int n;
 	char const * st, * en;
 

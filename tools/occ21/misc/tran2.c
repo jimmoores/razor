@@ -2106,7 +2106,7 @@ PUBLIC int ilength (const INT32 operand)
 	else
 		/*{{{  others */
 	{
-		int mask = -1 << 16, adj = 4, done;
+		int mask = (int)(~0U << 16), adj = 4, done;
 		if (operand < 0)
 			done = mask;
 		else

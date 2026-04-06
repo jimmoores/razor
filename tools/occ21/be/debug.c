@@ -291,7 +291,7 @@ PRIVATE void add_to_index_table (treenode * const address, const int index)
 	if (debug_diagnostics) {
 		fprintf (outfile, "add_to_index_table: (index = %d) treenode: %X, tag: %s, hash: %d\n",
 			 index, altaddr,
-			 address == NULL ? "<<NULL>>" : ((BIT32) address & 1) != 0 ? "ENDBODY" : itagstring (TagOf (address)), hash_value);
+			 address == NULL ? "<<NULL>>" : ((BIT32)(uintptr_t)address & 1) != 0 ? "ENDBODY" : itagstring (TagOf (address)), hash_value);
 	}
 	/* If that address is already there, ignore it */
 	for (hptr = index_hash_table[hash_value]; hptr != NULL; hptr = hptr->next)
@@ -1593,7 +1593,7 @@ gendebugspecs (treenode * tptr)
 		case S_VALRETYPE:
 		case S_RETYPE:
 			if (	/* ((TagOf(tptr) == S_VALABBR) || (TagOf(tptr) == S_VALRETYPE)) && */
-				   (TagOf (DValOf (tptr)) == S_CONSTEXP)) {
+				   TagOf (DValOf (tptr)) == S_CONSTEXP) {
 				/* add_to_index_table(nptr), debuginfo_index); */
 				gendebugconstant (tptr);
 			} else {

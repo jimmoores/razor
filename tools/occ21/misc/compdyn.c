@@ -533,7 +533,7 @@ void sh_remove (int *bsizes, void ***table, char ***keys, int bitsize, void *ite
 			}
 		}
 	}
-	compdyn_fatal ("sh_remove(): item [0x%8.8x:%s] not in stringhash", (unsigned int)item, key);
+	compdyn_fatal ("sh_remove(): item [0x%8.8x:%s] not in stringhash", (unsigned int)(uintptr_t)item, key);
 	return;
 }
 /*}}}*/
@@ -578,7 +578,7 @@ void sh_dump (FILE *stream, int *bsizes, void ***table, char ***keys, int size)
 			int j;
 
 			for (j=0; j<bsizes[i]; j++) {
-				fprintf (stream, "%s%s (0x%8.8x)", (!j ? "" : ", "), keys[i][j], (unsigned int)(table[i][j]));
+				fprintf (stream, "%s%s (0x%8.8x)", (!j ? "" : ", "), keys[i][j], (unsigned int)(uintptr_t)(table[i][j]));
 			}
 		}
 		fprintf (stream, "\n");
@@ -760,7 +760,7 @@ void ph_remove (int *bsizes, void ***table, void ***keys, int bitsize, void *ite
 			}
 		}
 	}
-	compdyn_fatal ("ph_remove(): item [0x%8.8x:%s] not in pointerhash", (unsigned int)item, (char *)key);
+	compdyn_fatal ("ph_remove(): item [0x%8.8x:%s] not in pointerhash", (unsigned int)(uintptr_t)item, (char *)key);
 	return;
 }
 /*}}}*/
@@ -805,7 +805,7 @@ void ph_dump (FILE *stream, int *bsizes, void ***table, void ***keys, int size)
 			int j;
 
 			for (j=0; j<bsizes[i]; j++) {
-				fprintf (stream, "%s0x%8.8x (0x%8.8x)", (!j ? "" : ", "), (unsigned int)(keys[i][j]), (unsigned int)(table[i][j]));
+				fprintf (stream, "%s0x%8.8x (0x%8.8x)", (!j ? "" : ", "), (unsigned int)(uintptr_t)(keys[i][j]), (unsigned int)(uintptr_t)(table[i][j]));
 			}
 		}
 		fprintf (stream, "\n");

@@ -578,7 +578,10 @@ PRIVATEPARAM void print_memstats(void)
 {
 	#if defined(HOST_OS_IS_UNIX) && !defined(WIN32)
 	if (memstats) {
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		fprintf(outfile, "Memory usage: (current tree %ld) (sbrk %td)\n", tablesize(), sbrk(0) - original_sbrk);
+		#pragma GCC diagnostic pop
 	}
 	#endif
 }
@@ -3003,7 +3006,7 @@ PUBLIC void codegenerate (BOOL open_file, treenode *const treeroot )
 /*{{{  PRIVATEPARAM void *map_malloc*/
 PRIVATEPARAM void *map_malloc(map_handle_t *handle, const size_t size)
 {
-	handle = handle;
+	(void)handle;
 	return newvec(size);
 }
 /*}}}*/
@@ -3012,7 +3015,7 @@ PRIVATEPARAM void *map_malloc(map_handle_t *handle, const size_t size)
 /*{{{  PRIVATEPARAM void map_free*/
 PRIVATEPARAM void map_free(map_handle_t *handle, void *const data, const size_t size)
 {
-	handle = handle;
+	(void)handle;
 	freevec(data, size);
 }
 /*}}}*/
@@ -3155,7 +3158,10 @@ PUBLIC int main (const int argc, const char *argv[])
 	/*{{{  initialise memstats*/
 
 	#if defined(HOST_OS_IS_UNIX) && !defined(WIN32)
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 		original_sbrk = sbrk(0);
+		#pragma GCC diagnostic pop
 	#endif
 
 	/*}}}*/
