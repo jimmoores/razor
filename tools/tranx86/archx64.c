@@ -2440,19 +2440,36 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		/* FP exception check -- no-op for SSE2 (exceptions masked by default) */
 		break;
 	case I_FPSTNLI32:
-		/* Convert FA to INT64 and store to [old_a_reg].
-		 * On 64-bit targets, workspace slots are 8 bytes, so we use
-		 * cvttsd2siq / cvtsd2siq to write a full 64-bit integer.
+		/* Convert FA to INT32 and store to [old_a_reg].
+		 * For workspace-local destinations (VALUE_LOCALPTR), convert
+		 * to 64-bit and store a full word so that LDL reads back
+		 * correctly (occ21 uses FPSTNLI32 even for INT ROUND on
+		 * 64-bit targets).
+		 * For pointer-based destinations (e.g. INT32 array elements),
+		 * convert to 32-bit and store only 4 bytes to avoid
+		 * overwriting adjacent memory.
 		 * Use truncation if FPINT preceded or FPRZ active, else
-		 * round according to MXCSR (default = nearest).
-		 * Convert to r11 via annotation, then store via RTL. */
+		 * round according to MXCSR (default = nearest). */
 		if (x64_fp_stack_depth >= 1) {
-			if (x64_fp_had_fpint || x64_fp_rounding_mode == FPU_Z) {
-				x64_fp_emit_anno (ts, "\tcvttsd2siq\t%s, %%r11", x64_xmm_name(0));
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				/* Workspace-local: store full 64-bit word */
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				if (x64_fp_had_fpint || x64_fp_rounding_mode == FPU_Z) {
+					x64_fp_emit_anno (ts, "\tcvttsd2siq\t%s, %%r11", x64_xmm_name(0));
+				} else {
+					x64_fp_emit_anno (ts, "\tcvtsd2siq\t%s, %%r11", x64_xmm_name(0));
+				}
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_R11, ARG_REGIND | ARG_DISP, REG_WPTR, offset));
 			} else {
-				x64_fp_emit_anno (ts, "\tcvtsd2siq\t%s, %%r11", x64_xmm_name(0));
+				/* Pointer-based: store 32-bit to avoid overwriting
+				 * adjacent data in packed INT32 arrays */
+				if (x64_fp_had_fpint || x64_fp_rounding_mode == FPU_Z) {
+					x64_fp_emit_anno (ts, "\tcvttsd2si\t%s, %%r11d", x64_xmm_name(0));
+				} else {
+					x64_fp_emit_anno (ts, "\tcvtsd2si\t%s, %%r11d", x64_xmm_name(0));
+				}
+				add_to_ins_chain (compose_ins (INS_MOVE32, 1, 1, ARG_REG, REG_R11, ARG_REGIND, ts->stack->old_a_reg));
 			}
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_R11, ARG_REGIND, ts->stack->old_a_reg));
 			x64_fp_stack_depth--;
 			x64_fp_emit_pop (ts);
 			x64_fp_had_fpint = 0;
