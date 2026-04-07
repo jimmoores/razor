@@ -2391,7 +2391,8 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		/* Convert FA to INT64 and store to [old_a_reg].
 		 * On 64-bit targets, workspace slots are 8 bytes, so we use
 		 * cvttsd2siq / cvtsd2siq to write a full 64-bit integer.
-		 * Use truncation if FPINT preceded, else round to nearest.
+		 * Use truncation if FPINT preceded or FPRZ active, else
+		 * round according to MXCSR (default = nearest).
 		 * Convert to r11 via annotation, then store via RTL. */
 		if (x64_fp_stack_depth >= 1) {
 			if (x64_fp_had_fpint || x64_fp_rounding_mode == FPU_Z) {
@@ -2403,6 +2404,12 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			x64_fp_stack_depth--;
 			x64_fp_emit_pop (ts);
 			x64_fp_had_fpint = 0;
+		}
+		/* Reset rounding mode to nearest after conversion so that
+		 * subsequent ROUND operations (which don't emit FPRN) work
+		 * correctly.  The FPRZ is consumed by this conversion. */
+		if (x64_fp_rounding_mode != FPU_N) {
+			compose_fp_set_fround_x64 (ts, FPU_N);
 		}
 		ts->stack->fs_depth--;
 		break;
@@ -2419,6 +2426,10 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			x64_fp_emit_pop (ts);
 			x64_fp_had_fpint = 0;
 		}
+		/* Reset rounding mode after conversion */
+		if (x64_fp_rounding_mode != FPU_N) {
+			compose_fp_set_fround_x64 (ts, FPU_N);
+		}
 		if (ts->stack->fs_depth > 0) ts->stack->fs_depth--;
 		break;
 	case I_FPLDNLSN:  /* Load REAL32 from [old_a_reg] onto FP stack */
@@ -2433,16 +2444,17 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		x64_fp_emit_anno (ts, "\tcvtss2sd\t(%%r11), %s", x64_xmm_name(0));
 		ts->stack->fs_depth++;
 		break;
-	case I_FPLDNLSNI:  /* Load REAL32 indexed */
+	case I_FPLDNLSNI:  /* Load REAL32 indexed: load REAL32 from [old_a_reg + old_b_reg] */
 		x64_fp_stack_depth++;
 		x64_fp_emit_push (ts);
 		{
-			int addr_reg = tstack_newreg (ts->stack);
+			/* Use old_a_reg as destination to satisfy x64 two-address form:
+			 * addq old_b_reg, old_a_reg  =>  old_a_reg = old_a_reg + old_b_reg */
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
 				ARG_REG, ts->stack->old_b_reg,
 				ARG_REG, ts->stack->old_a_reg,
-				ARG_REG, addr_reg));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, addr_reg, ARG_REG, REG_R11));
+				ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 			x64_fp_emit_anno (ts, "\tcvtss2sd\t(%%r11), %s", x64_xmm_name(0));
 		}
 		ts->stack->fs_depth++;
@@ -2459,21 +2471,21 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		}
 		ts->stack->fs_depth++;
 		break;
-	case I_FPLDNLDBI:  /* Load REAL64 indexed */
+	case I_FPLDNLDBI:  /* Load REAL64 indexed: load REAL64 from [old_a_reg + old_b_reg*4] */
 		x64_fp_stack_depth++;
 		x64_fp_emit_push (ts);
 		{
-			int addr_reg = tstack_newreg (ts->stack);
 			/* Scale index by 4 (pre-scaled by occ21 to 32-bit word units) */
 			add_to_ins_chain (compose_ins (INS_SHL, 2, 1,
 				ARG_CONST, (intptr_t)2,
 				ARG_REG, ts->stack->old_b_reg,
 				ARG_REG, ts->stack->old_b_reg));
+			/* Use old_a_reg as destination to satisfy x64 two-address form */
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
 				ARG_REG, ts->stack->old_b_reg,
 				ARG_REG, ts->stack->old_a_reg,
-				ARG_REG, addr_reg));
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, addr_reg, ARG_REG, REG_R11));
+				ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 			x64_fp_emit_anno (ts, "\tmovsd\t(%%r11), %s", x64_xmm_name(0));
 		}
 		ts->stack->fs_depth++;
@@ -2489,6 +2501,11 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			x64_fp_stack_depth--;
 			x64_fp_emit_pop (ts);
 		}
+		/* Reset rounding mode if changed (FPRZ may precede int-to-float
+		 * conversions that end with FPSTNLSN, leaving MXCSR stale). */
+		if (x64_fp_rounding_mode != FPU_N) {
+			compose_fp_set_fround_x64 (ts, FPU_N);
+		}
 		ts->stack->fs_depth--;
 		break;
 	case I_FPSTNLDB:  /* Store REAL64 from FA to [old_a_reg] */
@@ -2502,6 +2519,10 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			}
 			x64_fp_stack_depth--;
 			x64_fp_emit_pop (ts);
+		}
+		/* Reset rounding mode if changed */
+		if (x64_fp_rounding_mode != FPU_N) {
+			compose_fp_set_fround_x64 (ts, FPU_N);
 		}
 		ts->stack->fs_depth--;
 		break;
@@ -2517,6 +2538,12 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			x64_fp_emit_anno (ts, "\troundsd\t$%d, %s, %s", rmode, x64_xmm_name(0), x64_xmm_name(0));
 		}
 		x64_fp_had_fpint = 1;
+		/* Reset MXCSR to round-to-nearest if it was changed.
+		 * This ensures subsequent cvtsd2siq (used by FPSTNLI32 for
+		 * ROUND operations) uses the correct rounding mode. */
+		if (x64_fp_rounding_mode != FPU_N) {
+			compose_fp_set_fround_x64 (ts, FPU_N);
+		}
 		x64_fp_rounding_mode = FPU_N;
 		break;
 	case I_FPR32TOR64:  /* Widen: already double internally, nop */

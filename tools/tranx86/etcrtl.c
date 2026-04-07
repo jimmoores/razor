@@ -4515,6 +4515,12 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 			case VALUE_LABADDR:
 				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
 				break;
+			case VALUE_LOCAL:
+				/* old_b_reg value is in workspace -- load via memory operand */
+				add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH,
+					ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
+				break;
 			default:
 				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
 				break;
@@ -6251,16 +6257,20 @@ static void generate_constmapped_21instr (tstate *ts, int etc_instr, int instr, 
 		}
 		break;
 	case VALUE_LOCAL:
-		if (options.machine_class == CLASS_AARCH64 || options.machine_class == CLASS_X64) {
+		if (options.machine_class == CLASS_AARCH64) {
 			/* RISC targets: arithmetic instructions can't use memory operands
-			 * directly. Use the register (value should already be loaded by LDL). */
+			 * directly.  Materialize the value into the register first. */
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (src_reg1) << WSH,
+				ARG_REG, src_reg1));
+			constmap_remove (src_reg1);
 			if (usecc) {
 				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_REG, src_reg1, ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
 			} else {
 				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 1, ARG_REG, src_reg1, ARG_REG, src_reg2, ARG_REG, dst_reg));
 			}
 		} else {
-			/* CISC targets (x86): can use memory operands in arithmetic */
+			/* CISC targets (x86, x64): can use memory operands in arithmetic */
 			if (usecc) {
 				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (src_reg1) << WSH), ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
 			} else {
@@ -6355,14 +6365,12 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 #endif
 		/* generate check */
 #if (BytesPerWord > 4)
-		/* On 64-bit with 32-bit INT, truncate both operands to 32 bits
-		 * before the unsigned comparison.  Workspace slots may have
-		 * stale upper 32 bits from prior pointer storage, sub-word
-		 * channel I/O, or C function results.  Use INS_TRUNCATE32
-		 * unconditionally (regardless of constmap) to guarantee clean
-		 * 32-bit values for the comparison. */
-		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
-		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		/* On 64-bit with 32-bit INT, operands should already be properly
+		 * zero-extended from the operations that produced them (I_ADD,
+		 * I_SUB, etc. all apply emit_int_truncate).  Do NOT truncate
+		 * in-place here because the registers used for old_a_reg/old_b_reg
+		 * may also hold live values (e.g. old_c_reg base pointer) that
+		 * would be corrupted by a 32-bit truncation. */
 #endif
 		switch (constmap_typeof (ts->stack->old_b_reg)) {
 		default:
