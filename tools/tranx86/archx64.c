@@ -1934,63 +1934,103 @@ static void compose_x64_longop (tstate *ts, int sec)
 	switch (sec) {
 	case I_LADD:
 		/* LADD: result = Breg + Areg + (Creg & 1).
-		 * SHR puts bit 0 of Creg into carry flag, then ADC adds with carry. */
-		add_to_ins_chain (compose_ins (INS_SHR, 2, 2, ARG_CONST, 1, ARG_REG, ts->stack->old_c_reg,
+		 * On x64, INT values are 32-bit in 64-bit slots. Use 32-bit
+		 * instructions so carry flags are computed correctly for 32-bit overflow.
+		 * SHR32 puts bit 0 of Creg into carry flag, then ADC32 adds with carry. */
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		add_to_ins_chain (compose_ins (INS_SHR32, 2, 2, ARG_CONST, 1, ARG_REG, ts->stack->old_c_reg,
 			ARG_REG, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
 		constmap_remove (ts->stack->old_c_reg);
-		add_to_ins_chain (compose_ins (INS_ADC, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
+		add_to_ins_chain (compose_ins (INS_ADC32, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
 			ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 		constmap_remove (ts->stack->old_b_reg);
 		ts->stack->a_reg = ts->stack->old_b_reg;
 		break;
 	case I_LSUB:
 		/* LSUB: result = Breg - Areg - (Creg & 1).
-		 * SHR puts bit 0 of Creg into carry flag, then SBB subtracts with borrow. */
-		add_to_ins_chain (compose_ins (INS_SHR, 2, 2, ARG_CONST, 1, ARG_REG, ts->stack->old_c_reg,
+		 * Use 32-bit instructions for correct carry/borrow flags.
+		 * SHR32 puts bit 0 of Creg into carry flag, then SBB32 subtracts with borrow. */
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		add_to_ins_chain (compose_ins (INS_SHR32, 2, 2, ARG_CONST, 1, ARG_REG, ts->stack->old_c_reg,
 			ARG_REG, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
 		constmap_remove (ts->stack->old_c_reg);
-		add_to_ins_chain (compose_ins (INS_SBB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
+		add_to_ins_chain (compose_ins (INS_SBB32, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
 			ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 		constmap_remove (ts->stack->old_b_reg);
 		ts->stack->a_reg = ts->stack->old_b_reg;
 		break;
 	case I_LSUM:
-		/* LSUM: carry_out, sum := Areg + Breg */
+		/* LSUM: carry_out, sum := Areg + Breg + (Creg & 1)
+		 * Creg is carry_in; use SHR to put bit 0 of Creg into CF,
+		 * then ADC for add-with-carry. Collect carry_out via ADC 0. */
 		{
 			int carry = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			/* Put bit 0 of Creg (carry_in) into CF */
+			add_to_ins_chain (compose_ins (INS_SHR32, 2, 2, ARG_CONST, 1, ARG_REG, ts->stack->old_c_reg,
+				ARG_REG, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
+			constmap_remove (ts->stack->old_c_reg);
+			/* sum = Breg + Areg + CF (32-bit add with carry) */
+			add_to_ins_chain (compose_ins (INS_ADC32, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
 				ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+			constmap_remove (ts->stack->old_b_reg);
+			/* Collect carry_out: carry = 0 + 0 + CF */
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, carry));
-			add_to_ins_chain (compose_ins (INS_ADC, 2, 1, ARG_CONST, 0, ARG_REG, carry, ARG_REG, carry));
+			add_to_ins_chain (compose_ins (INS_ADC32, 2, 1, ARG_CONST, 0, ARG_REG, carry, ARG_REG, carry));
 			ts->stack->a_reg = ts->stack->old_b_reg;
 			ts->stack->b_reg = carry;
 		}
 		break;
 	case I_LDIFF:
-		/* LDIFF: borrow_out, diff := Breg - Areg */
+		/* LDIFF: borrow_out, diff := Breg - Areg - (Creg & 1)
+		 * Creg is borrow_in; use SHR to put bit 0 of Creg into CF,
+		 * then SBB for subtract-with-borrow. Collect borrow_out via SBB 0. */
 		{
 			int borrow = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			/* Put bit 0 of Creg (borrow_in) into CF */
+			add_to_ins_chain (compose_ins (INS_SHR32, 2, 2, ARG_CONST, 1, ARG_REG, ts->stack->old_c_reg,
+				ARG_REG, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
+			constmap_remove (ts->stack->old_c_reg);
+			/* diff = Breg - Areg - CF (32-bit subtract with borrow) */
+			add_to_ins_chain (compose_ins (INS_SBB32, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
 				ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+			constmap_remove (ts->stack->old_b_reg);
+			/* Collect borrow_out: borrow = 0 - 0 - CF */
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, borrow));
-			add_to_ins_chain (compose_ins (INS_SBB, 2, 1, ARG_CONST, 0, ARG_REG, borrow, ARG_REG, borrow));
+			add_to_ins_chain (compose_ins (INS_SBB32, 2, 1, ARG_CONST, 0, ARG_REG, borrow, ARG_REG, borrow));
 			ts->stack->a_reg = ts->stack->old_b_reg;
 			ts->stack->b_reg = borrow;
 		}
 		break;
 	case I_LMUL:
-		/* LMUL: hi, lo := (unsigned)Areg * (unsigned)Breg + (unsigned)Creg */
+		/* LMUL: lo, hi := (uint32)Areg * (uint32)Breg + (uint32)Creg
+		 * On x64, workspace slots are 64-bit but INT values are 32-bit.
+		 * Use 32-bit mull instruction to get correct edx:eax = eax * operand.
+		 * Must truncate operands to 32 bits first to clear stale upper bits. */
 		{
 			int eax_reg = tstack_newreg (ts->stack);
 			int edx_reg = tstack_newreg (ts->stack);
 
 			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, eax_reg, ARG_REG, REG_RAX));
 			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, edx_reg, ARG_REG, REG_RDX));
+			/* Truncate operands to 32 bits */
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, eax_reg));
-			add_to_ins_chain (compose_ins (INS_UMUL, 2, 2, ARG_REG | ARG_IMP, eax_reg, ARG_REG, ts->stack->old_b_reg,
+			/* 32-bit multiply: edx:eax = eax * old_b_reg (all 32-bit) */
+			add_to_ins_chain (compose_ins (INS_UMUL32, 2, 2, ARG_REG | ARG_IMP, eax_reg, ARG_REG, ts->stack->old_b_reg,
 				ARG_REG | ARG_IMP, edx_reg, ARG_REG | ARG_IMP, eax_reg));
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, eax_reg, ARG_REG, eax_reg));
-			add_to_ins_chain (compose_ins (INS_ADC, 2, 1, ARG_CONST, 0, ARG_REG, edx_reg, ARG_REG, edx_reg));
+			/* Add carry-in (Creg) to 32-bit result pair edx:eax using 32-bit add
+			 * so carry propagates correctly at 32-bit overflow */
+			add_to_ins_chain (compose_ins (INS_ADD32, 2, 2, ARG_REG, ts->stack->old_c_reg, ARG_REG, eax_reg,
+				ARG_REG, eax_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_ADC32, 2, 1, ARG_CONST, 0, ARG_REG, edx_reg, ARG_REG, edx_reg));
 			add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, eax_reg));
 			add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, edx_reg));
 			ts->stack->a_reg = eax_reg;
@@ -1998,16 +2038,23 @@ static void compose_x64_longop (tstate *ts, int sec)
 		}
 		break;
 	case I_LDIV:
-		/* LDIV: quotient, remainder := (Creg:Breg) / Areg */
+		/* LDIV: quotient, remainder := (uint32 Creg : uint32 Breg) / (uint32)Areg
+		 * On x64, use 32-bit divl instruction: eax = edx:eax / operand, edx = remainder.
+		 * Must truncate operands to 32 bits first to clear stale upper bits. */
 		{
 			int eax_reg = tstack_newreg (ts->stack);
 			int edx_reg = tstack_newreg (ts->stack);
 
 			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, eax_reg, ARG_REG, REG_RAX));
 			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, edx_reg, ARG_REG, REG_RDX));
+			/* Truncate operands to 32 bits */
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, eax_reg));
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, edx_reg));
-			add_to_ins_chain (compose_ins (INS_UDIV, 3, 2, ARG_REG | ARG_IMP, eax_reg, ARG_REG | ARG_IMP, edx_reg, ARG_REG, ts->stack->old_a_reg,
+			/* 32-bit divide: eax = edx:eax / old_a_reg, edx = remainder */
+			add_to_ins_chain (compose_ins (INS_UDIV32, 3, 2, ARG_REG | ARG_IMP, eax_reg, ARG_REG | ARG_IMP, edx_reg, ARG_REG, ts->stack->old_a_reg,
 				ARG_REG | ARG_IMP, eax_reg, ARG_REG | ARG_IMP, edx_reg));
 			add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, eax_reg));
 			add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, edx_reg));
@@ -3262,7 +3309,8 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 		"fabs", "fchs", "fscale", "fprem1", "..", "movswq", "lahf", "..", "..", "..", \
 		"inb", "outb", "callq", "movzwq", "movw", "..", "..", "..", "..", "fsin", \
 		"fcos", "inw", "outw", "inl", "outl", "lock", "fptan", "mfence", "lfence", "sfence", \
-		"..", "movl", "movl", "movslq", "..", "..", "sarq"};
+		"..", "movl", "movl", "movslq", "..", "..", "sarq", "mull", "divl", \
+		"addl", "subl", "adcl", "sbbl", "shrl"};
 	static char *setcc_tailcodes[] = {"o", "no", "b", "ae", "e", "nz", "be", "a", "s", "ns", "pe", "po", "l", "ge", "le", "g", "..", ".."};
 	ins_chain *tmp;
 	ins_arg *arg;
@@ -3452,6 +3500,61 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			fprintf (outstream, "\tmulq\t");
 			x64_drop_arg (tmp->in_args[1], outstream);
 			fprintf (outstream, "\n");
+			break;
+		case INS_UMUL32:
+			/* 32-bit unsigned multiply: edx:eax = eax * operand */
+			{
+				int r = (int)(long)tmp->in_args[1]->regconst;
+				if (r < 0) r = x64_regcolour_special_to_real (r);
+				fprintf (outstream, "\tmull\t%s\n", (r >= 0 && r < 16) ? x64_regs32[r] : "??");
+			}
+			break;
+		case INS_UDIV32:
+			/* 32-bit unsigned divide: eax = edx:eax / operand, edx = remainder */
+			{
+				int r = (int)(long)tmp->in_args[2]->regconst;
+				if (r < 0) r = x64_regcolour_special_to_real (r);
+				fprintf (outstream, "\tdivl\t%s\n", (r >= 0 && r < 16) ? x64_regs32[r] : "??");
+			}
+			break;
+		case INS_ADD32:
+		case INS_SUB32:
+		case INS_ADC32:
+		case INS_SBB32:
+			/* 32-bit arithmetic with carry/borrow flags (for LONG operations) */
+			{
+				int r0, r1;
+				fprintf (outstream, "\t%s\t", codes[tmp->type]);
+				r0 = (int)(long)tmp->in_args[0]->regconst;
+				if ((tmp->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
+					fprintf (outstream, "$%ld", (long)tmp->in_args[0]->regconst);
+				} else {
+					if (r0 < 0) r0 = x64_regcolour_special_to_real (r0);
+					fprintf (outstream, "%s", (r0 >= 0 && r0 < 16) ? x64_regs32[r0] : "??");
+				}
+				fprintf (outstream, ", ");
+				r1 = (int)(long)tmp->in_args[1]->regconst;
+				if (r1 < 0) r1 = x64_regcolour_special_to_real (r1);
+				fprintf (outstream, "%s\n", (r1 >= 0 && r1 < 16) ? x64_regs32[r1] : "??");
+			}
+			break;
+		case INS_SHR32:
+			/* 32-bit shift right (for correct carry flag from bit 0) */
+			{
+				int r;
+				fprintf (outstream, "\tshrl\t");
+				if ((tmp->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
+					fprintf (outstream, "$%ld", (long)tmp->in_args[0]->regconst);
+				} else {
+					r = (int)(long)tmp->in_args[0]->regconst;
+					if (r < 0) r = x64_regcolour_special_to_real (r);
+					fprintf (outstream, "%s", (r >= 0 && r < 16) ? x64_regs32[r] : "??");
+				}
+				fprintf (outstream, ", ");
+				r = (int)(long)tmp->in_args[1]->regconst;
+				if (r < 0) r = x64_regcolour_special_to_real (r);
+				fprintf (outstream, "%s\n", (r >= 0 && r < 16) ? x64_regs32[r] : "??");
+			}
 			break;
 		case INS_FSUB:
 			/* Legacy x87 -- should not be reached with SSE2 backend */
