@@ -54,7 +54,7 @@ typedef struct constmap_t {
 typedef struct TAG_tstack {
 	struct TAG_tstack *next;
 	void *transtate;		/* cast to (tstate *) in etcrtl.c for resetting of FPU */
-	int a_reg, b_reg, c_reg;
+	int a_reg, b_reg, c_reg, d_reg;
 	int old_a_reg, old_b_reg, old_c_reg;
 	int ts_depth, old_ts_depth;
 	int fs_depth, old_fs_depth, fpu_mode;

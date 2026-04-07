@@ -100,6 +100,7 @@ void tstack_undefine (tstack *stack)
 	stack->a_reg = REG_UNDEFINED;
 	stack->b_reg = REG_UNDEFINED;
 	stack->c_reg = REG_UNDEFINED;
+	stack->d_reg = REG_UNDEFINED;
 	stack->ts_depth = 0;
 	stack->must_set_cmp_flags = 1;
 	stack->fs_depth = 0;
@@ -114,7 +115,8 @@ void tstack_pop (tstack *stack)
 {
 	stack->a_reg = stack->b_reg;
 	stack->b_reg = stack->c_reg;
-	stack->c_reg = REG_UNDEFINED;
+	stack->c_reg = stack->d_reg;
+	stack->d_reg = REG_UNDEFINED;
 	return;
 }
 /*}}}*/
@@ -127,16 +129,23 @@ void tstack_checkdepth_le (tstack *stack, int depth)
 	if (stack->old_ts_depth > depth) {
 		switch (stack->old_ts_depth - depth) {
 		case 1:
+			/* Save c_reg to d_reg spill slot before discarding.
+			 * This allows tstack_pop to recover it when the
+			 * eval stack depth temporarily exceeds 3 (e.g. 2D
+			 * array subscript computations on 64-bit targets). */
+			stack->d_reg = stack->c_reg;
 			stack->c_reg = REG_UNDEFINED;
 			break;
 		case 2:
 			stack->b_reg = REG_UNDEFINED;
 			stack->c_reg = REG_UNDEFINED;
+			stack->d_reg = REG_UNDEFINED;
 			break;
 		case 3:
 			stack->a_reg = REG_UNDEFINED;
 			stack->b_reg = REG_UNDEFINED;
 			stack->c_reg = REG_UNDEFINED;
+			stack->d_reg = REG_UNDEFINED;
 			break;
 		}
 		stack->ts_depth = depth;
@@ -202,11 +211,15 @@ void tstack_setprim (tstack *stack, int prim, arch_t *arch)
 		}
 		stack->ts_depth = ts_diff - 16;
 	} else if (ts_diff < 0) {
+		int effective_depth = stack->ts_depth;
+		if (stack->d_reg != REG_UNDEFINED) {
+			effective_depth++;
+		}
 		tstack_checkdepth_ge (stack, ts_diff);
 		for (i=0; i<(-ts_diff); i++) {
 			tstack_pop (stack);
 		}
-		stack->ts_depth = stack->old_ts_depth + ts_diff;
+		stack->ts_depth = effective_depth + ts_diff;
 	} else if (ts_diff) {
 		for (i=0; i<ts_diff; i++) {
 			tstack_push (stack);
@@ -250,11 +263,18 @@ void tstack_setsec (tstack *stack, int sec, arch_t *arch)
 		}
 		stack->ts_depth = ts_diff - 16;
 	} else if (ts_diff < 0) {
+		/* If d_reg holds a spilled value, account for it in the
+		 * effective depth so that pops correctly restore it and
+		 * subsequent depth calculations remain accurate. */
+		int effective_depth = stack->ts_depth;
+		if (stack->d_reg != REG_UNDEFINED) {
+			effective_depth++;
+		}
 		tstack_checkdepth_ge (stack, ts_diff);
 		for (i=0; i<(-ts_diff); i++) {
 			tstack_pop (stack);
 		}
-		stack->ts_depth = stack->old_ts_depth + ts_diff;
+		stack->ts_depth = effective_depth + ts_diff;
 	} else if (ts_diff) {
 		for (i=0; i<ts_diff; i++) {
 			tstack_push (stack);
@@ -282,14 +302,15 @@ int tstack_newreg (tstack *stack)
  */
 void constmap_cleanup (tstack *stack)
 {
-	int regs_to_keep[4];
+	int regs_to_keep[5];
 	int n_regs, i, j;
 
 	tran_cm_cidx = -1;
 	regs_to_keep[0] = (stack->ts_depth > 0) ? stack->a_reg : REG_UNDEFINED;
 	regs_to_keep[1] = (stack->ts_depth > 1) ? stack->b_reg : REG_UNDEFINED;
 	regs_to_keep[2] = (stack->ts_depth > 2) ? stack->c_reg : REG_UNDEFINED;
-	regs_to_keep[3] = REG_UNDEFINED;
+	regs_to_keep[3] = stack->d_reg;	/* always keep spilled d_reg if valid */
+	regs_to_keep[4] = REG_UNDEFINED;
 	for (n_regs = 0; regs_to_keep[n_regs] != REG_UNDEFINED; n_regs++);
 	for (i=0; i<tran_cm_cur; i++) {
 		for (j=0; j<n_regs; j++) {

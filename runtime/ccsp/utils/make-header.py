@@ -713,16 +713,20 @@ def gen_x64_header(f):
 	f.line("register word __r_ws __asm__(\"rdi\") = (word)(ws);")
 	f.line("register word __r_sched __asm__(\"rsi\") = (word)(sched);")
 	f.line("register word __r_func __asm__(\"rax\") = (word)(func);")
+	f.line("register word __r_topoff __asm__(\"r8\") = (word)(top * %d);" % sizeof_word)
 	f.line("(void)(stack);")
 	f.line("__asm__ __volatile__ (\"\\n\"")
 	f.indent()
 
 	f.begin_asm()
 	# Save SP at ws[top], setup workspace
+	# r8 = top offset (from register variable)
 	f.line("\tmovq %%rdi, %%r14")			# r14 = ws (Wptr)
-	f.line("\tleaq %3(%%r14), %%r8")		# r8 = ws + top*sizeof(word)
+	f.line("\taddq %%r14, %%r8")			# r8 = ws + top_offset
 	f.line("\tmovq %%rsp, (%%r8)")			# ws[top] = SP
 	f.line("\tmovq %%rbp, 8(%%r8)")			# ws[top+1] = rbp
+	# Also save top_offset+ws pointer at ws[top+2] for restoration
+	f.line("\tmovq %%r8, 16(%%r8)")			# ws[top+2] = save_area_ptr
 	# Store return label at ws[0] (IptrSucc) and ws[-1] (Iptr)
 	f.line("\tleaq 0f(%%rip), %%r8")
 	f.line("\tmovq %%r8, (%%r14)")			# ws[0] = return label
@@ -736,15 +740,20 @@ def gen_x64_header(f):
 	f.line("0:")
 	# Return from occam: r14 = ws + 32 due to I_RET frame pop. Undo that.
 	f.line("\tsubq $32, %%r14")			# undo I_RET frame pop
-	f.line("\tleaq %3(%%r14), %%r8")		# r8 = ws + top*sizeof(word)
-	f.line("\tmovq (%%r8), %%rsp")			# restore SP
-	f.line("\tmovq 8(%%r8), %%rbp")			# restore rbp
+	# Restore from saved area pointer at ws[top+2]
+	# We need to recompute ws+top_offset. Since we saved the pointer
+	# itself at ws[top+2], and we know top_offset = r8_original - r14_original,
+	# but both are clobbered. Use the input register variable which
+	# GCC will reload from its stack slot.
+	f.line("\taddq %%r14, %3")			# r8 = ws + top_offset (reload)
+	f.line("\tmovq (%3), %%rsp")			# restore SP from ws[top]
+	f.line("\tmovq 8(%3), %%rbp")			# restore rbp from ws[top+1]
 	f.end_asm()
-	f.line(": \"+r\" (__r_ws), \"+r\" (__r_sched), \"+r\" (__r_func)")
-	f.line(": \"i\" (top * %d)" % sizeof_word)
+	f.line(": \"+r\" (__r_ws), \"+r\" (__r_sched), \"+r\" (__r_func), \"+r\" (__r_topoff)")
+	f.line(": /* no pure inputs */")
 	# Clobber ALL registers the occam function may modify
 	f.line(": \"cc\", \"memory\",")
-	f.line("  \"rcx\", \"rdx\", \"r8\", \"r9\", \"r10\", \"r11\",")
+	f.line("  \"rcx\", \"rdx\", \"r9\", \"r10\", \"r11\",")
 	f.line("  \"rbx\", \"r12\", \"r13\", \"r14\", \"r15\"")
 
 	f.outdent()

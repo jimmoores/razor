@@ -3323,7 +3323,7 @@ SWIGEXPORT void _SDL_GL_GetAttribute (word occ_args[]) {
   {
     arg1 = * ((SDL_GLattr *) &occ_args[0]); 
   }{
-    arg2 = (word *) occ_args[1]; 
+    arg2 = (int *)(word *) occ_args[1];
   }result = (int)SDL_GL_GetAttribute(arg1,arg2);
   {
     *((word *) occ_args[3]) = result; 
@@ -3660,7 +3660,7 @@ SWIGEXPORT void _SDL_GetKeyState (word occ_args[]) {
   Uint8 *result = 0 ;
   
   {
-    arg1 = (word *) occ_args[0]; 
+    arg1 = (int *)(word *) occ_args[0];
   }result = (Uint8 *)SDL_GetKeyState(arg1);
   {
     *((void **) occ_args[2]) = result; 
@@ -3910,9 +3910,9 @@ SWIGEXPORT void _SDL_JoystickGetBall (word occ_args[]) {
   }{
     arg2 = * ((int *) &occ_args[1]); 
   }{
-    arg3 = (word *) occ_args[2]; 
+    arg3 = (int *)(word *) occ_args[2];
   }{
-    arg4 = (word *) occ_args[4]; 
+    arg4 = (int *)(word *) occ_args[4];
   }result = (int)SDL_JoystickGetBall(arg1,arg2,arg3,arg4);
   {
     *((word *) occ_args[6]) = result; 

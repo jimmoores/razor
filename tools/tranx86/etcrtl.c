@@ -1268,8 +1268,13 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					}
 					if (y_opd >= 4) {
 						while (y_opd > 3) {
-							add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("# register lost from stack")));
-							fprintf (stderr, "%s: warning: register lost from stack.\n", progname);
+							if (ts->stack->d_reg == REG_UNDEFINED) {
+								/* Only warn if the value is actually lost.
+								 * When d_reg holds the spilled value, the
+								 * tstack pop/push logic will restore it. */
+								add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("# register lost from stack")));
+								fprintf (stderr, "%s: warning: register lost from stack.\n", progname);
+							}
 							y_opd--;
 						}
 					} else if (y_opd >= 1) {
@@ -1286,8 +1291,15 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 						} else {
 							fprintf (stderr, "%s: warning: TSDEPTH experiencing stack problem..\n", progname);
 						}
-					} else {
+					} else if (y_opd == 0) {
 						ts->stack->a_reg = REG_UNDEFINED;
+					}
+					/* Clamp to 0: negative TSDEPTH values indicate the
+					 * compiler expected a register to be lost, but with
+					 * d_reg spilling the value was preserved, so the
+					 * actual depth is never negative. */
+					if (y_opd < 0) {
+						y_opd = 0;
 					}
 					ts->stack->ts_depth = y_opd;
 					break;
@@ -6436,9 +6448,20 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 		}
 		add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, thislab));
 	}
-	ts->stack->a_reg = ts->stack->old_b_reg;
-	ts->stack->b_reg = ts->stack->old_c_reg;
-	ts->stack->c_reg = REG_UNDEFINED;
+	{
+		/* After tstack_setsec popped the stack, c_reg may hold a value
+		 * restored from the d_reg spill slot (4th eval stack entry from
+		 * 2D array subscript computations on 64-bit targets). */
+		int restored_c = ts->stack->c_reg;
+		ts->stack->a_reg = ts->stack->old_b_reg;
+		ts->stack->b_reg = ts->stack->old_c_reg;
+		if (restored_c != REG_UNDEFINED) {
+			ts->stack->c_reg = restored_c;
+			new_ts_depth++;
+		} else {
+			ts->stack->c_reg = REG_UNDEFINED;
+		}
+	}
 	ts->stack->ts_depth = new_ts_depth;
 	ts->stack->must_set_cmp_flags = 1;
 	return;
@@ -6491,9 +6514,18 @@ static void translate_range_check (tstate *ts, int lwb, arch_t *arch, int ecode)
 	if (lwb == 1) {
 		add_to_ins_chain (compose_ins (INS_INC, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 	}
-	ts->stack->a_reg = ts->stack->old_b_reg;
-	ts->stack->b_reg = ts->stack->old_c_reg;
-	ts->stack->c_reg = REG_UNDEFINED;
+	{
+		/* Preserve c_reg if it holds a restored d_reg spill value. */
+		int restored_c = ts->stack->c_reg;
+		ts->stack->a_reg = ts->stack->old_b_reg;
+		ts->stack->b_reg = ts->stack->old_c_reg;
+		if (restored_c != REG_UNDEFINED) {
+			ts->stack->c_reg = restored_c;
+			new_ts_depth++;
+		} else {
+			ts->stack->c_reg = REG_UNDEFINED;
+		}
+	}
 	ts->stack->ts_depth = new_ts_depth;
 	ts->stack->must_set_cmp_flags = 1;
 	return;
