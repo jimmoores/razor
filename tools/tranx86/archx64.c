@@ -406,7 +406,15 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 		ts->stack->ts_depth = r_out;
 		for (i = 0; i < r_out; i++) {
 			oregs[i] = cregs[i];
-			if (i >= 1) {
+			if (i == 0) {
+				/* Primary result: C ABI returns in rax, move to result register.
+				 * On x64, xregs[0]=rdi is the first argument register, but
+				 * the C return value is in rax.  We need to move it. */
+				int rax_reg = tstack_newreg (ts->stack);
+				add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, rax_reg, ARG_REG, REG_RAX));
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, rax_reg, ARG_REG, oregs[0]));
+				add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, rax_reg));
+			} else {
 				/* Additional results from cparam[] */
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[(i - 1)]), ARG_REG, oregs[i]));
 			}
@@ -548,6 +556,15 @@ static void compose_x64_inline_full_reschedule (tstate *ts)
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_IPTR));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_LINK));
 
+	#ifdef PROCESS_PRIORITY
+	{
+		int tmp_reg3 = tstack_newreg (ts->stack);
+		/* Save sched->priofinity into Wptr's Priofinity slot before re-enqueue */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, (intptr_t)CCSP_SCHED_PRIOFINITY_OFFSET, ARG_REG, tmp_reg3));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg3, ARG_REGIND | ARG_DISP, REG_WPTR, W_PRIORITY));
+	}
+	#endif	/* PROCESS_PRIORITY */
+
 	/* Add this process to the back of the run-queue */
 	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, NOT_PROCESS, ARG_REG, REG_FPTR, ARG_REG | ARG_IMP, REG_CC));
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_FLABEL, 1));
@@ -569,6 +586,14 @@ static void compose_x64_inline_full_reschedule (tstate *ts)
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_FLABEL, 0));
 
 	/* Inline reschedule */
+	#ifdef PROCESS_PRIORITY
+	{
+		int tmp_reg3 = tstack_newreg (ts->stack);
+		/* Save sched->priofinity into Wptr's Priofinity slot before inline reschedule */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, (intptr_t)CCSP_SCHED_PRIOFINITY_OFFSET, ARG_REG, tmp_reg3));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg3, ARG_REGIND | ARG_DISP, REG_WPTR, W_PRIORITY));
+	}
+	#endif	/* PROCESS_PRIORITY */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_LINK));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_IPTR));
 	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, REG_FPTR, ARG_REG, REG_BPTR, ARG_REG | ARG_IMP, REG_CC));
@@ -619,12 +644,28 @@ static void compose_x64_inline_startp (tstate *ts)
 	case VALUE_LABDIFF:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_b_reg),
 			ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, W_IPTR));
+		#ifdef PROCESS_PRIORITY
+		{
+			int tmp_reg = tstack_newreg (ts->stack);
+			/* Copy sched->priofinity into new workspace's Priofinity slot */
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, (intptr_t)CCSP_SCHED_PRIOFINITY_OFFSET, ARG_REG, tmp_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, W_PRIORITY));
+		}
+		#endif	/* PROCESS_PRIORITY */
 		compose_x64_inline_enqueue (ts, ts->stack->old_a_reg, 0);
 		break;
 	case VALUE_CONST:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, W_IPTR));
 		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, constmap_regconst (ts->stack->old_b_reg), ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, W_IPTR,
 			ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, W_IPTR));
+		#ifdef PROCESS_PRIORITY
+		{
+			int tmp_reg = tstack_newreg (ts->stack);
+			/* Copy sched->priofinity into new workspace's Priofinity slot */
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, (intptr_t)CCSP_SCHED_PRIOFINITY_OFFSET, ARG_REG, tmp_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, ts->stack->old_a_reg, W_PRIORITY));
+		}
+		#endif	/* PROCESS_PRIORITY */
 		compose_x64_inline_enqueue (ts, ts->stack->old_a_reg, 1);
 		add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 		break;
@@ -650,6 +691,14 @@ static void compose_x64_inline_endp (tstate *ts)
 static void compose_x64_inline_stopp (tstate *ts)
 {
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_IPTR));
+	#ifdef PROCESS_PRIORITY
+	{
+		int tmp_reg = tstack_newreg (ts->stack);
+		/* Save sched->priofinity into Wptr's Priofinity slot before descheduling */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, (intptr_t)CCSP_SCHED_PRIOFINITY_OFFSET, ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, W_PRIORITY));
+	}
+	#endif	/* PROCESS_PRIORITY */
 	compose_x64_inline_quick_reschedule (ts);
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 }
@@ -760,6 +809,14 @@ static void compose_x64_inline_in (tstate *ts, int width)
 	}
 
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_IPTR));
+	#ifdef PROCESS_PRIORITY
+	{
+		int tmp_reg = tstack_newreg (ts->stack);
+		/* Save sched->priofinity into Wptr's Priofinity slot */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, (intptr_t)CCSP_SCHED_PRIOFINITY_OFFSET, ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, W_PRIORITY));
+	}
+	#endif	/* PROCESS_PRIORITY */
 	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, NOT_PROCESS, ARG_REGIND, chan_reg, ARG_REG | ARG_IMP, REG_CC));
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 1));
 
@@ -922,6 +979,14 @@ static void compose_x64_inline_out (tstate *ts, int width)
 	}
 
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, W_IPTR));
+	#ifdef PROCESS_PRIORITY
+	{
+		int tmp_reg = tstack_newreg (ts->stack);
+		/* Save sched->priofinity into Wptr's Priofinity slot */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, (intptr_t)CCSP_SCHED_PRIOFINITY_OFFSET, ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, W_PRIORITY));
+	}
+	#endif	/* PROCESS_PRIORITY */
 	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, NOT_PROCESS, ARG_REGIND, chan_reg, ARG_REG | ARG_IMP, REG_CC));
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 1));
 
@@ -1346,6 +1411,14 @@ static void compose_x64_inline_altwt (tstate *ts)
 	add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, Z_READY, ARG_REGIND | ARG_DISP, REG_WPTR, W_POINTER, ARG_REG | ARG_IMP, REG_CC));
 	add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_E, ARG_FLABEL, ready_lab));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, Z_WAITING, ARG_REGIND | ARG_DISP, REG_WPTR, W_POINTER));
+	#ifdef PROCESS_PRIORITY
+	{
+		int tmp_reg = tstack_newreg (ts->stack);
+		/* Save sched->priofinity into Wptr's Priofinity slot before ALT wait */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, (intptr_t)CCSP_SCHED_PRIOFINITY_OFFSET, ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, W_PRIORITY));
+	}
+	#endif	/* PROCESS_PRIORITY */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, ready_lab, ARG_REGIND | ARG_DISP, REG_WPTR, W_IPTR));
 	compose_x64_inline_quick_reschedule (ts);
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, ready_lab));

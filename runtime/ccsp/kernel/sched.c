@@ -147,6 +147,13 @@ void dt_dump(void) {
 
 #define CONST_ARRAY_LENGTH(array) (sizeof (array) / sizeof ((array)[0]))
 
+/* Validate that the CCSP_SCHED_PRIOFINITY_OFFSET constant in ccsp.h
+ * matches the actual offset of priofinity in sched_t. */
+#if defined(CCSP_SCHED_PRIOFINITY_OFFSET)
+_Static_assert(offsetof(sched_t, priofinity) == CCSP_SCHED_PRIOFINITY_OFFSET,
+	"CCSP_SCHED_PRIOFINITY_OFFSET does not match sched_t layout");
+#endif
+
 /*}}}*/
 
 /*{{{  PUBLIC variables that are used elsewhere in the run time system */
@@ -2213,6 +2220,7 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 	}
 
 	if (Wptr != NotProcess_p) {
+		Wptr[Priofinity] = sched->priofinity;
 		sched->stats.startp++;
 		K_ZERO_OUT_JRET ();
 	} else {

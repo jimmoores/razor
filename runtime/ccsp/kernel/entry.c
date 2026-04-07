@@ -70,6 +70,7 @@ void ccsp_kernel_entry (word *wptr, word *fptr)
 void ccsp_occam_entry (void *ws, unsigned int ws_bytes, word iptr, word *wptr, word *fptr)
 {
 	wptr[Iptr] = iptr;
+	wptr[Priofinity] = 0;
 	ccsp_give_ws_code ((char *) ws, (int) ws_bytes, (unsigned char *) iptr);
 	ccsp_kernel_entry (wptr, fptr);
 }

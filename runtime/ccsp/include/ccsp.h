@@ -59,6 +59,16 @@ typedef struct _ccsp_sched_t {
 	word		pad[8];
 } _PACK_STRUCT ccsp_sched_t;
 
+/* Byte offset of priofinity within the full sched_t structure.
+ * ccsp_sched_t is a prefix subset of sched_t.  The priofinity field
+ * sits after CACHELINE_ALIGN padding in sched_t which cannot be
+ * replicated here without pulling in the full sched_types.h header.
+ * This constant must match offsetof(sched_t, priofinity) and is
+ * validated by a static assertion in the runtime (sched.c). */
+#if defined(__aarch64__) || defined(__x86_64__)
+#define CCSP_SCHED_PRIOFINITY_OFFSET 1416
+#endif
+
 #undef _PACK_STRUCT
 
 #if defined(USE_TLS)
