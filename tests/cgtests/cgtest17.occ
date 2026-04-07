@@ -489,7 +489,7 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
         check(h, 1, "B178h")
         check(i, 1, "B178i")
         check(j, 1, "B178j")
-        #IF DEFINED(AARCH64)
+        #IF (TARGET.WORD.BITS = 64)
         ASM
           LD ADDRESSOF [1(INT64),2(INT64),3(INT64)]
           LDNL 2
@@ -532,7 +532,7 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
     -- Bug 494 tests RETYPES between INT and CHAN.
     -- On 64-bit targets, CHAN is a word (8 bytes) but INT is 32-bit (4 bytes),
     -- so INT64 must be used instead of INT for channel RETYPES.
-    #IF DEFINED(AARCH64)
+    #IF (TARGET.WORD.BITS = 64)
     PROC bug.494()
       CHAN OF INT c1, c2, c3, c4 :
       PAR
@@ -912,7 +912,7 @@ PROC cgtest17 (CHAN OF BYTE keyb, scr, err)
           SEQ j = 0 FOR SIZE array[0]
             array[i][j] := i + j
         x := 1
-        #IF DEFINED(AARCH64)
+        #IF (TARGET.WORD.BITS = 64)
         -- Skip on 64-bit targets because LDNL loads 8 bytes from an INT array
         #ELSE
         sub.array IS array[x] :
