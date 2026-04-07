@@ -1,8 +1,9 @@
 /*
- *	Portable timer interface definitions (frmb made i386 specific..)
+ *	Portable timer interface definitions (x64 version)
  *	Copyright (C) 1996-1999 Jim Moores
  *	Modifications (C) 2001-2005 Fred Barnes  <frmb@kent.ac.uk>
  *	Modifications (C) 2007 Carl Ritson <cgr@kent.ac.uk>
+ *	Copyright (C) 2025 (x64 adaptation)
  *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -19,33 +20,28 @@
  *	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef I386_TIMER_H
-#define I386_TIMER_H
+#ifndef X64_TIMER_H
+#define X64_TIMER_H
 
 #if defined(HAVE_CONFIG_H)
 #include <config.h>
 #endif
 
 #include <sched_types.h>
-#include <i386/ccsp_types.h>
+#include <x64/ccsp_types.h>
 
 static inline Time Time_GetTime (sched_t *sched)
 {
 	#ifdef ENABLE_CPU_TIMERS
+	unsigned int lo, hi;
+	unsigned long long tsc;
 	Time time_in_us;
 
-	__asm__ __volatile__ ("			\n"
-		"	.byte	0x0f, 0x31	\n" /* rdtsc                         */
-		"	movl	%%edx, %%ebx	\n"
-		"	mull	%%ecx		\n" /* r_a = low word * cpu_factor   */
-		"	movl	%%ebx, %%eax	\n" 
-		"	movl	%%edx, %%ebx	\n" /* save r_a[high]                */
-		"	mull	%%ecx		\n" /* r_b = high word * cpu_factor  */
-		"	addl	%%ebx, %%eax	\n" /* result = r_b[low] + r_b[high] */
-		: "=a" (time_in_us)
-		: "c" (sched->cpu_factor)
-		: "ebx", "edx"
-	);
+	__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+	tsc = ((unsigned long long)hi << 32) | lo;
+
+	/* cpu_factor converts TSC ticks to microseconds */
+	time_in_us = (Time)(tsc * (unsigned long long)sched->cpu_factor >> 32);
 
 	return time_in_us;
 	#else
@@ -60,14 +56,11 @@ static inline Time Time_GetTime (sched_t *sched)
 static inline int Time_PastTimeout (sched_t *sched)
 {
 	unsigned int *timeout = sched->timeout.tsc;
-	unsigned int tsc[2];
-	
-	__asm__ __volatile__ ("			\n"
-		"	.byte	0x0f, 0x31	\n"
-		: "=a" (tsc[0]), "=d" (tsc[1])
-	);
+	unsigned int lo, hi;
 
-	return (tsc[1] > timeout[1]) || (tsc[1] == timeout[1] && tsc[0] > timeout[0]);
+	__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+
+	return (hi > timeout[1]) || (hi == timeout[1] && lo > timeout[0]);
 }
 
 /*
@@ -86,7 +79,7 @@ static inline void Time_SetPastTimeout (sched_t *sched, Time delay)
 		"	andl	$0x003fffff, %%ebx	\n" /*  "                       */
 		"	shl	$22, %%edx		\n" /*  "                       */
 		"	orl	%%edx, %%ebx		\n" /*  " (side-effect CF = 0)  */
-		"	.byte	0x0f, 0x31		\n" /* rdtsc                    */
+		"	rdtsc				\n" /* rdtsc                    */
 		"	addl	%%ebx, %%eax		\n" /* result += rdtsc          */
 		"	adcl	%%ecx, %%edx		\n" /*  "                       */
 		: "=a" (timeout[0]), "=d" (timeout[1])
@@ -96,5 +89,4 @@ static inline void Time_SetPastTimeout (sched_t *sched, Time delay)
 }
 #endif /* ENABLE_CPU_TIMERS */
 
-#endif /* I386_TIMER_H */
-
+#endif /* X64_TIMER_H */

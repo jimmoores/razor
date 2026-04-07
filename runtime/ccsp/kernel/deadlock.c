@@ -340,6 +340,8 @@ static int deadlock_debug (word *iws_ptr, int bytes, int *did_print)
 				if (ins_1 != PPC_JUMP_INS) {
 #elif defined(TARGET_CPU_AARCH64)
 				if (ins_1 != AARCH64_BRANCH_INS) {
+#elif defined(TARGET_CPU_X64)
+				if (ins_1 != X64_JUMP_INS) {
 #else
 				if (ins_1 != I386_JUMP_INS) {
 #endif

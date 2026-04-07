@@ -521,6 +521,241 @@ def gen_sparc_header(f):
 def gen_sparc_cif_stub(f, symbol, inputs, outputs):
 	f.line("/* sparc unsupported */")
 
+def gen_x64_cif_stub(f, symbol, inputs, outputs):
+	"""Generate CIF stub for x64 architecture.
+	x64 kernel calling convention (System V AMD64 ABI):
+	  param0 -> rdi, sched -> rsi, Wptr -> rdx
+	  return -> rax
+	Calltable accessed via sched pointer.
+	Runtime registers: r14=Wptr, r15=sched, r13=Fptr, r12=Bptr
+	"""
+	resched = (symbol["name"][0] == 'Y')
+	in_regs = min(len(inputs), 1)
+	out_regs = min(len(outputs), 1)
+	offset = symbol["offset"]
+
+	if len(inputs) > 1:
+		for (n, i) in enumerate(inputs):
+			if n >= 1:
+				f.line("__sched->cparam[%d] = (word) (%s);" % ((n - 1), i))
+
+	dummies = []
+	if not resched:
+		dummies.append("sched_dummy")
+		dummies.append("wptr_dummy")
+	if in_regs > out_regs:
+		dummies = ["dummy0"] + dummies
+
+	if len(dummies) > 0:
+		f.line("{")
+		f.indent()
+		for dummy in dummies:
+			f.line("word %s;" % dummy)
+
+	f.line("__asm__ __volatile__ (\"\\n\"")
+	f.indent()
+
+	f.begin_asm()
+	if resched:
+		# Save callee-saved regs, switch to kernel stack, call via calltable
+		f.line("\tpushq %%rbx")
+		f.line("\tpushq %%r14")
+		f.line("\tmovq %%rsp, -56(%%r14)")	# save SP at Wptr[SchedPtr]
+		f.line("\tmovq (%%r15), %%rsp")		# switch to kernel stack
+		f.line("\tmovq %%r15, %%rsi")		# sched -> rsi
+		f.line("\tmovq %%r14, %%rdx")		# Wptr -> rdx
+		# calltable offset: 8 bytes (stack) + 40 bytes (cparam[5]) + offset*8
+		f.line("\tcallq *%d(%%%%r15)" % (48 + offset * 8))
+		f.line("\tmovq -56(%%r14), %%rsp")	# restore SP
+		f.line("\tpopq %%r14")
+		f.line("\tpopq %%rbx")
+	else:
+		# Non-rescheduling: simpler path
+		f.line("\tmovq %%rsp, %%rcx")		# save rsp in rcx
+		f.line("\tmovq %%r15, %%rsi")		# sched -> rsi
+		f.line("\tmovq (%%r15), %%rsp")		# switch to kernel stack (sched->stack)
+		f.line("\tmovq %%r14, %%rdx")		# Wptr -> rdx
+		f.line("\tcallq *%d(%%%%rsi)" % (48 + offset * 8))
+		f.line("\tmovq %%rcx, %%rsp")		# restore original rsp
+	f.end_asm()
+	f.begin_line()
+	if resched:
+		if (in_regs + out_regs) > 0:
+			f.add(": \"=a\" (%s)" % ((outputs + dummies)[0]))
+		else:
+			f.add(": /* no outputs */")
+	else:
+		f.add(": \"=d\" (wptr_dummy), \"=S\" (sched_dummy)")
+		if (in_regs + out_regs) > 0:
+			f.add(", \"=a\" (%s)" % ((outputs + dummies)[0]))
+	f.end_line()
+
+	f.begin_line()
+	if resched:
+		if in_regs > 0:
+			f.add(": \"D\" (%s)" % inputs[0])
+		else:
+			f.add(": /* no inputs */")
+	else:
+		f.add(": \"D\" (__wptr), \"1\" (__sched)")
+		for (idx, name) in enumerate(inputs):
+			if idx < in_regs:
+				f.add(", \"%d\" (%s)" % (idx + 2, name))
+	f.end_line()
+
+	f.begin_line()
+	if resched:
+		# Rescheduling: no register constraints beyond rdi and rax
+		f.add(": \"cc\", \"memory\", \"rcx\", \"rdx\", \"rsi\", \"r8\", \"r9\", \"r10\", \"r11\"")
+		if (in_regs + out_regs) == 0:
+			f.add(", \"rax\"")
+	else:
+		# Non-rescheduling: rdx("=d") and rsi("=S") are outputs, rdi("D") is input
+		# so don't clobber rdx, rsi, or rdi
+		f.add(": \"cc\", \"memory\", \"rcx\", \"r8\", \"r9\", \"r10\", \"r11\"")
+		if (in_regs + out_regs) == 0:
+			f.add(", \"rax\"")
+	f.end_line()
+
+	f.outdent()
+	f.line(");")
+
+	if resched:
+		f.line("(__wptr)[SchedPtr] = (word) __sched;")
+
+	if len(outputs) > 1:
+		for (n, i) in enumerate(outputs):
+			if n >= 1:
+				f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
+
+	if len(dummies) > 0:
+		f.outdent()
+		f.line("}")
+
+def gen_x64_header(f):
+	"""Generate x64 CIF header macros."""
+	# sizeof(word) for x64 = 8
+	sizeof_word = 8
+
+	# ccsp_cif_external_call
+	f.begin_macro()
+
+	f.begin_line()
+	f.line("#define ccsp_cif_external_call(func, stack, result)")
+
+	f.indent()
+	f.line("do {")
+
+	f.indent()
+	f.line("word __tmp_sp;")
+	f.line("__asm__ __volatile__ (\"\\n\"")
+	f.indent()
+
+	f.begin_asm()
+	f.line("\tmovq %%rsp, %0")		# save sp
+	f.line("\tmovq %2, %%rsp")		# switch to provided stack
+	f.line("\tcallq *%1")			# call function
+	f.line("\tmovq %0, %%rsp")		# restore sp
+	f.end_asm()
+	f.line(": \"=&r\" (__tmp_sp), \"=a\" (result)")
+	f.line(": \"r\" (func), \"r\" (stack)")
+	f.line(": \"cc\", \"memory\", \"rcx\", \"rdx\", \"rsi\", \"rdi\", \"r8\", \"r9\", \"r10\", \"r11\"")
+
+	f.outdent()
+	f.line(");")
+	f.outdent()
+
+	f.begin_line()
+	f.add ("} while (0)")
+	f.end_line(end_macro = True)
+	f.outdent()
+
+	# ccsp_cif_jump
+	f.begin_macro()
+
+	f.begin_line()
+	f.line("#define ccsp_cif_jump(wptr, addr)")
+
+	f.indent()
+	f.line("do {")
+
+	f.indent()
+	f.line("__asm__ __volatile__ (\"\\n\"")
+	f.indent()
+
+	f.begin_asm()
+	f.line("\tmovq %0, %%r14")		# r14 = Wptr
+	f.line("\tjmpq *%1")			# jump to addr
+	f.end_asm()
+	f.line(": /* no outputs */")
+	f.line(": \"r\" (wptr), \"q\" (addr)")
+	f.line(": \"memory\"")
+
+	f.outdent()
+	f.line(");")
+	f.outdent()
+
+	f.begin_line()
+	f.add ("} while (0)")
+	f.end_line(end_macro = True)
+	f.outdent()
+
+	# ccsp_cif_occam_call
+	f.begin_macro()
+
+	f.begin_line()
+	f.line("#define ccsp_cif_occam_call(sched, stack, ws, func, top)")
+
+	f.indent()
+	f.line("do {")
+
+	f.indent()
+	f.line("register word __r_ws __asm__(\"rdi\") = (word)(ws);")
+	f.line("register word __r_sched __asm__(\"rsi\") = (word)(sched);")
+	f.line("register word __r_func __asm__(\"rax\") = (word)(func);")
+	f.line("(void)(stack);")
+	f.line("__asm__ __volatile__ (\"\\n\"")
+	f.indent()
+
+	f.begin_asm()
+	# Save SP at ws[top], setup workspace
+	f.line("\tmovq %%rdi, %%r14")			# r14 = ws (Wptr)
+	f.line("\tleaq %3(%%r14), %%r8")		# r8 = ws + top*sizeof(word)
+	f.line("\tmovq %%rsp, (%%r8)")			# ws[top] = SP
+	f.line("\tmovq %%rbp, 8(%%r8)")			# ws[top+1] = rbp
+	# Store return label at ws[0] (IptrSucc) and ws[-1] (Iptr)
+	f.line("\tleaq 0f(%%rip), %%r8")
+	f.line("\tmovq %%r8, (%%r14)")			# ws[0] = return label
+	f.line("\tmovq %%r8, -8(%%r14)")		# ws[-1] = return label
+	# Switch to private workspace stack
+	f.line("\tleaq -256(%%r14), %%rsp")
+	f.line("\tandq $-16, %%rsp")
+	# Set scheduler pointer for occam code (r15 = sched)
+	f.line("\tmovq %%rsi, %%r15")			# r15 = sched
+	f.line("\tjmpq *%%rax")				# jump to func
+	f.line("0:")
+	# Return from occam: r14 = ws + 32 due to I_RET frame pop. Undo that.
+	f.line("\tsubq $32, %%r14")			# undo I_RET frame pop
+	f.line("\tleaq %3(%%r14), %%r8")		# r8 = ws + top*sizeof(word)
+	f.line("\tmovq (%%r8), %%rsp")			# restore SP
+	f.line("\tmovq 8(%%r8), %%rbp")			# restore rbp
+	f.end_asm()
+	f.line(": \"+r\" (__r_ws), \"+r\" (__r_sched), \"+r\" (__r_func)")
+	f.line(": \"i\" (top * %d)" % sizeof_word)
+	# Clobber ALL registers the occam function may modify
+	f.line(": \"cc\", \"memory\",")
+	f.line("  \"rcx\", \"rdx\", \"r8\", \"r9\", \"r10\", \"r11\",")
+	f.line("  \"rbx\", \"r12\", \"r13\", \"r14\", \"r15\"")
+
+	f.outdent()
+	f.line(");")
+	f.outdent()
+
+	f.begin_line()
+	f.add ("} while (0)")
+	f.end_line(end_macro = True)
+	f.outdent()
+
 def gen_aarch64_cif_stub(f, symbol, inputs, outputs):
         resched = (symbol["name"][0] == 'Y')
         in_regs = len(inputs)
@@ -710,6 +945,9 @@ def output_cif(defines, symbol_list, symbols, fn):
 		warn("generating CIF stubs for unsupported architecture...")
 		arch_header = gen_aarch64_header
 		arch_generator = gen_aarch64_cif_stub
+	elif "TARGET_CPU_X64" in defines:
+		arch_header = gen_x64_header
+		arch_generator = gen_x64_cif_stub
 	else:
 		die("unable to generate CIF stubs for unknown architecture.")
 

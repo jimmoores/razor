@@ -9,4 +9,8 @@
 #include <aarch64/alignment.h>
 #endif
 
+#ifdef TARGET_CPU_X64
+#include <x64/alignment.h>
+#endif
+
 #endif /* _ARCH_ALIGNMENT_H */

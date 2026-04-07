@@ -17,10 +17,22 @@ KROC_CCSP_FLAGS
 ARCH_DEFS=""
 GNUASFLAGS=""
 
+AC_ARG_ENABLE([64bit],
+              AS_HELP_STRING([--enable-64bit],
+                             [enable 64-bit compilation (default enabled on x86_64 and aarch64)]),
+              enable_64bit=$enableval,
+              enable_64bit=auto)
+
 case "$host_cpu" in
  x86_64)
-  ARCH_DEFS="-m32"
-  GNUASFLAGS="--32"
+  if test "$enable_64bit" = "auto"; then
+    enable_64bit=yes
+  fi
+  if test "$enable_64bit" = "no"; then
+    # Cross-compile tranx86 as 32-bit on x86_64 host
+    ARCH_DEFS="-m32"
+    GNUASFLAGS="--32"
+  fi
   ;;
  i386)
   case "$target" in
@@ -41,8 +53,7 @@ esac
 AC_SUBST(ARCH_DEFS)
 
 case "$host_cpu" in
- i386 | i486 | i586 | i686 | x86_64)
-
+ i386 | i486 | i586 | i686)
   saved_CFLAGS="$CFLAGS"
   CFLAGS="$ARCH_DEFS $CFLAGS"
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[__asm__ __volatile__ ("\n\tfucom\n\tfildl (%eax)\n\tfildd (%ebx)\n");]])],[old_as=no],[old_as=yes])
@@ -53,8 +64,23 @@ case "$host_cpu" in
   if test "$old_as" = yes; then
    AC_DEFINE([OLD_ASSEMBLER],1,[define if ia32 assembler does not understand fucom, fildl or fildd])
   fi
-
- 
+  ;;
+ x86_64)
+  if test "$enable_64bit" = "no"; then
+    saved_CFLAGS="$CFLAGS"
+    CFLAGS="$ARCH_DEFS $CFLAGS"
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[__asm__ __volatile__ ("\n\tfucom\n\tfildl (%eax)\n\tfildd (%ebx)\n");]])],[old_as=no],[old_as=yes])
+    CFLAGS="$saved_CFLAGS"
+    AC_ARG_ENABLE([force-old-as], AS_HELP_STRING([--enable-force-old-as], [force generation of .byte codes for certain i386 instructions]), [old_as=$enableval], [])
+    AC_MSG_CHECKING(whether assembler fails to understand some mnemonics)
+    AC_MSG_RESULT($old_as)
+    if test "$old_as" = yes; then
+     AC_DEFINE([OLD_ASSEMBLER],1,[define if ia32 assembler does not understand fucom, fildl or fildd])
+    fi
+  else
+    dnl Native 64-bit x86_64 assembler always supports these mnemonics
+    old_as=no
+  fi
   ;;
 esac
 
@@ -63,7 +89,7 @@ AC_ARG_ENABLE([udc], AS_HELP_STRING([--enable-udc], [enable (old) user-defined c
 AC_ARG_ENABLE([process-priority], AS_HELP_STRING([--disable-process-priority], [disable process priorities]), [enable_process_priority=$enableval], [enable_process_priority=yes])
 
 case "$host_cpu" in
- i386 | i486 | i586 | i686 | x86_64)
+ i386 | i486 | i586 | i686)
   saved_CFLAGS="$CFLAGS"
   CFLAGS="$ARCH_DEFS $CFLAGS"
 
@@ -80,6 +106,39 @@ case "$host_cpu" in
   ])], [can_do_dotlabels=yes], [can_do_dotlabels=no], [can_do_dotlabels=no])
 
   CFLAGS="$saved_CFLAGS"
+  ;;
+ x86_64)
+  if test "$enable_64bit" = "no"; then
+    saved_CFLAGS="$CFLAGS"
+    CFLAGS="$ARCH_DEFS $CFLAGS"
+
+    AC_RUN_IFELSE([AC_LANG_PROGRAM([],[
+     __asm__ __volatile__ ("		\n"
+      "	xorl	%%eax, %%eax		\n"
+      "	je	.LTMP1			\n"
+      ".LTMP2:				\n"
+      "	movl	\$1, %%eax		\n"
+      ".LTMP1:				\n"
+      "	nop				\n"
+      ::: "cc", "memory");
+      return 0;
+    ])], [can_do_dotlabels=yes], [can_do_dotlabels=no], [can_do_dotlabels=no])
+
+    CFLAGS="$saved_CFLAGS"
+  else
+    dnl Native 64-bit x86_64: test dot-labels with 64-bit compatible assembly
+    AC_RUN_IFELSE([AC_LANG_PROGRAM([],[
+     __asm__ __volatile__ ("		\n"
+      "	xorq	%%rax, %%rax		\n"
+      "	je	.LTMP1			\n"
+      ".LTMP2:				\n"
+      "	movq	\$1, %%rax		\n"
+      ".LTMP1:				\n"
+      "	nop				\n"
+      ::: "cc", "memory");
+      return 0;
+    ])], [can_do_dotlabels=yes], [can_do_dotlabels=no], [can_do_dotlabels=no])
+  fi
   ;;
  mips)
   can_do_dotlabels=no
@@ -117,8 +176,15 @@ if test "$enable_mp" = yes; then
 fi
 
 case "$host_cpu" in
- i486 | i586 | i686 | x86_64)
+ i486 | i586 | i686)
   AC_DEFINE([HOST_CPU_IS_I486],1,[define for 486/586/686 and compatible CPUs])
+  ;;
+ x86_64)
+  if test "$enable_64bit" = "no"; then
+    AC_DEFINE([HOST_CPU_IS_I486],1,[define for 486/586/686 and compatible CPUs])
+  else
+    AC_DEFINE([HOST_CPU_IS_X64],1,[define for x86-64 CPUs in 64-bit mode])
+  fi
   ;;
  i386)
   AC_DEFINE([HOST_CPU_IS_I386],1,[define for 386 CPUs])

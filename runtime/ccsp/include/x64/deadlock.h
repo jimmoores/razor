@@ -1,6 +1,7 @@
 /*
- *	Interface to the deadlock detection stuff
+ *	Interface to the deadlock detection stuff (x64 version)
  *	Copyright (C) 2000 Fred Barnes
+ *	Copyright (C) 2025 (x64 adaptation)
  *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License as published by
@@ -18,34 +19,20 @@
  */
 
 
-#ifndef I386_DEADLOCK_H
-#define I386_DEADLOCK_H
+#ifndef X64_DEADLOCK_H
+#define X64_DEADLOCK_H
 
 #ifdef __DEADLOCK_C
 /* architecture dependant stuff */
-#define I386_JUMP_INS	0xe9
+#define X64_JUMP_INS	0xe9
 
-#if 0
-#define DEADLOCK_CODE_BLOCK(FN,PN,CP) \
-	do { \
-		int DCBtmp1, DCBtmp2; \
-	__asm__ __volatile__ ( "\n" \
-		"	call *%%eax		\n" \
-		: "=a" (DCBtmp1), "=b" (DCBtmp2) \
-		: "a" (CP) \
-		: "cc", "memory"); \
-		*(int *)&(FN) = DCBtmp1; \
-		*(int *)&(PN) = DCBtmp2; \
-	} while (0)
-#endif
 #define DEADLOCK_CODE_BLOCK(FN,PN,CP) \
 	__asm__ __volatile__ ( "\n" \
-		"	call *%%eax		\n" \
+		"	callq *%%rax		\n" \
 		: "=a" (FN), "=c" (PN) \
 		: "a" (CP) \
 		: "cc", "memory")
 
 #endif	/* __DEADLOCK_C */
 
-#endif	/* !I386_DEADLOCK_H */
-
+#endif	/* !X64_DEADLOCK_H */

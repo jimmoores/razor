@@ -9,4 +9,8 @@
 #include <aarch64/timer.h>
 #endif
 
+#ifdef TARGET_CPU_X64
+#include <x64/timer.h>
+#endif
+
 #endif /* !_ARCH_TIMER_H */

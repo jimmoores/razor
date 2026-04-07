@@ -44,6 +44,9 @@ libccsp_a_LIBADD = \
 if CCSP_AARCH64
 libccsp_a_LIBADD += kernel/aarch64_cif.o
 endif
+if CCSP_X64
+libccsp_a_LIBADD += kernel/x64_cif.o
+endif
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = ccsp-1.6.pc

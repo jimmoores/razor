@@ -9,4 +9,8 @@
 #include <aarch64/asm_ops.h>
 #endif
 
+#ifdef TARGET_CPU_X64
+#include <x64/asm_ops.h>
+#endif
+
 #endif /* !_ARCH_ASM_OPS_H */

@@ -9,4 +9,8 @@
 #include <aarch64/atomics.h>
 #endif
 
+#ifdef TARGET_CPU_X64
+#include <x64/atomics.h>
+#endif
+
 #endif	/* !_ARCH_ATOMICS_H */
