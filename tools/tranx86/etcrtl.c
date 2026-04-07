@@ -3461,12 +3461,22 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 					ts->cond = (ts->cond ^ 1);
 				}
 			} else {
+				/* On 64-bit targets where INT is 32 bits, register values
+				 * are zero-extended (via INS_TRUNCATE32).  Mask the constant
+				 * to 32 bits to match, so negative INT values compare
+				 * correctly (e.g., -1 becomes 0x00000000FFFFFFFF). */
+				intptr_t eqc_const = (intptr_t)operand;
+#if (BytesPerWord > 4)
+				if (!wide_next) {
+					eqc_const &= 0xFFFFFFFF;
+				}
+#endif
 				switch (constmap_typeof (ts->stack->a_reg)) {
 				default:
-					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)operand, ARG_REG, ts->stack->a_reg, ARG_REG | ARG_IMP, REG_CC));
+					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, eqc_const, ARG_REG, ts->stack->a_reg, ARG_REG | ARG_IMP, REG_CC));
 					break;
 				case VALUE_LOCAL:
-					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)operand, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (ts->stack->a_reg) << WSH), ARG_REG | ARG_IMP, REG_CC));
+					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, eqc_const, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (ts->stack->a_reg) << WSH), ARG_REG | ARG_IMP, REG_CC));
 					break;
 				}
 				ts->cond = CC_Z;

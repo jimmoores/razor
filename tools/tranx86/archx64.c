@@ -1907,13 +1907,25 @@ static void compose_x64_longop (tstate *ts, int sec)
 {
 	switch (sec) {
 	case I_LADD:
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
+		/* LADD: result = Breg + Areg + (Creg & 1).
+		 * SHR puts bit 0 of Creg into carry flag, then ADC adds with carry. */
+		add_to_ins_chain (compose_ins (INS_SHR, 2, 2, ARG_CONST, 1, ARG_REG, ts->stack->old_c_reg,
+			ARG_REG, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
+		constmap_remove (ts->stack->old_c_reg);
+		add_to_ins_chain (compose_ins (INS_ADC, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
 			ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+		constmap_remove (ts->stack->old_b_reg);
 		ts->stack->a_reg = ts->stack->old_b_reg;
 		break;
 	case I_LSUB:
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
+		/* LSUB: result = Breg - Areg - (Creg & 1).
+		 * SHR puts bit 0 of Creg into carry flag, then SBB subtracts with borrow. */
+		add_to_ins_chain (compose_ins (INS_SHR, 2, 2, ARG_CONST, 1, ARG_REG, ts->stack->old_c_reg,
+			ARG_REG, ts->stack->old_c_reg, ARG_REG | ARG_IMP, REG_CC));
+		constmap_remove (ts->stack->old_c_reg);
+		add_to_ins_chain (compose_ins (INS_SBB, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
 			ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+		constmap_remove (ts->stack->old_b_reg);
 		ts->stack->a_reg = ts->stack->old_b_reg;
 		break;
 	case I_LSUM:
@@ -2139,7 +2151,11 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		/* Do nothing for now */
 		break;
 	case I_FPSTNLI32:
-		add_to_ins_chain (compose_ins (INS_FIST32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		/* On 64-bit targets, workspace slots are 8 bytes.  Using FIST32
+		 * writes only 4 bytes, leaving the upper 4 bytes of the slot
+		 * with stale data.  Use FIST64 to write a full 64-bit integer
+		 * (still 32-bit range value) so the entire slot is valid. */
+		add_to_ins_chain (compose_ins (INS_FIST64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
 		add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
 		ts->stack->fs_depth--;
 		break;
@@ -2174,6 +2190,87 @@ static void compose_x64_fpop (tstate *ts, int sec)
 	case I_FPRANGE:
 		/* Range check -- no-op for now */
 		break;
+	/*{{{  I_FPI32TOR64, I_FPI32TOR32 -- integer to real conversions */
+	case I_FPI32TOR64:
+	case I_FPI32TOR32:
+		add_to_ins_chain (compose_ins (INS_FILD32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		compose_fp_set_fround_x64 (ts, FPU_N);
+		ts->stack->fs_depth++;
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
+	/*{{{  I_FPRTOI32 -- convert FP value to INT32 */
+	case I_FPRTOI32:
+		add_to_ins_chain (compose_ins (INS_FRNDINT, 0, 0));
+		compose_fp_set_fround_x64 (ts, FPU_N);
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
+	/*{{{  I_FPLDNLADDDB -- add non-local REAL64 (to top of FP stack) */
+	case I_FPLDNLADDDB:
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			add_to_ins_chain (compose_ins (INS_FADD64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+		} else {
+			add_to_ins_chain (compose_ins (INS_FADD64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		}
+		compose_fp_set_fround_x64 (ts, FPU_N);
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
+	/*{{{  I_FPLDNLADDSN -- add non-local REAL32 (to top of FP stack) */
+	case I_FPLDNLADDSN:
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			add_to_ins_chain (compose_ins (INS_FADD32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+		} else {
+			add_to_ins_chain (compose_ins (INS_FADD32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		}
+		compose_fp_set_fround_x64 (ts, FPU_N);
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
+	/*{{{  I_FPLDNLMULDB -- multiply non-local REAL64 (with top of FP stack) */
+	case I_FPLDNLMULDB:
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			add_to_ins_chain (compose_ins (INS_FMUL64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+		} else {
+			add_to_ins_chain (compose_ins (INS_FMUL64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		}
+		compose_fp_set_fround_x64 (ts, FPU_N);
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
+	/*{{{  I_FPLDNLMULSN -- multiply non-local REAL32 (with top of FP stack) */
+	case I_FPLDNLMULSN:
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			add_to_ins_chain (compose_ins (INS_FMUL32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+		} else {
+			add_to_ins_chain (compose_ins (INS_FMUL32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		}
+		compose_fp_set_fround_x64 (ts, FPU_N);
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
+	/*{{{  I_FPMULBY2 -- floating-point multiply by 2 */
+	case I_FPMULBY2:
+		add_to_ins_chain (compose_ins (INS_FLD1, 0, 0));
+		add_to_ins_chain (compose_ins (INS_FXCH, 0, 0));
+		add_to_ins_chain (compose_ins (INS_FSCALE, 0, 0));
+		add_to_ins_chain (compose_ins (INS_FSTP, 0, 1, ARG_FREG, 1));
+		compose_fp_set_fround_x64 (ts, FPU_N);
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
+	/*{{{  I_FPDIVBY2 -- floating-point divide by 2 */
+	case I_FPDIVBY2:
+		add_to_ins_chain (compose_ins (INS_FLD1, 0, 0));
+		add_to_ins_chain (compose_ins (INS_FCHS, 0, 0));
+		add_to_ins_chain (compose_ins (INS_FXCH, 0, 0));
+		add_to_ins_chain (compose_ins (INS_FSCALE, 0, 0));
+		add_to_ins_chain (compose_ins (INS_FSTP, 0, 1, ARG_FREG, 1));
+		compose_fp_set_fround_x64 (ts, FPU_N);
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
 	default:
 		fprintf (stderr, "%s: unsupported x64 fp operation %d (0x%x)\n", progname, sec, sec);
 		break;
