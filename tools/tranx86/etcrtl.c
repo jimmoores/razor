@@ -3473,10 +3473,36 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 #endif
 				switch (constmap_typeof (ts->stack->a_reg)) {
 				default:
+#if (BytesPerWord > 4)
+					if (!wide_next) {
+						/* On 64-bit, the register value may be sign-extended
+						 * (e.g. from INT16 load via movswq), but the constant
+						 * has been zero-extended.  Truncate the register to
+						 * 32 bits so both sides are zero-extended. */
+						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+					}
+#endif
 					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, eqc_const, ARG_REG, ts->stack->a_reg, ARG_REG | ARG_IMP, REG_CC));
 					break;
 				case VALUE_LOCAL:
-					add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, eqc_const, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (ts->stack->a_reg) << WSH), ARG_REG | ARG_IMP, REG_CC));
+#if (BytesPerWord > 4)
+					if (!wide_next) {
+						/* On 64-bit, workspace slots may contain sign-extended
+						 * 32-bit values (e.g. -99 stored as 0xFFFFFFFFFFFFFF9D).
+						 * The constant has been zero-extended (masked to 32 bits).
+						 * Load the workspace value into a register and truncate
+						 * it to 32 bits for consistent comparison. */
+						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+							ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->a_reg) << WSH,
+							ARG_REG, ts->stack->a_reg));
+						constmap_remove (ts->stack->a_reg);
+						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
+						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, eqc_const, ARG_REG, ts->stack->a_reg, ARG_REG | ARG_IMP, REG_CC));
+					} else
+#endif
+					{
+						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, eqc_const, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (ts->stack->a_reg) << WSH), ARG_REG | ARG_IMP, REG_CC));
+					}
 					break;
 				}
 				ts->cond = CC_Z;
