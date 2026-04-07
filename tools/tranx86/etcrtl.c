@@ -486,10 +486,21 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					ts->stack->old_c_reg = ts->stack->c_reg;
 					deferred_cond (ts);
 					tstack_setsec (ts->stack, I_POP, arch);
+#if (WSH > 2)
+					/* On 64-bit targets, route through the architecture's
+					 * FP conversion handler (SSE2/NEON) instead of x87
+					 * INS_FILD64 which doesn't interact with SSE2 xmm regs.
+					 * Use I_FPI64TOR64 for 64-bit integer to FP conversion
+					 * (distinct from I_FPI32TOR64 which converts 32-bit INTs).
+					 * compose_fpop handles fs_depth and tstate_ctofp. */
+					arch->compose_fpop (ts, I_FPI64TOR64);
+					arch->compose_fp_set_fround (ts, FPU_N);
+#else
 					add_to_ins_chain (compose_ins (INS_FILD64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
 					arch->compose_fp_set_fround (ts, FPU_N);
 					ts->stack->fs_depth++;
 					tstate_ctofp (ts);
+#endif
 					break;
 					/*}}}*/
 					/*{{{  BOOLINVERT*/

@@ -322,6 +322,7 @@
 #define I_DEVSS		0xf3
 #define I_DEVLW		0xf4
 #define I_DEVSW		0xf5
+#define I_FPI64TOR64	0xf6	/* internal: convert INT64 (64-bit) to REAL64, used by I64TOREAL on 64-bit targets */
 #define I_XSWORD	0xf8
 #define I_LSX		0xf9
 #define I_CS		0xfa
