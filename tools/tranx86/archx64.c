@@ -99,6 +99,14 @@
 #define RMAX_X64 10
 #define NODEMAX_X64 256
 
+/* SSE2 FP stack simulation: we track a virtual FP stack on xmm registers,
+ * similar to the aarch64 backend using d/s registers.  The transputer has
+ * a 3-deep FP stack (FA, FB, FC).  We use xmm0-xmm2 for these slots.
+ * xmm3 is used as scratch for swap/temp operations.
+ * All FP values are kept in double precision (REAL64) internally.
+ * REAL32 values are widened on load and narrowed on store. */
+#define X64_FP_STACK_SIZE 3
+
 /* Reference counting operation constants (may not be in transputer.h) */
 #ifndef I_RCINIT
 #define I_RCINIT 200
@@ -161,6 +169,17 @@ static char *x64_regs8[] = {
 static char *x64_fregs[] = {
 	"%st(0)", "%st(1)", "%st(2)", "%st(3)", "%st(4)", "%st(5)", "%st(6)", "%st(7)"
 };
+
+/* SSE2 xmm register names (for annotation text) */
+static const char *x64_xmm_regs[] = {
+	"%xmm0", "%xmm1", "%xmm2", "%xmm3", "%xmm4", "%xmm5", "%xmm6", "%xmm7"
+};
+
+/* SSE2 FP stack state */
+static int x64_fp_stack_depth;		/* current depth of simulated FP stack */
+static int x64_fp_rounding_mode;	/* current MXCSR rounding mode (0=N,1=M,2=P,3=Z) */
+static int x64_fp_had_fpint;		/* flag: FPINT preceded FPSTNLI32 */
+static int x64_fp_masks_needed;		/* flag: need to emit FP constant masks in data section */
 
 /* System V ABI: first arg in rdi for kernel calls */
 static const int xregs[3] = { REG_RDI, REG_RSI, REG_RDX };
@@ -233,6 +252,8 @@ static void compose_iospace_write_x64 (tstate *ts, int portreg, int addrreg, int
 static void compose_fp_set_fround_x64 (tstate *ts, int mode);
 static void compose_fp_init_x64 (tstate *ts);
 static void compose_reset_fregs_x64 (tstate *ts);
+static void x64_fp_emit_anno (tstate *ts, const char *fmt, ...);
+static const char *x64_xmm_name (int slot);
 static void compose_refcountop_x64 (tstate *ts, int op, int reg);
 static void compose_memory_barrier_x64 (tstate *ts, int sec);
 static int x64_regcolour_special_to_real (int reg);
@@ -2027,247 +2048,623 @@ static void compose_x64_longop (tstate *ts, int sec)
 }
 /*}}}*/
 
-/*{{{  floating point operations -- uses x87 FPU stack */
+/*{{{  SSE2 FP stack simulation helpers */
+
+/* Get the xmm register name for a given FP stack slot */
+static const char *x64_xmm_name (int slot)
+{
+	if (slot < 0 || slot >= 8) slot = 0;
+	return x64_xmm_regs[slot];
+}
+
+/* Emit an annotation that will be output as real assembly */
+static void x64_fp_emit_anno (tstate *ts, const char *fmt, ...)
+{
+	char buf[256];
+	va_list ap;
+
+	va_start (ap, fmt);
+	vsnprintf (buf, sizeof(buf), fmt, ap);
+	va_end (ap);
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
+}
+
+/* Sync the x64 FP stack depth with the generic tracker.
+ * Handles cases where the generic tracker is updated externally
+ * (e.g. .REALRESULT) without going through compose_fpop. */
+static void x64_fp_sync_depth (tstate *ts)
+{
+	if (x64_fp_stack_depth > ts->stack->fs_depth) {
+		x64_fp_stack_depth = ts->stack->fs_depth;
+	}
+	while (x64_fp_stack_depth < ts->stack->fs_depth) {
+		x64_fp_stack_depth++;
+	}
+}
+
+/* Emit xmm register shifts to simulate an FP stack push.
+ * Moves existing values down: xmm0->xmm1, xmm1->xmm2.
+ * Must be called AFTER incrementing x64_fp_stack_depth.
+ * AT&T syntax: movsd src, dst */
+static void x64_fp_emit_push (tstate *ts)
+{
+	int i;
+	for (i = x64_fp_stack_depth - 1; i > 0; i--) {
+		/* Move slot i-1 to slot i: src=xmm(i-1), dst=xmm(i) */
+		x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(i - 1), x64_xmm_name(i));
+	}
+}
+
+/* Emit xmm register shifts to simulate an FP stack pop.
+ * Moves values up: xmm1->xmm0, xmm2->xmm1.
+ * Must be called AFTER decrementing x64_fp_stack_depth.
+ * AT&T syntax: movsd src, dst */
+static void x64_fp_emit_pop (tstate *ts)
+{
+	int i;
+	for (i = 0; i < x64_fp_stack_depth; i++) {
+		/* Move slot i+1 to slot i: src=xmm(i+1), dst=xmm(i) */
+		x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(i + 1), x64_xmm_name(i));
+	}
+}
+
+/* Emit register shifts after a binary arithmetic op that consumed slot 1.
+ * After addsd/subsd/mulsd/divsd, slot 1 is consumed (result in xmm0).
+ * If there was a value in slot 2 (old depth was 3), move it to slot 1.
+ * Must be called AFTER decrementing x64_fp_stack_depth.
+ * AT&T syntax: movsd src, dst */
+static void x64_fp_emit_arith_pop (tstate *ts)
+{
+	if (x64_fp_stack_depth >= 2) {
+		/* Move slot 2 to slot 1: src=xmm2, dst=xmm1 */
+		x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(2), x64_xmm_name(1));
+	}
+}
+/*}}}*/
+
+/*{{{  floating point operations -- SSE2 scalar */
 static void compose_x64_fpop (tstate *ts, int sec)
 {
+	/* Validate stack state */
+	if (!ts || !ts->stack) {
+		fprintf (stderr, "x64_fpop: invalid tstate or stack\n");
+		return;
+	}
+
+	/* Sync the SSE2 FP stack depth with the generic tracker */
+	x64_fp_sync_depth (ts);
+
 	switch (sec) {
-	case I_FPADD:
-		add_to_ins_chain (compose_ins (INS_FADD, 0, 0));
+	case I_FPADD:  /* FA = FB + FA, pop one */
+		if (x64_fp_stack_depth >= 2) {
+			/* result = FA + FB -> xmm0.
+			 * AT&T: addsd src, dst => dst = dst + src
+			 * addsd %xmm1, %xmm0 => xmm0 = xmm0 + xmm1 */
+			x64_fp_emit_anno (ts, "\taddsd\t%s, %s", x64_xmm_name(1), x64_xmm_name(0));
+			x64_fp_stack_depth--;
+			x64_fp_emit_arith_pop (ts);
+		}
 		ts->stack->fs_depth--;
 		break;
-	case I_FPSUB:
-		add_to_ins_chain (compose_ins (INS_FSUB, 0, 0));
+	case I_FPSUB:  /* FA = FB - FA, pop one */
+		if (x64_fp_stack_depth >= 2) {
+			/* Transputer: result = FB - FA = xmm1 - xmm0.
+			 * AT&T: subsd src, dst => dst = dst - src
+			 * We need xmm1 - xmm0 in xmm0.
+			 * Step 1: subsd %xmm0, %xmm1 => xmm1 = xmm1 - xmm0
+			 * Step 2: movsd %xmm1, %xmm0 => xmm0 = xmm1 (the result) */
+			x64_fp_emit_anno (ts, "\tsubsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(1));
+			x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(1), x64_xmm_name(0));
+			x64_fp_stack_depth--;
+			x64_fp_emit_arith_pop (ts);
+		}
 		ts->stack->fs_depth--;
 		break;
-	case I_FPMUL:
-		add_to_ins_chain (compose_ins (INS_FMUL, 0, 0));
+	case I_FPMUL:  /* FA = FB * FA, pop one */
+		if (x64_fp_stack_depth >= 2) {
+			/* result = FA * FB -> xmm0 (commutative).
+			 * mulsd %xmm1, %xmm0 => xmm0 = xmm0 * xmm1 */
+			x64_fp_emit_anno (ts, "\tmulsd\t%s, %s", x64_xmm_name(1), x64_xmm_name(0));
+			x64_fp_stack_depth--;
+			x64_fp_emit_arith_pop (ts);
+		}
 		ts->stack->fs_depth--;
 		break;
-	case I_FPDIV:
-		add_to_ins_chain (compose_ins (INS_FDIV, 0, 0));
+	case I_FPDIV:  /* FA = FB / FA, pop one */
+		if (x64_fp_stack_depth >= 2) {
+			/* Transputer: result = FB / FA = xmm1 / xmm0.
+			 * Step 1: divsd %xmm0, %xmm1 => xmm1 = xmm1 / xmm0
+			 * Step 2: movsd %xmm1, %xmm0 => xmm0 = xmm1 */
+			x64_fp_emit_anno (ts, "\tdivsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(1));
+			x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(1), x64_xmm_name(0));
+			x64_fp_stack_depth--;
+			x64_fp_emit_arith_pop (ts);
+		}
 		ts->stack->fs_depth--;
 		break;
-	case I_FPSQRT:
-		add_to_ins_chain (compose_ins (INS_FSQRT, 0, 0));
+	case I_FPSQRT:  /* FA = sqrt(FA) */
+		if (x64_fp_stack_depth >= 1) {
+			x64_fp_emit_anno (ts, "\tsqrtsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
+		}
 		break;
-	case I_FPABS:
-		add_to_ins_chain (compose_ins (INS_FABS, 0, 0));
+	case I_FPABS:  /* FA = |FA| */
+		if (x64_fp_stack_depth >= 1) {
+			x64_fp_masks_needed = 1;
+			x64_fp_emit_anno (ts, "\tandpd\t%s, __x64_fp_abs_mask(%%rip)", x64_xmm_name(0));
+		}
 		break;
-	case I_FPREV:
-		add_to_ins_chain (compose_ins (INS_FXCH, 0, 0));
+	case I_FPCHS:  /* FA = -FA */
+		if (x64_fp_stack_depth >= 1) {
+			x64_fp_masks_needed = 1;
+			x64_fp_emit_anno (ts, "\txorpd\t%s, __x64_fp_sign_mask(%%rip)", x64_xmm_name(0));
+		}
 		break;
-	case I_FPDUP:
-		add_to_ins_chain (compose_ins (INS_FLD, 1, 0, ARG_FREG, 0));
+	case I_FPREV:  /* swap FA and FB */
+		if (x64_fp_stack_depth >= 2) {
+			/* Use xmm3 as temp.  AT&T: movsd src, dst */
+			x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(3));  /* xmm3 = xmm0 */
+			x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(1), x64_xmm_name(0));  /* xmm0 = xmm1 */
+			x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(3), x64_xmm_name(1));  /* xmm1 = xmm3 */
+		}
+		break;
+	case I_FPDUP:  /* duplicate FA */
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		/* xmm0 now has old xmm0 value (push moved it, but we want it duplicated in slot 0 too) */
+		/* Actually, push moved xmm0->xmm1, xmm1->xmm2.  xmm0 still has the old value.
+		 * We need xmm0 = old xmm0 (it already is).  No extra copy needed. */
 		ts->stack->fs_depth++;
 		break;
+	case I_FPPOP:  /* pop FP stack */
+		x64_fp_emit_anno (ts, "# FP pop");
+		if (x64_fp_stack_depth > 0) {
+			x64_fp_stack_depth--;
+			x64_fp_emit_pop (ts);
+		}
+		if (ts->stack->fs_depth > 0) {
+			ts->stack->fs_depth--;
+		}
+		break;
 	case I_FPRN:
-		compose_fp_set_fround_x64 (ts, 0);
+		compose_fp_set_fround_x64 (ts, FPU_N);
 		break;
 	case I_FPRZ:
-		compose_fp_set_fround_x64 (ts, 3);
+		compose_fp_set_fround_x64 (ts, FPU_Z);
 		break;
 	case I_FPRP:
-		compose_fp_set_fround_x64 (ts, 2);
+		compose_fp_set_fround_x64 (ts, FPU_P);
 		break;
 	case I_FPRM:
-		compose_fp_set_fround_x64 (ts, 1);
+		compose_fp_set_fround_x64 (ts, FPU_M);
 		break;
-	case I_FPREM:
-		add_to_ins_chain (compose_ins (INS_FPREM1, 0, 0));
+	case I_FPREM:  /* remainder: FA = FB REM FA, pop one */
+		/* Compute IEEE remainder: rem = FB - round_nearest(FB/FA) * FA
+		 * FB is in xmm1, FA is in xmm0. Use xmm3 as scratch.
+		 * AT&T: op src, dst => dst = dst OP src */
+		if (x64_fp_stack_depth >= 2) {
+			/* xmm3 = xmm1 (copy FB) */
+			x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(1), x64_xmm_name(3));
+			/* xmm3 = xmm3 / xmm0 (= FB / FA).  divsd src,dst => dst=dst/src */
+			x64_fp_emit_anno (ts, "\tdivsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(3));
+			/* xmm3 = round_nearest(xmm3) */
+			x64_fp_emit_anno (ts, "\troundsd\t$0, %s, %s", x64_xmm_name(3), x64_xmm_name(3));
+			/* xmm3 = xmm3 * xmm0 (= round(FB/FA) * FA).  mulsd src,dst => dst=dst*src */
+			x64_fp_emit_anno (ts, "\tmulsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(3));
+			/* xmm0 = xmm1 - xmm3 (= FB - round(FB/FA)*FA) */
+			x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(1), x64_xmm_name(0));
+			/* subsd src, dst => dst = dst - src. dst=xmm0, src=xmm3 */
+			x64_fp_emit_anno (ts, "\tsubsd\t%s, %s", x64_xmm_name(3), x64_xmm_name(0));
+			x64_fp_stack_depth--;
+			x64_fp_emit_arith_pop (ts);
+		}
 		ts->stack->fs_depth--;
 		break;
-	case I_FPEQ:
+	case I_FPEQ:  /* test FA == FB, pop both, push boolean */
 		{
 			int tmp_reg = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_FUCOM, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTSW, 0, 1, ARG_REG | ARG_IMP, REG_RAX));
-			add_to_ins_chain (compose_ins (INS_SAHF, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
-			ts->stack->fs_depth--;
-			add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
-			ts->stack->fs_depth--;
+			if (x64_fp_stack_depth >= 2) {
+				/* ucomisd sets RFLAGS directly */
+				x64_fp_emit_anno (ts, "\tucomisd\t%s, %s", x64_xmm_name(1), x64_xmm_name(0));
+				x64_fp_stack_depth -= 2;
+			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, tmp_reg));
 			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_E, ARG_REG | ARG_IS8BIT, tmp_reg));
 			ts->stack->a_reg = tmp_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 1) {
+				ts->stack->fs_depth -= 2;
+			} else {
+				ts->stack->fs_depth = 0;
+			}
 		}
 		break;
-	case I_FPGT:
+	case I_FPGT:  /* test FB > FA, pop both, push boolean */
 		{
 			int tmp_reg = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_FUCOM, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTSW, 0, 1, ARG_REG | ARG_IMP, REG_RAX));
-			add_to_ins_chain (compose_ins (INS_SAHF, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
-			ts->stack->fs_depth--;
-			add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
-			ts->stack->fs_depth--;
+			if (x64_fp_stack_depth >= 2) {
+				/* ucomisd xmm1, xmm0: sets CF=0, ZF=0 if xmm1 > xmm0 (CC_A) */
+				x64_fp_emit_anno (ts, "\tucomisd\t%s, %s", x64_xmm_name(0), x64_xmm_name(1));
+				x64_fp_stack_depth -= 2;
+			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, tmp_reg));
 			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_A, ARG_REG | ARG_IS8BIT, tmp_reg));
 			ts->stack->a_reg = tmp_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 1) {
+				ts->stack->fs_depth -= 2;
+			} else {
+				ts->stack->fs_depth = 0;
+			}
 		}
 		break;
-	case I_FPORDERED:
+	case I_FPGE:  /* test FB >= FA, pop both, push boolean */
 		{
 			int tmp_reg = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_FUCOM, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTSW, 0, 1, ARG_REG | ARG_IMP, REG_RAX));
-			add_to_ins_chain (compose_ins (INS_SAHF, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
-			ts->stack->fs_depth--;
-			add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
-			ts->stack->fs_depth--;
+			if (x64_fp_stack_depth >= 2) {
+				/* ucomisd xmm1, xmm0: CC_AE (above or equal) for >= */
+				x64_fp_emit_anno (ts, "\tucomisd\t%s, %s", x64_xmm_name(0), x64_xmm_name(1));
+				x64_fp_stack_depth -= 2;
+			}
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, tmp_reg));
+			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_GE, ARG_REG | ARG_IS8BIT, tmp_reg));
+			ts->stack->a_reg = tmp_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 1) {
+				ts->stack->fs_depth -= 2;
+			} else {
+				ts->stack->fs_depth = 0;
+			}
+		}
+		break;
+	case I_FPORDERED:  /* test FA and FB ordered (not NaN), pop both, push boolean */
+		{
+			int tmp_reg = tstack_newreg (ts->stack);
+			if (x64_fp_stack_depth >= 2) {
+				/* ucomisd sets PF if unordered; SETNP gives 1 if ordered */
+				x64_fp_emit_anno (ts, "\tucomisd\t%s, %s", x64_xmm_name(1), x64_xmm_name(0));
+				x64_fp_stack_depth -= 2;
+			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, tmp_reg));
 			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_FPORD, ARG_REG | ARG_IS8BIT, tmp_reg));
 			ts->stack->a_reg = tmp_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 1) {
+				ts->stack->fs_depth -= 2;
+			} else {
+				ts->stack->fs_depth = 0;
+			}
 		}
 		break;
-	case I_FPNAN:
+	case I_FPNAN:  /* test if FA is NaN, pop FA, push boolean */
 		{
 			int tmp_reg = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_FTST, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTSW, 0, 1, ARG_REG | ARG_IMP, REG_RAX));
-			add_to_ins_chain (compose_ins (INS_SAHF, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
-			ts->stack->fs_depth--;
+			if (x64_fp_stack_depth >= 1) {
+				/* NaN != NaN, so ucomisd xmm0, xmm0 sets PF if NaN */
+				x64_fp_emit_anno (ts, "\tucomisd\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
+				x64_fp_stack_depth--;
+				x64_fp_emit_pop (ts);
+			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, tmp_reg));
 			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_FPNAN, ARG_REG | ARG_IS8BIT, tmp_reg));
 			ts->stack->a_reg = tmp_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 0) ts->stack->fs_depth--;
 		}
 		break;
-	case I_FPNOTFINITE:
+	case I_FPNOTFINITE:  /* test if FA is Inf or NaN, pop FA, push boolean */
 		{
 			int tmp_reg = tstack_newreg (ts->stack);
-			add_to_ins_chain (compose_ins (INS_FXAM, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTSW, 0, 1, ARG_REG | ARG_IMP, REG_RAX));
-			add_to_ins_chain (compose_ins (INS_SAHF, 0, 0));
-			add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
-			ts->stack->fs_depth--;
+			if (x64_fp_stack_depth >= 1) {
+				/* x - x is 0 for finite, NaN for inf/NaN.
+				 * Use xmm3 as scratch.
+				 * AT&T: movsd src, dst; subsd src, dst => dst = dst - src */
+				x64_fp_emit_anno (ts, "\tmovsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(3));
+				x64_fp_emit_anno (ts, "\tsubsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(3));
+				/* ucomisd xmm3, xmm3: PF set if NaN (not finite) */
+				x64_fp_emit_anno (ts, "\tucomisd\t%s, %s", x64_xmm_name(3), x64_xmm_name(3));
+				x64_fp_stack_depth--;
+				x64_fp_emit_pop (ts);
+			}
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, tmp_reg));
-			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_FPINFNAN, ARG_REG | ARG_IS8BIT, tmp_reg));
+			add_to_ins_chain (compose_ins (INS_SETCC, 1, 1, ARG_COND, CC_FPNAN, ARG_REG | ARG_IS8BIT, tmp_reg));
 			ts->stack->a_reg = tmp_reg;
+			ts->stack->ts_depth = 1;
+			ts->stack->must_set_cmp_flags = 1;
+			constmap_clearall ();
+			if (ts->stack->fs_depth > 0) ts->stack->fs_depth--;
 		}
 		break;
 	case I_FPCHKERR:
-		/* Do nothing for now */
+		/* FP exception check -- no-op for SSE2 (exceptions masked by default) */
 		break;
 	case I_FPSTNLI32:
-		/* On 64-bit targets, workspace slots are 8 bytes.  Using FIST32
-		 * writes only 4 bytes, leaving the upper 4 bytes of the slot
-		 * with stale data.  Use FIST64 to write a full 64-bit integer
-		 * (still 32-bit range value) so the entire slot is valid. */
-		add_to_ins_chain (compose_ins (INS_FIST64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
-		add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
+		/* Convert FA to INT64 and store to [old_a_reg].
+		 * On 64-bit targets, workspace slots are 8 bytes, so we use
+		 * cvttsd2siq / cvtsd2siq to write a full 64-bit integer.
+		 * Use truncation if FPINT preceded, else round to nearest.
+		 * Convert to r11 via annotation, then store via RTL. */
+		if (x64_fp_stack_depth >= 1) {
+			if (x64_fp_had_fpint || x64_fp_rounding_mode == FPU_Z) {
+				x64_fp_emit_anno (ts, "\tcvttsd2siq\t%s, %%r11", x64_xmm_name(0));
+			} else {
+				x64_fp_emit_anno (ts, "\tcvtsd2siq\t%s, %%r11", x64_xmm_name(0));
+			}
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_R11, ARG_REGIND, ts->stack->old_a_reg));
+			x64_fp_stack_depth--;
+			x64_fp_emit_pop (ts);
+			x64_fp_had_fpint = 0;
+		}
 		ts->stack->fs_depth--;
 		break;
-	case I_FPLDNLSN:
-		add_to_ins_chain (compose_ins (INS_FLD32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+	case I_FPSTNLI64:
+		/* Convert FA to INT64 and store */
+		if (x64_fp_stack_depth >= 1) {
+			if (x64_fp_had_fpint || x64_fp_rounding_mode == FPU_Z) {
+				x64_fp_emit_anno (ts, "\tcvttsd2siq\t%s, %%r11", x64_xmm_name(0));
+			} else {
+				x64_fp_emit_anno (ts, "\tcvtsd2siq\t%s, %%r11", x64_xmm_name(0));
+			}
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_R11, ARG_REGIND, ts->stack->old_a_reg));
+			x64_fp_stack_depth--;
+			x64_fp_emit_pop (ts);
+			x64_fp_had_fpint = 0;
+		}
+		if (ts->stack->fs_depth > 0) ts->stack->fs_depth--;
+		break;
+	case I_FPLDNLSN:  /* Load REAL32 from [old_a_reg] onto FP stack */
+		/* Load as single, then widen to double for internal use.
+		 * Push FP stack first, then load into xmm0 */
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		/* Load 32-bit float, widen to 64-bit double */
+		/* Need address from old_a_reg.  Use RTL for the load via INS_MOVE to get
+		 * address into r11, then annotation for the SSE load. */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+		x64_fp_emit_anno (ts, "\tcvtss2sd\t(%%r11), %s", x64_xmm_name(0));
 		ts->stack->fs_depth++;
 		break;
-	case I_FPLDNLDB:
-		add_to_ins_chain (compose_ins (INS_FLD64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+	case I_FPLDNLSNI:  /* Load REAL32 indexed */
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		{
+			int addr_reg = tstack_newreg (ts->stack);
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+				ARG_REG, ts->stack->old_b_reg,
+				ARG_REG, ts->stack->old_a_reg,
+				ARG_REG, addr_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, addr_reg, ARG_REG, REG_R11));
+			x64_fp_emit_anno (ts, "\tcvtss2sd\t(%%r11), %s", x64_xmm_name(0));
+		}
 		ts->stack->fs_depth++;
 		break;
-	case I_FPSTNLSN:
-		add_to_ins_chain (compose_ins (INS_FST32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
-		add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
+	case I_FPLDNLDB:  /* Load REAL64 from [old_a_reg] onto FP stack */
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+			x64_fp_emit_anno (ts, "\tmovsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
+		} else {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+			x64_fp_emit_anno (ts, "\tmovsd\t(%%r11), %s", x64_xmm_name(0));
+		}
+		ts->stack->fs_depth++;
+		break;
+	case I_FPLDNLDBI:  /* Load REAL64 indexed */
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		{
+			int addr_reg = tstack_newreg (ts->stack);
+			/* Scale index by 4 (pre-scaled by occ21 to 32-bit word units) */
+			add_to_ins_chain (compose_ins (INS_SHL, 2, 1,
+				ARG_CONST, (intptr_t)2,
+				ARG_REG, ts->stack->old_b_reg,
+				ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+				ARG_REG, ts->stack->old_b_reg,
+				ARG_REG, ts->stack->old_a_reg,
+				ARG_REG, addr_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, addr_reg, ARG_REG, REG_R11));
+			x64_fp_emit_anno (ts, "\tmovsd\t(%%r11), %s", x64_xmm_name(0));
+		}
+		ts->stack->fs_depth++;
+		break;
+	case I_FPSTNLSN:  /* Store REAL32 from FA to [old_a_reg] */
+		if (x64_fp_stack_depth >= 1) {
+			/* Narrow double to single, store, then pop.
+			 * Use xmm3 as scratch for narrowing so we don't corrupt xmm0
+			 * before the pop moves values. */
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+			x64_fp_emit_anno (ts, "\tcvtsd2ss\t%s, %s", x64_xmm_name(0), x64_xmm_name(3));
+			x64_fp_emit_anno (ts, "\tmovss\t%s, (%%r11)", x64_xmm_name(3));
+			x64_fp_stack_depth--;
+			x64_fp_emit_pop (ts);
+		}
 		ts->stack->fs_depth--;
 		break;
-	case I_FPSTNLDB:
-		add_to_ins_chain (compose_ins (INS_FST64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
-		add_to_ins_chain (compose_ins (INS_FSTP, 1, 0, ARG_FREG, 0));
+	case I_FPSTNLDB:  /* Store REAL64 from FA to [old_a_reg] */
+		if (x64_fp_stack_depth >= 1) {
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				x64_fp_emit_anno (ts, "\tmovsd\t%s, %d(%%r14)", x64_xmm_name(0), offset);
+			} else {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+				x64_fp_emit_anno (ts, "\tmovsd\t%s, (%%r11)", x64_xmm_name(0));
+			}
+			x64_fp_stack_depth--;
+			x64_fp_emit_pop (ts);
+		}
 		ts->stack->fs_depth--;
 		break;
-	case I_FPINT:
-		add_to_ins_chain (compose_ins (INS_FRNDINT, 0, 0));
+	case I_FPINT:  /* Round FA to integer value (keeping as float) */
+		if (x64_fp_stack_depth >= 1) {
+			int rmode;
+			switch (x64_fp_rounding_mode) {
+				case FPU_Z: rmode = 3; break; /* truncate */
+				case FPU_P: rmode = 2; break; /* toward +inf */
+				case FPU_M: rmode = 1; break; /* toward -inf */
+				default:    rmode = 0; break; /* nearest */
+			}
+			x64_fp_emit_anno (ts, "\troundsd\t$%d, %s, %s", rmode, x64_xmm_name(0), x64_xmm_name(0));
+		}
+		x64_fp_had_fpint = 1;
+		x64_fp_rounding_mode = FPU_N;
 		break;
-	case I_FPR32TOR64:
-		/* Widen: already on x87 stack, no-op */
+	case I_FPR32TOR64:  /* Widen: already double internally, nop */
 		break;
-	case I_FPR64TOR32:
-		/* Narrow: store as 32-bit and reload */
-		/* The x87 FPU handles precision internally */
+	case I_FPR64TOR32:  /* Narrow: convert double to single and back */
+		if (x64_fp_stack_depth >= 1) {
+			x64_fp_emit_anno (ts, "\tcvtsd2ss\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
+			x64_fp_emit_anno (ts, "\tcvtss2sd\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
+		}
+		x64_fp_rounding_mode = FPU_N;
 		break;
 	case I_FPRANGE:
-		/* Range check -- no-op for now */
+		/* Range check -- no-op on x64 SSE2 */
 		break;
 	/*{{{  I_FPI32TOR64, I_FPI32TOR32 -- integer to real conversions */
 	case I_FPI32TOR64:
 	case I_FPI32TOR32:
-		add_to_ins_chain (compose_ins (INS_FILD32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
-		compose_fp_set_fround_x64 (ts, FPU_N);
+		/* Load int32 from [old_a_reg], convert to double */
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+			x64_fp_emit_anno (ts, "\tcvtsi2sdl\t%d(%%r14), %s", offset, x64_xmm_name(0));
+		} else {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+			x64_fp_emit_anno (ts, "\tcvtsi2sdl\t(%%r11), %s", x64_xmm_name(0));
+		}
 		ts->stack->fs_depth++;
 		tstate_ctofp (ts);
 		break;
 	/*}}}*/
-	/*{{{  I_FPRTOI32 -- convert FP value to INT32 */
+	/*{{{  I_FPRTOI32 -- mark FA for conversion to INT32 */
 	case I_FPRTOI32:
-		add_to_ins_chain (compose_ins (INS_FRNDINT, 0, 0));
-		compose_fp_set_fround_x64 (ts, FPU_N);
+		/* Actual conversion happens in FPSTNLI32. Just mark rounding mode. */
 		tstate_ctofp (ts);
 		break;
 	/*}}}*/
-	/*{{{  I_FPLDNLADDDB -- add non-local REAL64 (to top of FP stack) */
+	/*{{{  I_FPLDNLADDDB -- load REAL64 and add to FA */
 	case I_FPLDNLADDDB:
-		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FADD64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
-		} else {
-			add_to_ins_chain (compose_ins (INS_FADD64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		if (x64_fp_stack_depth >= 1) {
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				x64_fp_emit_anno (ts, "\taddsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
+			} else {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+				x64_fp_emit_anno (ts, "\taddsd\t(%%r11), %s", x64_xmm_name(0));
+			}
 		}
-		compose_fp_set_fround_x64 (ts, FPU_N);
 		tstate_ctofp (ts);
 		break;
 	/*}}}*/
-	/*{{{  I_FPLDNLADDSN -- add non-local REAL32 (to top of FP stack) */
+	/*{{{  I_FPLDNLADDSN -- load REAL32 and add to FA */
 	case I_FPLDNLADDSN:
-		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FADD32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
-		} else {
-			add_to_ins_chain (compose_ins (INS_FADD32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		if (x64_fp_stack_depth >= 1) {
+			/* Load single into scratch xmm3, widen, then add to xmm0.
+			 * AT&T: addsd src, dst => dst = dst + src */
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				x64_fp_emit_anno (ts, "\tcvtss2sd\t%d(%%r14), %s", offset, x64_xmm_name(3));
+			} else {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+				x64_fp_emit_anno (ts, "\tcvtss2sd\t(%%r11), %s", x64_xmm_name(3));
+			}
+			/* addsd %xmm3, %xmm0 => xmm0 = xmm0 + xmm3 */
+			x64_fp_emit_anno (ts, "\taddsd\t%s, %s", x64_xmm_name(3), x64_xmm_name(0));
 		}
-		compose_fp_set_fround_x64 (ts, FPU_N);
 		tstate_ctofp (ts);
 		break;
 	/*}}}*/
-	/*{{{  I_FPLDNLMULDB -- multiply non-local REAL64 (with top of FP stack) */
+	/*{{{  I_FPLDNLMULDB -- load REAL64 and multiply with FA */
 	case I_FPLDNLMULDB:
-		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FMUL64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
-		} else {
-			add_to_ins_chain (compose_ins (INS_FMUL64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		if (x64_fp_stack_depth >= 1) {
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				x64_fp_emit_anno (ts, "\tmulsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
+			} else {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+				x64_fp_emit_anno (ts, "\tmulsd\t(%%r11), %s", x64_xmm_name(0));
+			}
 		}
-		compose_fp_set_fround_x64 (ts, FPU_N);
 		tstate_ctofp (ts);
 		break;
 	/*}}}*/
-	/*{{{  I_FPLDNLMULSN -- multiply non-local REAL32 (with top of FP stack) */
+	/*{{{  I_FPLDNLMULSN -- load REAL32 and multiply with FA */
 	case I_FPLDNLMULSN:
-		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FMUL32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
-		} else {
-			add_to_ins_chain (compose_ins (INS_FMUL32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
+		if (x64_fp_stack_depth >= 1) {
+			/* Load single into scratch xmm3, widen, then multiply with xmm0.
+			 * AT&T: mulsd src, dst => dst = dst * src */
+			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				x64_fp_emit_anno (ts, "\tcvtss2sd\t%d(%%r14), %s", offset, x64_xmm_name(3));
+			} else {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+				x64_fp_emit_anno (ts, "\tcvtss2sd\t(%%r11), %s", x64_xmm_name(3));
+			}
+			/* mulsd %xmm3, %xmm0 => xmm0 = xmm0 * xmm3 */
+			x64_fp_emit_anno (ts, "\tmulsd\t%s, %s", x64_xmm_name(3), x64_xmm_name(0));
 		}
-		compose_fp_set_fround_x64 (ts, FPU_N);
 		tstate_ctofp (ts);
 		break;
 	/*}}}*/
-	/*{{{  I_FPMULBY2 -- floating-point multiply by 2 */
+	/*{{{  I_FPMULBY2 -- multiply by 2 */
 	case I_FPMULBY2:
-		add_to_ins_chain (compose_ins (INS_FLD1, 0, 0));
-		add_to_ins_chain (compose_ins (INS_FXCH, 0, 0));
-		add_to_ins_chain (compose_ins (INS_FSCALE, 0, 0));
-		add_to_ins_chain (compose_ins (INS_FSTP, 0, 1, ARG_FREG, 1));
-		compose_fp_set_fround_x64 (ts, FPU_N);
+		if (x64_fp_stack_depth >= 1) {
+			/* addsd xmm0, xmm0 is equivalent to multiply by 2 */
+			x64_fp_emit_anno (ts, "\taddsd\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
+		}
 		tstate_ctofp (ts);
 		break;
 	/*}}}*/
-	/*{{{  I_FPDIVBY2 -- floating-point divide by 2 */
+	/*{{{  I_FPDIVBY2 -- divide by 2 */
 	case I_FPDIVBY2:
-		add_to_ins_chain (compose_ins (INS_FLD1, 0, 0));
-		add_to_ins_chain (compose_ins (INS_FCHS, 0, 0));
-		add_to_ins_chain (compose_ins (INS_FXCH, 0, 0));
-		add_to_ins_chain (compose_ins (INS_FSCALE, 0, 0));
-		add_to_ins_chain (compose_ins (INS_FSTP, 0, 1, ARG_FREG, 1));
-		compose_fp_set_fround_x64 (ts, FPU_N);
+		if (x64_fp_stack_depth >= 1) {
+			/* Load 0.5 via integer constant into xmm3.
+			 * 0.5 in IEEE 754 double = 0x3FE0000000000000 */
+			x64_fp_emit_anno (ts, "\tmovabsq\t$0x3FE0000000000000, %%r11");
+			x64_fp_emit_anno (ts, "\tmovq\t%%r11, %s", x64_xmm_name(3));
+			/* mulsd %xmm3, %xmm0 => xmm0 = xmm0 * xmm3 = FA * 0.5 */
+			x64_fp_emit_anno (ts, "\tmulsd\t%s, %s", x64_xmm_name(3), x64_xmm_name(0));
+		}
+		tstate_ctofp (ts);
+		break;
+	/*}}}*/
+	/*{{{  I_FPLDZERODB -- load REAL64 zero */
+	case I_FPLDZERODB:
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		x64_fp_emit_anno (ts, "\txorpd\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
+		ts->stack->fs_depth++;
+		break;
+	/*}}}*/
+	/*{{{  I_FPLDZEROSN -- load REAL32 zero */
+	case I_FPLDZEROSN:
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		x64_fp_emit_anno (ts, "\txorpd\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
+		ts->stack->fs_depth++;
+		break;
+	/*}}}*/
+	/*{{{  I_FPB32TOR64 -- convert unsigned 32-bit int to REAL64 */
+	case I_FPB32TOR64:
+		/* Zero-extend 32-bit value to 64-bit, then convert to double */
+		add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
+		x64_fp_stack_depth++;
+		x64_fp_emit_push (ts);
+		x64_fp_emit_anno (ts, "\tcvtsi2sdq\t%%r11, %s", x64_xmm_name(0));
+		ts->stack->fs_depth++;
 		tstate_ctofp (ts);
 		break;
 	/*}}}*/
@@ -2278,28 +2675,53 @@ static void compose_x64_fpop (tstate *ts, int sec)
 }
 /*}}}*/
 
-/*{{{  FP control */
+/*{{{  FP control -- SSE2 MXCSR */
 static void compose_fp_set_fround_x64 (tstate *ts, int mode)
 {
-	/* x87 rounding mode: change FPCW bits 10-11 */
-	int tmp_reg = tstack_newreg (ts->stack);
+	/* SSE2 rounding mode via MXCSR register bits 13-14.
+	 * MXCSR rounding: 0=nearest, 1=down, 2=up, 3=truncate
+	 * FPU_N=0 (nearest), FPU_P=1 (up), FPU_M=2 (down), FPU_Z=3 (truncate)
+	 * Map: FPU_N->0, FPU_P->2, FPU_M->1, FPU_Z->3 */
+	int mxcsr_mode;
 
-	add_to_ins_chain (compose_ins (INS_FSTCW, 0, 1, ARG_REGIND | ARG_DISP, REG_WPTR, -16));
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, -16, ARG_REG, tmp_reg));
-	add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xF3FF, ARG_REG, tmp_reg, ARG_REG, tmp_reg));
-	add_to_ins_chain (compose_ins (INS_OR, 2, 1, ARG_CONST, (intptr_t)(mode << 10), ARG_REG, tmp_reg, ARG_REG, tmp_reg));
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, -16));
-	add_to_ins_chain (compose_ins (INS_FLDCW, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, -16));
+	switch (mode) {
+		case FPU_N: mxcsr_mode = 0; break; /* nearest */
+		case FPU_P: mxcsr_mode = 2; break; /* up */
+		case FPU_M: mxcsr_mode = 1; break; /* down */
+		case FPU_Z: mxcsr_mode = 3; break; /* truncate */
+		default:    mxcsr_mode = 0; break;
+	}
+
+	x64_fp_rounding_mode = mode;
+
+	/* Use stmxcsr/ldmxcsr to change rounding mode.
+	 * Store MXCSR to stack slot [r14 - 16], modify bits 13-14, reload. */
+	x64_fp_emit_anno (ts, "\tstmxcsr\t-16(%%r14)");
+	if (mxcsr_mode == 0) {
+		/* Clear bits 13-14 */
+		x64_fp_emit_anno (ts, "\tandl\t$0xFFFF9FFF, -16(%%r14)");
+	} else {
+		x64_fp_emit_anno (ts, "\tandl\t$0xFFFF9FFF, -16(%%r14)");
+		x64_fp_emit_anno (ts, "\torl\t$0x%X, -16(%%r14)", mxcsr_mode << 13);
+	}
+	x64_fp_emit_anno (ts, "\tldmxcsr\t-16(%%r14)");
 }
 
 static void compose_fp_init_x64 (tstate *ts)
 {
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("# x64 FPU init")));
+	x64_fp_stack_depth = 0;
+	x64_fp_rounding_mode = FPU_N;
+	x64_fp_had_fpint = 0;
+	x64_fp_masks_needed = 0;
+	x64_fp_emit_anno (ts, "# x64 SSE2 FPU init");
 }
 
 static void compose_reset_fregs_x64 (tstate *ts)
 {
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("# x64 FPU reset")));
+	x64_fp_stack_depth = 0;
+	x64_fp_rounding_mode = FPU_N;
+	x64_fp_had_fpint = 0;
+	x64_fp_emit_anno (ts, "# x64 SSE2 FPU reset");
 }
 /*}}}*/
 
@@ -2980,6 +3402,7 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			fprintf (outstream, "\n");
 			break;
 		case INS_FSUB:
+			/* Legacy x87 -- should not be reached with SSE2 backend */
 			fprintf (outstream, "\tfsubrp\t%%st, %%st(1)\n");
 			break;
 		case INS_MOVEB:
@@ -3006,9 +3429,41 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			fprintf (outstream, "\trep\n\tmovsq\n");
 			break;
 		case INS_ANNO:
-			fprintf (outstream, "# ");
-			x64_drop_arg (tmp->in_args[0], outstream);
-			fprintf (outstream, "\n");
+			if (tmp->in_args[0] && (tmp->in_args[0]->flags & ARG_MODEMASK) == ARG_TEXT) {
+				const char *text = (const char *)(long)tmp->in_args[0]->regconst;
+				const char *p = text;
+				while (*p == '\t' || *p == ' ') p++;
+				/* Check if this is an SSE2 or other real instruction to emit as assembly */
+				if (text[0] == '\t'
+				    || strncmp(p, "movsd", 5) == 0 || strncmp(p, "movss", 5) == 0
+				    || strncmp(p, "addsd", 5) == 0 || strncmp(p, "subsd", 5) == 0
+				    || strncmp(p, "mulsd", 5) == 0 || strncmp(p, "divsd", 5) == 0
+				    || strncmp(p, "sqrtsd", 6) == 0 || strncmp(p, "sqrtss", 6) == 0
+				    || strncmp(p, "andpd", 5) == 0 || strncmp(p, "xorpd", 5) == 0
+				    || strncmp(p, "ucomisd", 7) == 0 || strncmp(p, "ucomiss", 7) == 0
+				    || strncmp(p, "cvtsd2ss", 8) == 0 || strncmp(p, "cvtss2sd", 8) == 0
+				    || strncmp(p, "cvtsi2sd", 8) == 0 || strncmp(p, "cvtsd2si", 8) == 0
+				    || strncmp(p, "cvttsd2si", 9) == 0
+				    || strncmp(p, "roundsd", 7) == 0 || strncmp(p, "roundss", 7) == 0
+				    || strncmp(p, "stmxcsr", 7) == 0 || strncmp(p, "ldmxcsr", 7) == 0
+				    || strncmp(p, "andl", 4) == 0 || strncmp(p, "orl", 3) == 0
+				    || strncmp(p, "movabsq", 7) == 0 || strncmp(p, "movq", 4) == 0) {
+					/* Emit as actual instruction */
+					if (text[0] == '\t') {
+						fprintf (outstream, "%s\n", text);
+					} else {
+						fprintf (outstream, "\t%s\n", text);
+					}
+				} else {
+					fprintf (outstream, "# ");
+					x64_drop_arg (tmp->in_args[0], outstream);
+					fprintf (outstream, "\n");
+				}
+			} else {
+				fprintf (outstream, "# ");
+				x64_drop_arg (tmp->in_args[0], outstream);
+				fprintf (outstream, "\n");
+			}
 			break;
 		case INS_SWAP:
 			fprintf (outstream, "\txchgq\t");
@@ -3511,6 +3966,18 @@ static int x64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 			break;
 		}
 	}
+	/* Emit SSE2 FP constant masks in rodata if needed */
+	if (x64_fp_masks_needed) {
+		fprintf (stream, "\n.section .rodata\n");
+		fprintf (stream, ".align 16\n");
+		fprintf (stream, "__x64_fp_abs_mask:\n");
+		fprintf (stream, "\t.quad\t0x7FFFFFFFFFFFFFFF\n");
+		fprintf (stream, "\t.quad\t0x7FFFFFFFFFFFFFFF\n");
+		fprintf (stream, "__x64_fp_sign_mask:\n");
+		fprintf (stream, "\t.quad\t0x8000000000000000\n");
+		fprintf (stream, "\t.quad\t0x8000000000000000\n");
+	}
+
 #ifdef HOST_OS_IS_LINUX
 	fprintf (stream, ".section .note.GNU-stack,\"\",%%progbits\n");
 #endif
