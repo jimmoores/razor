@@ -833,9 +833,11 @@ else
   oclibpath="@KROC_CCSP_LIBPATH@ -L$intree/modules/inmoslibs/libsrc/forall"
   cincludepath="@KROC_CCSP_CINCPATH@"
   # Prevent the linker from finding stale installed libraries in /usr/local/lib
-  # or other system paths when building in-tree. The -L paths above should be
-  # sufficient; this ensures shared library dependency resolution also uses them.
+  # or other system paths when building in-tree. -rpath-link fixes build-time
+  # resolution; -rpath embeds the paths into the executable so it can find
+  # the shared libraries at runtime without LD_LIBRARY_PATH or make install.
   oclibpath="$oclibpath -Wl,-rpath-link,$intree/runtime/ccsp -Wl,-rpath-link,$intree/runtime/libkrocif"
+  oclibpath="$oclibpath -Wl,-rpath,$intree/runtime/ccsp -Wl,-rpath,$intree/runtime/libkrocif"
 fi
 
 #}}}
@@ -866,6 +868,11 @@ IFS=':'
 for dir in $opts_libpaths; do
 	oclibpath="-L$dir $oclibpath"
 	ocsearch="$dir:$ocsearch"
+	# For in-tree builds, embed library paths into the executable so it
+	# can find shared libraries at runtime without LD_LIBRARY_PATH.
+	if [ "$intree" != "" ]; then
+		oclibpath="-Wl,-rpath,$dir $oclibpath"
+	fi
 done
 
 for dir in $opts_incpaths; do
