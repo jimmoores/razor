@@ -2602,10 +2602,14 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		break;
 	case I_FPR64TOR32:  /* Narrow: convert double to single and back */
 		if (x64_fp_stack_depth >= 1) {
+			/* The cvtsd2ss instruction uses the MXCSR rounding mode,
+			 * which was set by the preceding FPRN/FPRZ/etc instruction.
+			 * Do NOT reset x64_fp_rounding_mode here -- it must reflect
+			 * the actual MXCSR state so that subsequent instructions
+			 * (like FPSTNLSN) can correctly decide whether to reset it. */
 			x64_fp_emit_anno (ts, "\tcvtsd2ss\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
 			x64_fp_emit_anno (ts, "\tcvtss2sd\t%s, %s", x64_xmm_name(0), x64_xmm_name(0));
 		}
-		x64_fp_rounding_mode = FPU_N;
 		break;
 	case I_FPRANGE:
 		/* Range check -- no-op on x64 SSE2 */

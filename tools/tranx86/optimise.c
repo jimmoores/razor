@@ -881,11 +881,32 @@ static int codeblock_pack_sequences (ins_chain *head)
 						break;
 					}
 				}
-				
+
 				if (i < MAX_IN_ARGS) {
 					break;
 				}
-				
+
+				/* If the target is a memory location (REGIND), check for
+				 * INS_ANNO instructions between the two moves.  On x64,
+				 * FP operations are emitted as annotations that may read
+				 * from memory, so we must not eliminate a store that feeds
+				 * an intervening FP instruction. */
+				if (ArgMode(out_arg) == ARG_REGIND) {
+					ins_chain *scan = tmp->next;
+					int has_anno = 0;
+
+					while (scan && scan != next_ins) {
+						if (scan->type == INS_ANNO) {
+							has_anno = 1;
+							break;
+						}
+						scan = scan->next;
+					}
+					if (has_anno) {
+						break;
+					}
+				}
+
 				this_ins = next_ins;
 				next_ins = rtl_next_instr (next_ins);
 			}
