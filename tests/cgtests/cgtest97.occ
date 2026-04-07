@@ -1,0 +1,102 @@
+-- CG test 97 -- x64 SSE2 FPABS/FPCHS regression test
+-- Tests andpd/xorpd instruction generation for FP abs/negate.
+-- Bug: AT&T operand order was reversed for andpd/xorpd with
+-- memory operands (FP constant masks), causing assembler errors
+-- in trig library functions that use I_FPABS and I_FPCHS.
+
+PROC cgtest97 (CHAN OF BYTE keyb, scr, err)
+
+  #INCLUDE "cgmain.occ"
+  #INCLUDE "cgreal.occ"
+
+  SEQ
+    init ("CG test 97", "SSE2 FPABS (andpd) and FPCHS (xorpd)")
+
+    --{{{  REAL64 DMINUSX (generates I_FPCHS -> xorpd)
+    title ("REAL64 DMINUSX (FPCHS/xorpd)")
+    REAL64 x, y :
+    SEQ
+      x := 42.5(REAL64)
+      y := DMINUSX(x)
+      check.REAL64(y, -42.5(REAL64), "R97-001")
+
+      x := -3.0(REAL64)
+      y := DMINUSX(x)
+      check.REAL64(y, 3.0(REAL64), "R97-002")
+
+      -- negate zero
+      x := 0.0(REAL64)
+      y := DMINUSX(x)
+      check.REAL64(y + 1.0(REAL64), 1.0(REAL64), "R97-003")
+
+      -- constant folding case
+      y := DMINUSX(7.0(REAL64))
+      check.REAL64(y, -7.0(REAL64), "R97-004")
+    --}}}
+
+    --{{{  REAL64 DABS (generates I_FPABS -> andpd)
+    title ("REAL64 DABS (FPABS/andpd)")
+    REAL64 x, y :
+    SEQ
+      x := -8.0(REAL64)
+      y := DABS(x)
+      check.REAL64(y, 8.0(REAL64), "R97-010")
+
+      x := 8.0(REAL64)
+      y := DABS(x)
+      check.REAL64(y, 8.0(REAL64), "R97-011")
+
+      -- constant folding case
+      y := DABS(-99.5(REAL64))
+      check.REAL64(y, 99.5(REAL64), "R97-012")
+    --}}}
+
+    --{{{  REAL32 MINUSX (generates I_FPCHS -> xorpd)
+    title ("REAL32 MINUSX (FPCHS/xorpd)")
+    REAL32 a, b :
+    SEQ
+      a := 12.5(REAL32)
+      b := MINUSX(a)
+      check.REAL32(b, -12.5(REAL32), "R97-020")
+
+      a := -9.0(REAL32)
+      b := MINUSX(a)
+      check.REAL32(b, 9.0(REAL32), "R97-021")
+    --}}}
+
+    --{{{  REAL32 ABS (generates I_FPABS -> andpd)
+    title ("REAL32 ABS (FPABS/andpd)")
+    REAL32 a, b :
+    SEQ
+      a := -100.25(REAL32)
+      b := ABS(a)
+      check.REAL32(b, 100.25(REAL32), "R97-030")
+
+      a := 100.25(REAL32)
+      b := ABS(a)
+      check.REAL32(b, 100.25(REAL32), "R97-031")
+    --}}}
+
+    --{{{  abs and negate in expressions
+    title ("abs/negate in expressions")
+    REAL64 x, y, z :
+    SEQ
+      x := -5.0(REAL64)
+      y := 3.0(REAL64)
+      z := DABS(x) + y
+      check.REAL64(z, 8.0(REAL64), "R97-040")
+
+      z := DMINUSX(x) + y
+      check.REAL64(z, 8.0(REAL64), "R97-041")
+
+      -- abs(negate(x)) = abs(x)
+      z := DABS(DMINUSX(x))
+      check.REAL64(z, 5.0(REAL64), "R97-042")
+
+      -- negate(abs(x)) = -abs(x)
+      z := DMINUSX(DABS(x))
+      check.REAL64(z, -5.0(REAL64), "R97-043")
+    --}}}
+
+    finish ()
+:
