@@ -3609,8 +3609,8 @@ static void do_code_nocc_special (tstate *ts, etc_chain **ecodeptr, arch_t *arch
 			add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 #endif
 			generate_call (ts, etc_code, arch, 0);
-			/* XXX: adjust the workspace back to where it was */
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, 32, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+			/* adjust the workspace back to where it was */
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(adj << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 		}
 		break;
 		/*}}}*/

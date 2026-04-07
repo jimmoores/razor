@@ -931,13 +931,15 @@ static void compose_x64_inline_in_2 (tstate *ts, int width)
 			known_size--;
 		}
 	} else {
-		/* Use rep movsb for general case */
+		/* Use rep movsb for general case.
+		 * rep movsb: RSI=src, RDI=dst, RCX=count.
+		 * On x64, RSI/RDI are not FPTR/BPTR, so save/restore RSI/RDI. */
 		int tmp_reg2 = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_FPTR));
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_BPTR));
+		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RSI));
+		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RDI));
 		ts->stack_drift += 2;
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, tmp_reg, W_POINTER, ARG_REG, REG_FPTR));
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, dest_reg, ARG_REG, REG_BPTR));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, tmp_reg, W_POINTER, ARG_REG, REG_RSI));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, dest_reg, ARG_REG, REG_RDI));
 		if (known_size) {
 			tmp_reg2 = tstack_newreg (ts->stack);
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, known_size, ARG_REG, tmp_reg2));
@@ -945,10 +947,10 @@ static void compose_x64_inline_in_2 (tstate *ts, int width)
 			tmp_reg2 = count_reg;
 		}
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, tmp_reg2, ARG_REG, REG_RCX));
-		add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, tmp_reg2, ARG_REG | ARG_IMP, REG_FPTR, ARG_REG | ARG_IMP, REG_BPTR));
+		add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, tmp_reg2, ARG_REG | ARG_IMP, REG_RSI, ARG_REG | ARG_IMP, REG_RDI));
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg2));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_BPTR));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_FPTR));
+		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RDI));
+		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RSI));
 		ts->stack_drift -= 2;
 	}
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 1));
@@ -1114,23 +1116,25 @@ static void compose_x64_inline_out_2 (tstate *ts, int width)
 			known_size--;
 		}
 	} else {
-		/* Use rep movsb for general case */
+		/* Use rep movsb for general case.
+		 * rep movsb: RSI=src, RDI=dst, RCX=count.
+		 * On x64, RSI/RDI are not FPTR/BPTR, so save/restore RSI/RDI. */
 		int count_r = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_FPTR));
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_BPTR));
+		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RSI));
+		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RDI));
 		ts->stack_drift += 2;
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, src_reg, ARG_REG, REG_FPTR));
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, tmp_reg, W_POINTER, ARG_REG, REG_BPTR));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, src_reg, ARG_REG, REG_RSI));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, tmp_reg, W_POINTER, ARG_REG, REG_RDI));
 		if (known_size) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, known_size, ARG_REG, count_r));
 		} else {
 			count_r = count_reg;
 		}
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, count_r, ARG_REG, REG_RCX));
-		add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, count_r, ARG_REG | ARG_IMP, REG_FPTR, ARG_REG | ARG_IMP, REG_BPTR));
+		add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, count_r, ARG_REG | ARG_IMP, REG_RSI, ARG_REG | ARG_IMP, REG_RDI));
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, count_r));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_BPTR));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_FPTR));
+		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RDI));
+		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RSI));
 		ts->stack_drift -= 2;
 	}
 
@@ -1459,69 +1463,128 @@ static void compose_x64_inline_malloc (tstate *ts)
 /*{{{  compose_x64_move_loadptrs */
 static void compose_x64_move_loadptrs (tstate *ts)
 {
-	/* This is a no-op on x64; the MOVE instruction handles it */
+	/* Load src pointer into RSI and dst pointer into RDI for rep movsb.
+	 * On x64, RSI/RDI are NOT mapped to special registers (unlike i386 where
+	 * ESI=JPTR and EDI=LPTR), so we must explicitly load them here. */
+	switch (constmap_typeof (ts->stack->old_c_reg)) {
+	case VALUE_LABADDR:
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_c_reg), ARG_REG, REG_RSI));
+		break;
+	case VALUE_LOCALPTR:
+		if (!constmap_regconst (ts->stack->old_c_reg)) {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_RSI));
+		} else {
+			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, REG_RSI));
+		}
+		break;
+	case VALUE_LOCAL:
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, REG_RSI));
+		break;
+	default:
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, REG_RSI));
+		break;
+	}
+	switch (constmap_typeof (ts->stack->old_b_reg)) {
+	case VALUE_LABADDR:
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, REG_RDI));
+		break;
+	case VALUE_LOCALPTR:
+		if (!constmap_regconst (ts->stack->old_b_reg)) {
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_RDI));
+		} else {
+			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, REG_RDI));
+		}
+		break;
+	case VALUE_LOCAL:
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, REG_RDI));
+		break;
+	default:
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, REG_RDI));
+		break;
+	}
+	return;
 }
 /*}}}*/
 
 /*{{{  compose_x64_move */
 static void compose_x64_move (tstate *ts)
 {
-	/* BLOCKCOPY: Areg=count, Breg=dst, Creg=src. Use rep movsb. */
-	int count_r, src_r, dst_r;
+	/* BLOCKCOPY: Areg=count, Breg=dst, Creg=src. Use rep movsb.
+	 * On x64, rep movsb requires RSI=src, RDI=dst, RCX=count.
+	 * Unlike i386 where ESI/EDI are JPTR/LPTR, on x64 RSI/RDI are
+	 * general-purpose registers that may hold live values, so we must
+	 * save and restore them. */
+	int tmp_reg, tmp_reg2;
 
-	count_r = ts->stack->old_a_reg;
-	dst_r = ts->stack->old_b_reg;
-	src_r = ts->stack->old_c_reg;
-
-	/* Materialise pointers from constmap if needed */
-	switch (constmap_typeof (src_r)) {
-	case VALUE_LABADDR:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (src_r), ARG_REG, src_r));
-		break;
-	case VALUE_LOCALPTR:
-		if (constmap_regconst (src_r)) {
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, constmap_regconst (src_r) << WSH, ARG_REG, src_r));
-		} else {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, src_r));
+	if ((constmap_typeof (ts->stack->old_a_reg) == VALUE_CONST) && (constmap_regconst (ts->stack->old_a_reg) == 8)) {
+		/* Special case: single word (8 bytes) copy (src = Creg, dst = Breg) */
+		tmp_reg = tstack_newreg (ts->stack);
+		switch (constmap_typeof (ts->stack->old_c_reg)) {
+		case VALUE_LABADDR:
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL, constmap_regconst (ts->stack->old_c_reg), ARG_REG, tmp_reg));
+			break;
+		default:
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, ts->stack->old_c_reg, ARG_REG, tmp_reg));
+			break;
 		}
-		break;
-	default:
-		break;
-	}
-	constmap_remove (src_r);
-
-	switch (constmap_typeof (dst_r)) {
-	case VALUE_LABADDR:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (dst_r), ARG_REG, dst_r));
-		break;
-	case VALUE_LOCALPTR:
-		if (constmap_regconst (dst_r)) {
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, constmap_regconst (dst_r) << WSH, ARG_REG, dst_r));
-		} else {
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, dst_r));
+		switch (constmap_typeof (ts->stack->old_b_reg)) {
+		case VALUE_LOCALPTR:
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH));
+			break;
+		default:
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND, ts->stack->old_b_reg));
+			break;
 		}
-		break;
-	default:
-		break;
+	} else {
+		/* General block move using rep movsb */
+		add_to_ins_chain (compose_ins (INS_OR, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+		add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 0));
+		/* Save RSI and RDI - the registers used by rep movsb */
+		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RSI));
+		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RDI));
+		ts->stack_drift += 2;
+		compose_x64_move_loadptrs (ts);
+		tmp_reg = tstack_newreg (ts->stack);
+		tmp_reg2 = tstack_newreg (ts->stack);
+		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, tmp_reg, ARG_REG, REG_RSI));
+		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, tmp_reg2, ARG_REG, REG_RDI));
+		switch (constmap_typeof (ts->stack->old_a_reg)) {
+		case VALUE_CONST:
+			{
+				int loop_count;
+
+				loop_count = constmap_regconst (ts->stack->old_a_reg);
+				if (!(loop_count & 0x07)) {
+					/* do replicated quad-word move */
+					int new_reg = tstack_newreg (ts->stack);
+
+					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)(loop_count >> 3), ARG_REG, new_reg));
+					add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, new_reg, ARG_REG, REG_RCX));
+					add_to_ins_chain (compose_ins (INS_REPMOVEL, 2, 1, ARG_REG | ARG_IMP, new_reg, ARG_REG | ARG_IMP, tmp_reg, ARG_REG | ARG_IMP, tmp_reg2));
+					add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, new_reg));
+				} else {
+					/* regular byte move */
+					add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_RCX));
+					add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, ts->stack->old_a_reg, ARG_REG | ARG_IMP, tmp_reg, ARG_REG | ARG_IMP, tmp_reg2));
+					add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, ts->stack->old_a_reg));
+				}
+			}
+			break;
+		default:
+			/* regular byte move */
+			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_RCX));
+			add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, ts->stack->old_a_reg, ARG_REG | ARG_IMP, tmp_reg, ARG_REG | ARG_IMP, tmp_reg2));
+			add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, ts->stack->old_a_reg));
+			break;
+		}
+		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg2));
+		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RDI));
+		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RSI));
+		ts->stack_drift -= 2;
+		add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 	}
-	constmap_remove (dst_r);
-	constmap_remove (count_r);
-
-	/* Save and use RSI/RDI for rep movsb */
-	add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_FPTR));
-	add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_BPTR));
-	ts->stack_drift += 2;
-
-	/* rep movsb: rsi=src, rdi=dst, rcx=count */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, src_r, ARG_REG, REG_RSI));
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, dst_r, ARG_REG, REG_RDI));
-	add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, count_r, ARG_REG, REG_RCX));
-	add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, count_r, ARG_REG | ARG_IMP, REG_RSI, ARG_REG | ARG_IMP, REG_RDI));
-	add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, count_r));
-
-	add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_BPTR));
-	add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_FPTR));
-	ts->stack_drift -= 2;
+	return;
 }
 /*}}}*/
 
@@ -1801,7 +1864,7 @@ static void compose_x64_nreturn (tstate *ts, int adjust)
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, REG_WPTR, ARG_REG, tmp_reg));
 
 	if (adjust != 0) {
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, adjust << WSH, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)(adjust << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 	}
 
 	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_REGIND | ARG_IND, tmp_reg));
@@ -3023,6 +3086,19 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 						x64_drop_arg (tmp->out_args[0], outstream);
 						fprintf (outstream, "\n");
 					}
+				} else if ((in_mode == ARG_LABEL || in_mode == ARG_FLABEL || in_mode == ARG_INSLABEL) && !is_const) {
+					/* Load value from label address: movq .Lnn(%rip), %reg */
+					char lbuf[64];
+					if (in_mode == ARG_LABEL) {
+						sprintf (lbuf, LBLPFX "%ld", (long)tmp->in_args[0]->regconst);
+					} else if (in_mode == ARG_FLABEL) {
+						sprintf (lbuf, "%ldf", (long)tmp->in_args[0]->regconst);
+					} else {
+						sprintf (lbuf, LBLPFX "%ld", (long)((ins_chain *)(long)tmp->in_args[0]->regconst)->in_args[0]->regconst);
+					}
+					fprintf (outstream, "\tmovq\t%s(%%rip), ", lbuf);
+					x64_drop_arg (tmp->out_args[0], outstream);
+					fprintf (outstream, "\n");
 				} else {
 					/* Default MOV handling */
 					fprintf (outstream, "\tmovq\t");
