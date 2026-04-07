@@ -2242,13 +2242,13 @@ static void compose_x64_fpop (tstate *ts, int sec)
 	case I_FPABS:  /* FA = |FA| */
 		if (x64_fp_stack_depth >= 1) {
 			x64_fp_masks_needed = 1;
-			x64_fp_emit_anno (ts, "\tandpd\t%s, __x64_fp_abs_mask(%%rip)", x64_xmm_name(0));
+			x64_fp_emit_anno (ts, "\tandpd\t__x64_fp_abs_mask(%%rip), %s", x64_xmm_name(0));
 		}
 		break;
 	case I_FPCHS:  /* FA = -FA */
 		if (x64_fp_stack_depth >= 1) {
 			x64_fp_masks_needed = 1;
-			x64_fp_emit_anno (ts, "\txorpd\t%s, __x64_fp_sign_mask(%%rip)", x64_xmm_name(0));
+			x64_fp_emit_anno (ts, "\txorpd\t__x64_fp_sign_mask(%%rip), %s", x64_xmm_name(0));
 		}
 		break;
 	case I_FPREV:  /* swap FA and FB */
