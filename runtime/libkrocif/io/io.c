@@ -142,6 +142,8 @@ int init_occam_io (int tlpiface)
 #elif defined(__aarch64__)
 	asm ("adrp %0, :got:O_kroc_keyboard_process\n\t"
 		 "ldr  %0, [%0, :got_lo12:O_kroc_keyboard_process]" : "=r" (kbd_ws[-1]));
+#elif defined(__x86_64__)
+	asm ("leaq O_kroc_keyboard_process(%%rip), %0" : "=r" (kbd_ws[-1]));
 #elif defined(__i386__)
 	asm ("movl $O_kroc_keyboard_process, %0" : "=r" (kbd_ws[-1]));
 #endif
@@ -165,6 +167,8 @@ int init_occam_io (int tlpiface)
 #elif defined(__aarch64__)
 	asm ("adrp %0, :got:O_kroc_screen_process\n\t"
 	     "ldr  %0, [%0, :got_lo12:O_kroc_screen_process]" : "=r" (scr_ws[-1]));
+#elif defined(__x86_64__)
+	asm ("leaq O_kroc_screen_process(%%rip), %0" : "=r" (scr_ws[-1]));
 #elif defined(__i386__)
 	asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[-1]));
 #endif
@@ -182,6 +186,8 @@ int init_occam_io (int tlpiface)
 #elif defined(__aarch64__)
 	asm ("adrp %0, :got:O_kroc_error_process\n\t"
 	     "ldr  %0, [%0, :got_lo12:O_kroc_error_process]" : "=r" (err_ws[-1]));
+#elif defined(__x86_64__)
+	asm ("leaq O_kroc_error_process(%%rip), %0" : "=r" (err_ws[-1]));
 #elif defined(__i386__)
 	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[-1]));
 #endif

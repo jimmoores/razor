@@ -1690,10 +1690,12 @@ static void compose_x64_return (tstate *ts)
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
 	}
 
-	/* Pop I_CALL frame: 4 words = 32 bytes on 64-bit */
+	/* Pop I_CALL frame: 4 words = 32 bytes on 64-bit.
+	 * The return address was stored at Wptr[0] (by the I_CALL stub or JENTRY)
+	 * BEFORE the frame pop.  After adding 4<<WSH, read it back at -(4<<WSH)
+	 * from the new Wptr -- matching the i386 pattern (PUSH Wptr[-16]; RET). */
 	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)(4 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-	/* Jump to return address at old Wptr[Iptr] */
-	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_REGIND | ARG_IND | ARG_DISP, REG_WPTR, W_IPTR));
+	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_REGIND | ARG_IND | ARG_DISP, REG_WPTR, -(4 << WSH)));
 
 	for (i = ts->numfuncresults - 1; i >= 0; i--) {
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, toldregs[i]));
