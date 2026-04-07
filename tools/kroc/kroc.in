@@ -832,6 +832,10 @@ if [ "$intree" = "" ]; then
 else
   oclibpath="@KROC_CCSP_LIBPATH@ -L$intree/modules/inmoslibs/libsrc/forall"
   cincludepath="@KROC_CCSP_CINCPATH@"
+  # Prevent the linker from finding stale installed libraries in /usr/local/lib
+  # or other system paths when building in-tree. The -L paths above should be
+  # sufficient; this ensures shared library dependency resolution also uses them.
+  oclibpath="$oclibpath -Wl,-rpath-link,$intree/runtime/ccsp -Wl,-rpath-link,$intree/runtime/libkrocif"
 fi
 
 #}}}

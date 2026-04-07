@@ -69,3 +69,16 @@ clean-local:
 	cd $(srcdir) && git ls-files --others --ignored --exclude-standard \
 		-- '*.tce' '*.lib' '*.lbb' '*.module' 'liboccam_*.a' \
 		'liboccam_*.so' 'liboccam_*.dylib' | xargs rm -f 2>/dev/null; true
+
+# Rebuild all occam libraries from their .tce files after tranx86 changes.
+# Use this when tranx86 has been modified but occ21 output (.tce) is unchanged.
+# This avoids stale .o files compiled by an older version of tranx86.
+.PHONY: rebuild-libs
+rebuild-libs:
+	@echo "Cleaning all occam object files and libraries..."
+	@cd $(srcdir) && git ls-files --others --ignored --exclude-standard \
+		-- '*.o' '*.lib' '*.lbb' '*.module' 'liboccam_*.a' \
+		'liboccam_*.so' 'liboccam_*.dylib' 'forall-*' | \
+		grep -v 'tools/' | grep -v 'runtime/' | xargs rm -f 2>/dev/null; true
+	@echo "Rebuilding all modules..."
+	$(MAKE) all
