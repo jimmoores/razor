@@ -310,9 +310,10 @@ static word ExternalCallN (void *func, word argc, ...)
 	}
 	va_end (ap);
 
-	/* Cast to typed function pointers so the compiler generates
-	 * correct calling convention code (especially for variadic
-	 * target functions like fprintf on aarch64). */
+	/* Cast to typed function pointers so the compiler generates correct
+	 * calling convention code.  On x64, variadic functions like printf
+	 * require al=0 (no XMM register args).  Use __asm__ to zero al before
+	 * each call since the compiler won't do it for non-variadic types. */
 	typedef word (*fn0_t)(void);
 	typedef word (*fn1_t)(word);
 	typedef word (*fn2_t)(word, word);
@@ -322,17 +323,23 @@ static word ExternalCallN (void *func, word argc, ...)
 	typedef word (*fn6_t)(word, word, word, word, word, word);
 	typedef word (*fn7_t)(word, word, word, word, word, word, word);
 	typedef word (*fn8_t)(word, word, word, word, word, word, word, word);
+#if defined(__x86_64__)
+#define _ZERO_AL __asm__ __volatile__ ("xorl %%eax, %%eax" ::: "rax");
+#else
+#define _ZERO_AL
+#endif
 	switch (argc) {
-		case 0: result = ((fn0_t)func) (); break;
-		case 1: result = ((fn1_t)func) (args[0]); break;
-		case 2: result = ((fn2_t)func) (args[0], args[1]); break;
-		case 3: result = ((fn3_t)func) (args[0], args[1], args[2]); break;
-		case 4: result = ((fn4_t)func) (args[0], args[1], args[2], args[3]); break;
-		case 5: result = ((fn5_t)func) (args[0], args[1], args[2], args[3], args[4]); break;
-		case 6: result = ((fn6_t)func) (args[0], args[1], args[2], args[3], args[4], args[5]); break;
-		case 7: result = ((fn7_t)func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
-		case 8: result = ((fn8_t)func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
+		case 0: _ZERO_AL result = ((fn0_t)func) (); break;
+		case 1: _ZERO_AL result = ((fn1_t)func) (args[0]); break;
+		case 2: _ZERO_AL result = ((fn2_t)func) (args[0], args[1]); break;
+		case 3: _ZERO_AL result = ((fn3_t)func) (args[0], args[1], args[2]); break;
+		case 4: _ZERO_AL result = ((fn4_t)func) (args[0], args[1], args[2], args[3]); break;
+		case 5: _ZERO_AL result = ((fn5_t)func) (args[0], args[1], args[2], args[3], args[4]); break;
+		case 6: _ZERO_AL result = ((fn6_t)func) (args[0], args[1], args[2], args[3], args[4], args[5]); break;
+		case 7: _ZERO_AL result = ((fn7_t)func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
+		case 8: _ZERO_AL result = ((fn8_t)func) (args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
 	}
+#undef _ZERO_AL
 	return result;
 #else
 	ccsp_sched_t *sched = ccsp_scheduler;
