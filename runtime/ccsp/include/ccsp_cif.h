@@ -691,6 +691,9 @@ static inline void ProcStart (Workspace wptr, Workspace ws, Process func)
 	ws[0]	= (word) top;
 	top[0]	= (word) func;
 	top[1]	= (word) ws;
+	/* Set SchedPtr AFTER using ws[StackPtr] for top calculation above,
+	 * since StackPtr and SchedPtr share offset -7. */
+	ws[SchedPtr] = (word) sched;
 
 	ws -= CIF_PROCESS_WORDS;
 

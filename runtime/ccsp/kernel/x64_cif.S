@@ -100,15 +100,18 @@ ccsp_cif_x64_kcall_resched:
 .global ccsp_cif_x64_kcall
 .type ccsp_cif_x64_kcall, @function
 ccsp_cif_x64_kcall:
-	/* Simple: switch to kernel stack, call, switch back */
-	movq	%rsp, %r8		/* save current rsp */
+	/* Save rbx (callee-saved) and use it to hold the original rsp.
+	 * r8-r11 are caller-saved and may be clobbered by the kernel. */
+	pushq	%rbx
+	movq	%rsp, %rbx		/* save current rsp in callee-saved rbx */
 	movq	(%rsi), %rsp		/* switch to kernel stack */
 	movq	%rdi, %r9		/* save wptr */
 	movq	%rdx, %rdi		/* rdi = param0 */
 	movq	%r9, %rdx		/* rdx = wptr */
 	/* rsi = sched (already correct) */
 	callq	*%rcx
-	movq	%r8, %rsp		/* restore rsp */
+	movq	%rbx, %rsp		/* restore rsp from callee-saved rbx */
+	popq	%rbx			/* restore rbx */
 	ret
 .size ccsp_cif_x64_kcall, . - ccsp_cif_x64_kcall
 
