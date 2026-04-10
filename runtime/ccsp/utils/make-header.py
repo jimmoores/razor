@@ -667,8 +667,15 @@ def gen_x64_cif_stub(f, symbol, inputs, outputs):
 
 	f.begin_asm()
 	if resched:
-		# Save callee-saved regs, switch to kernel stack, call via calltable
+		# Save ALL callee-saved regs before rescheduling kernel call.
+		# After a context switch (K_ZERO_OUT_JRET), the kernel will have
+		# modified r12 (Bptr), r13 (Fptr), r14 (Wptr), r15 (sched), rbx,
+		# and rbp.  The C function's frame pointer (rbp) and any callee-
+		# saved registers used for local variables must be preserved.
+		f.line("\tpushq %%rbp")
 		f.line("\tpushq %%rbx")
+		f.line("\tpushq %%r12")
+		f.line("\tpushq %%r13")
 		f.line("\tpushq %%r14")
 		f.line("\tmovq %%rsp, -56(%%r14)")	# save SP at Wptr[SchedPtr]
 		f.line("\tmovq (%%r15), %%rsp")		# switch to kernel stack
@@ -678,7 +685,10 @@ def gen_x64_cif_stub(f, symbol, inputs, outputs):
 		f.line("\tcallq *%d(%%%%r15)" % (48 + offset * 8))
 		f.line("\tmovq -56(%%r14), %%rsp")	# restore SP
 		f.line("\tpopq %%r14")
+		f.line("\tpopq %%r13")
+		f.line("\tpopq %%r12")
 		f.line("\tpopq %%rbx")
+		f.line("\tpopq %%rbp")
 	else:
 		# Non-rescheduling: simpler path
 		f.line("\tmovq %%rsp, %%rcx")		# save rsp in rcx
