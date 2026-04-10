@@ -235,7 +235,7 @@ def output_kitable(symbol_list, symbols, fn):
 def output_calltable(symbol_list, symbols, fn):
 	f = open(fn, "w")
 	output_header(f, fn, False)
-	
+
 	f.write ("#include <arch/sched_asm_inserts.h>\n")
 
 	for name in symbol_list:
@@ -246,7 +246,45 @@ def output_calltable(symbol_list, symbols, fn):
 		elif not symbols[name].get("unsupported"):
 			f.write("K_CALL_DEFINE_%d_%d (%s);\n" % (inputs, outputs, name))
 	f.write("\n")
-	
+
+	# Under CCSP_DIRECT_CALL, kernel functions have different signatures
+	# (all params as C args).  The CIF stubs still call through the
+	# calltable with the OLD convention (param0, sched, Wptr) + cparam[].
+	# Generate adapter wrappers that translate old -> new calling convention.
+	f.write("#ifdef CCSP_DIRECT_CALL\n")
+	f.write("/* Adapter wrappers: old ABI (param0, sched, Wptr) -> new ABI (p0, p1, ..., sched, Wptr) */\n")
+	for name in symbol_list:
+		if name.startswith("CIF_"):
+			continue
+		if symbols[name].get("unsupported"):
+			continue
+		inputs = int(symbols[name].get("INPUT"))
+		outputs = int(symbols[name].get("OUTPUT"))
+		has_return = (outputs > 0)
+		ret_type = "word" if has_return else "void"
+
+		# Build the argument list for calling the real kernel function
+		# New signature: kernel_X(p0, p1, ..., sched, Wptr)
+		call_args = []
+		if inputs >= 1:
+			call_args.append("param0")
+		for n in range(1, inputs):
+			call_args.append("sched->cparam[%d]" % (n - 1))
+		call_args.append("sched")
+		call_args.append("Wptr")
+
+		f.write("static %s __attribute__((noinline)) calltable_adapter_%s(word param0, sched_t *sched, word *Wptr) {\n" % (ret_type, name))
+		if has_return:
+			f.write("\treturn kernel_%s(%s);\n" % (name, ", ".join(call_args)))
+		else:
+			f.write("\tkernel_%s(%s);\n" % (name, ", ".join(call_args)))
+		f.write("}\n")
+
+	f.write("#define K_CALLTABLE_PTR(X) ((void *)(calltable_adapter_##X))\n")
+	f.write("#else /* !CCSP_DIRECT_CALL */\n")
+	f.write("#define K_CALLTABLE_PTR(X) K_CALL_PTR(X)\n")
+	f.write("#endif /* CCSP_DIRECT_CALL */\n\n")
+
 	f.write("static inline void build_calltable (void **table)\n")
 	f.write("{\n")
 	for (i, name) in enumerate(symbol_list):
@@ -258,7 +296,7 @@ def output_calltable(symbol_list, symbols, fn):
 		if name.startswith("CIF_"):
 			f.write("\ttable[% 3d] = kernel_%s ();\n" % (i, sname))
 		else:
-			f.write("\ttable[% 3d] = K_CALL_PTR (%s);\n" % (i, sname))
+			f.write("\ttable[% 3d] = K_CALLTABLE_PTR (%s);\n" % (i, sname))
 	f.write("}\n\n")
 
 	output_footer(f, fn)
