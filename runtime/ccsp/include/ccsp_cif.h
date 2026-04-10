@@ -812,6 +812,7 @@ static inline void LightProcStart (Workspace wptr, LightProcBarrier *bar, Worksp
 	top[0]		= (word) func;
 	top[1]		= (word) ws;
 
+
 	ccsp_cif_X_runp (wptr, ws);
 }
 /*}}}*/

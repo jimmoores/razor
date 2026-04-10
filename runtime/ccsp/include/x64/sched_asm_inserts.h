@@ -298,6 +298,7 @@
 		"	popq	%%rdi			\n" \
 		"	callq	*%%rax			\n" \
 		"	movq	-56(%%r14), %%r15	\n" \
+		"	movq	%%r14, %%rdi		\n" \
 		"	movq	%%r14, %%rdx		\n" \
 		"	movq	%%r15, %%rsi		\n" \
 		"	movq	(%%r15), %%rsp		\n" \
