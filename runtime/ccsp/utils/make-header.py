@@ -633,122 +633,55 @@ def gen_sparc_cif_stub(f, symbol, inputs, outputs):
 
 def gen_x64_cif_stub(f, symbol, inputs, outputs):
 	"""Generate CIF stub for x64 architecture.
-	x64 kernel calling convention (System V AMD64 ABI):
-	  param0 -> rdi, sched -> rsi, Wptr -> rdx
-	  return -> rax
-	Calltable accessed via sched pointer.
-	Runtime registers: r14=Wptr, r15=sched, r13=Fptr, r12=Bptr
+	Uses standalone assembly functions (ccsp_cif_x64_kcall_resched and
+	ccsp_cif_x64_kcall) instead of inline asm, because the inline asm
+	approach cannot safely handle the r14/r15 registers that the occam
+	runtime uses for Wptr/sched but GCC may reassign freely.
 	"""
 	resched = (symbol["name"][0] == 'Y')
 	in_regs = min(len(inputs), 1)
 	out_regs = min(len(outputs), 1)
 	offset = symbol["offset"]
+	calltable_offset = 48 + offset * 8
 
 	if len(inputs) > 1:
 		for (n, i) in enumerate(inputs):
 			if n >= 1:
 				f.line("__sched->cparam[%d] = (word) (%s);" % ((n - 1), i))
 
-	dummies = []
-	if not resched:
-		dummies.append("sched_dummy")
-		dummies.append("wptr_dummy")
-	if in_regs > out_regs:
-		dummies = ["dummy0"] + dummies
+	param0 = inputs[0] if in_regs > 0 else "0"
 
-	if len(dummies) > 0:
+	if resched:
 		f.line("{")
 		f.indent()
-		for dummy in dummies:
-			f.line("word %s;" % dummy)
-
-	f.line("__asm__ __volatile__ (\"\\n\"")
-	f.indent()
-
-	f.begin_asm()
-	if resched:
-		# Save ALL callee-saved regs before rescheduling kernel call.
-		# After a context switch (K_ZERO_OUT_JRET), the kernel will have
-		# modified r12 (Bptr), r13 (Fptr), r14 (Wptr), r15 (sched), rbx,
-		# and rbp.  The C function's frame pointer (rbp) and any callee-
-		# saved registers used for local variables must be preserved.
-		f.line("\tpushq %%rbp")
-		f.line("\tpushq %%rbx")
-		f.line("\tpushq %%r12")
-		f.line("\tpushq %%r13")
-		f.line("\tpushq %%r14")
-		f.line("\tmovq %%rsp, -56(%%r14)")	# save SP at Wptr[SchedPtr]
-		f.line("\tmovq (%%r15), %%rsp")		# switch to kernel stack
-		f.line("\tmovq %%r15, %%rsi")		# sched -> rsi
-		f.line("\tmovq %%r14, %%rdx")		# Wptr -> rdx
-		# calltable offset: 8 bytes (stack) + 40 bytes (cparam[5]) + offset*8
-		f.line("\tcallq *%d(%%%%r15)" % (48 + offset * 8))
-		f.line("\tmovq -56(%%r14), %%rsp")	# restore SP
-		f.line("\tpopq %%r14")
-		f.line("\tpopq %%r13")
-		f.line("\tpopq %%r12")
-		f.line("\tpopq %%rbx")
-		f.line("\tpopq %%rbp")
-	else:
-		# Non-rescheduling: simpler path
-		f.line("\tmovq %%rsp, %%rcx")		# save rsp in rcx
-		f.line("\tmovq %%r15, %%rsi")		# sched -> rsi
-		f.line("\tmovq (%%r15), %%rsp")		# switch to kernel stack (sched->stack)
-		f.line("\tmovq %%r14, %%rdx")		# Wptr -> rdx
-		f.line("\tcallq *%d(%%%%rsi)" % (48 + offset * 8))
-		f.line("\tmovq %%rcx, %%rsp")		# restore original rsp
-	f.end_asm()
-	f.begin_line()
-	if resched:
-		if (in_regs + out_regs) > 0:
-			f.add(": \"=a\" (%s)" % ((outputs + dummies)[0]))
+		f.line("extern word ccsp_cif_x64_kcall_resched(void *, void *, word, void *);")
+		f.line("void *__func = *(void **)((char *)__sched + %d);" % calltable_offset)
+		if out_regs > 0:
+			f.line("%s = (__typeof__(%s)) ccsp_cif_x64_kcall_resched((void *)__wptr, (void *)__sched, (word)(%s), __func);" % (
+				outputs[0], outputs[0], param0))
 		else:
-			f.add(": /* no outputs */")
-	else:
-		f.add(": \"=d\" (wptr_dummy), \"=S\" (sched_dummy)")
-		if (in_regs + out_regs) > 0:
-			f.add(", \"=a\" (%s)" % ((outputs + dummies)[0]))
-	f.end_line()
-
-	f.begin_line()
-	if resched:
-		if in_regs > 0:
-			f.add(": \"D\" (%s)" % inputs[0])
-		else:
-			f.add(": /* no inputs */")
-	else:
-		f.add(": \"D\" (__wptr), \"1\" (__sched)")
-		for (idx, name) in enumerate(inputs):
-			if idx < in_regs:
-				f.add(", \"%d\" (%s)" % (idx + 2, name))
-	f.end_line()
-
-	f.begin_line()
-	if resched:
-		# Rescheduling: no register constraints beyond rdi and rax
-		f.add(": \"cc\", \"memory\", \"rcx\", \"rdx\", \"rsi\", \"r8\", \"r9\", \"r10\", \"r11\"")
-		if (in_regs + out_regs) == 0:
-			f.add(", \"rax\"")
-	else:
-		# Non-rescheduling: rdx("=d") and rsi("=S") are outputs, rdi("D") is input
-		# so don't clobber rdx, rsi, or rdi
-		f.add(": \"cc\", \"memory\", \"rcx\", \"r8\", \"r9\", \"r10\", \"r11\"")
-		if (in_regs + out_regs) == 0:
-			f.add(", \"rax\"")
-	f.end_line()
-
-	f.outdent()
-	f.line(");")
-
-	if resched:
+			f.line("ccsp_cif_x64_kcall_resched((void *)__wptr, (void *)__sched, (word)(%s), __func);" % param0)
 		f.line("(__wptr)[SchedPtr] = (word) __sched;")
-
-	if len(outputs) > 1:
-		for (n, i) in enumerate(outputs):
-			if n >= 1:
-				f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
-
-	if len(dummies) > 0:
+		if len(outputs) > 1:
+			for (n, i) in enumerate(outputs):
+				if n >= 1:
+					f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
+		f.outdent()
+		f.line("}")
+	else:
+		f.line("{")
+		f.indent()
+		f.line("extern word ccsp_cif_x64_kcall(void *, void *, word, void *);")
+		f.line("void *__func = *(void **)((char *)__sched + %d);" % calltable_offset)
+		if out_regs > 0:
+			f.line("%s = (__typeof__(%s)) ccsp_cif_x64_kcall((void *)__wptr, (void *)__sched, (word)(%s), __func);" % (
+				outputs[0], outputs[0], param0))
+		else:
+			f.line("ccsp_cif_x64_kcall((void *)__wptr, (void *)__sched, (word)(%s), __func);" % param0)
+		if len(outputs) > 1:
+			for (n, i) in enumerate(outputs):
+				if n >= 1:
+					f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
 		f.outdent()
 		f.line("}")
 

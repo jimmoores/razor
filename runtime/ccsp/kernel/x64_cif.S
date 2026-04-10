@@ -38,6 +38,80 @@
  */
 .global ccsp_cif_process_call
 .type ccsp_cif_process_call, @function
+/*
+ * word ccsp_cif_x64_kcall_resched(void *wptr, void *sched, word param0, void *func)
+ *
+ * Rescheduling kernel call from CIF C code.  Saves all callee-saved
+ * registers to the workspace (private to this process), switches to the
+ * kernel stack, calls the kernel function, then restores after reschedule.
+ *
+ * Arguments (System V ABI):
+ *   rdi = wptr (CIF workspace pointer)
+ *   rsi = sched (scheduler pointer)
+ *   rdx = param0 (first kernel call argument)
+ *   rcx = func (calltable function pointer)
+ */
+.global ccsp_cif_x64_kcall_resched
+.type ccsp_cif_x64_kcall_resched, @function
+ccsp_cif_x64_kcall_resched:
+	/* Save callee-saved regs to workspace at negative offsets from wptr (rdi) */
+	movq	%rbp, -96(%rdi)		/* wptr[-12] */
+	movq	%rbx, -88(%rdi)		/* wptr[-11] */
+	movq	%r12, -104(%rdi)	/* wptr[-13] */
+	movq	%r13, -112(%rdi)	/* wptr[-14] */
+	movq	%r14, -120(%rdi)	/* wptr[-15] */
+	movq	%r15, -128(%rdi)	/* wptr[-16] */
+
+	/* Save current SP (= private stack) to wptr[-10] (byte -80) */
+	movq	%rsp, -80(%rdi)
+
+	/* Switch to kernel stack */
+	movq	(%rsi), %rsp		/* rsp = sched->stack */
+
+	/* Set up kernel call args: param0=rdi, sched=rsi, Wptr=rdx */
+	/* param0 is already in rdx, but we need to shuffle:
+	 *   rdi(param0) -> rdi  (stays)
+	 *   rsi(sched)  -> rsi  (stays)
+	 *   rdx(param0) -> rdi, rsi(sched) -> rsi, rdi(wptr) -> rdx */
+	movq	%rdi, %r8		/* save wptr */
+	movq	%rdx, %rdi		/* rdi = param0 */
+	movq	%r8, %rdx		/* rdx = wptr (= Wptr for kernel) */
+	/* rsi = sched (already correct) */
+
+	/* Call kernel function */
+	callq	*%rcx
+
+	/* After return (possibly after context switch via K_ZERO_OUT_JRET):
+	 * r14 = Wptr (set by K_ZERO_OUT_JRET).  For CIF calls, the
+	 * kernel's Wptr IS the CIF wptr we passed in. */
+
+	/* Use r14 (= wptr, set by K_ZERO_OUT_JRET) to restore everything */
+	movq	-80(%r14), %rsp		/* restore SP from wptr[-10] */
+	movq	-96(%r14), %rbp
+	movq	-128(%r14), %r15
+	movq	-112(%r14), %r13
+	movq	-104(%r14), %r12
+	movq	-88(%r14), %rbx
+	movq	-120(%r14), %r14	/* restore r14 LAST (used for addressing) */
+	ret
+.size ccsp_cif_x64_kcall_resched, . - ccsp_cif_x64_kcall_resched
+
+/* Non-rescheduling variant: simple call, no context switch possible */
+.global ccsp_cif_x64_kcall
+.type ccsp_cif_x64_kcall, @function
+ccsp_cif_x64_kcall:
+	/* Simple: switch to kernel stack, call, switch back */
+	movq	%rsp, %r8		/* save current rsp */
+	movq	(%rsi), %rsp		/* switch to kernel stack */
+	movq	%rdi, %r9		/* save wptr */
+	movq	%rdx, %rdi		/* rdi = param0 */
+	movq	%r9, %rdx		/* rdx = wptr */
+	/* rsi = sched (already correct) */
+	callq	*%rcx
+	movq	%r8, %rsp		/* restore rsp */
+	ret
+.size ccsp_cif_x64_kcall, . - ccsp_cif_x64_kcall
+
 ccsp_cif_process_call:
 	/* Save ALL callee-saved registers to the workspace.
 	 * The occam runtime uses r12 (Bptr), r13 (Fptr), r14 (Wptr),
