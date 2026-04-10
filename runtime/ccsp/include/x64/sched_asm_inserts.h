@@ -252,27 +252,26 @@
 /*}}}*/
 
 /*{{{  CIF helpers */
-/* K_CIF_BCALLN: call a function with argc words of arguments copied from argv.
- * Save rbp, allocate stack space for args (argc << 3 bytes), align to 16,
- * copy args, call function, restore stack. */
+/* K_CIF_BCALLN: call a C function with N word-sized arguments from argv.
+ * On x64, args go in registers (rdi, rsi, ...), not on the stack.
+ * Unpack argv into registers via typed function pointer calls.
+ * Zero al before call for x64 variadic function ABI compliance. */
 #define K_CIF_BCALLN(func, argc, argv, ret) \
-	__asm__ __volatile__ ("				\n" \
-		"	pushq	%%rbp			\n" \
-		"	movq	%%rsp, %%rbp		\n" \
-		"	movq	%%rcx, %%rdx		\n" \
-		"	shlq	$3, %%rdx		\n" \
-		"	subq	%%rdx, %%rsp		\n" \
-		"	andq	$-16, %%rsp		\n" \
-		"	movq	%%rsp, %%rdi		\n" \
-		"	cld				\n" \
-		"	rep				\n" \
-		"	movsb				\n" \
-		"	callq	*%%rax			\n" \
-		"	movq	%%rbp, %%rsp		\n" \
-		"	popq	%%rbp			\n" \
-		: "=a" (ret) \
-		: "0" (func), "c" ((word)(argc) << 3), "S" (argv) \
-		: "cc", "memory", "rdx", "rdi")
+	do { \
+		word (*_f0)(void) = (word (*)(void))(func); \
+		word (*_f1)(word) = (word (*)(word))(func); \
+		word (*_f2)(word,word) = (word (*)(word,word))(func); \
+		word (*_f3)(word,word,word) = (word (*)(word,word,word))(func); \
+		word (*_f4)(word,word,word,word) = (word (*)(word,word,word,word))(func); \
+		__asm__ __volatile__ ("xorl %%eax, %%eax" ::: "rax"); \
+		switch (argc) { \
+		case 0: ret = _f0(); break; \
+		case 1: ret = _f1((argv)[0]); break; \
+		case 2: ret = _f2((argv)[0], (argv)[1]); break; \
+		case 3: ret = _f3((argv)[0], (argv)[1], (argv)[2]); break; \
+		default: ret = _f4((argv)[0], (argv)[1], (argv)[2], (argv)[3]); break; \
+		} \
+	} while (0)
 
 /* K_CIF_ENDP_RESUME: get resume address and do process end.
  * The call pushes the resume address (label 0:) onto the stack.
