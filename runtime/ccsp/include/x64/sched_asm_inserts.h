@@ -44,7 +44,63 @@
 #ifndef X64_SCHED_ASM_INSERTS_H
 #define X64_SCHED_ASM_INSERTS_H
 
+/* Enable direct C calling convention for kernel functions on x64.
+ * Instead of passing all parameters through param0/cparam[], each kernel
+ * function receives its parameters as normal C function arguments. */
+#define CCSP_DIRECT_CALL 1
+
 /*{{{  architecture dependent kernel call declarations */
+#ifdef CCSP_DIRECT_CALL
+/*{{{  CCSP_DIRECT_CALL: kernel functions receive explicit C parameters */
+/* Under CCSP_DIRECT_CALL, kernel functions receive inputs as normal C
+ * parameters (p0, p1, ...) followed by sched and Wptr.  The _N_M naming
+ * gives N inputs, M outputs.  Variants returning a value use word return. */
+
+/* 0 inputs */
+#define K_CALL_DEFINE_0_0(X) __attribute__((noinline)) void kernel_##X (sched_t *sched, word *Wptr)
+#define K_CALL_DEFINE_0_1(X) __attribute__((noinline)) word kernel_##X (sched_t *sched, word *Wptr)
+
+/* 1 input */
+#define K_CALL_DEFINE_1_0(X) __attribute__((noinline)) void kernel_##X (word p0, sched_t *sched, word *Wptr)
+#define K_CALL_DEFINE_1_1(X) __attribute__((noinline)) word kernel_##X (word p0, sched_t *sched, word *Wptr)
+
+/* 2 inputs */
+#define K_CALL_DEFINE_2_0(X) __attribute__((noinline)) void kernel_##X (word p0, word p1, sched_t *sched, word *Wptr)
+#define K_CALL_DEFINE_2_1(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, sched_t *sched, word *Wptr)
+#define K_CALL_DEFINE_2_3(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, sched_t *sched, word *Wptr)
+
+/* 3 inputs */
+#define K_CALL_DEFINE_3_0(X) __attribute__((noinline)) void kernel_##X (word p0, word p1, word p2, sched_t *sched, word *Wptr)
+#define K_CALL_DEFINE_3_1(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, word p2, sched_t *sched, word *Wptr)
+#define K_CALL_DEFINE_3_3(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, word p2, sched_t *sched, word *Wptr)
+
+/* 4 inputs */
+#define K_CALL_DEFINE_4_0(X) __attribute__((noinline)) void kernel_##X (word p0, word p1, word p2, word p3, sched_t *sched, word *Wptr)
+
+/* 5 inputs */
+#define K_CALL_DEFINE_5_0(X) __attribute__((noinline)) void kernel_##X (word p0, word p1, word p2, word p3, word p4, sched_t *sched, word *Wptr)
+
+#define K_CALL_PTR(X) \
+	((void *) (kernel_##X))
+
+/* K_CALL_HEADER: still capture return address for error handlers.
+ * With noinline, __builtin_return_address(0) reliably returns the
+ * caller's return address on x64. */
+#define K_CALL_HEADER \
+	__attribute__ ((unused)) \
+	unsigned long return_address = (unsigned long) __builtin_return_address (0);
+
+/* K_CALL_PARAM: map parameter index to the corresponding C argument.
+ * Token pasting is used since all call sites use literal indices 0-4. */
+#define K_CALL_PARAM_0 p0
+#define K_CALL_PARAM_1 p1
+#define K_CALL_PARAM_2 p2
+#define K_CALL_PARAM_3 p3
+#define K_CALL_PARAM_4 p4
+#define K_CALL_PARAM(N) K_CALL_PARAM_##N
+/*}}}*/
+#else /* !CCSP_DIRECT_CALL */
+/*{{{  legacy: all parameters via param0/cparam[] */
 /* x64 uses System V AMD64 ABI, no regparm needed.
  * noinline prevents the compiler from inlining kernel entry points,
  * which ensures __builtin_return_address(0) reads the correct return address. */
@@ -75,6 +131,8 @@
 	unsigned long return_address = (unsigned long) __builtin_return_address (0);
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
+/*}}}*/
+#endif /* CCSP_DIRECT_CALL */
 /*}}}*/
 
 /*{{{  debugging support */
