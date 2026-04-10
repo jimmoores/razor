@@ -1008,7 +1008,11 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 
 	/* Set up workspace pointer parameter: Wptr + 1 word points to the param block */
 	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, arg_reg));
+#ifndef CCSP_DIRECT_CALL
+	/* Legacy: store param block pointer to cparam[0] since compose_kcall
+	 * only passes the first arg in a register. */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, arg_reg, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[0])));
+#endif
 
 	if (kernel_call != K_KERNEL_RUN) {
 		/* push address of function to call - skip prefix, keep leading dot */
@@ -1027,10 +1031,17 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg));
 	}
 
-	/* Call kernel dispatch function.  Use regs_in=1 because cparam[0] is
-	 * already set to the parameter block pointer above; regs_in=2 would
-	 * cause the kcall to overwrite cparam[0] with the transputer B-reg. */
+#ifdef CCSP_DIRECT_CALL
+	/* Under CCSP_DIRECT_CALL, both the function pointer (A-reg) and param
+	 * block pointer (B-reg) are passed as register arguments to the kernel.
+	 * Use regs_in=2 so compose_kcall places them in x0 and x1. */
+	compose_aarch64_kcall (ts, kernel_call, 2, 0);
+#else
+	/* Legacy: use regs_in=1 because cparam[0] is already set to the
+	 * parameter block pointer above; regs_in=2 would cause the kcall
+	 * to overwrite cparam[0] with the transputer B-reg. */
 	compose_aarch64_kcall (ts, kernel_call, 1, 0);
+#endif
 
 	/* After the blocking call returns (process rescheduled), pop the
 	 * I_CALL frame that was allocated before the call.  The I_CALL
