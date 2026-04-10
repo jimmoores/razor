@@ -33,9 +33,10 @@
 /* CCSP_DIRECT_CALL: direct C calling convention for kernel functions.
  * Instead of passing all parameters through param0/cparam[], each kernel
  * function receives its parameters as normal C function arguments.
- * Enable when tranx86 kcall generation and CIF stubs are also updated
- * (Phase 1B/1C). Until then, leave disabled for ABI compatibility. */
-/* #define CCSP_DIRECT_CALL */
+ * tranx86 (compose_aarch64_kcall) passes all inputs in x0..xN-1 followed
+ * by sched and Wptr.  CIF stubs still use the calltable with adapter
+ * wrappers that translate old ABI -> new ABI. */
+#define CCSP_DIRECT_CALL
 
 /*{{{  architecture dependent kernel call declarations */
 #ifdef CCSP_DIRECT_CALL
