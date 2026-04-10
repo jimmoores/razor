@@ -245,18 +245,22 @@ __attribute__ ((unused)) /* make GCC ignore when unused */
 static word BlockingCallN (Workspace wptr, void *func, word argc, ...)
 {
 	word args[3];
+	word va_args[8]; /* max 8 variadic arguments */
 	word *tmp = &(args[0]);
 	va_list ap;
-	
+	word i;
+
 	va_start (ap, argc);
+	for (i = 0; i < argc && i < 8; i++) {
+		va_args[i] = va_arg (ap, word);
+	}
+	va_end (ap);
 
 	args[0] = (word) func;
 	args[1] = argc;
-	args[2] = ((word) (&argc)) + sizeof (word);
+	args[2] = (word) va_args;
 
 	ccsp_cif_Y_b_dispatch (wptr, ccsp_cif_bcalln_stub, tmp);
-
-	va_end (ap);
 
 	return args[0];
 }
@@ -361,15 +365,21 @@ __attribute__ ((unused)) /* make GCC ignore when unused */
 static word KillableBlockingCallN (Workspace wptr, void *func, Channel *killchan, word argc, ...)
 {
 	word args[4];
+	word va_args[8]; /* max 8 variadic arguments */
 	word *tmp = &(args[0]);
 	va_list ap;
-	
+	word i;
+
 	va_start (ap, argc);
+	for (i = 0; i < argc && i < 8; i++) {
+		va_args[i] = va_arg (ap, word);
+	}
+	va_end (ap);
 
 	args[0] = (word) killchan;
 	args[1] = (word) func;
 	args[2] = argc;
-	args[3] = ((word) (&argc)) + sizeof (word);
+	args[3] = (word) va_args;
 
 	ccsp_cif_Y_bx_dispatch (wptr, ccsp_cif_bcalln_stub, tmp);
 
