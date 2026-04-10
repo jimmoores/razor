@@ -54,13 +54,19 @@
 .global ccsp_cif_x64_kcall_resched
 .type ccsp_cif_x64_kcall_resched, @function
 ccsp_cif_x64_kcall_resched:
-	/* Save callee-saved regs to workspace at negative offsets from wptr (rdi) */
+	/* Save callee-saved regs to workspace at negative offsets from wptr (rdi).
+	 * r14 (= Wptr from occam code) differs from rdi (= wptr = Wptr+8).
+	 * After the kernel call, r14 could be either Wptr (non-rescheduling,
+	 * preserved by kernel) or wptr (rescheduling, K_ZERO_OUT_JRET sets
+	 * r14 = rdx = wptr).  To handle both cases, we save wptr at a fixed
+	 * offset and use it to find the restore base. */
 	movq	%rbp, -96(%rdi)		/* wptr[-12] */
 	movq	%rbx, -88(%rdi)		/* wptr[-11] */
 	movq	%r12, -104(%rdi)	/* wptr[-13] */
 	movq	%r13, -112(%rdi)	/* wptr[-14] */
 	movq	%r14, -120(%rdi)	/* wptr[-15] */
 	movq	%r15, -128(%rdi)	/* wptr[-16] */
+	movq	%rdi, -136(%rdi)	/* wptr[-17] = wptr itself */
 
 	/* Save current SP (= private stack) to wptr[-10] (byte -80) */
 	movq	%rsp, -80(%rdi)
@@ -69,10 +75,6 @@ ccsp_cif_x64_kcall_resched:
 	movq	(%rsi), %rsp		/* rsp = sched->stack */
 
 	/* Set up kernel call args: param0=rdi, sched=rsi, Wptr=rdx */
-	/* param0 is already in rdx, but we need to shuffle:
-	 *   rdi(param0) -> rdi  (stays)
-	 *   rsi(sched)  -> rsi  (stays)
-	 *   rdx(param0) -> rdi, rsi(sched) -> rsi, rdi(wptr) -> rdx */
 	movq	%rdi, %r8		/* save wptr */
 	movq	%rdx, %rdi		/* rdi = param0 */
 	movq	%r8, %rdx		/* rdx = wptr (= Wptr for kernel) */
@@ -81,11 +83,17 @@ ccsp_cif_x64_kcall_resched:
 	/* Call kernel function */
 	callq	*%rcx
 
-	/* After return (possibly after context switch via K_ZERO_OUT_JRET):
-	 * r14 = Wptr (set by K_ZERO_OUT_JRET).  For CIF calls, the
-	 * kernel's Wptr IS the CIF wptr we passed in. */
-
-	/* Use r14 (= wptr, set by K_ZERO_OUT_JRET) to restore everything */
+	/* After return: r14 is either Wptr (= wptr-8, non-rescheduling)
+	 * or wptr (rescheduling).  Recover wptr from the saved value at
+	 * wptr[-17].  For non-rescheduling: wptr[-17] is at r14+8-136 =
+	 * r14-128.  For rescheduling: wptr[-17] is at r14-136.
+	 * We handle this by trying r14+8 first (= wptr for non-resched): */
+	leaq	8(%r14), %r14		/* speculatively: r14 = Wptr+8 = wptr? */
+	cmpq	%r14, -136(%r14)	/* does wptr[-17] == r14? */
+	je	1f
+	subq	$8, %r14		/* no: was already wptr, undo +8 */
+1:
+	/* r14 = wptr (verified) */
 	movq	-80(%r14), %rsp		/* restore SP from wptr[-10] */
 	movq	-96(%r14), %rbp
 	movq	-128(%r14), %r15
