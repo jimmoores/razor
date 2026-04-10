@@ -804,9 +804,11 @@ static inline void LightProcStart (Workspace wptr, LightProcBarrier *bar, Worksp
 
 	ws[BarrierPtr]	= (word) (bar->data + CIF_PROCESS_WORDS);
 	ws[Priofinity]	= (bar->data + CIF_PROCESS_WORDS)[SavedPriority];
-	ws[SchedPtr]	= (word) sched;
 	ws[Iptr]	= (word) sched->calltable[K_CIF_LIGHT_PROC_STUB];
 	ws[0]		= (word) top;
+	/* Set SchedPtr AFTER using ws[StackPtr] for top calculation above,
+	 * since StackPtr and SchedPtr share offset -7. */
+	ws[SchedPtr]	= (word) sched;
 	top[0]		= (word) func;
 	top[1]		= (word) ws;
 
