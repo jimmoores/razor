@@ -241,9 +241,13 @@ typedef struct TAG_rtl_chain {
 #define INS_ADC32 131		/* 32-bit add with carry (adcl on x64) */
 #define INS_SBB32 132		/* 32-bit subtract with borrow (sbbl on x64) */
 #define INS_SHR32 133		/* 32-bit shift right (shrl on x64, for correct carry) */
+#define INS_SHL32 134		/* 32-bit shift left (shll on x64) */
+#define INS_SHLD32 135		/* 32-bit double shift left (shldl on x64) */
+#define INS_SHRD32 136		/* 32-bit double shift right (shrdl on x64) */
+#define INS_ROR32 137		/* 32-bit rotate right (rorl on x64) */
 
 #define INS_FIRST INS_MOVE
-#define INS_LAST INS_SHR32
+#define INS_LAST INS_ROR32
 
 #define INS_START_REG 65535	/* ARG_REG */
 #define INS_END_REG 65534	/* ARG_REG */

@@ -6360,19 +6360,11 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 		 * stale upper 32 bits from prior pointer storage or sub-word
 		 * channel I/O (I_IN8 writes 1 byte, I_IN32 writes 4 bytes
 		 * into 8-byte slots).  CSUB0 is an unsigned range check on
-		 * INT values, so we must zero-extend all operands to 64 bits
+		 * INT values, so we must zero-extend operands to 64 bits
 		 * before comparison.
 		 *
-		 * For VALUE_LOCAL operands (workspace-resident), load them
-		 * into their register and truncate to 32 bits.  This converts
-		 * them to regular register values so the default reg-reg CMP
-		 * path handles them.  For register operands, just truncate
-		 * in place.  Constants don't need truncation. */
-		/* For VALUE_LOCAL operands, materialize them into registers
-		 * so the default reg-reg CMP path handles them.
-		 * Do NOT truncate to 32 bits -- CWORD operates on values that
-		 * may be sign-extended (e.g., INT16 values extended to INT via
-		 * SXTH).  Truncating corrupts the MOSTNEG-based algorithm. */
+		 * For VALUE_LOCAL operands, materialize them into registers
+		 * first, then zero-extend.  Constants don't need truncation. */
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCAL) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
 				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH,
@@ -6385,15 +6377,13 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 				ARG_REG, ts->stack->old_b_reg));
 			constmap_remove (ts->stack->old_b_reg);
 		}
-#endif
-		/* generate check */
-#if (BytesPerWord > 4)
-		/* On 64-bit with 32-bit INT, operands should already be properly
-		 * zero-extended from the operations that produced them (I_ADD,
-		 * I_SUB, etc. all apply emit_int_truncate).  Do NOT truncate
-		 * in-place here because the registers used for old_a_reg/old_b_reg
-		 * may also hold live values (e.g. old_c_reg base pointer) that
-		 * would be corrupted by a 32-bit truncation. */
+		/* Zero-extend non-constant operands to clear stale upper bits */
+		if (constmap_typeof (ts->stack->old_a_reg) != VALUE_CONST) {
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
+		}
+		if (constmap_typeof (ts->stack->old_b_reg) != VALUE_CONST) {
+			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+		}
 #endif
 		switch (constmap_typeof (ts->stack->old_b_reg)) {
 		default:

@@ -2000,9 +2000,9 @@ static void compose_x64_longop (tstate *ts, int sec)
 			add_to_ins_chain (compose_ins (INS_SBB32, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
 				ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 			constmap_remove (ts->stack->old_b_reg);
-			/* Collect borrow_out: borrow = 0 - 0 - CF */
+			/* Collect borrow_out: borrow = 0 + 0 + CF (CF is borrow from SBB32) */
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, 0, ARG_REG, borrow));
-			add_to_ins_chain (compose_ins (INS_SBB32, 2, 1, ARG_CONST, 0, ARG_REG, borrow, ARG_REG, borrow));
+			add_to_ins_chain (compose_ins (INS_ADC32, 2, 1, ARG_CONST, 0, ARG_REG, borrow, ARG_REG, borrow));
 			ts->stack->a_reg = ts->stack->old_b_reg;
 			ts->stack->b_reg = borrow;
 		}
@@ -2063,25 +2063,75 @@ static void compose_x64_longop (tstate *ts, int sec)
 		}
 		break;
 	case I_LSHL:
+		/* LSHL: double-length left shift of Creg:Breg by Areg places.
+		 * Must use 32-bit operations since INT is 32-bit.
+		 * Must handle shift >= 32 case like the i386 backend. */
 		{
-			int tmp_reg = tstack_newreg (ts->stack);
+			int this_lab = ++(ts->last_lab);
 
+			/* Truncate operands to 32 bits */
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
 			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_RCX));
-			add_to_ins_chain (compose_ins (INS_SHLD, 3, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
+			/* 32-bit double shift left: shifts bits from old_b_reg into old_c_reg */
+			add_to_ins_chain (compose_ins (INS_SHLD32, 3, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg,
 				ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
-			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			/* 32-bit shift left on low word */
+			add_to_ins_chain (compose_ins (INS_SHL32, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			constmap_remove (ts->stack->old_b_reg);
+			constmap_remove (ts->stack->old_c_reg);
 			add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, ts->stack->old_a_reg));
+
+			/* Handle shift >= 32: shld only handles the low 5 bits of cl */
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)32, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_B, ARG_LABEL, this_lab));
+			/* shift >= 32: swap low into high, clear low */
+			add_to_ins_chain (compose_ins (INS_SWAP, 2, 2, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_c_reg,
+				ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, ts->stack->old_b_reg));
+			/* shift >= 64: also clear high */
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)64, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_B, ARG_LABEL, this_lab));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, ts->stack->old_c_reg));
+
+			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
 			ts->stack->a_reg = ts->stack->old_b_reg;
 			ts->stack->b_reg = ts->stack->old_c_reg;
 		}
 		break;
 	case I_LSHR:
+		/* LSHR: double-length right shift of Creg:Breg by Areg places.
+		 * Must use 32-bit operations since INT is 32-bit.
+		 * Must handle shift >= 32 case like the i386 backend. */
 		{
+			int this_lab = ++(ts->last_lab);
+
+			/* Truncate operands to 32 bits */
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_TRUNCATE32, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
 			add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_RCX));
-			add_to_ins_chain (compose_ins (INS_SHRD, 3, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_c_reg,
+			/* 32-bit double shift right: shifts bits from old_c_reg into old_b_reg */
+			add_to_ins_chain (compose_ins (INS_SHRD32, 3, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_c_reg,
 				ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
-			add_to_ins_chain (compose_ins (INS_SHR, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
+			/* 32-bit shift right on high word */
+			add_to_ins_chain (compose_ins (INS_SHR32, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_c_reg));
+			constmap_remove (ts->stack->old_b_reg);
+			constmap_remove (ts->stack->old_c_reg);
 			add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, ts->stack->old_a_reg));
+
+			/* Handle shift >= 32: shrd only handles the low 5 bits of cl */
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)32, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_B, ARG_LABEL, this_lab));
+			/* shift >= 32: swap high into low, clear high */
+			add_to_ins_chain (compose_ins (INS_SWAP, 2, 2, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_c_reg,
+				ARG_REG, ts->stack->old_c_reg, ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, ts->stack->old_c_reg));
+			/* shift >= 64: also clear low */
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)64, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_B, ARG_LABEL, this_lab));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, ts->stack->old_b_reg));
+
+			add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, this_lab));
 			ts->stack->a_reg = ts->stack->old_b_reg;
 			ts->stack->b_reg = ts->stack->old_c_reg;
 		}
@@ -3331,7 +3381,7 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 		"inb", "outb", "callq", "movzwq", "movw", "..", "..", "..", "..", "fsin", \
 		"fcos", "inw", "outw", "inl", "outl", "lock", "fptan", "mfence", "lfence", "sfence", \
 		"..", "movl", "movl", "movslq", "..", "..", "sarq", "mull", "divl", \
-		"addl", "subl", "adcl", "sbbl", "shrl"};
+		"addl", "subl", "adcl", "sbbl", "shrl", "shll", "shldl", "shrdl", "rorl"};
 	static char *setcc_tailcodes[] = {"o", "no", "b", "ae", "e", "nz", "be", "a", "s", "ns", "pe", "po", "l", "ge", "le", "g", "..", ".."};
 	ins_chain *tmp;
 	ins_arg *arg;
@@ -3560,19 +3610,42 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			}
 			break;
 		case INS_SHR32:
-			/* 32-bit shift right (for correct carry flag from bit 0) */
+		case INS_SHL32:
+		case INS_ROR32:
+			/* 32-bit shift/rotate (for correct carry flag and 32-bit INT semantics) */
 			{
 				int r;
-				fprintf (outstream, "\tshrl\t");
+				fprintf (outstream, "\t%s\t", codes[tmp->type]);
 				if ((tmp->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST) {
 					fprintf (outstream, "$%ld", (long)tmp->in_args[0]->regconst);
 				} else {
 					r = (int)(long)tmp->in_args[0]->regconst;
 					if (r < 0) r = x64_regcolour_special_to_real (r);
-					fprintf (outstream, "%s", (r >= 0 && r < 16) ? x64_regs32[r] : "??");
+					fprintf (outstream, "%s", (r >= 0 && r < 16) ? x64_regs8[r] : "??");
 				}
 				fprintf (outstream, ", ");
 				r = (int)(long)tmp->in_args[1]->regconst;
+				if (r < 0) r = x64_regcolour_special_to_real (r);
+				fprintf (outstream, "%s\n", (r >= 0 && r < 16) ? x64_regs32[r] : "??");
+			}
+			break;
+		case INS_SHLD32:
+		case INS_SHRD32:
+			/* 32-bit double shift (for LSHL/LSHR with 32-bit INT halves) */
+			{
+				int r;
+				fprintf (outstream, "\t%s\t", codes[tmp->type]);
+				if ((tmp->in_args[0]->flags & ARG_MODEMASK) == ARG_REG) {
+					fprintf (outstream, "%s", x64_regs8[tmp->in_args[0]->regconst]);
+				} else {
+					x64_drop_arg (tmp->in_args[0], outstream);
+				}
+				fprintf (outstream, ", ");
+				r = (int)(long)tmp->in_args[1]->regconst;
+				if (r < 0) r = x64_regcolour_special_to_real (r);
+				fprintf (outstream, "%s", (r >= 0 && r < 16) ? x64_regs32[r] : "??");
+				fprintf (outstream, ", ");
+				r = (int)(long)tmp->in_args[2]->regconst;
 				if (r < 0) r = x64_regcolour_special_to_real (r);
 				fprintf (outstream, "%s\n", (r >= 0 && r < 16) ? x64_regs32[r] : "??");
 			}
