@@ -253,10 +253,25 @@ LABEL_TYPE( ,X) \
 /*}}}*/
 
 /*{{{  CIF helpers */
+/* K_CIF_BCALLN: call a C function with N word-sized arguments.
+ * On i386, this copies argv onto the stack so the function receives
+ * its arguments normally.  On AArch64, the first 8 arguments go in
+ * registers x0-x7.  We unpack argv into the appropriate registers
+ * using a switch on argc. */
 #define K_CIF_BCALLN(func, argc, argv, ret) \
 	do { \
-		/* Simple function call for aarch64 */ \
-		ret = ((word (*)(word *, int))(func))(argv, argc); \
+		word (*_f0)(void) = (word (*)(void))(func); \
+		word (*_f1)(word) = (word (*)(word))(func); \
+		word (*_f2)(word,word) = (word (*)(word,word))(func); \
+		word (*_f3)(word,word,word) = (word (*)(word,word,word))(func); \
+		word (*_f4)(word,word,word,word) = (word (*)(word,word,word,word))(func); \
+		switch (argc) { \
+		case 0: ret = _f0(); break; \
+		case 1: ret = _f1(argv[0]); break; \
+		case 2: ret = _f2(argv[0], argv[1]); break; \
+		case 3: ret = _f3(argv[0], argv[1], argv[2]); break; \
+		default: ret = _f4(argv[0], argv[1], argv[2], argv[3]); break; \
+		} \
 	} while (0)
 
 #define K_CIF_ENDP_RESUME(address) \
