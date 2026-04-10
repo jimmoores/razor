@@ -1008,7 +1008,13 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 
 	/* Set up workspace pointer parameter: Wptr + 1 word points to the param block */
 	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, arg_reg));
-#ifndef CCSP_DIRECT_CALL
+#ifdef CCSP_DIRECT_CALL
+	/* Under CCSP_DIRECT_CALL, param block ptr goes in x1 (second argument).
+	 * Constrain arg_reg to x1 so it doesn't conflict with the function
+	 * pointer in x0.  Without this constraint, the register allocator may
+	 * assign both to x0, causing the param block pointer to be clobbered. */
+	add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, arg_reg, ARG_REG, REG_X1));
+#else
 	/* Legacy: store param block pointer to cparam[0] since compose_kcall
 	 * only passes the first arg in a register. */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, arg_reg, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[0])));
@@ -1032,9 +1038,11 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 	}
 
 #ifdef CCSP_DIRECT_CALL
-	/* Under CCSP_DIRECT_CALL, both the function pointer (A-reg) and param
-	 * block pointer (B-reg) are passed as register arguments to the kernel.
-	 * Use regs_in=2 so compose_kcall places them in x0 and x1. */
+	/* Unconstrain arg_reg before the kcall - compose_kcall will place it
+	 * in the correct position (x1 for a 2-input call). */
+	add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, arg_reg));
+	/* Both function pointer (A-reg) and param block pointer (B-reg) are
+	 * passed as register arguments. regs_in=2 places them in x0 and x1. */
 	compose_aarch64_kcall (ts, kernel_call, 2, 0);
 #else
 	/* Legacy: use regs_in=1 because cparam[0] is already set to the
