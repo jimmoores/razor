@@ -251,8 +251,81 @@ def output_calltable(symbol_list, symbols, fn):
 	# (all params as C args).  The CIF stubs still call through the
 	# calltable with the OLD convention (param0, sched, Wptr) + cparam[].
 	# Generate adapter wrappers that translate old -> new calling convention.
+	#
+	# CRITICAL: adapters must use TAIL CALLS (b/br, not bl) to preserve
+	# x30 (link register).  For Y_ (rescheduling) kernel calls, the kernel
+	# captures x30 via K_CALL_HEADER and saves it as the process resume
+	# address.  If the adapter uses bl, x30 points into the adapter's
+	# dead stack frame, causing crashes on reschedule.  Tail calls preserve
+	# the caller's x30, so the kernel captures the CIF assembly stub's
+	# return address correctly.
 	f.write("#ifdef CCSP_DIRECT_CALL\n")
-	f.write("/* Adapter wrappers: old ABI (param0, sched, Wptr) -> new ABI (p0, p1, ..., sched, Wptr) */\n")
+	f.write("#if defined(__aarch64__) || defined(_M_ARM64)\n")
+	f.write("/* AArch64 assembly adapters: tail-call to preserve x30 for rescheduling. */\n")
+	f.write("/* Old ABI: (param0=x0, sched=x1, Wptr=x2) + sched->cparam[] */\n")
+	f.write("/* New ABI: (p0=x0, p1=x1, ..., sched=xN, Wptr=xN+1) */\n")
+	for name in symbol_list:
+		if name.startswith("CIF_"):
+			continue
+		if symbols[name].get("unsupported"):
+			continue
+		inputs = int(symbols[name].get("INPUT"))
+
+		# Generate naked assembly adapter with tail call.
+		# cparam[0] is at offset 8 from sched, cparam[1] at offset 16.
+		f.write("static void __attribute__((naked)) calltable_adapter_%s(void) {\n" % name)
+		f.write("\t__asm__ volatile (\n")
+		if inputs == 0:
+			# Old: (param0=x0, sched=x1, Wptr=x2) -> New: (sched=x0, Wptr=x1)
+			f.write('\t\t"mov x0, x1\\n\\t"\n')
+			f.write('\t\t"mov x1, x2\\n\\t"\n')
+		elif inputs == 1:
+			# Old: (param0=x0, sched=x1, Wptr=x2) -> New: (p0=x0, sched=x1, Wptr=x2)
+			# Identity - no shuffling needed
+			pass
+		elif inputs == 2:
+			# Old: (param0=x0, sched=x1, Wptr=x2) -> New: (p0=x0, p1=x1, sched=x2, Wptr=x3)
+			# x0 stays, need cparam[0] in x1, sched in x2, Wptr in x3
+			f.write('\t\t"mov x3, x2\\n\\t"          /* x3 = Wptr */\n')
+			f.write('\t\t"ldr x9, [x1, #8]\\n\\t"    /* x9 = sched->cparam[0] */\n')
+			f.write('\t\t"mov x2, x1\\n\\t"          /* x2 = sched */\n')
+			f.write('\t\t"mov x1, x9\\n\\t"          /* x1 = cparam[0] */\n')
+		elif inputs == 3:
+			# Old: -> New: (p0=x0, p1=x1, p2=x2, sched=x3, Wptr=x4)
+			f.write('\t\t"mov x4, x2\\n\\t"          /* x4 = Wptr */\n')
+			f.write('\t\t"ldr x9, [x1, #8]\\n\\t"    /* x9 = sched->cparam[0] */\n')
+			f.write('\t\t"ldr x10, [x1, #16]\\n\\t"  /* x10 = sched->cparam[1] */\n')
+			f.write('\t\t"mov x3, x1\\n\\t"          /* x3 = sched */\n')
+			f.write('\t\t"mov x1, x9\\n\\t"          /* x1 = cparam[0] */\n')
+			f.write('\t\t"mov x2, x10\\n\\t"         /* x2 = cparam[1] */\n')
+		elif inputs == 4:
+			# Old: -> New: (p0=x0, p1-p3, sched=x4, Wptr=x5)
+			f.write('\t\t"mov x5, x2\\n\\t"          /* x5 = Wptr */\n')
+			f.write('\t\t"ldr x9, [x1, #8]\\n\\t"    /* x9 = cparam[0] */\n')
+			f.write('\t\t"ldr x10, [x1, #16]\\n\\t"  /* x10 = cparam[1] */\n')
+			f.write('\t\t"ldr x11, [x1, #24]\\n\\t"  /* x11 = cparam[2] */\n')
+			f.write('\t\t"mov x4, x1\\n\\t"          /* x4 = sched */\n')
+			f.write('\t\t"mov x1, x9\\n\\t"          /* x1 = cparam[0] */\n')
+			f.write('\t\t"mov x2, x10\\n\\t"         /* x2 = cparam[1] */\n')
+			f.write('\t\t"mov x3, x11\\n\\t"         /* x3 = cparam[2] */\n')
+		elif inputs == 5:
+			# Old: -> New: (p0=x0, p1-p4, sched=x5, Wptr=x6)
+			f.write('\t\t"mov x6, x2\\n\\t"          /* x6 = Wptr */\n')
+			f.write('\t\t"ldr x9, [x1, #8]\\n\\t"    /* x9 = cparam[0] */\n')
+			f.write('\t\t"ldr x10, [x1, #16]\\n\\t"  /* x10 = cparam[1] */\n')
+			f.write('\t\t"ldr x11, [x1, #24]\\n\\t"  /* x11 = cparam[2] */\n')
+			f.write('\t\t"ldr x12, [x1, #32]\\n\\t"  /* x12 = cparam[3] */\n')
+			f.write('\t\t"mov x5, x1\\n\\t"          /* x5 = sched */\n')
+			f.write('\t\t"mov x1, x9\\n\\t"          /* x1 = cparam[0] */\n')
+			f.write('\t\t"mov x2, x10\\n\\t"         /* x2 = cparam[1] */\n')
+			f.write('\t\t"mov x3, x11\\n\\t"         /* x3 = cparam[2] */\n')
+			f.write('\t\t"mov x4, x12\\n\\t"         /* x4 = cparam[3] */\n')
+		f.write('\t\t"b kernel_%s\\n\\t"\n' % name)
+		f.write("\t);\n")
+		f.write("}\n")
+
+	f.write("#else /* !__aarch64__ */\n")
+	f.write("/* Non-AArch64: use C adapters (x64/i386 don't have the LR issue) */\n")
 	for name in symbol_list:
 		if name.startswith("CIF_"):
 			continue
@@ -263,8 +336,6 @@ def output_calltable(symbol_list, symbols, fn):
 		has_return = (outputs > 0)
 		ret_type = "word" if has_return else "void"
 
-		# Build the argument list for calling the real kernel function
-		# New signature: kernel_X(p0, p1, ..., sched, Wptr)
 		call_args = []
 		if inputs >= 1:
 			call_args.append("param0")
@@ -279,6 +350,7 @@ def output_calltable(symbol_list, symbols, fn):
 		else:
 			f.write("\tkernel_%s(%s);\n" % (name, ", ".join(call_args)))
 		f.write("}\n")
+	f.write("#endif /* __aarch64__ */\n")
 
 	f.write("#define K_CALLTABLE_PTR(X) ((void *)(calltable_adapter_##X))\n")
 	f.write("#else /* !CCSP_DIRECT_CALL */\n")
