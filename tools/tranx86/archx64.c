@@ -22,6 +22,14 @@
 #endif
 
 #include <stdio.h>
+#include <ccsp.h>
+
+/* When cross-compiling tranx86 on i386 for x64 target code generation,
+ * CCSP_SCHED_PRIOFINITY_OFFSET may not be defined in ccsp.h (guarded
+ * by __x86_64__).  Provide the x64 value as fallback. */
+#ifndef CCSP_SCHED_PRIOFINITY_OFFSET
+#define CCSP_SCHED_PRIOFINITY_OFFSET 1416
+#endif
 
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
