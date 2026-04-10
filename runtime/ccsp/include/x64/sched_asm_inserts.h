@@ -303,13 +303,14 @@
 		"	movq	%%r15, %%rsi		\n" \
 		"	movq	(%%r15), %%rsp		\n" \
 		"	addq	%2, %%rdi		\n" \
-		"	addq	%1, %%rsi		\n"
+		"	movq	%%rsi, %%rcx		\n" \
+		"	addq	%1, %%rcx		\n"
 
 #define K_CIF_PROC(address, call, offset) \
 	__asm__ __volatile__ ("				\n" \
 		"	call	0f			\n" \
 		_K_CIF_PROC \
-		"	callq	*(%%rsi)		\n" \
+		"	callq	*(%%rcx)		\n" \
 		"0:	popq	%0			\n" \
 		: "=g" (address) \
 		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
@@ -319,7 +320,7 @@
 		"	call	0f			\n" \
 		_K_CIF_PROC \
 		"	movq	(%%rdi), %%rdi		\n" \
-		"	callq	*(%%rsi)		\n" \
+		"	callq	*(%%rcx)		\n" \
 		"0:	popq	%0			\n" \
 		: "=g" (address) \
 		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
