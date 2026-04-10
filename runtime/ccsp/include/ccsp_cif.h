@@ -804,6 +804,7 @@ static inline void LightProcStart (Workspace wptr, LightProcBarrier *bar, Worksp
 
 	ws[BarrierPtr]	= (word) (bar->data + CIF_PROCESS_WORDS);
 	ws[Priofinity]	= (bar->data + CIF_PROCESS_WORDS)[SavedPriority];
+	ws[SchedPtr]	= (word) sched;
 	ws[Iptr]	= (word) sched->calltable[K_CIF_LIGHT_PROC_STUB];
 	ws[0]		= (word) top;
 	top[0]		= (word) func;

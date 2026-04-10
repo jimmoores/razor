@@ -39,8 +39,14 @@
 .global ccsp_cif_process_call
 .type ccsp_cif_process_call, @function
 ccsp_cif_process_call:
-	/* Save callee-saved rbx to wptr[-24] (byte -192) */
-	movq	%rbx, -192(%rdi)
+	/* Save ALL callee-saved registers to the workspace.
+	 * The occam runtime uses r12 (Bptr), r13 (Fptr), r14 (Wptr),
+	 * r15 (sched), and rbp for its own purposes.  The C function
+	 * expects these to be preserved per the System V ABI. */
+	movq	%rbx, -192(%rdi)	/* wptr[-24] */
+	movq	%rbp, -200(%rdi)	/* wptr[-25] */
+	movq	%r12, -208(%rdi)	/* wptr[-26] */
+	movq	%r13, -216(%rdi)	/* wptr[-27] */
 
 	/* Pop return address into rbx temporarily, save to wptr[-23] (byte -184) */
 	popq	%rbx
@@ -52,8 +58,9 @@ ccsp_cif_process_call:
 	/* Save wptr in rbx (callee-saved, survives the call) */
 	movq	%rdi, %rbx
 
-	/* Switch to private stack at wptr - 256, 16-byte aligned */
-	leaq	-256(%rdi), %rsp
+	/* Switch to private stack at wptr - 280, 16-byte aligned.
+	 * Must be below all workspace saves (wptr[-27] = -216). */
+	leaq	-280(%rdi), %rsp
 	andq	$-16, %rsp
 
 	/* Call the CIF C function: func(wptr)
@@ -65,6 +72,9 @@ ccsp_cif_process_call:
 	movq	-40(%rbx), %rsp		/* restore rsp from wptr[-5] */
 	movq	-184(%rbx), %rax	/* restore return address from wptr[-23] */
 	pushq	%rax			/* put return address back on stack */
+	movq	-216(%rbx), %r13	/* restore r13 from wptr[-27] */
+	movq	-208(%rbx), %r12	/* restore r12 from wptr[-26] */
+	movq	-200(%rbx), %rbp	/* restore rbp from wptr[-25] */
 	movq	-192(%rbx), %rbx	/* restore rbx from wptr[-24] */
 	retq				/* return to caller */
 .size ccsp_cif_process_call, . - ccsp_cif_process_call
