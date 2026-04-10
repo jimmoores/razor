@@ -298,7 +298,7 @@ __attribute__ ((unused)) /* make GCC ignore when unused */
 #endif
 static word ExternalCallN (void *func, word argc, ...)
 {
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__x86_64__)
 	va_list ap;
 	word result = 0;
 	word args[8] = {0};

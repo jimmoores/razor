@@ -706,8 +706,8 @@ def gen_x64_header(f):
 
 	f.begin_asm()
 	f.line("\tmovq %%rsp, %0")		# save sp
-	f.line("\tmovq %2, %%rsp")		# switch to provided stack
-	f.line("\tcallq *%1")			# call function
+	f.line("\tmovq %3, %%rsp")		# switch to provided stack
+	f.line("\tcallq *%2")			# call function (func)
 	f.line("\tmovq %0, %%rsp")		# restore sp
 	f.end_asm()
 	f.line(": \"=&r\" (__tmp_sp), \"=a\" (result)")
