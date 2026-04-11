@@ -793,17 +793,15 @@ def gen_x64_header(f):
 	f.line("0:")
 	# Return from occam: r14 = ws + 32 due to I_RET frame pop. Undo that.
 	f.line("\tsubq $32, %%r14")			# undo I_RET frame pop
-	# Restore from saved area pointer at ws[top+2]
-	# We need to recompute ws+top_offset. Since we saved the pointer
-	# itself at ws[top+2], and we know top_offset = r8_original - r14_original,
-	# but both are clobbered. Use the input register variable which
-	# GCC will reload from its stack slot.
-	f.line("\taddq %%r14, %3")			# r8 = ws + top_offset (reload)
-	f.line("\tmovq (%3), %%rsp")			# restore SP from ws[top]
-	f.line("\tmovq 8(%3), %%rbp")			# restore rbp from ws[top+1]
+	# Reload topoff from compile-time constant instead of clobbered r8.
+	# r8 was used by the occam function (caller-saved) and has garbage.
+	f.line("\tmovq %4, %%r8")			# r8 = top_offset (constant)
+	f.line("\taddq %%r14, %%r8")			# r8 = ws + top_offset
+	f.line("\tmovq (%%r8), %%rsp")			# restore SP from ws[top]
+	f.line("\tmovq 8(%%r8), %%rbp")			# restore rbp from ws[top+1]
 	f.end_asm()
 	f.line(": \"+r\" (__r_ws), \"+r\" (__r_sched), \"+r\" (__r_func), \"+r\" (__r_topoff)")
-	f.line(": /* no pure inputs */")
+	f.line(": \"i\" ((word)(top * %d))" % sizeof_word)  # %4 = topoff constant
 	# Clobber ALL registers the occam function may modify
 	f.line(": \"cc\", \"memory\",")
 	f.line("  \"rcx\", \"rdx\", \"r9\", \"r10\", \"r11\",")
