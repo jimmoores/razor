@@ -74,6 +74,18 @@ ccsp_cif_x64_kcall_resched:
 	/* Switch to kernel stack */
 	movq	(%rsi), %rsp		/* rsp = sched->stack */
 
+	/* Set r14 = wptr (from rdi) so saves and restores use the same
+	 * base.  The kernel preserves r14 (callee-saved) for non-
+	 * rescheduling returns.  For rescheduling returns (K_ZERO_OUT_JRET),
+	 * the kernel sets r14 = Wptr = wptr (from rdx, which we set below).
+	 * Either way, r14 = wptr after the kernel call.
+	 *
+	 * The caller (CIF function) saved r14 before calling kcall_resched
+	 * (push in prologue or callee-saved convention).  Setting r14 here
+	 * is invisible to the caller since r14 is saved/restored by
+	 * kcall_resched itself (at rdi[-15] offset). */
+	movq	%rdi, %r14		/* r14 = wptr */
+
 	/* Set up kernel call args: param0=rdi, sched=rsi, Wptr=rdx */
 	movq	%rdi, %r8		/* save wptr */
 	movq	%rdx, %rdi		/* rdi = param0 */
@@ -82,18 +94,6 @@ ccsp_cif_x64_kcall_resched:
 
 	/* Call kernel function */
 	callq	*%rcx
-
-	/* After return: r14 is either Wptr (= wptr-8, non-rescheduling)
-	 * or wptr (rescheduling).  Recover wptr from the saved value at
-	 * wptr[-17].  For non-rescheduling: wptr[-17] is at r14+8-136 =
-	 * r14-128.  For rescheduling: wptr[-17] is at r14-136.
-	 * We handle this by trying r14+8 first (= wptr for non-resched): */
-	leaq	8(%r14), %r14		/* speculatively: r14 = Wptr+8 = wptr? */
-	cmpq	%r14, -136(%r14)	/* does wptr[-17] == r14? */
-	je	1f
-	subq	$8, %r14		/* no: was already wptr, undo +8 */
-1:
-	/* r14 = wptr (verified) */
 	movq	-80(%r14), %rsp		/* restore SP from wptr[-10] */
 	movq	-96(%r14), %rbp
 	movq	-128(%r14), %r15
