@@ -30,6 +30,7 @@
 #ifndef AARCH64_SCHED_ASM_INSERTS_H
 #define AARCH64_SCHED_ASM_INSERTS_H
 
+
 /* CCSP_DIRECT_CALL: direct C calling convention for kernel functions.
  * Instead of passing all parameters through param0/cparam[], each kernel
  * function receives its parameters as normal C function arguments.

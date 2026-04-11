@@ -179,6 +179,7 @@ sched_t			*_ccsp_scheduler 		CACHELINE_ALIGN = NULL;
 ccsp_global_t		_ccsp				CACHELINE_ALIGN = {};
 
 void 			**_ccsp_calltable		CACHELINE_ALIGN = NULL;
+
 /*}}}*/
 
 /*{{{  ENTRY_TRACE macros*/
