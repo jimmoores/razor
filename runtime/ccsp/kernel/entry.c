@@ -59,7 +59,13 @@ void ccsp_kernel_entry (word *wptr, word *fptr)
 	 * kernel stack frames (which start at sched_base and grow down) cannot
 	 * collide with them.
 	 */
-	sched_base = (top - sizeof(sched_t)) & ~((word)0x3F);  /* 64-byte align for cacheline */
+	/* Leave a gap between the C stack frames above and the sched_t below.
+	 * This protects the sched_t from being overlapped by deep C call
+	 * chains (e.g., CIF process → _write_error → fputc → libc internals)
+	 * that run on the C stack above sched_base after K_ZERO_OUT_JRET
+	 * restores SP to sched_base. */
+	#define SCHED_STACK_GAP (64 * 1024)
+	sched_base = (top - SCHED_STACK_GAP - sizeof(sched_t)) & ~((word)0x3F);
 
 	K_ENTRY (ccsp_calltable[K_RTTHREADINIT], sched_base, wptr, fptr);
 }
