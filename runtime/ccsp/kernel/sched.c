@@ -808,7 +808,17 @@ static HOT void add_to_visible_runqueue (runqueue_t *rq, mwindow_t *mw, batch_t 
 		atw_set (&(mw->data[w]), (word) batch);
 		weak_write_barrier ();
 	}
-	atw_set (&(mw->data[MWINDOW_STATE]), (word) MWINDOW_NEW_STATE (state, w));
+	/* Atomically update MWINDOW_STATE to set the new head and BM bit.
+	 * Must use CAS because the thief thread (try_migrate_from_scheduler)
+	 * may atomically clear BM bits between our read of state above and
+	 * this write.  A plain atw_set would overwrite the thief's clears. */
+	{
+		word old_s;
+		do {
+			old_s = atw_val (&(mw->data[MWINDOW_STATE]));
+		} while (!atw_cas (&(mw->data[MWINDOW_STATE]), old_s,
+			(word) MWINDOW_NEW_STATE ((unsigned int) old_s, w)));
+	}
 
 	add_to_local_runqueue (rq, batch);
 }
@@ -828,7 +838,7 @@ static HOT void add_to_runqueue (sched_t *sched, word priofinity, unsigned int r
 		add_affine_batch_to_runqueue (&(sched->rq[rq_n]), batch);
 	} else {
 		add_to_visible_runqueue (&(sched->rq[rq_n]), &(sched->mw[rq_n]), batch);
-		att_unsafe_set_bit (&(sched->mwstate), rq_n);
+		att_set_bit (&(sched->mwstate), rq_n);
 	}
 }
 /*}}}*/
@@ -1118,7 +1128,7 @@ static HOT batch_t *pick_batch (sched_t *sched, unsigned int rq_n)
 			return batch;
 		} else if (sched->rq[rq_n].Fptr == NULL && !sched->rq[rq_n].priofinity) {
 			att_unsafe_clear_bit (&(sched->rqstate), rq_n);
-			att_unsafe_clear_bit (&(sched->mwstate), rq_n);
+			att_clear_bit (&(sched->mwstate), rq_n);
 			return NULL;
 		}
 	}
