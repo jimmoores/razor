@@ -105,6 +105,11 @@ ccsp_cif_call_asm_resched:
     // Update wptr[SchedPtr] so the CIF C code picks up the correct
     // scheduler for subsequent kernel calls.
     stur x25, [x28, #-56]  // wptr[SchedPtr] = current sched (x25)
+    // Also update wptr[-5] (byte -40) with the current sched->stack.
+    // ccsp_cif_process_call saved the original sched->stack there, but
+    // after migration it needs to restore the NEW scheduler's stack.
+    ldr x9, [x25]              // x9 = sched->stack
+    stur x9, [x28, #-40]       // wptr[-5] = current sched->stack
 
     // Restore callee-saved registers from the WORKSPACE.
     ldur x9, [x28, #-80]   // restore SP from wptr[-10]
@@ -182,7 +187,16 @@ ccsp_cif_process_call:
     // x28 is callee-saved and should still be Wptr (from occam).
     add x9, x28, #8             // x9 = Wptr + 8 = wptr
     ldur x30, [x9, #-184]       // restore LR from wptr[-23]
-    ldur x9, [x9, #-40]         // x9 = wptr[-5] = saved SP
-    mov sp, x9                  // restore shared sched->stack
+    // Restore SP from the CURRENT scheduler's stack, not the saved SP.
+    // If the CIF process was migrated to a different scheduler during a
+    // rescheduling kernel call, the saved SP (wptr[-5]) still points to
+    // the ORIGINAL scheduler's kernel stack.  Using it would put us on
+    // the wrong thread's stack, causing corruption when both threads
+    // access the same stack simultaneously.
+    // ccsp_cif_call_asm_resched updates wptr[-5] (TLink slot, byte -40)
+    // with the current scheduler's stack after each rescheduling call,
+    // so that this restore always gets the right stack even after migration.
+    ldur x9, [x9, #-40]         // x9 = wptr[-5] = current sched->stack
+    mov sp, x9                  // restore to current scheduler's stack
 
     ret
