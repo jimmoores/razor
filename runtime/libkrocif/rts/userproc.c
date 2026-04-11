@@ -108,7 +108,6 @@ void user_good_exit (void)
  */
 static void user_signal_good_exit (int sig)
 {
-	write(2, "SIGNAL CAUGHT\n", 14);
 	_exit (0);
 }
 /*}}}*/
