@@ -108,7 +108,7 @@ void user_good_exit (void)
  */
 static void user_signal_good_exit (int sig)
 {
-	_exit (0);
+	siglongjmp (signal_jump_buffer, 1);
 }
 /*}}}*/
 /*{{{  static void user_signal_quit_exit (int sig)*/
@@ -185,15 +185,12 @@ static void user_crash_signal (int sig)
  */
 static void set_user_process_signals (void)
 {
-	/* Process termination signals - use sigaction for reliable delivery */
-	{
-		struct sigaction sa;
-		sa.sa_handler = user_signal_good_exit;
-		sa.sa_flags = 0;
-		sigemptyset(&sa.sa_mask);
-		sigaction(SIGHUP, &sa, NULL);
-		sigaction(SIGTERM, &sa, NULL);
-	}
+	/* Process termination signals */
+	signal (SIGHUP, user_signal_good_exit);	/* hangup */
+	#if 0
+	signal (SIGEMT, user_bad_exit);		/* emulator trap */
+	#endif
+	signal (SIGTERM, user_signal_good_exit); /* software termination */
 	signal (SIGPIPE, user_signal_good_exit); /* broken pipe -- usually from "prog | head -10" or similar */
 
 	/* Only catch if not being ignored */
