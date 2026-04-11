@@ -5014,6 +5014,7 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 	DT_LOG("chan_io", Wptr, (word)channel_address, (word)pointer, flags | (count << 16));
 	temp = atw_val (channel_address);
 
+
 	if (temp == NotProcess_p || (temp & 1)) {
 		Wptr[Pointer] = (word) pointer;
 		save_priofinity (sched, Wptr);

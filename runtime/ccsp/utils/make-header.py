@@ -661,7 +661,7 @@ def gen_x64_cif_stub(f, symbol, inputs, outputs):
 				outputs[0], outputs[0], param0))
 		else:
 			f.line("ccsp_cif_x64_kcall_resched((void *)__wptr, (void *)__sched, (word)(%s), __func);" % param0)
-		f.line("(__wptr)[SchedPtr] = (word) __sched;")
+		f.line("__sched = (ccsp_sched_t *)((__wptr)[SchedPtr]);")
 		if len(outputs) > 1:
 			for (n, i) in enumerate(outputs):
 				if n >= 1:
@@ -838,7 +838,7 @@ def gen_aarch64_cif_stub(f, symbol, inputs, outputs):
         f.line("word _res = %s((void *)__wptr, (void *)__sched, (word)(%s), __kernel_func);" % (asm_func, param0))
 
         if resched:
-                f.line("(__wptr)[SchedPtr] = (word) __sched;")
+                f.line("__sched = (ccsp_sched_t *)((__wptr)[SchedPtr]);")
 
         if out_regs > 0:
                 f.line("%s = (__typeof__(%s)) _res;" % (outputs[0], outputs[0]))

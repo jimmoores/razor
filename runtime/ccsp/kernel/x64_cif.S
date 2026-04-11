@@ -94,6 +94,12 @@ ccsp_cif_x64_kcall_resched:
 
 	/* Call kernel function */
 	callq	*%rcx
+	/* After K_ZERO_OUT_JRET: r14=wptr, r15=current sched.
+	 * If the process was migrated to a different scheduler during
+	 * the rescheduling call, r15 now points to the NEW scheduler.
+	 * Update wptr[SchedPtr] so the CIF C code picks up the correct
+	 * scheduler for subsequent kernel calls. */
+	movq	%r15, -56(%r14)		/* wptr[SchedPtr] = current sched */
 	movq	-80(%r14), %rsp		/* restore SP from wptr[-10] */
 	movq	-96(%r14), %rbp
 	movq	-128(%r14), %r15

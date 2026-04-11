@@ -99,12 +99,16 @@ ccsp_cif_call_asm_resched:
     blr x3
 
     // After return from kernel (possibly after context switch):
-    // K_ZERO_OUT_JRET restores x28=Wptr (= wptr from entry).
+    // K_ZERO_OUT_JRET restores x28=Wptr (= wptr from entry), x25=sched.
+    // If the process was migrated to a different scheduler during the
+    // rescheduling call, x25 now points to the NEW scheduler.
+    // Update wptr[SchedPtr] so the CIF C code picks up the correct
+    // scheduler for subsequent kernel calls.
+    stur x25, [x28, #-56]  // wptr[SchedPtr] = current sched (x25)
+
     // Restore callee-saved registers from the WORKSPACE.
     ldur x9, [x28, #-80]   // restore SP from wptr[-10]
     mov sp, x9
-
-    ldur x1, [x28, #-56]   // reload sched from wptr[-7]
 
     ldur x29, [x28, #-96]
     ldur x30, [x28, #-88]
