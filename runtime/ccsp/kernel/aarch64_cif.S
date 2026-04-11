@@ -182,16 +182,8 @@ ccsp_cif_process_call:
     // x28 is callee-saved and should still be Wptr (from occam).
     add x9, x28, #8             // x9 = Wptr + 8 = wptr
     ldur x30, [x9, #-184]       // restore LR from wptr[-23]
-    // Restore SP from the CURRENT scheduler's stack, not the saved SP.
-    // If the CIF process was migrated to a different scheduler during a
-    // rescheduling kernel call, the saved SP (wptr[-5]) still points to
-    // the ORIGINAL scheduler's kernel stack.  Using it would put us on
-    // the wrong thread's stack, causing corruption when both threads
-    // access the same stack simultaneously.
     // Load the CURRENT scheduler's stack via wptr[SchedPtr].
-    // If the CIF process was migrated during a rescheduling kernel call,
-    // the original saved SP (wptr[-5]) points to the wrong scheduler's
-    // stack.  wptr[SchedPtr] (byte -56) is always updated by
+    // wptr[SchedPtr] (byte -56) is always updated by
     // ccsp_cif_call_asm_resched after each rescheduling call.
     ldur x9, [x9, #-56]         // x9 = wptr[SchedPtr] = current sched
     ldr x9, [x9]                // x9 = sched->stack
