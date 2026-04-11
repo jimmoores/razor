@@ -1032,10 +1032,20 @@ static HOT int calculate_dispatches (word size)
 /*{{{  static HOT void load_curb (sched_t *sched, batch_t *batch, bool remote)*/
 static HOT void load_curb (sched_t *sched, batch_t *batch, bool remote)
 {
+	if (remote) {
+		/* Stolen batch: ensure all stores by the owning thread
+		 * (batch fields, process workspace data, Link pointers)
+		 * are visible before we read them.  On aarch64 the
+		 * atw_swap acquire in try_migrate_from_scheduler pairs
+		 * with the owner's release, but the batch's Fptr/Bptr
+		 * and the processes' workspace fields were written with
+		 * plain stores that need a full barrier to be visible. */
+		strong_read_barrier ();
+	}
 	sched->curb.Fptr = batch->Fptr;
 	sched->curb.Bptr = batch->Bptr;
 	sched->curb.size = batch->size & (~BATCH_EMPTIED);
-	
+
 	sched->dispatches = calculate_dispatches (sched->curb.size);
 	sched->priofinity = sched->curb.Fptr[Priofinity];
 
@@ -2087,6 +2097,14 @@ static void NO_RETURN REGPARM kernel_scheduler (sched_t *sched)
 						#if defined(RMOX_BUILD)
 						att_clear_bit (&sleeping_threads, sched->index);
 						#endif /* defined(RMOX_BUILD) */
+						/* After waking from sleep, ensure we see all
+						 * stores from the thread that woke us (e.g.
+						 * migrated batch data, sync flag updates).
+						 * On aarch64 the pipe read in ccsp_safe_pause
+						 * acts as a data dependency barrier but does
+						 * not guarantee visibility of unrelated stores
+						 * from other CPUs. */
+						strong_memory_barrier ();
 						sched->loop = sched->spin;
 					}
 				}
@@ -2097,6 +2115,13 @@ static void NO_RETURN REGPARM kernel_scheduler (sched_t *sched)
 			Wptr = dequeue_from_curb (sched);
 		}
 	} while (Wptr == NotProcess_p);
+
+	/* Ensure all stores to the process's workspace (Iptr, Link,
+	 * Priofinity, etc.) are visible before we read them in
+	 * K_ZERO_OUT_JRET.  On aarch64, if the process was migrated
+	 * from another scheduler thread, the plain stores to workspace
+	 * fields might not yet be visible without a barrier. */
+	strong_read_barrier ();
 
 	K_ZERO_OUT_JRET ();
 	

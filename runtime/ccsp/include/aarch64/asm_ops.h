@@ -33,7 +33,12 @@
 #if MAX_RUNTIME_THREADS > 1
 #define weak_memory_barrier() 	strong_memory_barrier()
 #define weak_read_barrier() 	strong_read_barrier()
-#define weak_write_barrier() 	compiler_barrier()
+/* On aarch64, stores can be reordered by the CPU even after a
+ * compiler barrier.  Use DMB ST (store barrier) to ensure all
+ * prior stores are visible to other CPUs before subsequent stores.
+ * On x86 this can remain a compiler barrier since TSO guarantees
+ * store-store ordering. */
+#define weak_write_barrier() 	strong_write_barrier()
 #else
 #define weak_memory_barrier() 	compiler_barrier()
 #define weak_read_barrier() 	compiler_barrier()
