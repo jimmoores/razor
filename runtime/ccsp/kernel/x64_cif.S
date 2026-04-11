@@ -100,11 +100,6 @@ ccsp_cif_x64_kcall_resched:
 	 * Update wptr[SchedPtr] so the CIF C code picks up the correct
 	 * scheduler for subsequent kernel calls. */
 	movq	%r15, -56(%r14)		/* wptr[SchedPtr] = current sched */
-	/* Also update wptr[-5] (byte -40) with current sched->stack.
-	 * ccsp_cif_process_call saved the original sched->stack there,
-	 * but after migration it needs the NEW scheduler's stack. */
-	movq	(%r15), %rax
-	movq	%rax, -40(%r14)		/* wptr[-5] = sched->stack */
 	movq	-80(%r14), %rsp		/* restore SP from wptr[-10] */
 	movq	-96(%r14), %rbp
 	movq	-128(%r14), %r15
@@ -165,10 +160,12 @@ ccsp_cif_process_call:
 
 	/* CIF function returned.  rbx = wptr (callee-saved).
 	 * Restore state from workspace.
-	 * wptr[-5] now holds the CURRENT scheduler's stack (updated by
-	 * ccsp_cif_x64_kcall_resched after each rescheduling kernel call),
-	 * so this restore works correctly even after process migration. */
-	movq	-40(%rbx), %rsp		/* restore rsp from wptr[-5] */
+	 * Load the CURRENT scheduler's stack via wptr[SchedPtr].
+	 * If the CIF process migrated during a rescheduling kernel call,
+	 * the original saved SP (wptr[-5]) points to the wrong scheduler.
+	 * wptr[SchedPtr] (byte -56) is always updated after each resched. */
+	movq	-56(%rbx), %rsp		/* rsp = wptr[SchedPtr] = current sched */
+	movq	(%rsp), %rsp		/* rsp = sched->stack */
 	movq	-184(%rbx), %rax	/* restore return address from wptr[-23] */
 	pushq	%rax			/* put return address back on stack */
 	movq	-216(%rbx), %r13	/* restore r13 from wptr[-27] */
