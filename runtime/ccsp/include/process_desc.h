@@ -105,6 +105,34 @@ typedef struct process_descriptor {
 	((process_descriptor_t *)(void *)((word *)(wptr) - PROC_DESC_NEG_WORDS))
 
 /*
+ *	PROC_WPTR(desc) -- inverse of PROC_DESC, recovering the workspace
+ *	pointer that the legacy alias model would have computed `desc` from.
+ *
+ *	Stage 3D-3 starts using process_descriptor_t* values as the
+ *	canonical "process identity" inside the scheduler queues, replacing
+ *	the legacy `word *Wptr` chain.  PROC_WPTR is the bridge: code that
+ *	still needs the AJW-level Wptr value (e.g. dispatch, which sets the
+ *	Wptr register before jumping to the resume Iptr) calls
+ *	PROC_WPTR(desc) to get it.
+ *
+ *	In the alias model PROC_WPTR is the literal inverse arithmetic.
+ *	After stage 3D-4 (or whichever stage moves the descriptor to a
+ *	separately-allocated location), this macro will read a saved-Wptr
+ *	field from inside the descriptor instead -- but the API stays
+ *	the same so call sites don't change.
+ */
+#define PROC_WPTR(desc) \
+	((word *)((char *)(desc) + (PROC_DESC_NEG_WORDS * sizeof(word))))
+
+/*
+ *	process_t -- typed handle for "a process in a scheduler queue".
+ *	Phase 3D-3 onward, this is the canonical type passed in and out
+ *	of enqueue/dequeue/run-queue helpers, replacing `word *Wptr`.
+ *	The underlying value is just a process_descriptor_t pointer.
+ */
+typedef process_descriptor_t *process_t;
+
+/*
  *	Compile-time assertions that the descriptor struct lays out
  *	exactly on top of the legacy negative-offset slots defined in
  *	ccsp_consts.h.  If anyone reorders the struct or fiddles with
