@@ -36,6 +36,7 @@
 #include <arch/sched_asm_inserts.h>
 #include <deadlock.h>
 #include <kiface.h>
+#include <process_desc.h>
 /*}}}*/
 
 /*{{{  void ccsp_kernel_entry (word *wptr, word *fptr)*/
@@ -84,8 +85,8 @@ void ccsp_kernel_entry (word *wptr, word *fptr)
 /* Entry point to CCSP for occam programs. */
 void ccsp_occam_entry (void *ws, unsigned int ws_bytes, word iptr, word *wptr, word *fptr)
 {
-	wptr[Iptr] = iptr;
-	wptr[Priofinity] = 0;
+	PROC_DESC(wptr)->iptr = iptr;
+	PROC_DESC(wptr)->priofinity = 0;
 	ccsp_give_ws_code ((char *) ws, (int) ws_bytes, (unsigned char *) iptr);
 	ccsp_kernel_entry (wptr, fptr);
 }

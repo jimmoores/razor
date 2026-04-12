@@ -135,7 +135,7 @@
 extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((noreturn));
 #define K_ZERO_OUT_JRET() \
 	do { \
-		TRACE_RETURN (Wptr[Iptr]); \
+		TRACE_RETURN (PROC_DESC(Wptr)->iptr); \
 		ccsp_dispatch_process (sched, Wptr); \
 	} while (0)
 

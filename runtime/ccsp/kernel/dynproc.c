@@ -46,6 +46,7 @@
 #include <deadlock.h>
 #include <dynproc.h>
 #include <dmem_if.h>
+#include <process_desc.h>
 /*}}}*/
 
 /*{{{  forward declarations*/
@@ -631,8 +632,8 @@ MESSAGE ("debug: not one of my output channels (do_ccsp_suspendproc)\n");
 	/* tranx86 does something special here: upon return we jump back into the occam kernel */
 	*(tp->result) 			= DPROCESS_SUSPENDED;
 	xx_wptr 			= (word *)tp->holding_wptr;
-	xx_wptr[Iptr] 			= tp->holding_raddr;
-	xx_wptr[Priofinity] 		= tp->holding_priofinity;
+	PROC_DESC(xx_wptr)->iptr 	= tp->holding_raddr;
+	PROC_DESC(xx_wptr)->priofinity	= tp->holding_priofinity;
 	do_queue_process (xx_wptr);
 	*result = 0;
 	return;

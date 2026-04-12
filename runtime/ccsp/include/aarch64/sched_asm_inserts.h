@@ -240,8 +240,8 @@ LABEL_TYPE( ,X) \
 extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((noreturn));
 #define K_ZERO_OUT_JRET() \
 	do { \
-		DT_LOG("JRET", Wptr, Wptr ? Wptr[Iptr] : 0, sched, 0); \
-		TRACE_RETURN (Wptr[Iptr]); \
+		DT_LOG("JRET", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, sched, 0); \
+		TRACE_RETURN (PROC_DESC(Wptr)->iptr); \
 		ccsp_dispatch_process (sched, Wptr); \
 	} while (0)
 #define K_ONE_OUT(A) \

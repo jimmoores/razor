@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <ccsp.h>
 #include <ccsp_timer.h>
+#include <process_desc.h>
 
 /*{{{  void ccsp_cif_noreturn(void) */
 #define ccsp_cif_noreturn() { exit(1); }
@@ -133,7 +134,7 @@ static inline void TimerAltWait (Workspace wptr)
 static inline int AltEnd (Workspace wptr)
 {
 	ccsp_cif_Y_caltend (wptr);
-	return (int) wptr[Temp];
+	return (int) PROC_DESC(wptr)->temp;
 }
 /*}}}*/
 /*}}}*/
@@ -628,8 +629,8 @@ static inline Workspace ProcAlloc (Workspace wptr, word args, word stack)
 	ccsp_cif_X_proc_alloc (wptr, 0, words, ws);
 
 	ws += CIF_PROCESS_WORDS;
-	ws[BarrierPtr] = (word) NULL;
-	ws[StackPtr] = words - CIF_PROCESS_WORDS;
+	PROC_DESC(ws)->barrier_ptr = (word) NULL;
+	PROC_DESC(ws)->stack_ptr = words - CIF_PROCESS_WORDS;
 	
 	return ws;
 }
@@ -679,8 +680,8 @@ static inline void ProcMTMove (Workspace wptr, Workspace ws, word n, void *pptr)
 /*{{{  void ProcStart (Workspace wptr, Workspace ws, Process func) */
 static inline void ProcStart (Workspace wptr, Workspace ws, Process func)
 {
-	ccsp_sched_t *sched = (ccsp_sched_t *) wptr[SchedPtr];
-	Workspace top = ws + ws[StackPtr];
+	ccsp_sched_t *sched = (ccsp_sched_t *) PROC_DESC(wptr)->sched_ptr;
+	Workspace top = ws + PROC_DESC(ws)->stack_ptr;
 	
 	top -= 1; 			/* one parameter (ws) */
 	top = (Workspace) (((word) top) & (~((sizeof(word) * CIF_STACK_ALIGN) - 1)));
@@ -689,9 +690,9 @@ static inline void ProcStart (Workspace wptr, Workspace ws, Process func)
 	ws[0]	= (word) top;
 	top[0]	= (word) func;
 	top[1]	= (word) ws;
-	/* Set SchedPtr AFTER using ws[StackPtr] for top calculation above,
+	/* Set SchedPtr AFTER using PROC_DESC(ws)->stack_ptr for top calculation above,
 	 * since StackPtr and SchedPtr share offset -7. */
-	ws[SchedPtr] = (word) sched;
+	PROC_DESC(ws)->sched_ptr = (word) sched;
 
 	ws -= CIF_PROCESS_WORDS;
 
@@ -701,7 +702,7 @@ static inline void ProcStart (Workspace wptr, Workspace ws, Process func)
 /*{{{  void ProcEnd (Workspace wptr) */
 static inline void ProcEnd (Workspace wptr)
 {
-	switch (wptr[BarrierPtr]) {
+	switch (PROC_DESC(wptr)->barrier_ptr) {
 		case ((word) NULL):
 			{
 				/* started with ProcStart */
@@ -712,13 +713,13 @@ static inline void ProcEnd (Workspace wptr)
 		case ((word) -1):
 			{
 				/* called from occam */
-				ccsp_cif_jump ((void *) wptr, (void *) wptr[EscapePtr]);
+				ccsp_cif_jump ((void *) wptr, (void *) PROC_DESC(wptr)->escape_ptr);
 			}
 			break;
 		default:
 			{
 				/* start with LightProcStart */
-				word bar = wptr[BarrierPtr];
+				word bar = PROC_DESC(wptr)->barrier_ptr;
 				ccsp_cif_Y_endp (wptr, bar);
 			}
 			break;
@@ -734,8 +735,8 @@ static inline Workspace ProcAllocInitial (word args, word stack)
 	ws = ccsp_proc_alloc (0, words);
 
 	ws += CIF_PROCESS_WORDS;
-	ws[BarrierPtr] = (word) NULL;
-	ws[StackPtr] = words - CIF_PROCESS_WORDS;
+	PROC_DESC(ws)->barrier_ptr = (word) NULL;
+	PROC_DESC(ws)->stack_ptr = words - CIF_PROCESS_WORDS;
 	
 	return ws;
 }
@@ -743,13 +744,13 @@ static inline Workspace ProcAllocInitial (word args, word stack)
 /*{{{  void ProcStartInitial (Workspace ws, Process func) */
 static inline void ProcStartInitial (Workspace ws, Process func)
 {
-	Workspace top = ws + ws[StackPtr];
+	Workspace top = ws + PROC_DESC(ws)->stack_ptr;
 	
 	top -= 1; 			/* one parameter (ws) */
 	top = (Workspace) (((word) top) & (~((sizeof(word) * CIF_STACK_ALIGN) - 1)));
 	top -= CIF_STACK_LINKAGE;	/* return pointer */
 
-	ws[Iptr]	= (word) _ccsp_cif_proc_stub;
+	PROC_DESC(ws)->iptr	= (word) _ccsp_cif_proc_stub;
 	ws[0]		= (word) top;
 	top[0]		= (word) func;
 	top[1]		= (word) ws;
@@ -765,9 +766,9 @@ static inline void LightProcBarrierInit (Workspace wptr, LightProcBarrier *bar, 
 
 	ccsp_cif_X_getpas (wptr, pas);
 
-	wbar[IptrSucc]		= (word) _ccsp_cif_endp_resume_stub;
-	wbar[Count] 		= count + 1;
-	wbar[SavedPriority]	= pas;
+	PROC_DESC(wbar)->iptr_succ		= (word) _ccsp_cif_endp_resume_stub;
+	PROC_DESC(wbar)->count 		= count + 1;
+	PROC_DESC(wbar)->saved_priority	= pas;
 }
 /*}}}*/
 /*{{{  void LightProcBarrierEnroll (Workspace wptr, LightProcBarrier *bar, word count) */
@@ -783,7 +784,7 @@ static inline void LightProcBarrierWait (Workspace wptr, LightProcBarrier *bar)
 {
 	word *wbar = bar->data + CIF_PROCESS_WORDS;
 
-	wbar[Pointer] = (word) wptr;
+	PROC_DESC(wbar)->pointer = (word) wptr;
 
 	ccsp_cif_Y_endp (wptr, wbar);
 }
@@ -794,7 +795,7 @@ static inline Workspace LightProcInit (Workspace wptr, word *base, word args, wo
 	Workspace ws = base + CIF_PROCESS_WORDS;
 	word words = WORKSPACE_SIZE (args, stack);
 
-	ws[StackPtr] = words - CIF_PROCESS_WORDS;
+	PROC_DESC(ws)->stack_ptr = words - CIF_PROCESS_WORDS;
 
 	return ws;
 }
@@ -802,20 +803,20 @@ static inline Workspace LightProcInit (Workspace wptr, word *base, word args, wo
 /*{{{  void LightProcStart (Workspace wptr, LightProcBarrier *bar, Workspace ws, Process func) */
 static inline void LightProcStart (Workspace wptr, LightProcBarrier *bar, Workspace ws, Process func)
 {
-	ccsp_sched_t *sched = (ccsp_sched_t *) wptr[SchedPtr];
-	Workspace top = ws + ws[StackPtr];
+	ccsp_sched_t *sched = (ccsp_sched_t *) PROC_DESC(wptr)->sched_ptr;
+	Workspace top = ws + PROC_DESC(ws)->stack_ptr;
 	
 	top -= 1; 			/* one parameter (ws) */
 	top = (Workspace) (((word) top) & (~((sizeof(word) * CIF_STACK_ALIGN) - 1)));
 	top -= CIF_STACK_LINKAGE;	/* return pointer */
 
-	ws[BarrierPtr]	= (word) (bar->data + CIF_PROCESS_WORDS);
-	ws[Priofinity]	= (bar->data + CIF_PROCESS_WORDS)[SavedPriority];
-	ws[Iptr]	= (word) _ccsp_cif_light_proc_stub;
+	PROC_DESC(ws)->barrier_ptr	= (word) (bar->data + CIF_PROCESS_WORDS);
+	PROC_DESC(ws)->priofinity	= PROC_DESC(bar->data + CIF_PROCESS_WORDS)->saved_priority;
+	PROC_DESC(ws)->iptr	= (word) _ccsp_cif_light_proc_stub;
 	ws[0]		= (word) top;
-	/* Set SchedPtr AFTER using ws[StackPtr] for top calculation above,
+	/* Set SchedPtr AFTER using PROC_DESC(ws)->stack_ptr for top calculation above,
 	 * since StackPtr and SchedPtr share offset -7. */
-	ws[SchedPtr]	= (word) sched;
+	PROC_DESC(ws)->sched_ptr	= (word) sched;
 	top[0]		= (word) func;
 	top[1]		= (word) ws;
 

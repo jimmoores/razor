@@ -24,6 +24,7 @@ krocinclude_HEADERS = \
 	mobile_types.h \
 	mobproc.h \
 	mwsync.h \
+	process_desc.h \
 	typedesc.h \
 	ukcthreads_types.h
 
