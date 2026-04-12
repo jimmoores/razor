@@ -180,6 +180,14 @@ ccsp_global_t		_ccsp				CACHELINE_ALIGN = {};
 
 void 			**_ccsp_calltable		CACHELINE_ALIGN = NULL;
 
+/* CIF process trampoline addresses (Phase 1D Stage 1b).
+ * Populated once by ccsp_kernel_init from the kernel_CIF_*_stub
+ * functions; replaces sched->calltable[K_CIF_*_STUB] lookups in
+ * ccsp_cif.h. */
+void			*_ccsp_cif_proc_stub		= NULL;
+void			*_ccsp_cif_light_proc_stub	= NULL;
+void			*_ccsp_cif_endp_resume_stub	= NULL;
+
 /*}}}*/
 
 /*{{{  ENTRY_TRACE macros*/
@@ -1935,6 +1943,15 @@ void ccsp_kernel_init (void)
 	init_ccsp_global_t (&_ccsp);
 	build_calltable (_ccsp.calltable);
 	_ccsp_calltable = _ccsp.calltable;
+
+	/* Cache the CIF trampoline code addresses for ccsp_cif.h.  These
+	 * are returned by kernel_CIF_*_stub() functions in this file.
+	 * build_calltable above already invokes them; calling here again
+	 * is harmless and removes the dependency on the global calltable. */
+	_ccsp_cif_proc_stub		= kernel_CIF_proc_stub ();
+	_ccsp_cif_light_proc_stub	= kernel_CIF_light_proc_stub ();
+	_ccsp_cif_endp_resume_stub	= kernel_CIF_endp_resume_stub ();
+
 	init_local_schedulers ();
 
 }
@@ -6880,7 +6897,7 @@ K_CALL_DEFINE_3_0 (Y_mppdeserialise)
  *	@CALL:		K_CIF_ENDP_RESUME_STUB
  *	@PRIO:		0
  */
-static void * __attribute__((noinline)) kernel_CIF_endp_resume_stub (void)
+void * __attribute__((noinline)) kernel_CIF_endp_resume_stub (void)
 {
 	void *address;
 	K_CIF_ENDP_RESUME (address);
@@ -6893,7 +6910,7 @@ static void * __attribute__((noinline)) kernel_CIF_endp_resume_stub (void)
  *	@CALL:		K_CIF_LIGHT_PROC_STUB
  *	@PRIO:		0
  */
-static void * __attribute__((noinline)) kernel_CIF_light_proc_stub (void)
+void * __attribute__((noinline)) kernel_CIF_light_proc_stub (void)
 {
 	void *address;
 	K_CIF_PROC_IND (address, K_ENDP, BarrierPtr);
@@ -6906,7 +6923,7 @@ static void * __attribute__((noinline)) kernel_CIF_light_proc_stub (void)
  *	@CALL:		K_CIF_PROC_STUB
  *	@PRIO:		0
  */
-static void * __attribute__((noinline)) kernel_CIF_proc_stub (void)
+void * __attribute__((noinline)) kernel_CIF_proc_stub (void)
 {
 	void *address;
 	K_CIF_PROC (address, K_PROC_END, -CIF_PROCESS_WORDS);
