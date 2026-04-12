@@ -273,19 +273,9 @@ extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) 
 		} \
 	} while (0)
 
-/* K_CIF_ENDP_RESUME: get resume address and do process end.
- * The call pushes the resume address (label 0:) onto the stack.
- * After the call falls through, we load Wptr from Wptr[-4] (saved parent Wptr)
- * and jump to Wptr[-1] (Iptr). */
-#define K_CIF_ENDP_RESUME(address) \
-	__asm__ __volatile__ ("				\n" \
-		"	call	0f			\n" \
-		"	movq	-32(%%r14), %%r14	\n" \
-		"	jmpq	*-8(%%r14)		\n" \
-		"0:	popq	%0			\n" \
-		: "=g" (address) \
-		: /* no inputs */ \
-		: "memory")
+/* K_CIF_ENDP_RESUME removed in Phase 2: kernel_CIF_endp_resume_stub
+ * now returns &ccsp_cif_endp_resume_label directly (defined in
+ * x64_cif.S).  No inline-asm dance needed. */
 
 /* _K_CIF_PROC: CIF process creation trampoline body.
  * Switches from kernel stack to process stack, pops and calls the C function,

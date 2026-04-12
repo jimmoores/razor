@@ -304,18 +304,9 @@ extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) 
 		} \
 	} while (0)
 
-#define K_CIF_ENDP_RESUME(address) \
-	__asm__ __volatile__ ("\t\t\t\t\n" \
-		"\tadr %0, 0f\t\n" \
-		"\tb 1f\t\t\n" \
-		"0:\t\t\t\t\n" \
-		"\tldr x28, [x28, #-32]\t\n" \
-		"\tldr x9, [x28, #-8]\t\n" \
-		"\tbr x9\t\t\t\n" \
-		"1:\t\t\t\t\n" \
-		: "=r" (address) \
-		: /* no inputs */ \
-		: "memory", "x9", "x28")
+/* K_CIF_ENDP_RESUME removed in Phase 2: kernel_CIF_endp_resume_stub
+ * now returns &ccsp_cif_endp_resume_label directly (defined in
+ * aarch64_cif.S).  No inline-asm dance needed. */
 /* K_CIF_PROC / K_CIF_PROC_IND now dispatch directly to a named kernel
  * function symbol via `b <symbol>` instead of indirecting through
  * sched->calltable[call].  Mirrors the x64 change; lets the per-sched

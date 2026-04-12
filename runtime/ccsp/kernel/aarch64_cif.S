@@ -1,6 +1,28 @@
 .text
 .align 2
 
+// ccsp_cif_endp_resume_label  (Phase 2)
+//
+// Code-only label whose address is returned by kernel_CIF_endp_resume_stub
+// and stored as the IptrSucc of every LightProc barrier.  When a child
+// process ends and the barrier count drops to zero, the parent resumes
+// here: load the parent's Wptr from wptr[-4] (= byte -32 from current
+// x28) and jump to its saved Iptr at wptr[-1] (= byte -8 from x28).
+//
+// This is NOT a callable function -- it has no prologue and is only
+// ever entered via Iptr-jump from the scheduler, with x28 already
+// set to the resuming process's Wptr by ccsp_dispatch_process.
+#if defined(__APPLE__)
+.global _ccsp_cif_endp_resume_label
+_ccsp_cif_endp_resume_label:
+#else
+.global ccsp_cif_endp_resume_label
+ccsp_cif_endp_resume_label:
+#endif
+    ldr x28, [x28, #-32]   // x28 = parent Wptr
+    ldr x9, [x28, #-8]     // x9 = parent Wptr[Iptr]
+    br x9                  // jump
+
 // void ccsp_kernel_enter(void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn))
 //
 // Phase 2: kernel boot primitive.  Replaces the inline-asm K_ENTRY

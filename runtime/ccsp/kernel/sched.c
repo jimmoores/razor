@@ -6900,12 +6900,16 @@ K_CALL_DEFINE_3_0 (Y_mppdeserialise)
  *	@SYMBOL:	CIF_endp_resume_stub
  *	@CALL:		K_CIF_ENDP_RESUME_STUB
  *	@PRIO:		0
+ *
+ *	Phase 2: returns the address of ccsp_cif_endp_resume_label which
+ *	is defined in the per-arch *_cif.S file.  Replaces the old inline-
+ *	asm K_CIF_ENDP_RESUME macro that emitted both the resume code and
+ *	captured its address in one expansion.
  */
-void * __attribute__((noinline)) kernel_CIF_endp_resume_stub (void)
+extern char ccsp_cif_endp_resume_label[];
+void *kernel_CIF_endp_resume_stub (void)
 {
-	void *address;
-	K_CIF_ENDP_RESUME (address);
-	return address;
+	return (void *) &ccsp_cif_endp_resume_label[0];
 }
 /*}}}*/
 /*{{{  void *kernel_CIF_light_proc_stub (void)*/

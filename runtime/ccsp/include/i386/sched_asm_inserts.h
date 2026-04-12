@@ -190,15 +190,9 @@ extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) 
 		: "=a" (ret) \
 		: "0" (func), "c" (argc << WSH), "S" (argv) \
 		: "cc", "memory", "edx", "edi")
-#define K_CIF_ENDP_RESUME(address) \
-	__asm__ __volatile__ ("				\n" \
-		"	call	0f			\n" \
-		"	movl	-16(%%ebp), %%ebp	\n" \
-		"	jmp	*-4(%%ebp)		\n" \
-		"0:	popl	%0			\n" \
-		: "=g" (address) \
-		: /* no inputs */ \
-		: "memory")
+/* K_CIF_ENDP_RESUME removed in Phase 2: kernel_CIF_endp_resume_stub
+ * now returns &ccsp_cif_endp_resume_label directly (defined in
+ * i386_cif.S).  No inline-asm dance needed. */
 #define _K_CIF_PROC \
 		"	movl	(%%ebp), %%esp		\n" \
 		"	movl	%%esi, -28(%%ebp)	\n" \
