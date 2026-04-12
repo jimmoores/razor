@@ -111,6 +111,18 @@ void ccsp_cif_bcall1_stub (word *arg)
 /*}}}*/
 
 /*{{{  void ccsp_cif_bcalln_stub (word *arg)*/
+/*
+ * Phase 2: K_CIF_BCALLN macro replaced by an in-function switch on
+ * argc using typed function pointers.  Same pattern as ExternalCallN
+ * in ccsp_cif.h: cap at 8 args, dispatch via the appropriate fn type
+ * so the C compiler emits the correct calling convention (arg
+ * registers on x64/aarch64, stack pushes on i386 cdecl).
+ *
+ * On x64, variadic functions like printf require al=0 to indicate
+ * that no XMM registers are used for variadic args.  GCC zeroes al
+ * automatically for declared variadic types but not for our typed
+ * pointer casts -- so we emit `xorl %eax, %eax` ourselves.
+ */
 void ccsp_cif_bcalln_stub (word *arg)
 {
 	void *func	= (void *) arg[0];
@@ -118,7 +130,61 @@ void ccsp_cif_bcalln_stub (word *arg)
 	word *argv	= (word *) arg[2];
 	word ret;
 
-	K_CIF_BCALLN (func, argc, argv, ret);
+	typedef word (*fn0_t)(void);
+	typedef word (*fn1_t)(word);
+	typedef word (*fn2_t)(word, word);
+	typedef word (*fn3_t)(word, word, word);
+	typedef word (*fn4_t)(word, word, word, word);
+	typedef word (*fn5_t)(word, word, word, word, word);
+	typedef word (*fn6_t)(word, word, word, word, word, word);
+	typedef word (*fn7_t)(word, word, word, word, word, word, word);
+	typedef word (*fn8_t)(word, word, word, word, word, word, word, word);
+
+#if defined(__x86_64__)
+#define _BCALLN_ZERO_AL __asm__ __volatile__ ("xorl %%eax, %%eax" ::: "rax")
+#else
+#define _BCALLN_ZERO_AL (void)0
+#endif
+
+	switch (argc) {
+	case 0:
+		_BCALLN_ZERO_AL;
+		ret = ((fn0_t)func)();
+		break;
+	case 1:
+		_BCALLN_ZERO_AL;
+		ret = ((fn1_t)func)(argv[0]);
+		break;
+	case 2:
+		_BCALLN_ZERO_AL;
+		ret = ((fn2_t)func)(argv[0], argv[1]);
+		break;
+	case 3:
+		_BCALLN_ZERO_AL;
+		ret = ((fn3_t)func)(argv[0], argv[1], argv[2]);
+		break;
+	case 4:
+		_BCALLN_ZERO_AL;
+		ret = ((fn4_t)func)(argv[0], argv[1], argv[2], argv[3]);
+		break;
+	case 5:
+		_BCALLN_ZERO_AL;
+		ret = ((fn5_t)func)(argv[0], argv[1], argv[2], argv[3], argv[4]);
+		break;
+	case 6:
+		_BCALLN_ZERO_AL;
+		ret = ((fn6_t)func)(argv[0], argv[1], argv[2], argv[3], argv[4], argv[5]);
+		break;
+	case 7:
+		_BCALLN_ZERO_AL;
+		ret = ((fn7_t)func)(argv[0], argv[1], argv[2], argv[3], argv[4], argv[5], argv[6]);
+		break;
+	default:
+		_BCALLN_ZERO_AL;
+		ret = ((fn8_t)func)(argv[0], argv[1], argv[2], argv[3], argv[4], argv[5], argv[6], argv[7]);
+		break;
+	}
+#undef _BCALLN_ZERO_AL
 
 	arg[0] = ret;
 }

@@ -174,22 +174,9 @@ extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) 
 /*}}}*/
 
 /*{{{  CIF helpers */
-#define K_CIF_BCALLN(func, argc, argv, ret) \
-	__asm__ __volatile__ ("				\n" \
-		"	pushl	%%ebp			\n" \
-		"	movl	%%esp, %%ebp		\n" \
-		"	subl	%%ecx, %%esp		\n" \
-		"	andl	$-16, %%esp		\n" \
-		"	movl	%%esp, %%edi		\n" \
-		"	cld				\n" \
-		"	rep				\n" \
-		"	movsb				\n" \
-		"	call	*%%eax			\n" \
-		"	movl	%%ebp, %%esp		\n" \
-		"	popl	%%ebp			\n" \
-		: "=a" (ret) \
-		: "0" (func), "c" (argc << WSH), "S" (argv) \
-		: "cc", "memory", "edx", "edi")
+/* K_CIF_BCALLN removed in Phase 2: ccsp_cif_bcalln_stub in entry.c
+ * now does the dispatch in C using a switch on argc with typed
+ * function pointers. */
 /* K_CIF_ENDP_RESUME removed in Phase 2: kernel_CIF_endp_resume_stub
  * now returns &ccsp_cif_endp_resume_label directly (defined in
  * i386_cif.S).  No inline-asm dance needed. */

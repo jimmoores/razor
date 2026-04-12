@@ -252,26 +252,9 @@ extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) 
 /*}}}*/
 
 /*{{{  CIF helpers */
-/* K_CIF_BCALLN: call a C function with N word-sized arguments from argv.
- * On x64, args go in registers (rdi, rsi, ...), not on the stack.
- * Unpack argv into registers via typed function pointer calls.
- * Zero al before call for x64 variadic function ABI compliance. */
-#define K_CIF_BCALLN(func, argc, argv, ret) \
-	do { \
-		word (*_f0)(void) = (word (*)(void))(func); \
-		word (*_f1)(word) = (word (*)(word))(func); \
-		word (*_f2)(word,word) = (word (*)(word,word))(func); \
-		word (*_f3)(word,word,word) = (word (*)(word,word,word))(func); \
-		word (*_f4)(word,word,word,word) = (word (*)(word,word,word,word))(func); \
-		__asm__ __volatile__ ("xorl %%eax, %%eax" ::: "rax"); \
-		switch (argc) { \
-		case 0: ret = _f0(); break; \
-		case 1: ret = _f1((argv)[0]); break; \
-		case 2: ret = _f2((argv)[0], (argv)[1]); break; \
-		case 3: ret = _f3((argv)[0], (argv)[1], (argv)[2]); break; \
-		default: ret = _f4((argv)[0], (argv)[1], (argv)[2], (argv)[3]); break; \
-		} \
-	} while (0)
+/* K_CIF_BCALLN removed in Phase 2: ccsp_cif_bcalln_stub in entry.c
+ * now does the dispatch in C using a switch on argc with typed
+ * function pointers (same pattern as ExternalCallN in ccsp_cif.h). */
 
 /* K_CIF_ENDP_RESUME removed in Phase 2: kernel_CIF_endp_resume_stub
  * now returns &ccsp_cif_endp_resume_label directly (defined in
