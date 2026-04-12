@@ -17,6 +17,80 @@
 .align 8
 
 /*
+ * ccsp_cif_proc_stub_label  (Phase 2)
+ * ccsp_cif_light_proc_stub_label
+ *
+ * Code-only labels whose addresses are returned by kernel_CIF_proc_stub
+ * and kernel_CIF_light_proc_stub respectively.  Each is the entry point
+ * for a CIF process: when the scheduler dispatches one, control lands
+ * here with r14 = process Wptr (set by ccsp_dispatch_process), r15 =
+ * sched.  The process workspace top (wptr[0]) holds [func, ws_arg].
+ *
+ * Sequence:
+ *   1. Switch rsp to the process's private stack at wptr[0].
+ *   2. Save sched into wptr[SchedPtr] (= -56) so the CIF C function
+ *      can find it later via ccsp_cif_call_asm*.
+ *   3. Pop func into rax, ws into rdi (System V 1st arg slot).
+ *   4. Call func(ws) -- a normal C function on the private stack.
+ *   5. After return, restore sched from wptr[SchedPtr] (in case the
+ *      process migrated to a different scheduler thread).
+ *   6. Set up the kernel ABI args (rdi=p0, rsi=sched, rdx=Wptr) for
+ *      the follow-up kernel call.
+ *   7. Switch rsp back to sched->stack so the kernel runs on the
+ *      kernel stack.
+ *   8. Tail-call kernel_Y_proc_end (proc_stub) or kernel_Y_endp
+ *      (light_proc_stub).
+ *
+ * proc_stub passes p0 = wptr - CIF_PROCESS_WORDS*sizeof(word) = wptr-192
+ * (the base of the workspace allocation, for mt_release_simple).
+ * light_proc_stub passes p0 = *(wptr + BarrierPtr*sizeof(word))
+ *   = *(wptr - 64) (the barrier pointer, dereferenced).
+ *
+ * The follow-up kernel call uses callq (not jmpq) so the rsp ≡ 8 (mod 16)
+ * SysV alignment contract holds for the C-compiled kernel function;
+ * the dead return address is harmless because the call never returns.
+ */
+.equ X64_CIF_PROCESS_BYTES, 192		/* CIF_PROCESS_WORDS * 8 */
+.equ X64_BARRIER_PTR_BYTES, -64		/* BarrierPtr * 8 = -8*8 */
+.equ X64_SCHED_PTR_BYTES, -56		/* SchedPtr * 8 = -7*8 */
+
+.global ccsp_cif_proc_stub_label
+.type ccsp_cif_proc_stub_label, @function
+ccsp_cif_proc_stub_label:
+	movq	(%r14), %rsp		/* rsp = wptr[0] (private stack top) */
+	movq	%r15, X64_SCHED_PTR_BYTES(%r14)	/* wptr[SchedPtr] = sched */
+	popq	%rax			/* rax = func address */
+	popq	%rdi			/* rdi = ws (1st C arg) */
+	callq	*%rax			/* call the CIF C function */
+	movq	X64_SCHED_PTR_BYTES(%r14), %r15	/* restore sched (may have migrated) */
+	movq	%r14, %rdi		/* rdi = wptr (will become p0) */
+	movq	%r14, %rdx		/* rdx = wptr (Wptr arg) */
+	movq	%r15, %rsi		/* rsi = sched (sched arg) */
+	movq	(%r15), %rsp		/* rsp = sched->stack (16-byte aligned) */
+	subq	$X64_CIF_PROCESS_BYTES, %rdi	/* p0 = wptr - CIF_PROCESS_WORDS*8 */
+	callq	kernel_Y_proc_end	/* tail-call (alignment via callq+ud2) */
+	ud2				/* unreachable */
+.size ccsp_cif_proc_stub_label, . - ccsp_cif_proc_stub_label
+
+.global ccsp_cif_light_proc_stub_label
+.type ccsp_cif_light_proc_stub_label, @function
+ccsp_cif_light_proc_stub_label:
+	movq	(%r14), %rsp		/* rsp = wptr[0] (private stack top) */
+	movq	%r15, X64_SCHED_PTR_BYTES(%r14)	/* wptr[SchedPtr] = sched */
+	popq	%rax			/* rax = func address */
+	popq	%rdi			/* rdi = ws (1st C arg) */
+	callq	*%rax			/* call the CIF C function */
+	movq	X64_SCHED_PTR_BYTES(%r14), %r15	/* restore sched */
+	movq	%r14, %rdi		/* rdi = wptr */
+	movq	%r14, %rdx		/* rdx = wptr (Wptr arg) */
+	movq	%r15, %rsi		/* rsi = sched (sched arg) */
+	movq	(%r15), %rsp		/* rsp = sched->stack */
+	movq	X64_BARRIER_PTR_BYTES(%rdi), %rdi	/* p0 = *(wptr + BarrierPtr*8) */
+	callq	kernel_Y_endp		/* tail-call */
+	ud2				/* unreachable */
+.size ccsp_cif_light_proc_stub_label, . - ccsp_cif_light_proc_stub_label
+
+/*
  * ccsp_cif_endp_resume_label  (Phase 2)
  *
  * Code-only label whose address is returned by kernel_CIF_endp_resume_stub

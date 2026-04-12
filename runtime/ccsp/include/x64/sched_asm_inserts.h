@@ -277,51 +277,10 @@ extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) 
  * now returns &ccsp_cif_endp_resume_label directly (defined in
  * x64_cif.S).  No inline-asm dance needed. */
 
-/* _K_CIF_PROC: CIF process creation trampoline body.
- * Switches from kernel stack to process stack, pops and calls the C function,
- * then restores sched, sets up arguments for a follow-up kernel call.
- * After this fragment runs:
- *   rdi = wptr + (offset * sizeof(word))   (param0)
- *   rsi = sched                             (sched arg)
- *   rdx = wptr                              (Wptr arg)
- *   rsp = sched->stack                      (kernel stack restored) */
-#define _K_CIF_PROC \
-		"	movq	(%%r14), %%rsp		\n" \
-		"	movq	%%r15, -56(%%r14)	\n" \
-		"	popq	%%rax			\n" \
-		"	popq	%%rdi			\n" \
-		"	callq	*%%rax			\n" \
-		"	movq	-56(%%r14), %%r15	\n" \
-		"	movq	%%r14, %%rdi		\n" \
-		"	movq	%%r14, %%rdx		\n" \
-		"	movq	%%r15, %%rsi		\n" \
-		"	movq	(%%r15), %%rsp		\n" \
-		"	addq	%1, %%rdi		\n"
-
-/* K_CIF_PROC / K_CIF_PROC_IND now dispatch directly to a named kernel
- * function symbol instead of indirecting through sched->calltable[call].
- * The `kernel_sym` parameter is a token (e.g. kernel_Y_proc_end) that
- * gets stringified into the asm.  This removes the only x64 dependency
- * on sched_t.calltable[]; the field is gated out under CCSP_HAS_CALLTABLE. */
-#define K_CIF_PROC(address, kernel_sym, offset) \
-	__asm__ __volatile__ ("				\n" \
-		"	call	0f			\n" \
-		_K_CIF_PROC \
-		"	callq	" #kernel_sym "		\n" \
-		"0:	popq	%0			\n" \
-		: "=g" (address) \
-		: "i" (offset * sizeof(word)) \
-		: "memory")
-#define K_CIF_PROC_IND(address, kernel_sym, offset) \
-	__asm__ __volatile__ ("				\n" \
-		"	call	0f			\n" \
-		_K_CIF_PROC \
-		"	movq	(%%rdi), %%rdi		\n" \
-		"	callq	" #kernel_sym "		\n" \
-		"0:	popq	%0			\n" \
-		: "=g" (address) \
-		: "i" (offset * sizeof(word)) \
-		: "memory")
+/* K_CIF_PROC / K_CIF_PROC_IND removed in Phase 2.
+ * kernel_CIF_proc_stub and kernel_CIF_light_proc_stub now return the
+ * addresses of ccsp_cif_proc_stub_label / ccsp_cif_light_proc_stub_label
+ * directly (defined in x64_cif.S).  No inline-asm dance needed. */
 /*}}}*/
 
 #endif /* X64_SCHED_ASM_INSERTS_H */

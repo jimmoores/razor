@@ -193,42 +193,10 @@ extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) 
 /* K_CIF_ENDP_RESUME removed in Phase 2: kernel_CIF_endp_resume_stub
  * now returns &ccsp_cif_endp_resume_label directly (defined in
  * i386_cif.S).  No inline-asm dance needed. */
-#define _K_CIF_PROC \
-		"	movl	(%%ebp), %%esp		\n" \
-		"	movl	%%esi, -28(%%ebp)	\n" \
-		"	popl	%%eax			\n" \
-		"	call	*%%eax			\n" \
-		"	movl	-28(%%ebp), %%edx	\n" \
-		"	movl	%%ebp, %%ecx		\n" \
-		"	movl	%%edx, %%esi		\n" \
-		"	movl	%%ecx, %%eax		\n" \
-		"	movl	(%%edx), %%esp		\n" \
-		"	addl	%1, %%eax		\n"
-
-/* K_CIF_PROC / K_CIF_PROC_IND now dispatch directly to a named kernel
- * function symbol via `call <symbol>` instead of indirecting through
- * sched->calltable[call].  Mirrors the x64 / aarch64 change.  i386
- * still maintains the calltable for tranx86-generated kernel calls,
- * but the CIF process trampoline path bypasses it. */
-#define K_CIF_PROC(address, kernel_sym, offset) \
-	__asm__ __volatile__ ("				\n" \
-		"	call	0f			\n" \
-		_K_CIF_PROC \
-		"	call	" #kernel_sym "		\n" \
-		"0:	popl	%0			\n" \
-		: "=g" (address) \
-		: "i" (offset * sizeof(word)) \
-		: "memory")
-#define K_CIF_PROC_IND(address, kernel_sym, offset) \
-	__asm__ __volatile__ ("				\n" \
-		"	call	0f			\n" \
-		_K_CIF_PROC \
-		"	movl	(%%eax), %%eax		\n" \
-		"	call	" #kernel_sym "		\n" \
-		"0:	popl	%0			\n" \
-		: "=g" (address) \
-		: "i" (offset * sizeof(word)) \
-		: "memory")
+/* K_CIF_PROC / K_CIF_PROC_IND removed in Phase 2.
+ * kernel_CIF_proc_stub and kernel_CIF_light_proc_stub now return the
+ * addresses of ccsp_cif_proc_stub_label / ccsp_cif_light_proc_stub_label
+ * directly (defined in i386_cif.S).  No inline-asm dance needed. */
 /*}}}*/
 
 #endif /* I386_SCHED_ASM_INSERTS */

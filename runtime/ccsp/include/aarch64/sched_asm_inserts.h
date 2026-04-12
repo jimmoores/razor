@@ -307,58 +307,10 @@ extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) 
 /* K_CIF_ENDP_RESUME removed in Phase 2: kernel_CIF_endp_resume_stub
  * now returns &ccsp_cif_endp_resume_label directly (defined in
  * aarch64_cif.S).  No inline-asm dance needed. */
-/* K_CIF_PROC / K_CIF_PROC_IND now dispatch directly to a named kernel
- * function symbol via `b <symbol>` instead of indirecting through
- * sched->calltable[call].  Mirrors the x64 change; lets the per-sched
- * calltable[] field be removed under CCSP_HAS_CALLTABLE.
- *
- * Note: aarch64 has CCSP_DIRECT_CALL enabled, so kernel functions take
- * the new ABI (p0=x0, sched=x1, Wptr=x2 for 1-input).  K_ENDP and
- * K_PROC_END are both 1-input, so the same x0/x1/x2 layout works. */
-#define K_CIF_PROC(address, kernel_sym, offset) \
-	__asm__ __volatile__ ("\t\t\t\t\n" \
-		"\tadr %0, 0f\t\n" \
-		"\tb 1f\t\t\n" \
-		"0:\t\t\t\t\n" \
-		"\tldr x9, [x28, #0]\t\n" \
-		"\tstr x25, [x28, #-56]\t\n" \
-		"\tmov sp, x9\t\n" \
-		"\tldr x30, [sp], #16\t\n" \
-		"\tldur x0, [sp, #-8]\t\n" \
-		"\tblr x30\t\t\n" \
-		"\tldr x25, [x28, #-56]\t\n" \
-		"\tldr x9, [x25, #0]\t\n" \
-		"\tmov sp, x9\t\n" \
-		"\tsub x0, x28, %1\t\n" \
-		"\tmov x1, x25\t\n" \
-		"\tmov x2, x28\t\n" \
-		"\tb " #kernel_sym "\t\n" \
-		"1:\t\t\t\t\n" \
-		: "=r" (address) \
-		: "i" (-(offset) * (int)sizeof(word)) \
-		: "memory", "x0", "x9")
-#define K_CIF_PROC_IND(address, kernel_sym, offset) \
-	__asm__ __volatile__ ("\t\t\t\t\n" \
-		"\tadr %0, 0f\t\n" \
-		"\tb 1f\t\t\n" \
-		"0:\t\t\t\t\n" \
-		"\tldr x9, [x28, #0]\t\n" \
-		"\tstr x25, [x28, #-56]\t\n" \
-		"\tmov sp, x9\t\n" \
-		"\tldr x30, [sp], #16\t\n" \
-		"\tldur x0, [sp, #-8]\t\n" \
-		"\tblr x30\t\t\n" \
-		"\tldr x25, [x28, #-56]\t\n" \
-		"\tldr x9, [x25, #0]\t\n" \
-		"\tmov sp, x9\t\n" \
-		"\tldur x0, [x28, %1]\t\n" \
-		"\tmov x1, x25\t\n" \
-		"\tmov x2, x28\t\n" \
-		"\tb " #kernel_sym "\t\n" \
-		"1:\t\t\t\t\n" \
-		: "=r" (address) \
-		: "i" ((offset) * (int)sizeof(word)) \
-		: "memory", "x0", "x9")
+/* K_CIF_PROC / K_CIF_PROC_IND removed in Phase 2.
+ * kernel_CIF_proc_stub and kernel_CIF_light_proc_stub now return the
+ * addresses of ccsp_cif_proc_stub_label / ccsp_cif_light_proc_stub_label
+ * directly (defined in aarch64_cif.S).  No inline-asm dance needed. */
 /*}}}*/
 
 #endif /* AARCH64_SCHED_ASM_INSERTS */

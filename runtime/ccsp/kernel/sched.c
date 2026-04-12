@@ -6917,12 +6917,15 @@ void *kernel_CIF_endp_resume_stub (void)
  *	@SYMBOL:	CIF_light_proc_stub
  *	@CALL:		K_CIF_LIGHT_PROC_STUB
  *	@PRIO:		0
+ *
+ *	Phase 2: returns the address of ccsp_cif_light_proc_stub_label,
+ *	defined in the per-arch *_cif.S file.  Replaces the inline-asm
+ *	K_CIF_PROC_IND macro.
  */
-void * __attribute__((noinline)) kernel_CIF_light_proc_stub (void)
+extern char ccsp_cif_light_proc_stub_label[];
+void *kernel_CIF_light_proc_stub (void)
 {
-	void *address;
-	K_CIF_PROC_IND (address, kernel_Y_endp, BarrierPtr);
-	return address;
+	return (void *) &ccsp_cif_light_proc_stub_label[0];
 }
 /*}}}*/
 /*{{{  void *kernel_CIF_proc_stub (void)*/
@@ -6930,12 +6933,15 @@ void * __attribute__((noinline)) kernel_CIF_light_proc_stub (void)
  *	@SYMBOL:	CIF_proc_stub
  *	@CALL:		K_CIF_PROC_STUB
  *	@PRIO:		0
+ *
+ *	Phase 2: returns the address of ccsp_cif_proc_stub_label,
+ *	defined in the per-arch *_cif.S file.  Replaces the inline-asm
+ *	K_CIF_PROC macro.
  */
-void * __attribute__((noinline)) kernel_CIF_proc_stub (void)
+extern char ccsp_cif_proc_stub_label[];
+void *kernel_CIF_proc_stub (void)
 {
-	void *address;
-	K_CIF_PROC (address, kernel_Y_proc_end, -CIF_PROCESS_WORDS);
-	return address;
+	return (void *) &ccsp_cif_proc_stub_label[0];
 }
 /*}}}*/
 /*}}}*/

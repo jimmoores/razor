@@ -1,6 +1,70 @@
 .text
 .align 2
 
+// ccsp_cif_proc_stub_label  (Phase 2)
+// ccsp_cif_light_proc_stub_label
+//
+// CIF process trampoline labels.  Same idea as x64 versions: when the
+// scheduler dispatches a CIF process, control lands here with x28 =
+// process Wptr, x25 = sched.  The process workspace top (wptr[0])
+// holds [func, ws_arg].  We:
+//   1. Switch sp to wptr[0] (private stack)
+//   2. Save sched into wptr[SchedPtr] (= -56)
+//   3. Pop func into x30, ws into x0 (1st AAPCS arg)
+//   4. Call func(ws)
+//   5. Restore sched from wptr[SchedPtr]
+//   6. Set up kernel ABI args (x0=p0, x1=sched, x2=Wptr)
+//   7. Switch sp back to sched->stack
+//   8. Tail-jump to kernel_Y_proc_end / kernel_Y_endp
+//
+// proc_stub:        p0 = wptr - CIF_PROCESS_WORDS*8 = wptr - 192
+// light_proc_stub:  p0 = *(wptr + BarrierPtr*8) = *(wptr - 64)
+//
+// Uses `b` (tail call) since AAPCS sp is 16-byte aligned both before
+// and after a function call -- no +8 bias to maintain.
+
+#if defined(__APPLE__)
+.global _ccsp_cif_proc_stub_label
+_ccsp_cif_proc_stub_label:
+#else
+.global ccsp_cif_proc_stub_label
+ccsp_cif_proc_stub_label:
+#endif
+    ldr x9, [x28, #0]            // x9 = wptr[0] (private stack top)
+    str x25, [x28, #-56]         // wptr[SchedPtr] = sched
+    mov sp, x9                   // sp = private stack
+    ldr x30, [sp], #16           // x30 = func; sp += 16
+    ldur x0, [sp, #-8]           // x0 = ws (was at sp+8 before increment)
+    blr x30                      // call func(ws)
+    ldr x25, [x28, #-56]         // restore sched
+    ldr x9, [x25, #0]            // x9 = sched->stack
+    mov sp, x9                   // sp = kernel stack
+    sub x0, x28, #192            // p0 = wptr - CIF_PROCESS_WORDS*8
+    mov x1, x25                  // x1 = sched
+    mov x2, x28                  // x2 = Wptr
+    b kernel_Y_proc_end          // tail-call
+
+#if defined(__APPLE__)
+.global _ccsp_cif_light_proc_stub_label
+_ccsp_cif_light_proc_stub_label:
+#else
+.global ccsp_cif_light_proc_stub_label
+ccsp_cif_light_proc_stub_label:
+#endif
+    ldr x9, [x28, #0]            // x9 = wptr[0] (private stack top)
+    str x25, [x28, #-56]         // wptr[SchedPtr] = sched
+    mov sp, x9                   // sp = private stack
+    ldr x30, [sp], #16           // x30 = func; sp += 16
+    ldur x0, [sp, #-8]           // x0 = ws
+    blr x30                      // call func(ws)
+    ldr x25, [x28, #-56]         // restore sched
+    ldr x9, [x25, #0]            // x9 = sched->stack
+    mov sp, x9                   // sp = kernel stack
+    ldur x0, [x28, #-64]         // p0 = *(wptr + BarrierPtr*8)
+    mov x1, x25                  // x1 = sched
+    mov x2, x28                  // x2 = Wptr
+    b kernel_Y_endp              // tail-call
+
 // ccsp_cif_endp_resume_label  (Phase 2)
 //
 // Code-only label whose address is returned by kernel_CIF_endp_resume_stub
