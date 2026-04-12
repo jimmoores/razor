@@ -64,8 +64,12 @@ ccsp_cif_occam_call:
 	movl	%esp, (%ebx)		/* save_area[0] = SP */
 	movl	%ebx, -40(%ebp)		/* ws[-10] = save_area address */
 
-	/* Set up the occam return label */
-	leal	.Locc_call_return, %ecx
+	/* Set up the occam return label.  Compute its address PC-relatively
+	 * via the standard call/pop trick so no R_386_32 relocation lands in
+	 * .text -- otherwise libccsp.so gets DT_TEXTREL on i386 PIE builds. */
+	call	1f
+1:	popl	%ecx
+	addl	$(.Locc_call_return - 1b), %ecx
 	movl	%ecx, (%ebp)		/* ws[0] = return label */
 	movl	%ecx, -4(%ebp)		/* ws[-1] = return label */
 
