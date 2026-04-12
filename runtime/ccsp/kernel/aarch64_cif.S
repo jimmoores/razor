@@ -88,14 +88,23 @@ ccsp_cif_call_asm_resched:
     stur x27, [x0, #-168]
     stur x28, [x0, #-176]
 
-    // Save current C stack pointer
+    // Save current SP (the CIF private stack from ccsp_cif_process_call)
     mov x9, sp
-    stur x9, [x0, #-80]   // wptr[-10] = sp
+    stur x9, [x0, #-80]   // wptr[-10] = saved private SP
 
     // Save sched at wptr[-7] (SchedPtr)
     str x1, [x0, #-56]
 
     mov x28, x0           // x28 = wptr
+
+    // CRITICAL: switch to the scheduler's kernel stack BEFORE calling
+    // the kernel function.  The CIF private stack is small (~248 bytes
+    // minus the CIF C function's own frame) and would overflow when
+    // kernel calls go deep (e.g. kernel_Y_outbyte -> kernel_chan_io ->
+    // kernel_scheduler -> ccsp_safe_pause -> libc futex_wait).
+    // The kernel stack at sched->stack has plenty of room.
+    ldr x9, [x1]          // x9 = sched->stack
+    mov sp, x9            // sp = kernel stack
 
     // setup KRoC kernel arguments: x0=param0, x1=sched, x2=wptr
     mov x8, x28           // x8 = wptr
@@ -103,7 +112,7 @@ ccsp_cif_call_asm_resched:
     mov x2, x8            // x2 = wptr
     // x1 is already sched
 
-    // Call KRoC function (runs on current C stack = sched->stack)
+    // Call KRoC function (now on the proper kernel stack)
     blr x3
 
     // After return from kernel (possibly after context switch):
