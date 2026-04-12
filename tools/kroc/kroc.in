@@ -197,7 +197,19 @@ case "$target_os" in
 		extraccopts=${EXTRACCOPTS:-}
 		;;
 	*)
-		extraccopts=${EXTRACCOPTS:--Xlinker -E}
+		case "$target_cpu" in
+			i386 | i486 | i586 | i686)
+				# tranx86's i386 backend emits absolute (non-PIC) label
+				# references, so the resulting executable cannot be a PIE.
+				# Modern toolchains (e.g. Debian 12 / gcc 13) default to PIE,
+				# which would otherwise produce a "creating DT_TEXTREL in a
+				# PIE" warning at link time.
+				extraccopts=${EXTRACCOPTS:--Xlinker -E -no-pie}
+				;;
+			*)
+				extraccopts=${EXTRACCOPTS:--Xlinker -E}
+				;;
+		esac
 		;;
 esac
 
