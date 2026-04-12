@@ -17,6 +17,70 @@
 .align 8
 
 /*
+ * void ccsp_cif_jump(word *wptr, void *addr) __attribute__((noreturn))
+ *
+ * Phase 2: CIF -> occam transition primitive.  Used by ProcEnd to
+ * leave a "called from occam" CIF process by jumping back to the
+ * parent's escape pointer.  Sets r14 = wptr (Wptr runtime register)
+ * and tail-jumps to addr -- the target is occam-compiled code that
+ * expects only the runtime register convention, no stack alignment
+ * contract beyond what the caller's stack already provides.
+ *
+ * Arguments (System V x64 ABI):
+ *   rdi = wptr
+ *   rsi = addr
+ */
+.global ccsp_cif_jump
+.type ccsp_cif_jump, @function
+ccsp_cif_jump:
+	movq	%rdi, %r14		/* r14 = Wptr */
+	jmpq	*%rsi			/* tail-jump to occam code */
+.size ccsp_cif_jump, . - ccsp_cif_jump
+
+/*
+ * word ccsp_cif_external_call(void *func, void *stack)
+ *
+ * Phase 2: external C call helper.  Used by ExternalCall0/1/N for
+ * blocking syscalls that need to run on a separate stack so the
+ * occam runtime registers (r12-r15) and stack are preserved.
+ *
+ * Saves the caller's rsp, switches to `stack`, calls func() (with
+ * any args already placed on the stack by the caller), switches rsp
+ * back, and returns whatever func returned in rax.
+ *
+ * Arguments:
+ *   rdi = func   (function pointer to call)
+ *   rsi = stack  (stack to switch to)
+ * Returns:
+ *   rax = func's return value
+ *
+ * Preserves the runtime registers (r12-r15, rbp) by saving them on
+ * the C caller's stack before the switch.  func() may freely clobber
+ * any caller-saved register.
+ */
+.global ccsp_cif_external_call
+.type ccsp_cif_external_call, @function
+ccsp_cif_external_call:
+	pushq	%rbp			/* save callee-saved regs */
+	pushq	%r12
+	pushq	%r13
+	pushq	%r14
+	pushq	%r15
+	pushq	%rbx			/* 6 pushes -> 16-byte aligned */
+	movq	%rsp, %rbx		/* save current sp in callee-saved rbx */
+	movq	%rsi, %rsp		/* switch to provided stack */
+	callq	*%rdi			/* call func() */
+	movq	%rbx, %rsp		/* restore sp */
+	popq	%rbx			/* restore callee-saved regs */
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%rbp
+	retq				/* result already in rax */
+.size ccsp_cif_external_call, . - ccsp_cif_external_call
+
+/*
  * ccsp_cif_proc_stub_label  (Phase 2)
  * ccsp_cif_light_proc_stub_label
  *

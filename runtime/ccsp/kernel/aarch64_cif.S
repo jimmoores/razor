@@ -1,6 +1,64 @@
 .text
 .align 2
 
+// void ccsp_cif_jump(word *wptr, void *addr) __attribute__((noreturn))
+//
+// Phase 2: CIF -> occam transition primitive.  Used by ProcEnd to
+// leave a "called from occam" CIF process by jumping back to the
+// parent's escape pointer.  Sets x28 = wptr (Wptr runtime register)
+// and tail-jumps to addr.
+//
+// Arguments (AAPCS):
+//   x0 = wptr
+//   x1 = addr
+#if defined(__APPLE__)
+.global _ccsp_cif_jump
+_ccsp_cif_jump:
+#else
+.global ccsp_cif_jump
+ccsp_cif_jump:
+#endif
+    mov x28, x0          // x28 = Wptr
+    br x1                // tail-jump
+
+// word ccsp_cif_external_call(void *func, void *stack)
+//
+// Phase 2: external C call helper.  Saves the caller's sp, switches
+// to `stack`, calls func() (with any args already placed by caller),
+// switches sp back, returns the result in x0.
+//
+// Arguments:
+//   x0 = func
+//   x1 = stack
+// Returns:
+//   x0 = func's return value
+#if defined(__APPLE__)
+.global _ccsp_cif_external_call
+_ccsp_cif_external_call:
+#else
+.global ccsp_cif_external_call
+ccsp_cif_external_call:
+#endif
+    stp x29, x30, [sp, #-16]!    // save fp, lr
+    mov x29, sp
+    stp x19, x20, [sp, #-16]!    // save callee-saved regs
+    stp x21, x22, [sp, #-16]!
+    stp x23, x24, [sp, #-16]!
+    stp x25, x26, [sp, #-16]!
+    stp x27, x28, [sp, #-16]!
+    mov x19, sp                  // save sp in callee-saved x19
+    mov x9, x0                   // x9 = func
+    mov sp, x1                   // switch to provided stack
+    blr x9                       // call func()
+    mov sp, x19                  // restore sp
+    ldp x27, x28, [sp], #16
+    ldp x25, x26, [sp], #16
+    ldp x23, x24, [sp], #16
+    ldp x21, x22, [sp], #16
+    ldp x19, x20, [sp], #16
+    ldp x29, x30, [sp], #16
+    ret                          // result already in x0
+
 // ccsp_cif_proc_stub_label  (Phase 2)
 // ccsp_cif_light_proc_stub_label
 //

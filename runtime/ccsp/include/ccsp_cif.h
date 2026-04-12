@@ -31,6 +31,12 @@
 #define ccsp_cif_noreturn() { exit(1); }
 /*}}}*/
 
+/* Phase 2: CIF helpers extracted from inline asm to real functions
+ * in the per-arch *_cif.S file.  Declared here so the static inline
+ * helpers below (and any user CIF code) can call them. */
+extern word ccsp_cif_external_call (void *func, void *stack);
+extern void ccsp_cif_jump (void *wptr, void *addr) __attribute__((noreturn));
+
 #include <ccsp_cif_stubs.h>
 
 typedef word Channel;
@@ -271,11 +277,8 @@ static inline word ExternalCall0 (void *func)
 {
 	ccsp_sched_t *sched = ccsp_scheduler;
 	word *stack = (word *) sched->stack;
-	word result;
 
-	ccsp_cif_external_call (func, stack, result);
-
-	return result;
+	return ccsp_cif_external_call (func, stack);
 }
 /*}}}*/
 /*{{{  word ExternalCall1 (void *func, word arg) */
@@ -283,13 +286,10 @@ static inline word ExternalCall1 (void *func, word arg)
 {
 	ccsp_sched_t *sched = ccsp_scheduler;
 	word *stack = (word *) sched->stack;
-	word result;
 
 	*(stack--) = arg;
 
-	ccsp_cif_external_call (func, stack, result);
-
-	return result;
+	return ccsp_cif_external_call (func, stack);
 }
 /*}}}*/
 /*{{{  word ExternalCallN (void *func, word argc, ...) */
@@ -345,7 +345,6 @@ static word ExternalCallN (void *func, word argc, ...)
 	ccsp_sched_t *sched = ccsp_scheduler;
 	word *stack = (word *) sched->stack;
 	va_list ap;
-	word result;
 	int i;
 
 	va_start (ap, argc);
@@ -358,9 +357,7 @@ static word ExternalCallN (void *func, word argc, ...)
 
 	va_end (ap);
 
-	ccsp_cif_external_call (func, stack, result);
-
-	return result;
+	return ccsp_cif_external_call (func, stack);
 #endif
 }
 /*}}}*/
@@ -714,7 +711,7 @@ static inline void ProcEnd (Workspace wptr)
 		case ((word) -1):
 			{
 				/* called from occam */
-				ccsp_cif_jump (wptr, wptr[EscapePtr]);
+				ccsp_cif_jump ((void *) wptr, (void *) wptr[EscapePtr]);
 			}
 			break;
 		default:

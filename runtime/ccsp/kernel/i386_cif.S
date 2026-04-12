@@ -17,6 +17,59 @@
 .align 4
 
 /*
+ * void ccsp_cif_jump(word *wptr, void *addr) __attribute__((noreturn))
+ *
+ * Phase 2: CIF -> occam transition primitive.  Used by ProcEnd to
+ * leave a "called from occam" CIF process by jumping back to the
+ * parent's escape pointer.  Sets ebp = wptr (Wptr runtime register)
+ * and tail-jumps to addr.
+ *
+ * cdecl args:
+ *    4(%esp) = wptr
+ *    8(%esp) = addr
+ */
+.globl ccsp_cif_jump
+.type ccsp_cif_jump, @function
+ccsp_cif_jump:
+	movl	4(%esp), %ebp		/* ebp = Wptr */
+	movl	8(%esp), %eax		/* eax = addr */
+	jmp	*%eax			/* tail-jump */
+.size ccsp_cif_jump, . - ccsp_cif_jump
+
+/*
+ * word ccsp_cif_external_call(void *func, void *stack)
+ *
+ * Phase 2: external C call helper.  Saves the caller's esp, switches
+ * to `stack`, calls func() (with any args already placed by caller),
+ * switches esp back, returns the result in eax.
+ *
+ * cdecl args:
+ *    4(%esp) = func
+ *    8(%esp) = stack
+ * Returns:
+ *    eax = func's return value
+ */
+.globl ccsp_cif_external_call
+.type ccsp_cif_external_call, @function
+ccsp_cif_external_call:
+	pushl	%ebp			/* save callee-saved regs */
+	pushl	%ebx
+	pushl	%esi
+	pushl	%edi
+	movl	20(%esp), %eax		/* eax = func (4 pushes + retaddr = 20) */
+	movl	24(%esp), %edx		/* edx = stack */
+	movl	%esp, %ebx		/* save esp in callee-saved ebx */
+	movl	%edx, %esp		/* switch to provided stack */
+	call	*%eax			/* call func() */
+	movl	%ebx, %esp		/* restore esp */
+	popl	%edi			/* restore callee-saved regs */
+	popl	%esi
+	popl	%ebx
+	popl	%ebp
+	ret				/* result already in eax */
+.size ccsp_cif_external_call, . - ccsp_cif_external_call
+
+/*
  * ccsp_cif_proc_stub_label  (Phase 2)
  * ccsp_cif_light_proc_stub_label
  *

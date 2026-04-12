@@ -416,68 +416,10 @@ def gen_cif_stub(f, symbol, arch_generator):
 	f.outdent()
 
 def gen_i386_header(f):
-	# ccsp_cif_external_call
-	f.begin_macro()
+	# Phase 2: ccsp_cif_external_call and ccsp_cif_jump are now real
+	# functions defined in i386_cif.S.  ccsp_cif.h includes the
+	# extern declarations directly.
 
-	f.begin_line()
-	f.line("#define ccsp_cif_external_call(func, stack, result)")
-
-	f.indent()
-	f.line("do {")
-	
-	f.indent()
-	f.line("__asm__ __volatile__ (\"\\n\"")
-	f.indent()
-
-	f.begin_asm()
-	f.line("\tmovl %%esp, %%edi")
-	f.line("\tmovl %2, %%esp")
-	f.line("\tcall *%1")
-	f.line("\tmovl %%edi, %%esp")
-	f.end_asm()
-	f.line(": \"=a\" (result)")
-	f.line(": \"r\" (func), \"r\" (stack)")
-	f.line(": \"cc\", \"memory\", \"ecx\", \"edx\", \"edi\"")
-
-	f.outdent()
-	f.line(");")
-	f.outdent()
-	
-	f.begin_line()
-	f.add ("} while (0)")
-	f.end_line(end_macro = True)
-	f.outdent()
-
-	# ccsp_cif_jump
-	f.begin_macro()
-
-	f.begin_line()
-	f.line("#define ccsp_cif_jump(wptr, addr)")
-
-	f.indent()
-	f.line("do {")
-	
-	f.indent()
-	f.line("__asm__ __volatile__ (\"\\n\"")
-	f.indent()
-
-	f.begin_asm()
-	f.line("\tmovl %0, %%ebp")
-	f.line("\tjmp *%1")
-	f.end_asm()
-	f.line(": /* no outputs */")
-	f.line(": \"r\" (wptr), \"q\" (addr)")
-	f.line(": \"memory\"")
-
-	f.outdent()
-	f.line(");")
-	f.outdent()
-	
-	f.begin_line()
-	f.add ("} while (0)")
-	f.end_line(end_macro = True)
-	f.outdent()
-	
 	# ccsp_cif_occam_call
 	f.begin_macro()
 
@@ -681,68 +623,9 @@ def gen_x64_header(f):
 	# sizeof(word) for x64 = 8
 	sizeof_word = 8
 
-	# ccsp_cif_external_call
-	f.begin_macro()
-
-	f.begin_line()
-	f.line("#define ccsp_cif_external_call(func, stack, result)")
-
-	f.indent()
-	f.line("do {")
-
-	f.indent()
-	f.line("word __tmp_sp;")
-	f.line("__asm__ __volatile__ (\"\\n\"")
-	f.indent()
-
-	f.begin_asm()
-	f.line("\tmovq %%rsp, %0")		# save sp
-	f.line("\tmovq %3, %%rsp")		# switch to provided stack
-	f.line("\tcallq *%2")			# call function (func)
-	f.line("\tmovq %0, %%rsp")		# restore sp
-	f.end_asm()
-	f.line(": \"=&r\" (__tmp_sp), \"=a\" (result)")
-	f.line(": \"r\" (func), \"r\" (stack)")
-	f.line(": \"cc\", \"memory\", \"rcx\", \"rdx\", \"rsi\", \"rdi\", \"r8\", \"r9\", \"r10\", \"r11\"")
-
-	f.outdent()
-	f.line(");")
-	f.outdent()
-
-	f.begin_line()
-	f.add ("} while (0)")
-	f.end_line(end_macro = True)
-	f.outdent()
-
-	# ccsp_cif_jump
-	f.begin_macro()
-
-	f.begin_line()
-	f.line("#define ccsp_cif_jump(wptr, addr)")
-
-	f.indent()
-	f.line("do {")
-
-	f.indent()
-	f.line("__asm__ __volatile__ (\"\\n\"")
-	f.indent()
-
-	f.begin_asm()
-	f.line("\tmovq %0, %%r14")		# r14 = Wptr
-	f.line("\tjmpq *%1")			# jump to addr
-	f.end_asm()
-	f.line(": /* no outputs */")
-	f.line(": \"r\" (wptr), \"q\" (addr)")
-	f.line(": \"memory\"")
-
-	f.outdent()
-	f.line(");")
-	f.outdent()
-
-	f.begin_line()
-	f.add ("} while (0)")
-	f.end_line(end_macro = True)
-	f.outdent()
+	# Phase 2: ccsp_cif_external_call and ccsp_cif_jump are now real
+	# functions defined in x64_cif.S.  ccsp_cif.h includes the extern
+	# declarations directly; nothing to generate here for those two.
 
 	# ccsp_cif_occam_call
 	f.begin_macro()
@@ -842,68 +725,9 @@ def gen_aarch64_cif_stub(f, symbol, inputs, outputs):
                         if n >= 1:
                                 f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
 def gen_aarch64_header(f):
-	# ccsp_cif_external_call
-	f.begin_macro()
-
-	f.begin_line()
-	f.line("#define ccsp_cif_external_call(func, stack, result)")
-
-	f.indent()
-	f.line("do {")
-	
-	f.indent()
-	f.line("word __tmp_sp;")
-	f.line("__asm__ __volatile__ (\"\\n\"")
-	f.indent()
-
-	f.begin_asm()
-	f.line("\tmov %0, sp")
-	f.line("\tmov sp, %3")
-	f.line("\tblr %2")
-	f.line("\tmov sp, %0")
-	f.end_asm()
-	f.line(": \"=&r\" (__tmp_sp), \"=r\" (result)")
-	f.line(": \"r\" (func), \"r\" (stack)")
-	f.line(": \"cc\", \"memory\", \"x0\", \"x1\", \"x2\", \"x3\", \"x4\", \"x5\", \"x6\", \"x7\", \"x8\", \"x9\", \"x10\", \"x11\", \"x12\", \"x13\", \"x14\", \"x15\", \"x16\", \"x17\", \"x30\"")
-
-	f.outdent()
-	f.line(");")
-	f.outdent()
-	
-	f.begin_line()
-	f.add ("} while (0)")
-	f.end_line(end_macro = True)
-	f.outdent()
-
-	# ccsp_cif_jump
-	f.begin_macro()
-
-	f.begin_line()
-	f.line("#define ccsp_cif_jump(wptr, addr)")
-
-	f.indent()
-	f.line("do {")
-	
-	f.indent()
-	f.line("__asm__ __volatile__ (\"\\n\"")
-	f.indent()
-
-	f.begin_asm()
-	f.line("\tmov x28, %0")
-	f.line("\tbr %1")
-	f.end_asm()
-	f.line(": /* no outputs */")
-	f.line(": \"r\" (wptr), \"r\" (addr)")
-	f.line(": \"memory\"")
-
-	f.outdent()
-	f.line(");")
-	f.outdent()
-	
-	f.begin_line()
-	f.add ("} while (0)")
-	f.end_line(end_macro = True)
-	f.outdent()
+	# Phase 2: ccsp_cif_external_call and ccsp_cif_jump are now real
+	# functions defined in aarch64_cif.S.  ccsp_cif.h includes the
+	# extern declarations directly.
 	
 	# ccsp_cif_occam_call
 	# Use register variables for deterministic register assignment.
