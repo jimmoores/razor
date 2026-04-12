@@ -128,16 +128,15 @@
 		_SET_RETURN_ADDRESS (R);\
 		K_ZERO_OUT ();		\
 	} while (0)
+/* K_ZERO_OUT_JRET: kernel->user transition (Phase 2).
+ * Calls the noreturn ccsp_dispatch_process(sched, Wptr) helper in
+ * i386_cif.S, which sets ebp=Wptr, esi=sched (via the cdecl arg pop),
+ * restores esp from sched->stack and jumps to Wptr[Iptr]. */
+extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((noreturn));
 #define K_ZERO_OUT_JRET() \
 	do { \
 		TRACE_RETURN (Wptr[Iptr]); \
-		__asm__ __volatile__ ("			\n" \
-			"	movl	%0, %%ebp	\n" \
-			"	movl	(%%esi), %%esp	\n" \
-			"	jmp	*-4(%%ebp)	\n" \
-			: /* no outputs */ \
-			: "g" (Wptr), "S" (sched) \
-			: "memory"); \
+		ccsp_dispatch_process (sched, Wptr); \
 	} while (0)
 
 #define K_ONE_OUT(A) \

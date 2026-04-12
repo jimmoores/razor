@@ -201,20 +201,16 @@
 		_SET_RETURN_ADDRESS (R);\
 		K_ZERO_OUT ();		\
 	} while (0)
-/* K_ZERO_OUT_JRET: kernel->user transition.
- * Load Wptr into r14, sched into r15, restore rsp from sched->stack (offset 0),
- * then jump to Wptr[Iptr] which is at Wptr[-1] = -8 bytes from Wptr (64-bit word). */
+/* K_ZERO_OUT_JRET: kernel->user transition (Phase 2).
+ * Calls the noreturn ccsp_dispatch_process(sched, Wptr) helper in
+ * x64_cif.S, which sets r14=Wptr, r15=sched, restores sp from
+ * sched->stack and jumps to Wptr[Iptr].  Replaces an inline-asm block
+ * at every ~13 K_ZERO_OUT_JRET site in sched.c. */
+extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((noreturn));
 #define K_ZERO_OUT_JRET() \
 	do { \
 		TRACE_RETURN (Wptr[Iptr]); \
-		__asm__ __volatile__ ("			\n" \
-			"	movq	%0, %%r14	\n" \
-			"	movq	%1, %%r15	\n" \
-			"	movq	(%%r15), %%rsp	\n" \
-			"	jmpq	*-8(%%r14)	\n" \
-			: /* no outputs */ \
-			: "r" (Wptr), "r" (sched) \
-			: "memory", "r14", "r15"); \
+		ccsp_dispatch_process (sched, Wptr); \
 	} while (0)
 
 #define K_ONE_OUT(A) \

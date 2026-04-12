@@ -584,6 +584,7 @@ i386 | i486 | i586 | i686)
   ARCH_DIR=i386
   AC_SUBST(ARCH_DIR)
   AC_DEFINE([TARGET_CPU_386],1,[define if i386 or greater target])
+  ccsp_i386=yes
   bigendian=no
   ;;
 x86_64)
@@ -680,6 +681,7 @@ AC_SUBST(EXTRA_LDFLAGS)
 
 AM_CONDITIONAL([CCSP_AARCH64], [test x$ccsp_aarch64 = xyes])
 AM_CONDITIONAL([CCSP_X64], [test x$ccsp_x64 = xyes])
+AM_CONDITIONAL([CCSP_I386], [test x$ccsp_i386 = xyes])
 AC_CONFIG_HEADERS([include/ccsp_config.h])
 AC_CONFIG_FILES([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile include/aarch64/Makefile include/x64/Makefile kernel/Makefile utils/Makefile])
 AC_OUTPUT

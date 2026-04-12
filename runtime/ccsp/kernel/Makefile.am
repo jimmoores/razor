@@ -16,4 +16,7 @@ endif
 if CCSP_X64
 libkernel_a_SOURCES += x64_cif.S
 endif
+if CCSP_I386
+libkernel_a_SOURCES += i386_cif.S
+endif
 

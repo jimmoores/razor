@@ -1,6 +1,33 @@
 .text
 .align 2
 
+// void ccsp_dispatch_process(sched_t *sched, word *Wptr) __attribute__((noreturn))
+//
+// Phase 2: kernel-to-user dispatch primitive.  Replaces the inline-asm
+// K_ZERO_OUT_JRET macro at all ~13 call sites in sched.c.  This function
+// never returns to its caller.
+//
+// Sets the runtime register convention for the dispatched process,
+// restores the kernel SP from sched->stack, and jumps to the saved
+// instruction pointer at Wptr[-1] (= byte -8 from Wptr).
+//
+// Arguments (AAPCS):
+//   x0 = sched
+//   x1 = Wptr
+#if defined(__APPLE__)
+.global _ccsp_dispatch_process
+_ccsp_dispatch_process:
+#else
+.global ccsp_dispatch_process
+ccsp_dispatch_process:
+#endif
+    mov x28, x1            // x28 = Wptr (runtime convention)
+    mov x25, x0            // x25 = sched (runtime convention)
+    ldr x9, [x25]          // x9 = sched->stack
+    mov sp, x9             // sp = kernel stack
+    ldr x9, [x28, #-8]     // x9 = Wptr[Iptr]
+    br x9                  // jump
+
 // word ccsp_cif_call_asm(void *wptr, void *sched, void *param0, void *func)
 // Non-rescheduling variant: simple call, no context switch possible.
 #if defined(__APPLE__)

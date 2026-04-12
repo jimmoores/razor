@@ -17,6 +17,30 @@
 .align 8
 
 /*
+ * void ccsp_dispatch_process(sched_t *sched, word *Wptr) __attribute__((noreturn))
+ *
+ * Phase 2: kernel-to-user dispatch primitive.  Replaces the inline-asm
+ * K_ZERO_OUT_JRET macro at all ~13 call sites in sched.c.  This function
+ * never returns to its caller.
+ *
+ * Sets the runtime register convention for the dispatched process,
+ * restores the kernel SP from sched->stack, and jumps to the saved
+ * instruction pointer at Wptr[-1] (= byte -8 from Wptr).
+ *
+ * Arguments (System V x64 ABI):
+ *   rdi = sched
+ *   rsi = Wptr
+ */
+.global ccsp_dispatch_process
+.type ccsp_dispatch_process, @function
+ccsp_dispatch_process:
+	movq	%rsi, %r14		/* r14 = Wptr (runtime convention) */
+	movq	%rdi, %r15		/* r15 = sched (runtime convention) */
+	movq	(%r15), %rsp		/* rsp = sched->stack */
+	jmpq	*-8(%r14)		/* jump to Wptr[Iptr] */
+.size ccsp_dispatch_process, . - ccsp_dispatch_process
+
+/*
  * void ccsp_cif_process_call(void *wptr, void *func)
  *
  * Wrapper for calling a CIF C function on a private stack in the workspace.

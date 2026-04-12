@@ -233,20 +233,16 @@ LABEL_TYPE( ,X) \
 		_SET_RETURN_ADDRESS (R);\
 		K_ZERO_OUT ();\
 	} while (0)
+/* K_ZERO_OUT_JRET: kernel->user transition (Phase 2).
+ * Calls the noreturn ccsp_dispatch_process(sched, Wptr) helper in
+ * aarch64_cif.S, which sets x28=Wptr, x25=sched, restores sp from
+ * sched->stack and jumps to Wptr[Iptr]. */
+extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((noreturn));
 #define K_ZERO_OUT_JRET() \
 	do { \
 		DT_LOG("JRET", Wptr, Wptr ? Wptr[Iptr] : 0, sched, 0); \
 		TRACE_RETURN (Wptr[Iptr]); \
-		__asm__ __volatile__ ("\t\t\t\n" \
-			"\tmov x28, %0\t\n" \
-			"\tmov x25, %1\t\n" \
-			"\tldr x9, [x25]\t\n" \
-			"\tmov sp, x9\t\n" \
-			"\tldr x9, [x28, #-8]\t\n" \
-			"\tbr x9\t\n" \
-			: /* no outputs */ \
-			: "r" (Wptr), "r" (sched) \
-			: "memory", "x9", "x25", "x28"); \
+		ccsp_dispatch_process (sched, Wptr); \
 	} while (0)
 #define K_ONE_OUT(A) \
 	return ((word) (A))
