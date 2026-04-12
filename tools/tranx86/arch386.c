@@ -81,22 +81,60 @@ static char *Fptr_name;
 static char *Bptr_name;
 static char *PPriority_name;
 
+/*{{{  static char *i386_convert_kernel_symbol_name (const char *symbol)*/
+/*
+ *	Map a kif entrypoint name (e.g. "Y_in") to the actual C kernel
+ *	function symbol (e.g. "kernel_Y_in").  Prefixed with '&' so
+ *	modify_name in asm386.c strips the '&' and skips its automatic
+ *	'O_' / extref-prefix logic.
+ */
+static char *i386_convert_kernel_symbol_name (const char *symbol)
+{
+	char *rbuf;
+	const char *ext = options.extref_prefix ? options.extref_prefix : "";
+
+	if (symbol == NULL) {
+		return string_dup ("&unknown_kernel_call");
+	}
+
+	rbuf = smalloc (strlen (symbol) + strlen (ext) + 16);
+
+	if ((symbol[0] == 'Y' || symbol[0] == 'X') && symbol[1] == '_') {
+		sprintf (rbuf, "&%skernel_%s", ext, symbol);
+	} else if (!strncmp (symbol, "kernel_Y_", 9) || !strncmp (symbol, "kernel_X_", 9)) {
+		sprintf (rbuf, "&%s%s", ext, symbol);
+	} else {
+		sprintf (rbuf, "&%s%s", ext, symbol);
+	}
+	return rbuf;
+}
+/*}}}*/
+
 /*{{{   static ins_chain *compose_kjump_i386 (tstate *ts, const int type, const int cond, const kif_entrytype *entry)*/
 /*
- * 	composes a jump or call instruction via the calltable
+ * 	composes a direct jump or call instruction to a kernel function.
+ * 	Phase 1B for i386: previously dispatched indirectly through
+ * 	`*offset(REG_SCHED)` (sched->calltable[K_*]); now emits a direct
+ * 	`call kernel_<name>` instead.  The legacy ABI (eax=param0,
+ * 	edx=sched, ecx=Wptr + sched->cparam[]) is unchanged.
  */
 static ins_chain *compose_kjump_i386 (tstate *ts, const int type, const int cond, const kif_entrytype *entry)
 {
-	return compose_ins (INS_CALL, 1, 0, ARG_REGIND | ARG_DISP | ARG_IND, REG_SCHED, offsetof(ccsp_sched_t, calltable[entry->call_offset]));
-	#if 0
-	if (type == INS_CJUMP) {
-		return compose_ins (type, 2, 0, ARG_COND, cond, ARG_NAMEDLABEL, string_dup (entry->entrypoint));
-	} else if (options.kernel_interface & KRNLIFACE_MP) {
-		return compose_ins (INS_CALL, 1, 0, ARG_REGIND | ARG_DISP | ARG_IND, REG_SCHED, entry->call_offset << 2);
+	char *entrypoint_name;
+
+	if (!entry || !entry->entrypoint) {
+		entrypoint_name = string_dup ("&unknown_kernel_call");
 	} else {
-		return compose_ins (type, 1, 0, ARG_REGIND | ARG_DISP | ARG_IND, REG_SPTR, (entry->call_offset + ts->stack_drift + KIFACE_TABLEOFFS_I386) << 2);
+		entrypoint_name = i386_convert_kernel_symbol_name (entry->entrypoint);
 	}
-	#endif
+
+	if (type == INS_CJUMP) {
+		return compose_ins (INS_CJUMP, 2, 0, ARG_COND, cond, ARG_NAMEDLABEL, entrypoint_name);
+	} else if (type == INS_CALL) {
+		return compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, entrypoint_name);
+	} else {
+		return compose_ins (INS_JUMP, 1, 0, ARG_NAMEDLABEL, entrypoint_name);
+	}
 }
 /*}}}*/
 

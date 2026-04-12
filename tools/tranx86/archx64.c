@@ -26,9 +26,11 @@
 
 /* When cross-compiling tranx86 on i386 for x64 target code generation,
  * CCSP_SCHED_PRIOFINITY_OFFSET may not be defined in ccsp.h (guarded
- * by __x86_64__).  Provide the x64 value as fallback. */
+ * by __x86_64__).  Provide the x64 value as fallback.  Phase 1D
+ * Stage 1d removed the calltable[] field on 64-bit targets, so the
+ * 64-bit offset is 1416 - (122 * 8) = 440. */
 #ifndef CCSP_SCHED_PRIOFINITY_OFFSET
-#define CCSP_SCHED_PRIOFINITY_OFFSET 1416
+#define CCSP_SCHED_PRIOFINITY_OFFSET 440
 #endif
 
 #ifdef HAVE_STDLIB_H

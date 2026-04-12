@@ -220,8 +220,10 @@ struct _sched_t {
 	word		stack;
 	/** call params		- must be at the right offset **/
 	word		cparam[5];
+#ifdef CCSP_HAS_CALLTABLE
 	/** calltable		- must be at the right offset **/
 	void		*calltable[K_MAX_SUPPORTED];
+#endif
 
 	/** local debug state **/
 	word 		mdparam[32];
@@ -392,7 +394,9 @@ typedef struct _ccsp_global_t {
 
 	sched_t		*schedulers[MAX_RUNTIME_THREADS]	CACHELINE_ALIGN;
 	word		pad1[CACHELINE_WORDS]			CACHELINE_ALIGN;
+#ifdef CCSP_HAS_CALLTABLE
 	void		*calltable[K_MAX_SUPPORTED]		CACHELINE_ALIGN;
+#endif
 } _PACK_STRUCT ccsp_global_t;
 
 static inline void init_ccsp_global_t (ccsp_global_t *ccsp) {

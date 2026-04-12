@@ -46,7 +46,9 @@ typedef struct _ccsp_sched_t {
 	unsigned int    stack;
 #endif
 	word		cparam[5];
+#ifdef CCSP_HAS_CALLTABLE
 	void		*calltable[K_MAX_SUPPORTED];
+#endif
 	word		mdparam[32];
 	unsigned int	index;
 	unsigned int	id;
@@ -64,9 +66,14 @@ typedef struct _ccsp_sched_t {
  * sits after CACHELINE_ALIGN padding in sched_t which cannot be
  * replicated here without pulling in the full sched_types.h header.
  * This constant must match offsetof(sched_t, priofinity) and is
- * validated by a static assertion in the runtime (sched.c). */
+ * validated by a static assertion in the runtime (sched.c).
+ *
+ * 64-bit targets (aarch64, x86_64) have CCSP_HAS_CALLTABLE undefined
+ * (Phase 1D Stage 1d) so the calltable[K_MAX_SUPPORTED] field is
+ * omitted, shrinking sched_t by 122 * 8 = 976 bytes.  priofinity
+ * therefore moves from offset 1416 to 1416 - 976 = 440. */
 #if defined(__aarch64__) || defined(__x86_64__)
-#define CCSP_SCHED_PRIOFINITY_OFFSET 1416
+#define CCSP_SCHED_PRIOFINITY_OFFSET 440
 #endif
 
 #undef _PACK_STRUCT
