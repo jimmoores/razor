@@ -67,7 +67,16 @@ void ccsp_kernel_entry (word *wptr, word *fptr)
 	#define SCHED_STACK_GAP (64 * 1024)
 	sched_base = (top - SCHED_STACK_GAP - sizeof(sched_t)) & ~((word)0x3F);
 
-	K_ENTRY (ccsp_calltable[K_RTTHREADINIT], sched_base, wptr, fptr);
+	/* Direct dispatch to kernel_Y_rtthreadinit (Phase 1D Stage 1c).
+	 * Previously this looked up the function via ccsp_calltable[K_RTTHREADINIT]
+	 * but now references the symbol directly so build_calltable and the
+	 * global calltable can be removed.  Y_rtthreadinit takes one input
+	 * (the stack base) so its ABI is identical under both legacy and
+	 * CCSP_DIRECT_CALL: void f(word p0, sched_t *sched, word *Wptr). */
+	{
+		extern void kernel_Y_rtthreadinit (word, void *, word *);
+		K_ENTRY ((void *) kernel_Y_rtthreadinit, sched_base, wptr, fptr);
+	}
 }
 /*}}}*/
 
