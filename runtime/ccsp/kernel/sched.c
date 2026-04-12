@@ -1058,7 +1058,7 @@ static HOT void load_curb (sched_t *sched, batch_t *batch, bool remote)
 	sched->curb.size = batch->size & (~BATCH_EMPTIED);
 
 	sched->dispatches = calculate_dispatches (sched->curb.size);
-	sched->priofinity = sched->curb.PROC_DESC(Fptr)->priofinity;
+	sched->priofinity = PROC_DESC(sched->curb.Fptr)->priofinity;
 
 	if (!remote) {
 		reinit_batch_t (batch);
