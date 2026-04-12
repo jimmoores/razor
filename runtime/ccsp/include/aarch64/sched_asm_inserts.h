@@ -80,12 +80,12 @@
  * unreliable on AArch64 with -O2 when inlining occurs. */
 /* Capture x30 (LR) and strip any PAC bits.  GCC may compile kernel
  * functions with paciasp (sign return address) which leaves x30 with
- * Pointer Authentication Code in bits 48-54.  save_return stores this
+ * Pointer Authentication Code in bits 48-54.  save_resume_iptr stores this
  * as Wptr[Iptr], and K_ZERO_OUT_JRET later branches to it via `br x9`.
  * Branching to a PAC-signed address (non-canonical) causes SIGSEGV.
  *
  * Strip PAC bits with a bitmask (0x0000FFFFFFFFFFFF = 48-bit user VA).
- * We use the captured value ONLY for save_return; the real x30 (which
+ * We use the captured value ONLY for save_resume_iptr; the real x30 (which
  * may still be signed) is left intact so the function's autiasp/retaa
  * in its epilogue works correctly.
  */
@@ -140,12 +140,12 @@
  * inlining because x30 always holds the link register at function entry. */
 /* Capture x30 (LR) and strip any PAC bits.  GCC may compile kernel
  * functions with paciasp (sign return address) which leaves x30 with
- * Pointer Authentication Code in bits 48-54.  save_return stores this
+ * Pointer Authentication Code in bits 48-54.  save_resume_iptr stores this
  * as Wptr[Iptr], and K_ZERO_OUT_JRET later branches to it via `br x9`.
  * Branching to a PAC-signed address (non-canonical) causes SIGSEGV.
  *
  * Strip PAC bits with a bitmask (0x0000FFFFFFFFFFFF = 48-bit user VA).
- * We use the captured value ONLY for save_return; the real x30 (which
+ * We use the captured value ONLY for save_resume_iptr; the real x30 (which
  * may still be signed) is left intact so the function's autiasp/retaa
  * in its epilogue works correctly.
  */

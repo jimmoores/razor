@@ -629,11 +629,27 @@ static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)
 	}
 }
 /*}}}*/
-/*{{{  static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address)*/
-static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address)
+/*{{{  static TRIVIAL void save_resume_iptr (sched_t *sched, word *Wptr, word resume_iptr)*/
+/*
+ *	save_resume_iptr -- record the per-process resume Iptr for a
+ *	process that is about to be descheduled (or otherwise paused).
+ *
+ *	The resume Iptr is the instruction address that the kernel will
+ *	jump to when the process is rescheduled.  Stage 2.5A renames the
+ *	old `save_return` helper to make the semantics explicit: this is
+ *	per-process state, NOT the per-call return address that I_CALL/
+ *	I_RET use (which lives at Wptr[+0], a different slot).
+ *
+ *	Stage 3D will change the storage location of the resume Iptr
+ *	from PROC_DESC(Wptr)->iptr (currently Wptr[-1]) to a field in a
+ *	separately-allocated process descriptor.  Every caller of this
+ *	helper will then automatically follow the new layout without
+ *	any further code change.
+ */
+static TRIVIAL void save_resume_iptr (sched_t *sched, word *Wptr, word resume_iptr)
 {
-	DT_LOG("save_ret", Wptr, return_address, sched, 0);
-	PROC_DESC(Wptr)->iptr = (word) return_address;
+	DT_LOG("save_resume_iptr", Wptr, resume_iptr, sched, 0);
+	PROC_DESC(Wptr)->iptr = (word) resume_iptr;
 }
 /*}}}*/
 /*{{{  empty_batch(batch)*/
@@ -2697,7 +2713,7 @@ K_CALL_DEFINE_1_0 (Y_fbar_sync)
 		/* not complete - enqueue this process and reschedule */
 		word *fptr = (word *) bar[FBAR_FPTR];
 
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		PROC_DESC(Wptr)->link = NotProcess_p;
 
 		if (fptr == (word *) NotProcess_p || fptr == NULL) {
@@ -2847,7 +2863,7 @@ static INLINE void sem_claim (sched_t *sched, word *Wptr, word return_address, c
 
 	save_priofinity (sched, Wptr);
 	PROC_DESC(Wptr)->link = NotProcess_p;
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 	weak_write_barrier ();
 
 	while (!atw_cas (&(sem->bptr), val, (word) Wptr)) {
@@ -4535,7 +4551,7 @@ K_CALL_DEFINE_2_0 (Y_startp)
 	}
 	
 	save_priofinity (sched, workspace);
-	save_return (sched, workspace, return_address + start_offset);
+	save_resume_iptr (sched, workspace, return_address + start_offset);
 	enqueue_process_nopri (sched, workspace);
 	sched->stats.startp++;
 
@@ -4543,7 +4559,7 @@ K_CALL_DEFINE_2_0 (Y_startp)
 
 	if ((--sched->dispatches) <= 0) {
 		save_priofinity (sched, Wptr);
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		enqueue_to_batch_front (&(sched->curb), Wptr);
 		kernel_scheduler (sched);
 	}
@@ -4591,7 +4607,7 @@ K_CALL_DEFINE_0_0 (Y_pause)
 	ENTRY_TRACE0 (Y_pause);
 
 	save_priofinity (sched, Wptr);
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 	enqueue_process_nopri (sched, Wptr);
 	
 	kernel_scheduler (sched);
@@ -4613,7 +4629,7 @@ K_CALL_DEFINE_0_0 (Y_stopp)
 	ENTRY_TRACE0 (Y_stopp);
 
 	save_priofinity (sched, Wptr);
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 
 	kernel_scheduler (sched);
 }
@@ -4637,7 +4653,7 @@ K_CALL_DEFINE_1_0 (Y_endp)
 	/* BMESSAGE ("endp: ptr=%p count=%ld Wptr=%p\n", ptr, (long)PROC_DESC(ptr)->count, Wptr); */
 
 	/* save the return address for CIF */
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 
 	if (atw_dec_z (&(PROC_DESC(ptr)->count))) {
 		PROC_DESC(ptr)->priofinity = PROC_DESC(ptr)->saved_priority;
@@ -4819,7 +4835,7 @@ K_CALL_DEFINE_3_0 (Y_proc_start)
 
 	ws += offset;
 	save_priofinity (sched, ws);
-	save_return (sched, ws, code);
+	save_resume_iptr (sched, ws, code);
 
 	enqueue_process_nopri (sched, ws);
 	sched->stats.proc_start++;
@@ -4828,7 +4844,7 @@ K_CALL_DEFINE_3_0 (Y_proc_start)
 
 	if ((--sched->dispatches) <= 0) {
 		save_priofinity (sched, Wptr);
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		enqueue_to_batch_front (&(sched->curb), Wptr);
 		kernel_scheduler (sched);
 	} else {
@@ -4926,7 +4942,7 @@ K_CALL_DEFINE_1_0 (Y_setaff)
 		 * scheduler (e.g., started by STARTP which bypasses affinity
 		 * routing but inherits the parent's priofinity). */
 		PROC_DESC(Wptr)->priofinity = BuildPriofinity (affinity, PPriority (sched->priofinity));
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		enqueue_process (sched, Wptr);
 		Wptr = get_process_or_reschedule (sched);
 		K_ZERO_OUT_JRET ();
@@ -4994,7 +5010,7 @@ K_CALL_DEFINE_1_0 (Y_setpri)
 	
 	if (priority != PPriority (sched->priofinity)) {
 		PROC_DESC(Wptr)->priofinity = BuildPriofinity (PAffinity (sched->priofinity), priority);
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		enqueue_process (sched, Wptr);
 		Wptr = get_process_or_reschedule (sched);
 		K_ZERO_OUT_JRET ();
@@ -5130,7 +5146,7 @@ K_CALL_DEFINE_2_0 (symbol)		\
 	byte *pointer;			\
 					\
 	K_CALL_PARAMS_2 (channel_address, pointer); \
-	save_return (sched, Wptr, return_address); \
+	save_resume_iptr (sched, Wptr, return_address); \
 	kernel_chan_io ((flags), Wptr, sched, channel_address, pointer, count); \
 }
 
@@ -5144,7 +5160,7 @@ K_CALL_DEFINE_3_0 (symbol)		\
 	if ((shift)) {			\
 		count <<= (shift);	\
 	}				\
-	save_return (sched, Wptr, return_address); \
+	save_resume_iptr (sched, Wptr, return_address); \
 	kernel_chan_io ((flags), Wptr, sched, channel_address, pointer, count); \
 }
 /*}}}*/
@@ -5226,7 +5242,7 @@ K_CALL_DEFINE_2_0 (Y_outbyte)
 
 	K_CALL_PARAMS_2 (value, channel_address);
 
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 
 	pointer		= (byte *) Wptr;
 	*pointer	= (byte) value;
@@ -5255,7 +5271,7 @@ K_CALL_DEFINE_2_0 (Y_outword)
 	
 	K_CALL_PARAMS_2 (value, channel_address);
 	
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 
 	Wptr[0]	= value;
 	pointer	= (byte *) Wptr;
@@ -5286,7 +5302,7 @@ K_CALL_DEFINE_1_0 (Y_xable)
 	if (temp == NotProcess_p || (temp & 1)) {
 		atw_set (&(PROC_DESC(Wptr)->state), ALT_WAITING | 1);
 		save_priofinity (sched, Wptr);
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		weak_write_barrier ();
 
 		temp = atw_swap (channel_address, ((word) Wptr) | 1);
@@ -5448,7 +5464,7 @@ K_CALL_DEFINE_1_0 (Y_tin)
 
 	if (!Time_AFTER (now, wait_time)) {
 		save_priofinity (sched, Wptr);
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		wait_time++; /* from T9000 book... */
 		SetTimeField(Wptr, wait_time);
 		add_to_timer_queue (sched, Wptr, wait_time, false);
@@ -5476,7 +5492,7 @@ K_CALL_DEFINE_1_0 (Y_fasttin)
 	ENTRY_TRACE (Y_fasttin, "%d", wait_time);
 
 	save_priofinity (sched, Wptr);
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 	add_to_timer_queue (sched, Wptr, wait_time, false);
 
 	kernel_scheduler (sched);
@@ -5536,7 +5552,7 @@ static INLINE void kernel_altend (word *Wptr, sched_t *sched, word return_addres
 		return_address += PROC_DESC(Wptr)->temp;
 	}
 
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 	
 	if (unlikely (state != 1)) {
 		save_priofinity (sched, Wptr);
@@ -5609,7 +5625,7 @@ K_CALL_DEFINE_0_0 (Y_altwt)
 		word nstate = (state | ALT_WAITING) & (~(ALT_ENABLING | ALT_NOT_READY));
 		
 		save_priofinity (sched, Wptr);
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		weak_write_barrier ();
 		
 		if (likely (atw_cas (&(PROC_DESC(Wptr)->state), state, nstate))) {
@@ -5653,7 +5669,7 @@ K_CALL_DEFINE_0_0 (Y_taltwt)
 			tqnode_t *tn = NULL;
 
 			save_priofinity (sched, Wptr);
-			save_return (sched, Wptr, return_address);
+			save_resume_iptr (sched, Wptr, return_address);
 
 			if (PROC_DESC(Wptr)->tlink == TimeSet_p) {
 				tn = add_to_timer_queue (sched, Wptr, GetTimeField(Wptr), true);
@@ -5695,7 +5711,7 @@ static INLINE bool kernel_enbc (word *Wptr, sched_t *sched, word return_address,
 			atw_set (channel_address, temp);
 			if (jump) {
 				atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
-				save_return (sched, Wptr, return_address);
+				save_resume_iptr (sched, Wptr, return_address);
 				K_ZERO_OUT_JRET ();
 			} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
 				atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
@@ -5710,7 +5726,7 @@ static INLINE bool kernel_enbc (word *Wptr, sched_t *sched, word return_address,
 	} else if (temp != ptr) {
 		if (jump) {
 			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
-			save_return (sched, Wptr, return_address);
+			save_resume_iptr (sched, Wptr, return_address);
 			K_ZERO_OUT_JRET ();
 		} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
 			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
@@ -5946,7 +5962,7 @@ static INLINE bool kernel_enbt (word *Wptr, sched_t *sched, word return_address,
 		SetTimeField (Wptr, now);
 		if (jump) {
 			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
-			save_return (sched, Wptr, return_address);
+			save_resume_iptr (sched, Wptr, return_address);
 			K_ZERO_OUT_JRET ();
 		} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
 			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
@@ -6487,7 +6503,7 @@ K_CALL_DEFINE_1_0 (Y_mt_sync)
 	K_CALL_PARAMS_1 (bar);
 	ENTRY_TRACE (Y_mt_sync, "%p", bar);
 
-	save_return (sched, Wptr, return_address);
+	save_resume_iptr (sched, Wptr, return_address);
 
 	bar->sync (sched, &(bar->data), Wptr);
 }
@@ -6604,7 +6620,7 @@ K_CALL_DEFINE_2_0 (Y_wait_int)
 	if (!intcount[number]) {
 		/* no interrupt yet */
 		save_priofinity (sched, Wptr);
-		save_return (sched, Wptr, return_address);
+		save_resume_iptr (sched, Wptr, return_address);
 		PROC_DESC(Wptr)->temp = 0;
 		inttab[number] = Wptr;
 		sti ();
