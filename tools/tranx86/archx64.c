@@ -316,13 +316,66 @@ static char *x64_get_register_name (int reg)
 }
 /*}}}*/
 
+/*{{{  static char *x64_convert_kernel_symbol_name */
+/*
+ *	Map a kif entrypoint name (e.g. "Y_in") to the actual C kernel
+ *	function symbol (e.g. "kernel_Y_in").  On Linux x64 there is no
+ *	platform symbol prefix; on other ELF x64 targets the same
+ *	convention should hold.  Returns a freshly-allocated string.
+ */
+static char *x64_convert_kernel_symbol_name (const char *symbol)
+{
+	char *rbuf;
+	const char *ext = options.extref_prefix ? options.extref_prefix : "";
+
+	if (symbol == NULL) {
+		return string_dup ("&unknown_kernel_call");
+	}
+
+	/* Prepend '&' so x64_modify_name (which is run again on every
+	 * ARG_NAMEDLABEL during asm output) strips the '&' and skips its
+	 * automatic 'O_' / extref_prefix logic.  The final symbol emitted
+	 * is therefore exactly `kernel_<name>` (or with the platform
+	 * prefix on macOS), matching the C linkage of the kernel function. */
+	rbuf = smalloc (strlen (symbol) + strlen (ext) + 16);
+
+	if ((symbol[0] == 'Y' || symbol[0] == 'X') && symbol[1] == '_') {
+		sprintf (rbuf, "&%skernel_%s", ext, symbol);
+	} else if (!strncmp (symbol, "kernel_Y_", 9) || !strncmp (symbol, "kernel_X_", 9)) {
+		sprintf (rbuf, "&%s%s", ext, symbol);
+	} else {
+		sprintf (rbuf, "&%s%s", ext, symbol);
+	}
+	return rbuf;
+}
+/*}}}*/
+
 /*{{{  static ins_chain *compose_x64_kjump */
 /*
- *	composes a jump or call instruction via the calltable
+ *	composes a direct jump or call instruction to a kernel function.
+ *	Phase 1B: previously this dispatched indirectly through
+ *	`*offset(REG_SCHED)` (sched->calltable[K_*]); now it emits a
+ *	direct call/jump to the kernel symbol so the per-sched calltable
+ *	can eventually be removed.  The legacy ABI (rdi=param0, rsi=sched,
+ *	rdx=Wptr + sched->cparam[]) is unchanged.
  */
 static ins_chain *compose_x64_kjump (tstate *ts, const int type, const int cond, const kif_entrytype *entry)
 {
-	return compose_ins (INS_CALL, 1, 0, ARG_REGIND | ARG_DISP | ARG_IND, REG_SCHED, offsetof(ccsp_sched_t, calltable[entry->call_offset]));
+	char *entrypoint_name;
+
+	if (!entry || !entry->entrypoint) {
+		entrypoint_name = string_dup ("unknown_kernel_call");
+	} else {
+		entrypoint_name = x64_convert_kernel_symbol_name (entry->entrypoint);
+	}
+
+	if (type == INS_CJUMP) {
+		return compose_ins (INS_CJUMP, 2, 0, ARG_COND, cond, ARG_NAMEDLABEL, entrypoint_name);
+	} else if (type == INS_CALL) {
+		return compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, entrypoint_name);
+	} else {
+		return compose_ins (INS_JUMP, 1, 0, ARG_NAMEDLABEL, entrypoint_name);
+	}
 }
 /*}}}*/
 
@@ -3759,8 +3812,11 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			x64_drop_arg (tmp->in_args[0], outstream);
 			fprintf (outstream, "(%%rip), %%rax\n");
 			fprintf (outstream, "\tmovq\t%%rax, %d(%%r14)\n", W_IPTR);
-			/* Call kernel scheduler via calltable */
-			fprintf (outstream, "\tcallq\t*%d(%%r15)\n", (int)offsetof(ccsp_sched_t, calltable[K_PAUSE]));
+			/* Call kernel scheduler directly (Phase 1B for x64).
+			 * The kernel function uses the standard System V ABI:
+			 * rdi=param0, rsi=sched, rdx=Wptr — same convention as
+			 * any C function callable via `call <symbol>`. */
+			fprintf (outstream, "\tcallq\tkernel_Y_pause\n");
 			break;
 		case INS_LOCK:
 			fprintf (outstream, "\tlock;");
