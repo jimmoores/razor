@@ -76,9 +76,21 @@
 /* K_CALL_HEADER: still capture return address from LR for error handlers.
  * Direct x30 capture is used because __builtin_return_address(0) is
  * unreliable on AArch64 with -O2 when inlining occurs. */
+/* Capture x30 (LR) and strip any PAC bits.  GCC may compile kernel
+ * functions with paciasp (sign return address) which leaves x30 with
+ * Pointer Authentication Code in bits 48-54.  save_return stores this
+ * as Wptr[Iptr], and K_ZERO_OUT_JRET later branches to it via `br x9`.
+ * Branching to a PAC-signed address (non-canonical) causes SIGSEGV.
+ *
+ * Strip PAC bits with a bitmask (0x0000FFFFFFFFFFFF = 48-bit user VA).
+ * We use the captured value ONLY for save_return; the real x30 (which
+ * may still be signed) is left intact so the function's autiasp/retaa
+ * in its epilogue works correctly.
+ */
 #define K_CALL_HEADER \
 	unsigned long return_address; \
-	__asm__ volatile ("mov %0, x30" : "=r" (return_address));
+	__asm__ volatile ("mov %0, x30" : "=r" (return_address)); \
+	return_address &= 0x0000FFFFFFFFFFFFUL;
 
 /* K_CALL_PARAM: map parameter index to the corresponding C argument.
  * Token pasting is used since all call sites use literal indices 0-4. */
@@ -120,9 +132,21 @@
  * WRONG caller's return address (e.g., mt_release_simple instead of
  * the occam code's return point). Direct x30 capture is immune to
  * inlining because x30 always holds the link register at function entry. */
+/* Capture x30 (LR) and strip any PAC bits.  GCC may compile kernel
+ * functions with paciasp (sign return address) which leaves x30 with
+ * Pointer Authentication Code in bits 48-54.  save_return stores this
+ * as Wptr[Iptr], and K_ZERO_OUT_JRET later branches to it via `br x9`.
+ * Branching to a PAC-signed address (non-canonical) causes SIGSEGV.
+ *
+ * Strip PAC bits with a bitmask (0x0000FFFFFFFFFFFF = 48-bit user VA).
+ * We use the captured value ONLY for save_return; the real x30 (which
+ * may still be signed) is left intact so the function's autiasp/retaa
+ * in its epilogue works correctly.
+ */
 #define K_CALL_HEADER \
 	unsigned long return_address; \
-	__asm__ volatile ("mov %0, x30" : "=r" (return_address));
+	__asm__ volatile ("mov %0, x30" : "=r" (return_address)); \
+	return_address &= 0x0000FFFFFFFFFFFFUL;
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
 /*}}}*/

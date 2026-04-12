@@ -66,6 +66,14 @@ _ccsp_cif_call_asm_resched:
 .global ccsp_cif_call_asm_resched
 ccsp_cif_call_asm_resched:
 #endif
+    // Strip any PAC (Pointer Authentication Code) bits from LR before
+    // saving it to the workspace.  libc functions (e.g. pthread_*) are
+    // compiled with PAC and sign return addresses; if we save a signed
+    // LR and later restore it for `br x30`, the PAC bits make the
+    // address non-canonical and trigger SIGSEGV.  xpaclri clears the
+    // PAC bits from x30 to produce a plain code pointer.
+    hint #7        // xpaclri: strip PAC from x30 (NOP on non-PAC CPUs)
+
     // Save callee-saved registers to the WORKSPACE at negative offsets from wptr (x0).
     stur x29, [x0, #-96]
     stur x30, [x0, #-88]
@@ -151,6 +159,11 @@ ccsp_cif_process_call:
     // x1 = func address
     // x28 = Wptr (from occam, callee-saved)
     // x30 = LR (return address to compose_cif_call code)
+
+    // Strip PAC bits from LR before saving - see explanation in
+    // ccsp_cif_call_asm_resched above.  libc-compiled callers may
+    // sign LR with paciasp; we save the bare code address instead.
+    hint #7        // xpaclri: strip PAC from x30
 
     // Save LR to wptr[-23] (byte -184 from x0).
     // blr x1 will overwrite x30, and the CIF C function's channel
