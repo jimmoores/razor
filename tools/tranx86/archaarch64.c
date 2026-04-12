@@ -1924,54 +1924,49 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	/*{{{  CCSP_DIRECT_CALL: pass all inputs as C arguments */
 	/* Register layout: x0..x(regs_in-1) = inputs, x(regs_in) = sched, x(regs_in+1) = Wptr.
 	 *
-	 * We move sched and Wptr into position FIRST because they come from
-	 * dedicated registers (REG_SCHED=x25, REG_WPTR=x28) which won't be
-	 * clobbered when we set up x0..x2 from the occam stack registers.
+	 * Order matters: the register allocator may map a cregs[i] (virtual)
+	 * to one of the physical input slots (x0..x(regs_in+1)) used by
+	 * sched_pos / wptr_pos / final input positions.  If we move sched
+	 * or Wptr into those slots BEFORE saving cregs[i] to scratch, the
+	 * input value gets clobbered.  Save first, shuffle second.
 	 */
 	{
 		int sched_pos = regs_in;      /* register index for sched */
 		int wptr_pos  = regs_in + 1;  /* register index for Wptr */
+		int scratch[3] = { 9, 10, 11 }; /* x9, x10, x11 - scratch registers */
 
-		/* Move sched into its position (xN where N=regs_in) */
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, sched_pos));
-
-		/* Move Wptr into its position (xN+1) */
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, wptr_pos));
-
-		/* Now move input arguments into x0..x(regs_in-1).
-		 * First save all input values to scratch registers (x9..x11)
-		 * to avoid clobbering when source and destination registers
-		 * overlap (e.g., cregs[0] in x1 and cregs[1] in x0 need swapping).
-		 * Simple reverse-order processing can't handle all overlap cases. */
-		{
-			int scratch[3] = { 9, 10, 11 }; /* x9, x10, x11 - scratch registers */
-			int nsaved = 0;
-
-			/* Phase 1: save cregs values to scratch registers */
-			for (i = 0; i < regs_in && i < 3; i++) {
-				if (cregs[i] != REG_UNDEFINED) {
-					switch (constmap_typeof (cregs[i])) {
-					case VALUE_CONST:
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[i]), ARG_REG, scratch[i]));
-						break;
-					default:
-						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, cregs[i], ARG_REG, scratch[i]));
-						break;
-					}
-					nsaved++;
+		/* Phase 1: save cregs values to scratch registers BEFORE
+		 * touching x0..x(regs_in+1).  This protects against the
+		 * allocator placing a cregs[i] in any of those slots. */
+		for (i = 0; i < regs_in && i < 3; i++) {
+			if (cregs[i] != REG_UNDEFINED) {
+				switch (constmap_typeof (cregs[i])) {
+				case VALUE_CONST:
+					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, constmap_regconst (cregs[i]), ARG_REG, scratch[i]));
+					break;
+				default:
+					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, cregs[i], ARG_REG, scratch[i]));
+					break;
 				}
 			}
+		}
 
-			/* Phase 2: move from scratch registers to final positions */
-			for (i = 0; i < regs_in; i++) {
-				if (i < 3 && cregs[i] != REG_UNDEFINED) {
-					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, scratch[i], ARG_REG, i));
-				} else if (i >= 3) {
-					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, i));
-				} else {
-					/* REG_UNDEFINED - pass 0 */
-					add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, i));
-				}
+		/* Phase 2: move sched and Wptr into their final positions.
+		 * REG_SCHED=x25 and REG_WPTR=x28 are reserved (regcolour_rmax=25
+		 * excludes them) so they can't have been clobbered by Phase 1. */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, sched_pos));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, wptr_pos));
+
+		/* Phase 3: move from scratch registers to final input positions
+		 * (x0..x(regs_in-1)). */
+		for (i = 0; i < regs_in; i++) {
+			if (i < 3 && cregs[i] != REG_UNDEFINED) {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, scratch[i], ARG_REG, i));
+			} else if (i >= 3) {
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, i));
+			} else {
+				/* REG_UNDEFINED - pass 0 */
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t)0, ARG_REG, i));
 			}
 		}
 		/* For 0 inputs, sched goes in x0, Wptr in x1 - already done above. */
