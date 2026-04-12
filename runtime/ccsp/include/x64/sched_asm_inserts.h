@@ -289,7 +289,12 @@
 
 /* _K_CIF_PROC: CIF process creation trampoline body.
  * Switches from kernel stack to process stack, pops and calls the C function,
- * then restores sched, sets up arguments for the kernel ENDP call. */
+ * then restores sched, sets up arguments for a follow-up kernel call.
+ * After this fragment runs:
+ *   rdi = wptr + (offset * sizeof(word))   (param0)
+ *   rsi = sched                             (sched arg)
+ *   rdx = wptr                              (Wptr arg)
+ *   rsp = sched->stack                      (kernel stack restored) */
 #define _K_CIF_PROC \
 		"	movq	(%%r14), %%rsp		\n" \
 		"	movq	%%r15, -56(%%r14)	\n" \
@@ -301,28 +306,31 @@
 		"	movq	%%r14, %%rdx		\n" \
 		"	movq	%%r15, %%rsi		\n" \
 		"	movq	(%%r15), %%rsp		\n" \
-		"	addq	%2, %%rdi		\n" \
-		"	movq	%%rsi, %%rcx		\n" \
-		"	addq	%1, %%rcx		\n"
+		"	addq	%1, %%rdi		\n"
 
-#define K_CIF_PROC(address, call, offset) \
+/* K_CIF_PROC / K_CIF_PROC_IND now dispatch directly to a named kernel
+ * function symbol instead of indirecting through sched->calltable[call].
+ * The `kernel_sym` parameter is a token (e.g. kernel_Y_proc_end) that
+ * gets stringified into the asm.  This removes the only x64 dependency
+ * on sched_t.calltable[]; the field is gated out under CCSP_HAS_CALLTABLE. */
+#define K_CIF_PROC(address, kernel_sym, offset) \
 	__asm__ __volatile__ ("				\n" \
 		"	call	0f			\n" \
 		_K_CIF_PROC \
-		"	callq	*(%%rcx)		\n" \
+		"	callq	" #kernel_sym "		\n" \
 		"0:	popq	%0			\n" \
 		: "=g" (address) \
-		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
+		: "i" (offset * sizeof(word)) \
 		: "memory")
-#define K_CIF_PROC_IND(address, call, offset) \
+#define K_CIF_PROC_IND(address, kernel_sym, offset) \
 	__asm__ __volatile__ ("				\n" \
 		"	call	0f			\n" \
 		_K_CIF_PROC \
 		"	movq	(%%rdi), %%rdi		\n" \
-		"	callq	*(%%rcx)		\n" \
+		"	callq	" #kernel_sym "		\n" \
 		"0:	popq	%0			\n" \
 		: "=g" (address) \
-		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
+		: "i" (offset * sizeof(word)) \
 		: "memory")
 /*}}}*/
 

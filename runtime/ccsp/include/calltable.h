@@ -1390,6 +1390,7 @@ void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_zero_d
 #define K_CALLTABLE_PTR(X) K_CALL_PTR(X)
 #endif /* CCSP_DIRECT_CALL */
 
+#ifdef CCSP_HAS_CALLTABLE
 static inline void build_calltable (void **table)
 {
 	/* X_malloc */
@@ -1629,6 +1630,7 @@ static inline void build_calltable (void **table)
 	/* Y_zero_div */
 	table[ 117] = K_CALLTABLE_PTR (Y_zero_div);
 }
+#endif /* CCSP_HAS_CALLTABLE */
 
 
 #endif /* !__CALLTABLE_H */

@@ -38,6 +38,24 @@ typedef struct {
 /* call table maximum size */
 #define K_MAX_SUPPORTED		122
 
+/* CCSP_HAS_CALLTABLE: when defined, sched_t carries a per-scheduler
+ * calltable[K_MAX_SUPPORTED] populated by build_calltable(), and
+ * tranx86-generated code dispatches kernel calls indirectly through
+ * `*offset(REG_SCHED)`.  Architectures that have migrated to direct
+ * `call kernel_<name>` dispatch (Phase 1B) leave this undefined.
+ *
+ * Currently the calltable is required by:
+ *   - i386 (arch386.c emits indirect calls)
+ *   - any other 32-bit target that hasn't been converted
+ *
+ * It is unused by:
+ *   - x86_64  (Phase 1B for x64)
+ *   - aarch64 (Phase 1A/1B for aarch64)
+ */
+#if !defined(__aarch64__) && !defined(__x86_64__)
+#define CCSP_HAS_CALLTABLE
+#endif
+
 /* include auto-generated interface */
 #include "kitable.h"
 

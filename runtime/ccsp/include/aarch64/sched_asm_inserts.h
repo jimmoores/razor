@@ -311,7 +311,15 @@ LABEL_TYPE( ,X) \
 		: "=r" (address) \
 		: /* no inputs */ \
 		: "memory", "x9", "x28")
-#define K_CIF_PROC(address, call, offset) \
+/* K_CIF_PROC / K_CIF_PROC_IND now dispatch directly to a named kernel
+ * function symbol via `b <symbol>` instead of indirecting through
+ * sched->calltable[call].  Mirrors the x64 change; lets the per-sched
+ * calltable[] field be removed under CCSP_HAS_CALLTABLE.
+ *
+ * Note: aarch64 has CCSP_DIRECT_CALL enabled, so kernel functions take
+ * the new ABI (p0=x0, sched=x1, Wptr=x2 for 1-input).  K_ENDP and
+ * K_PROC_END are both 1-input, so the same x0/x1/x2 layout works. */
+#define K_CIF_PROC(address, kernel_sym, offset) \
 	__asm__ __volatile__ ("\t\t\t\t\n" \
 		"\tadr %0, 0f\t\n" \
 		"\tb 1f\t\t\n" \
@@ -325,16 +333,15 @@ LABEL_TYPE( ,X) \
 		"\tldr x25, [x28, #-56]\t\n" \
 		"\tldr x9, [x25, #0]\t\n" \
 		"\tmov sp, x9\t\n" \
-		"\tsub x0, x28, %2\t\n" \
+		"\tsub x0, x28, %1\t\n" \
 		"\tmov x1, x25\t\n" \
 		"\tmov x2, x28\t\n" \
-		"\tldr x9, [x25, %1]\t\n" \
-		"\tbr x9\t\t\n" \
+		"\tb " #kernel_sym "\t\n" \
 		"1:\t\t\t\t\n" \
 		: "=r" (address) \
-		: "i" (offsetof(sched_t, calltable[call])), "i" (-(offset) * (int)sizeof(word)) \
+		: "i" (-(offset) * (int)sizeof(word)) \
 		: "memory", "x0", "x9")
-#define K_CIF_PROC_IND(address, call, offset) \
+#define K_CIF_PROC_IND(address, kernel_sym, offset) \
 	__asm__ __volatile__ ("\t\t\t\t\n" \
 		"\tadr %0, 0f\t\n" \
 		"\tb 1f\t\t\n" \
@@ -348,14 +355,13 @@ LABEL_TYPE( ,X) \
 		"\tldr x25, [x28, #-56]\t\n" \
 		"\tldr x9, [x25, #0]\t\n" \
 		"\tmov sp, x9\t\n" \
-		"\tldur x0, [x28, %2]\t\n" \
+		"\tldur x0, [x28, %1]\t\n" \
 		"\tmov x1, x25\t\n" \
 		"\tmov x2, x28\t\n" \
-		"\tldr x9, [x25, %1]\t\n" \
-		"\tbr x9\t\t\n" \
+		"\tb " #kernel_sym "\t\n" \
 		"1:\t\t\t\t\n" \
 		: "=r" (address) \
-		: "i" (offsetof(sched_t, calltable[call])), "i" ((offset) * (int)sizeof(word)) \
+		: "i" ((offset) * (int)sizeof(word)) \
 		: "memory", "x0", "x9")
 /*}}}*/
 

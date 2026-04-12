@@ -82,7 +82,9 @@ typedef struct _ccsp_sched_t {
   #define ccsp_scheduler		_ccsp_scheduler
 #endif
 
+#ifdef CCSP_HAS_CALLTABLE
 extern void			**_ccsp_calltable;
+#endif
 
 /* CIF process trampoline addresses, populated by ccsp_kernel_init.
  * These are code-label addresses returned by the kernel_CIF_*_stub

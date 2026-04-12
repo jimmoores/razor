@@ -359,6 +359,7 @@ def output_calltable(symbol_list, symbols, fn):
 	f.write("#define K_CALLTABLE_PTR(X) K_CALL_PTR(X)\n")
 	f.write("#endif /* CCSP_DIRECT_CALL */\n\n")
 
+	f.write("#ifdef CCSP_HAS_CALLTABLE\n")
 	f.write("static inline void build_calltable (void **table)\n")
 	f.write("{\n")
 	for (i, name) in enumerate(symbol_list):
@@ -371,7 +372,8 @@ def output_calltable(symbol_list, symbols, fn):
 			f.write("\ttable[% 3d] = kernel_%s ();\n" % (i, sname))
 		else:
 			f.write("\ttable[% 3d] = K_CALLTABLE_PTR (%s);\n" % (i, sname))
-	f.write("}\n\n")
+	f.write("}\n")
+	f.write("#endif /* CCSP_HAS_CALLTABLE */\n\n")
 
 	output_footer(f, fn)
 	f.close()

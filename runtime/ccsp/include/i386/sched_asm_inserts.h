@@ -200,26 +200,31 @@
 		"	movl	%%edx, %%esi		\n" \
 		"	movl	%%ecx, %%eax		\n" \
 		"	movl	(%%edx), %%esp		\n" \
-		"	addl	%2, %%eax		\n" \
-		"	addl	%1, %%esi		\n"
-#define K_CIF_PROC(address, call, offset) \
+		"	addl	%1, %%eax		\n"
+
+/* K_CIF_PROC / K_CIF_PROC_IND now dispatch directly to a named kernel
+ * function symbol via `call <symbol>` instead of indirecting through
+ * sched->calltable[call].  Mirrors the x64 / aarch64 change.  i386
+ * still maintains the calltable for tranx86-generated kernel calls,
+ * but the CIF process trampoline path bypasses it. */
+#define K_CIF_PROC(address, kernel_sym, offset) \
 	__asm__ __volatile__ ("				\n" \
 		"	call	0f			\n" \
 		_K_CIF_PROC \
-		"	call	*(%%esi)		\n" \
+		"	call	" #kernel_sym "		\n" \
 		"0:	popl	%0			\n" \
 		: "=g" (address) \
-		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
+		: "i" (offset * sizeof(word)) \
 		: "memory")
-#define K_CIF_PROC_IND(address, call, offset) \
+#define K_CIF_PROC_IND(address, kernel_sym, offset) \
 	__asm__ __volatile__ ("				\n" \
 		"	call	0f			\n" \
 		_K_CIF_PROC \
 		"	movl	(%%eax), %%eax		\n" \
-		"	call	*(%%esi)		\n" \
+		"	call	" #kernel_sym "		\n" \
 		"0:	popl	%0			\n" \
 		: "=g" (address) \
-		: "i" (offsetof(sched_t, calltable[call])), "i" (offset * sizeof(word)) \
+		: "i" (offset * sizeof(word)) \
 		: "memory")
 /*}}}*/
 

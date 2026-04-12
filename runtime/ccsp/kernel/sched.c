@@ -178,7 +178,9 @@ sched_t			*_ccsp_scheduler 		CACHELINE_ALIGN = NULL;
 
 ccsp_global_t		_ccsp				CACHELINE_ALIGN = {};
 
+#ifdef CCSP_HAS_CALLTABLE
 void 			**_ccsp_calltable		CACHELINE_ALIGN = NULL;
+#endif
 
 /* CIF process trampoline addresses (Phase 1D Stage 1b).
  * Populated once by ccsp_kernel_init from the kernel_CIF_*_stub
@@ -1941,13 +1943,13 @@ void ccsp_kernel_init (void)
 {
 	/* initialise run-time */
 	init_ccsp_global_t (&_ccsp);
+#ifdef CCSP_HAS_CALLTABLE
 	build_calltable (_ccsp.calltable);
 	_ccsp_calltable = _ccsp.calltable;
+#endif
 
 	/* Cache the CIF trampoline code addresses for ccsp_cif.h.  These
-	 * are returned by kernel_CIF_*_stub() functions in this file.
-	 * build_calltable above already invokes them; calling here again
-	 * is harmless and removes the dependency on the global calltable. */
+	 * are returned by kernel_CIF_*_stub() functions in this file. */
 	_ccsp_cif_proc_stub		= kernel_CIF_proc_stub ();
 	_ccsp_cif_light_proc_stub	= kernel_CIF_light_proc_stub ();
 	_ccsp_cif_endp_resume_stub	= kernel_CIF_endp_resume_stub ();
@@ -2206,7 +2208,9 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 	sched			= (sched_t *) stack;
 	allocator 		= dmem_new_allocator ();
 	init_sched_t (sched);
+#ifdef CCSP_HAS_CALLTABLE
 	memcpy (sched->calltable, ccsp_calltable, sizeof(void *) * K_MAX_SUPPORTED);
+#endif
 	sched->allocator 	= allocator;
 	sched->stack		= stack;
 	sched->priofinity	= BuildPriofinity (0, (MAX_PRIORITY_LEVELS / 2));
@@ -6913,7 +6917,7 @@ void * __attribute__((noinline)) kernel_CIF_endp_resume_stub (void)
 void * __attribute__((noinline)) kernel_CIF_light_proc_stub (void)
 {
 	void *address;
-	K_CIF_PROC_IND (address, K_ENDP, BarrierPtr);
+	K_CIF_PROC_IND (address, kernel_Y_endp, BarrierPtr);
 	return address;
 }
 /*}}}*/
@@ -6926,7 +6930,7 @@ void * __attribute__((noinline)) kernel_CIF_light_proc_stub (void)
 void * __attribute__((noinline)) kernel_CIF_proc_stub (void)
 {
 	void *address;
-	K_CIF_PROC (address, K_PROC_END, -CIF_PROCESS_WORDS);
+	K_CIF_PROC (address, kernel_Y_proc_end, -CIF_PROCESS_WORDS);
 	return address;
 }
 /*}}}*/
