@@ -554,28 +554,45 @@
 #define CONST_INFINITY	0x7f800000
 
 
-#ifdef PROCESS_PRIORITY
-	/* priorities shove these (post Iptr) down a slot */
-	#define W_TIME		(-(6 << WSH))
-	#define W_TLINK		(-(5 << WSH))
-	#define W_STATUS	(-(4 << WSH))
-	#define W_POINTER	(-(4 << WSH))
-	#define W_PRIORITY	(-(3 << WSH))
-#else	/* !PROCESS_PRIORITY */
-	/* These must match the runtime (ccsp_consts.h) which always
-	 * includes the Priofinity slot at -3. */
-	#define W_TIME		(-(6 << WSH))
-	#define W_TLINK		(-(5 << WSH))
-	#define W_STATUS	(-(4 << WSH))
-	#define W_POINTER	(-(4 << WSH))
-	#define W_PRIORITY	(-(3 << WSH))
-#endif	/* !PROCESS_PRIORITY */
-#define W_LINK		(-(2 << WSH))
-#define W_IPTR		(-(1 << WSH))
-#define W_TEMP		(0)
+/*
+ * Workspace metadata offsets, expressed via the typed
+ * tranx86_proc_desc_t mirror in proc_desc.h.  These macros must
+ * stay numerically identical to their legacy literal-shift
+ * definitions; the static_assert checks below verify it.
+ *
+ * The runtime side defines the same layout in
+ * runtime/ccsp/include/process_desc.h.  Both must agree on field
+ * order; that's the whole point of mirroring the struct here.
+ */
+#include "proc_desc.h"
 
-#define W_COUNT		(1 << WSH)
-#define W_IPTRSUCC	(0)
+#define W_TIME		PROC_DESC_OFF(time_f)
+#define W_TLINK		PROC_DESC_OFF(tlink)
+#define W_STATUS	PROC_DESC_OFF(pointer)	/* alias of W_POINTER */
+#define W_POINTER	PROC_DESC_OFF(pointer)
+#define W_PRIORITY	PROC_DESC_OFF(priofinity)
+#define W_LINK		PROC_DESC_OFF(link)
+#define W_IPTR		PROC_DESC_OFF(iptr)
+#define W_TEMP		PROC_DESC_OFF(temp)
+
+#define W_COUNT		PROC_DESC_OFF(count)
+#define W_IPTRSUCC	PROC_DESC_OFF(temp)	/* alias of W_TEMP */
+
+/*
+ * Compile-time check that the typed offsets are numerically
+ * identical to the legacy literal-shift definitions.  If a future
+ * change to proc_desc.h reorders the struct, or to transputer.h
+ * changes WSH, these assertions catch it.
+ */
+_Static_assert (W_TIME     == -(6 << WSH), "W_TIME drift");
+_Static_assert (W_TLINK    == -(5 << WSH), "W_TLINK drift");
+_Static_assert (W_POINTER  == -(4 << WSH), "W_POINTER drift");
+_Static_assert (W_PRIORITY == -(3 << WSH), "W_PRIORITY drift");
+_Static_assert (W_LINK     == -(2 << WSH), "W_LINK drift");
+_Static_assert (W_IPTR     == -(1 << WSH), "W_IPTR drift");
+_Static_assert (W_TEMP     ==  0,          "W_TEMP drift");
+_Static_assert (W_COUNT    ==  (1 << WSH), "W_COUNT drift");
+_Static_assert (W_IPTRSUCC ==  0,          "W_IPTRSUCC drift");
 
 #define Z_ENABLING	(NOT_PROCESS + 1)
 #define Z_WAITING	(NOT_PROCESS + 2)
