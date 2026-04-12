@@ -461,16 +461,16 @@ sched_t *local_scheduler(void)
 /*{{{  static void verify_batch_integrity (batch_t *batch) */
 static void verify_batch_integrity (batch_t *batch)
 {
-	process_t desc = batch->Fptr;
+	word *ptr = batch->Fptr;
 	word size = 1;
 
-	while (desc->link != NotProcess_p) {
+	while (PROC_DESC(ptr)->link != NotProcess_p) {
 		ASSERT ( (batch->size & (~BATCH_EMPTIED)) > size );
 		size++;
-		desc = (process_t) desc->link;
+		ptr = (word *) PROC_DESC(ptr)->link;
 	}
 
-	ASSERT ( batch->Bptr == desc );
+	ASSERT ( batch->Bptr == ptr );
 	ASSERT ( (batch->size & (~BATCH_EMPTIED)) == size );
 }
 /*}}}*/
@@ -661,16 +661,15 @@ static TRIVIAL void save_resume_iptr (sched_t *sched, word *Wptr, word resume_ip
 /*{{{  static HOT void enqueue_to_batch_with_hint (batch_t *batch, word *Wptr, bool front)*/
 static HOT void enqueue_to_batch_with_hint (batch_t *batch, word *Wptr, bool front)
 {
-	process_t desc = PROC_DESC(Wptr);
-	desc->link = NotProcess_p;
+	PROC_DESC(Wptr)->link = NotProcess_p;
 
 	if (front) {
-		batch->Fptr = desc;
-		batch->Bptr = desc;
+		batch->Fptr = Wptr;
+		batch->Bptr = Wptr;
 		batch->size = 1;
 	} else {
-		batch->Bptr->link = (word) desc;
-		batch->Bptr = desc;
+		PROC_DESC(batch->Bptr)->link = (word) Wptr;
+		batch->Bptr = Wptr;
 		batch->size = batch->size + 1;
 	}
 }
@@ -678,30 +677,27 @@ static HOT void enqueue_to_batch_with_hint (batch_t *batch, word *Wptr, bool fro
 /*{{{  static HOT void enqueue_to_batch (batch_t *batch, word *Wptr)*/
 static HOT void enqueue_to_batch (batch_t *batch, word *Wptr)
 {
-	process_t desc = PROC_DESC(Wptr);
-	DT_LOG("enqueue", Wptr, Wptr ? desc->iptr : 0, batch->Fptr, batch->size);
-	desc->link = NotProcess_p;
+	DT_LOG("enqueue", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, batch->Fptr, batch->size);
+	PROC_DESC(Wptr)->link = NotProcess_p;
 
-	if (batch->Fptr == NULL) {
-		batch->Fptr = desc;
+	if (batch->Fptr == NotProcess_p) {
+		batch->Fptr = Wptr;
 	} else {
-		batch->Bptr->link = (word) desc;
+		PROC_DESC(batch->Bptr)->link = (word) Wptr;
 	}
 
-	batch->Bptr = desc;
+	batch->Bptr = Wptr;
 	batch->size = batch->size + 1;
 }
 /*}}}*/
 /*{{{  static WARM void enqueue_to_batch_front (batch_t *batch, word *Wptr)*/
 static WARM void enqueue_to_batch_front (batch_t *batch, word *Wptr)
 {
-	process_t desc = PROC_DESC(Wptr);
-
-	if ((desc->link = (word) batch->Fptr) == NotProcess_p) {
-		batch->Fptr = desc;
-		batch->Bptr = desc;
+	if ((PROC_DESC(Wptr)->link = (word) batch->Fptr) == NotProcess_p) {
+		batch->Fptr = Wptr;
+		batch->Bptr = Wptr;
 	} else {
-		batch->Fptr = desc;
+		batch->Fptr = Wptr;
 	}
 
 	batch->size = batch->size + 1;
@@ -710,12 +706,11 @@ static WARM void enqueue_to_batch_front (batch_t *batch, word *Wptr)
 /*{{{  static HOT word *dequeue_from_batch (batch_t *batch)*/
 static HOT word *dequeue_from_batch (batch_t *batch)
 {
-	process_t desc = batch->Fptr;
-	word *Wptr = PROC_WPTR(desc);
-	DT_LOG("dequeue", Wptr, desc ? desc->iptr : 0, (void *)desc->link, batch->size);
+	word *Wptr = batch->Fptr;
+	DT_LOG("dequeue", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, (word *)PROC_DESC(Wptr)->link, batch->size);
 	word size = batch->size;
 
-	batch->Fptr = (process_t) desc->link;
+	batch->Fptr = (word *) PROC_DESC(Wptr)->link;
 	batch->size = ((size - 2) & BATCH_EMPTIED) | (size - 1);
 	/* The previous line is "clever":
 	 *
@@ -726,11 +721,11 @@ static HOT word *dequeue_from_batch (batch_t *batch)
 	 *   give us either 0 or BATCH_EMPTIED, which we then OR
 	 *   with the real new size.
 	 */
-	ASSERT ( batch->Fptr != NULL || batch->Bptr == desc );
-	SAFETY { desc->link = ~NotProcess_p; };
+	ASSERT ( batch->Fptr != NotProcess_p || batch->Bptr == Wptr );
+	SAFETY { PROC_DESC(Wptr)->link = ~NotProcess_p; };
 
 	return Wptr;
-}
+}	
 /*}}}*/
 /*{{{  static WARM void atomic_enqueue_to_runqueue (runqueue_t *rq, bool workspace, void *ptr)*/
 static WARM void atomic_enqueue_to_runqueue (runqueue_t *rq, bool workspace, void *ptr)
@@ -1802,23 +1797,23 @@ void err_no_bsyscalls (word *wptr, int ra)
 /*{{{  dyanmic/mobile-process support functions */
 /*{{{  static bool find_remove_from_batch (batch_t *batch, bool remove, word ws_base, word ws_limit)*/
 static bool find_remove_from_batch (batch_t *batch, bool remove, word ws_base, word ws_limit) {
-	process_t prev = NULL;
-	process_t desc = batch->Fptr;
+	word *prev = NotProcess_p;
+	word *wptr = batch->Fptr;
 
-	while (desc != NULL) {
-		word ptr = (word) PROC_WPTR(desc);
+	while (wptr != NotProcess_p) {
+		word ptr = (word) wptr;
 		if (ptr >= ws_base && ptr < ws_limit) {
 			if (remove) {
-				if (prev == NULL) {
-					batch->Fptr = (process_t) desc->link;
+				if (prev == NotProcess_p) {
+					batch->Fptr = (word *) PROC_DESC(wptr)->link;
 				} else {
-					prev->link = desc->link;
+					PROC_DESC(prev)->link = PROC_DESC(wptr)->link;
 				}
 			}
 			return true;
 		}
-		prev = desc;
-		desc = (process_t) desc->link;
+		prev = wptr;
+		wptr = (word *) PROC_DESC(wptr)->link;
 	}
 
 	return false;
@@ -2581,7 +2576,7 @@ K_CALL_DEFINE_3_3 (X_trap)
 	K_CALL_PARAMS_3 (trapval_A, trapval_B, trapval_C);
 	ENTRY_TRACE (X_trap, "0x%x, 0x%x, 0x%x", trapval_A, trapval_B, trapval_C);
 	
-	dump_trap_info (Wptr, (word *) sched->curb.Fptr, (word *) sched->curb.Bptr, return_address, trapval_A, trapval_B, trapval_C);
+	dump_trap_info (Wptr, sched->curb.Fptr, sched->curb.Bptr, return_address, trapval_A, trapval_B, trapval_C);
 
 	K_THREE_OUT (trapval_A, trapval_B, trapval_C);
 }
@@ -2988,13 +2983,13 @@ static INLINE void bar_complete_head (sched_t *sched, bar_t *bar, bool local, ba
 
 		if (PHasAffinity (batch->priofinity)) {
 			if (dirty_batch (batch)) {
-				process_t desc = batch->Fptr;
+				word *Wptr = batch->Fptr;
 
 				do {
-					process_t next = (process_t) desc->link;
-					enqueue_process (sched, PROC_WPTR(desc));
-					desc = next;
-				} while (desc != NULL);
+					word *next = (word *) PROC_DESC(Wptr)->link;
+					enqueue_process (sched, Wptr);
+					Wptr = next;
+				} while (Wptr != NotProcess_p);
 
 				reinit_batch_t (batch);
 				set_batch_clean (batch);
@@ -3999,8 +3994,8 @@ static void kernel_bsc_dispatch (sched_t *sched, word return_address, word *Wptr
 	PROC_DESC(Wptr)->link	= NotProcess_p;
 
 	job 		= (bsc_batch_t *) allocate_batch (sched);
-	job->desc 	= PROC_DESC(Wptr);
-	job->bdesc 	= PROC_DESC(Wptr);
+	job->wptr 	= Wptr;
+	job->bptr 	= Wptr;
 	job->size 	= 1;
 	job->priofinity = sched->priofinity;
 	job->bsc.ws_arg = (word *) b_param;
