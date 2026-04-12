@@ -58,6 +58,7 @@
 #include <arch/sched_asm_inserts.h>
 #include <calltable.h>
 #include <ccsp_timer.h>
+#include <process_desc.h>
 
 #define MT_CCSP 1
 #define MT_DEFINES 1
