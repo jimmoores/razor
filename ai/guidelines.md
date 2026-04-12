@@ -22,3 +22,4 @@ Coding Guidelines
 * NEVER change the behavior of the system that was intended just to make a test pass.
 * Skipping problems prevents project progress and masks underlying issues.
 * Creating temporary workaround when you have no long term memory leads to them becoming permanent.
+* Do not tell me that something fails because it was a pre-existing problem.
