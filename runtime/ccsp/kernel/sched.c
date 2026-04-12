@@ -2154,12 +2154,12 @@ static void NO_RETURN REGPARM kernel_scheduler (sched_t *sched)
 
 	/* Ensure all stores to the process's workspace (Iptr, Link,
 	 * Priofinity, etc.) are visible before we read them in
-	 * K_ZERO_OUT_JRET.  On aarch64, if the process was migrated
+	 * ccsp_restore_context.  On aarch64, if the process was migrated
 	 * from another scheduler thread, the plain stores to workspace
 	 * fields might not yet be visible without a barrier. */
 	strong_read_barrier ();
 
-	K_ZERO_OUT_JRET ();
+	ccsp_restore_context (sched, Wptr);
 	
 	no_return ();
 }
@@ -2181,7 +2181,7 @@ K_CALL_DEFINE_0_0 (Y_fastscheduler)
 
 	Wptr = get_process_or_reschedule (sched); 
 
-	K_ZERO_OUT_JRET ();
+	ccsp_restore_context (sched, Wptr);
 }
 /*}}}*/
 /*{{{  void kernel_Y_occscheduler (void)*/
@@ -2296,7 +2296,7 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 	if (Wptr != NotProcess_p) {
 		PROC_DESC(Wptr)->priofinity = sched->priofinity;
 		sched->stats.startp++;
-		K_ZERO_OUT_JRET ();
+		ccsp_restore_context (sched, Wptr);
 	} else {
 		kernel_scheduler (sched);
 	}
@@ -3275,7 +3275,7 @@ static REGPARM void fork_bar_sync (sched_t *sched, word *bar, word *Wptr)
 
 	if (atw_dec_z (&(mb->ref_count))) {
 		dmem_thread_release (sched->allocator, mb);
-		K_ZERO_OUT_JRET ();
+		ccsp_restore_context (sched, Wptr);
 	} else {
 		kernel_scheduler (sched);
 	}
@@ -3395,7 +3395,7 @@ static REGPARM void mproc_bar_sync (sched_t *sched, mproc_bar_t *bar, word *Wptr
 				mproc_bar_complete (sched, bar);
 			}
 			
-			K_ZERO_OUT_JRET ();
+			ccsp_restore_context (sched, Wptr);
 			return;
 		} else {
 			/* not last process: queue */
@@ -4945,7 +4945,7 @@ K_CALL_DEFINE_1_0 (Y_setaff)
 		save_resume_iptr (sched, Wptr, return_address);
 		enqueue_process (sched, Wptr);
 		Wptr = get_process_or_reschedule (sched);
-		K_ZERO_OUT_JRET ();
+		ccsp_restore_context (sched, Wptr);
 	} else {
 		K_ZERO_OUT ();
 	}
@@ -5013,7 +5013,7 @@ K_CALL_DEFINE_1_0 (Y_setpri)
 		save_resume_iptr (sched, Wptr, return_address);
 		enqueue_process (sched, Wptr);
 		Wptr = get_process_or_reschedule (sched);
-		K_ZERO_OUT_JRET ();
+		ccsp_restore_context (sched, Wptr);
 	} else {
 		K_ZERO_OUT ();
 	}
@@ -5137,7 +5137,7 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 	}
 
 	DT_LOG("chan_jret", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, sched, 0);
-	K_ZERO_OUT_JRET ();
+	ccsp_restore_context (sched, Wptr);
 }
 #define BUILD_CHANNEL_IO(symbol,count,flags) \
 K_CALL_DEFINE_2_0 (symbol)		\
@@ -5563,7 +5563,7 @@ static INLINE void kernel_altend (word *Wptr, sched_t *sched, word return_addres
 		}
 	}
 	
-	K_ZERO_OUT_JRET ();
+	ccsp_restore_context (sched, Wptr);
 }
 /*}}}*/
 /*{{{  void kernel_Y_altend (void)*/
@@ -5712,7 +5712,7 @@ static INLINE bool kernel_enbc (word *Wptr, sched_t *sched, word return_address,
 			if (jump) {
 				atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 				save_resume_iptr (sched, Wptr, return_address);
-				K_ZERO_OUT_JRET ();
+				ccsp_restore_context (sched, Wptr);
 			} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
 				atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 				if (set_address) {
@@ -5727,7 +5727,7 @@ static INLINE bool kernel_enbc (word *Wptr, sched_t *sched, word return_address,
 		if (jump) {
 			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 			save_resume_iptr (sched, Wptr, return_address);
-			K_ZERO_OUT_JRET ();
+			ccsp_restore_context (sched, Wptr);
 		} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
 			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 			if (set_address) {
@@ -5963,7 +5963,7 @@ static INLINE bool kernel_enbt (word *Wptr, sched_t *sched, word return_address,
 		if (jump) {
 			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 			save_resume_iptr (sched, Wptr, return_address);
-			K_ZERO_OUT_JRET ();
+			ccsp_restore_context (sched, Wptr);
 		} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
 			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 			if (set_address) {

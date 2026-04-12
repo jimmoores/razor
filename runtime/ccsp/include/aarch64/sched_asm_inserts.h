@@ -233,16 +233,29 @@ LABEL_TYPE( ,X) \
 		_SET_RETURN_ADDRESS (R);\
 		K_ZERO_OUT ();\
 	} while (0)
-/* K_ZERO_OUT_JRET: kernel->user transition (Phase 2).
- * Calls the noreturn ccsp_dispatch_process(sched, Wptr) helper in
- * aarch64_cif.S, which sets x28=Wptr, x25=sched, restores sp from
- * sched->stack and jumps to Wptr[Iptr]. */
+/* ccsp_restore_context: kernel->user transition (Phase 2.5B).
+ *
+ * Loads the runtime registers from the saved per-process context
+ * `_w` and jumps to its resume Iptr, never returning.  Internally
+ * dispatches via ccsp_dispatch_process (extracted in Phase 2 to
+ * aarch64_cif.S), which sets x28=Wptr, x25=sched, restores sp from
+ * sched->stack and branches to PROC_DESC(_w)->iptr.
+ *
+ * Stage 3D will move the resume Iptr out of PROC_DESC(_w)->iptr
+ * (currently aliased onto _w[-1]) and into a separately-allocated
+ * per-process descriptor, but the API stays the same.
+ *
+ * Replaces the legacy K_ZERO_OUT_JRET() macro at all 13 reschedule
+ * sites in sched.c.  Takes its arguments explicitly rather than
+ * capturing `sched`/`Wptr` from the surrounding scope, so the
+ * call sites are self-documenting.
+ */
 extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((noreturn));
-#define K_ZERO_OUT_JRET() \
+#define ccsp_restore_context(_s, _w) \
 	do { \
-		DT_LOG("JRET", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, sched, 0); \
-		TRACE_RETURN (PROC_DESC(Wptr)->iptr); \
-		ccsp_dispatch_process (sched, Wptr); \
+		DT_LOG("JRET", (_w), (_w) ? PROC_DESC(_w)->iptr : 0, (_s), 0); \
+		TRACE_RETURN (PROC_DESC(_w)->iptr); \
+		ccsp_dispatch_process ((_s), (_w)); \
 	} while (0)
 #define K_ONE_OUT(A) \
 	return ((word) (A))
