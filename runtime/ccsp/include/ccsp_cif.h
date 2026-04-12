@@ -36,6 +36,7 @@
  * helpers below (and any user CIF code) can call them. */
 extern word ccsp_cif_external_call (void *func, void *stack);
 extern void ccsp_cif_jump (void *wptr, void *addr) __attribute__((noreturn));
+extern void ccsp_cif_occam_call (void *sched, void *stack, word *ws, void *func, word top);
 
 #include <ccsp_cif_stubs.h>
 
@@ -430,7 +431,7 @@ static void build_occam_call_ws (word *ws, int argc, ...)
 		word ws[(SS) + CIF_PROCESS_WORDS + top + 3];	\
 		word *p = &(ws[(SS) + CIF_PROCESS_WORDS]);	\
 		build_occam_call_ws (p, ARGC, ## ARGV);		\
-		ccsp_cif_occam_call (sched, sched->stack, p, FUNC, top); \
+		ccsp_cif_occam_call ((void *)sched, (void *)sched->stack, p, (void *)FUNC, top); \
 	} while (0)
 /*}}}*/
 /*}}}*/

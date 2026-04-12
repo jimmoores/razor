@@ -17,6 +17,86 @@
 .align 4
 
 /*
+ * void ccsp_cif_occam_call(void *sched, void *stack, word *ws, void *func, word top)
+ *
+ * Phase 2: CIF -> occam call helper.  Sets up an occam call frame
+ * on the workspace `ws`, jumps to `func`, and resumes when occam
+ * returns via I_RET back to a label inside this function body.
+ *
+ * cdecl args:
+ *    4(%esp) = sched
+ *    8(%esp) = stack (unused)
+ *   12(%esp) = ws
+ *   16(%esp) = func
+ *   20(%esp) = top
+ *
+ * The save-area address (ws + top*4) is stashed at ws[-10] (byte
+ * -40 from ws on 32-bit) before the SP switch so it can be recovered
+ * after occam returns.  See x64_cif.S for the rationale.
+ *
+ * Differs from the original i386 inline-asm macro: the original used
+ * the `stack` arg as the new SP (which was sched->stack from
+ * OccamCall).  The new version matches x64/aarch64 by using ws - 256
+ * as the new SP, so occam runs in the (SS)-word region the OccamCall
+ * macro reserved BELOW the workspace pointer rather than on
+ * sched->stack.
+ */
+.globl ccsp_cif_occam_call
+.type ccsp_cif_occam_call, @function
+ccsp_cif_occam_call:
+	/* Save callee-saved regs.  cdecl callee-saved set: ebp, ebx, esi, edi.
+	 * 4 pushes + return addr = 20 bytes; for 16-byte alignment we need
+	 * to subtract 12 more bytes (or push 3 more dummies).  We add a
+	 * subl $12 below to keep esp 16-byte aligned for occam. */
+	pushl	%ebp
+	pushl	%ebx
+	pushl	%esi
+	pushl	%edi
+	subl	$12, %esp		/* alignment padding */
+
+	movl	36(%esp), %eax		/* eax = sched   (4 pushes + 12 pad + 4 ret = 32; arg1 = +4 = 36) */
+	movl	44(%esp), %ebp		/* ebp = ws      (arg3 = +12 = 44) */
+	movl	48(%esp), %edx		/* edx = func    (arg4 = +16 = 48) */
+	movl	52(%esp), %ecx		/* ecx = top     (arg5 = +20 = 52) */
+
+	shll	$2, %ecx		/* ecx = top * 4 */
+	leal	(%ebp,%ecx), %ebx	/* ebx = ws + top*4 (save_area) */
+	movl	%esp, (%ebx)		/* save_area[0] = SP */
+	movl	%ebx, -40(%ebp)		/* ws[-10] = save_area address */
+
+	/* Set up the occam return label */
+	leal	.Locc_call_return, %ecx
+	movl	%ecx, (%ebp)		/* ws[0] = return label */
+	movl	%ecx, -4(%ebp)		/* ws[-1] = return label */
+
+	/* Switch SP to private stack (ws - 256, 16-byte aligned) */
+	leal	-256(%ebp), %esp
+	andl	$-16, %esp
+
+	/* Set sched runtime register and jump to occam.
+	 * The original i386 runtime convention is esi = sched. */
+	movl	%eax, %esi		/* esi = sched */
+	jmp	*%edx			/* jump to occam func */
+
+.Locc_call_return:
+	/* Occam returned via I_RET; ebp = ws + 16 due to I_RET frame pop
+	 * (4 words on 32-bit = 16 bytes).  Undo. */
+	subl	$16, %ebp
+
+	/* Reload save_area address from ws[-10] and restore SP */
+	movl	-40(%ebp), %ebx
+	movl	(%ebx), %esp
+
+	/* Pop callee-saved regs */
+	addl	$12, %esp		/* drop alignment padding */
+	popl	%edi
+	popl	%esi
+	popl	%ebx
+	popl	%ebp
+	ret
+.size ccsp_cif_occam_call, . - ccsp_cif_occam_call
+
+/*
  * void ccsp_cif_jump(word *wptr, void *addr) __attribute__((noreturn))
  *
  * Phase 2: CIF -> occam transition primitive.  Used by ProcEnd to

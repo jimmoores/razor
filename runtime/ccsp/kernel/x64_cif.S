@@ -17,6 +17,89 @@
 .align 8
 
 /*
+ * void ccsp_cif_occam_call(void *sched, void *stack, word *ws, void *func, word top)
+ *
+ * Phase 2: CIF -> occam call helper used by the OccamCall macro in
+ * ccsp_cif.h.  Sets up an occam call frame on the workspace `ws`,
+ * jumps to `func` (occam-compiled code), and resumes when occam
+ * returns via I_RET back to the saved Iptr.
+ *
+ * The trick: occam expects ws[-1] (Iptr) and ws[0] (IptrSucc) to
+ * point at where it should "return to".  We point them at an
+ * internal label inside this function so the occam I_RET lands
+ * inside our function body, where we restore SP and do a normal C
+ * function epilogue.
+ *
+ * Arguments (System V x64 ABI):
+ *   rdi = sched (unused -- present for API symmetry)
+ *   rsi = stack (unused -- present for API symmetry)
+ *   rdx = ws    (workspace pointer)
+ *   rcx = func  (occam function to jump to)
+ *   r8  = top   (number of args + 1; ws[top..top+1] is the save area)
+ *
+ * The save-area address (ws + top*8) is stashed at ws[-10] (byte -80
+ * from ws) before the SP switch so it can be recovered after occam
+ * returns.  ws[-10] is normally the rbp save slot for the
+ * ccsp_cif_call_asm_resched callee-save area, but OccamCall always
+ * allocates a fresh workspace that is not used by asm_resched, so
+ * the slot is safe to commandeer here.
+ */
+.global ccsp_cif_occam_call
+.type ccsp_cif_occam_call, @function
+ccsp_cif_occam_call:
+	/* Save callee-saved registers + 1 dummy push for 16-byte alignment.
+	 * Function entry has rsp ≡ 8 (mod 16); after 7 pushes (56 bytes)
+	 * rsp ≡ 0 (mod 16) which is what occam expects. */
+	pushq	%rbx
+	pushq	%rbp
+	pushq	%r12
+	pushq	%r13
+	pushq	%r14
+	pushq	%r15
+	pushq	%rax			/* alignment padding */
+
+	movq	%rdx, %r14		/* r14 = ws (Wptr runtime reg) */
+	shlq	$3, %r8			/* r8 = top * 8 */
+	addq	%r14, %r8		/* r8 = ws + top*8 (save_area) */
+
+	movq	%rsp, (%r8)		/* save_area[0] = current SP */
+	movq	%r8, -80(%r14)		/* ws[-10] = save_area address */
+
+	/* Set up the occam return label so I_RET lands inside us */
+	leaq	.Loccam_call_return(%rip), %r9
+	movq	%r9, (%r14)		/* ws[0] = return label (IptrSucc) */
+	movq	%r9, -8(%r14)		/* ws[-1] = return label (Iptr) */
+
+	/* Switch SP to a private stack below the workspace */
+	leaq	-256(%r14), %rsp
+	andq	$-16, %rsp
+
+	/* Set sched runtime register and jump to occam */
+	movq	%rdi, %r15		/* r15 = sched */
+	jmpq	*%rcx			/* jump to occam func */
+
+.Loccam_call_return:
+	/* Occam returned via I_RET, which leaves r14 at ws + 32 because
+	 * compose_x64_return always pops 32 bytes (4 words) for the
+	 * I_CALL frame that OccamCall doesn't push.  Undo that. */
+	subq	$32, %r14
+
+	/* Reload the save_area address from ws[-10] and restore SP */
+	movq	-80(%r14), %r8
+	movq	(%r8), %rsp
+
+	/* Pop callee-saved regs (matching the prologue's order) */
+	popq	%rax			/* discard alignment padding */
+	popq	%r15
+	popq	%r14
+	popq	%r13
+	popq	%r12
+	popq	%rbp
+	popq	%rbx
+	ret
+.size ccsp_cif_occam_call, . - ccsp_cif_occam_call
+
+/*
  * void ccsp_cif_jump(word *wptr, void *addr) __attribute__((noreturn))
  *
  * Phase 2: CIF -> occam transition primitive.  Used by ProcEnd to

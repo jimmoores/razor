@@ -1,6 +1,79 @@
 .text
 .align 2
 
+// void ccsp_cif_occam_call(void *sched, void *stack, word *ws, void *func, word top)
+//
+// Phase 2: CIF -> occam call helper.  Sets up an occam call frame
+// on the workspace `ws`, jumps to `func`, and resumes when occam
+// returns via I_RET back to a label inside this function body.
+//
+// Arguments (AAPCS):
+//   x0 = sched
+//   x1 = stack (unused)
+//   x2 = ws
+//   x3 = func
+//   x4 = top
+//
+// The save-area address (ws + top*8) is stashed at ws[-10] (byte
+// -80 from ws) before the SP switch so it can be recovered after
+// occam returns.  See x64_cif.S for the rationale.
+#if defined(__APPLE__)
+.global _ccsp_cif_occam_call
+_ccsp_cif_occam_call:
+#else
+.global ccsp_cif_occam_call
+ccsp_cif_occam_call:
+#endif
+    // Save callee-saved registers (occam clobbers all of x19-x28)
+    stp x29, x30, [sp, #-16]!
+    stp x19, x20, [sp, #-16]!
+    stp x21, x22, [sp, #-16]!
+    stp x23, x24, [sp, #-16]!
+    stp x25, x26, [sp, #-16]!
+    stp x27, x28, [sp, #-16]!
+
+    mov x28, x2              // x28 = ws (Wptr runtime reg)
+    lsl x4, x4, #3           // x4 = top * 8
+    add x9, x28, x4          // x9 = ws + top*8 (save_area)
+
+    mov x10, sp
+    str x10, [x9]            // save_area[0] = SP
+
+    // Stash save_area address at ws[-10]
+    stur x9, [x28, #-80]
+
+    // Set up the occam return label
+    adr x10, .Locc_call_return
+    str x10, [x28]           // ws[0] = return label
+    stur x10, [x28, #-8]     // ws[-1] = return label
+
+    // Switch SP to private stack
+    sub x10, x28, #256
+    and x10, x10, #-16
+    mov sp, x10
+
+    // Set sched runtime register and jump to occam
+    mov x25, x0              // x25 = sched
+    br x3                    // jump to occam func
+
+.Locc_call_return:
+    // Occam returned via I_RET; x28 = ws + 32 due to I_RET frame pop.
+    sub x28, x28, #32
+
+    // Reload save_area address from ws[-10] and restore SP
+    ldur x9, [x28, #-80]
+    ldr x10, [x9]
+    mov sp, x10
+
+    // Pop callee-saved regs
+    ldp x27, x28, [sp], #16
+    ldp x25, x26, [sp], #16
+    ldp x23, x24, [sp], #16
+    ldp x21, x22, [sp], #16
+    ldp x19, x20, [sp], #16
+    ldp x29, x30, [sp], #16
+    ret
+
 // void ccsp_cif_jump(word *wptr, void *addr) __attribute__((noreturn))
 //
 // Phase 2: CIF -> occam transition primitive.  Used by ProcEnd to
