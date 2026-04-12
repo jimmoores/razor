@@ -30,10 +30,13 @@
 #define I386_SCHED_ASM_INSERTS_H
 
 /*{{{  architecture dependent kernel call declarations */
+/* No `static`: tranx86 generates direct calls (`call kernel_<name>`)
+ * since Phase 1B for i386, so the kernel functions need external
+ * linkage.  noinline keeps __builtin_return_address(0) reliable. */
 #define _K_CALL_DEFINE(X) \
-	static void __attribute__ ((regparm(3))) kernel_##X (word param0, sched_t *sched, word *Wptr)
+	__attribute__ ((noinline, regparm(3))) void kernel_##X (word param0, sched_t *sched, word *Wptr)
 #define _K_CALL_DEFINE_O(X) \
-	static word __attribute__ ((regparm(3))) kernel_##X (word param0, sched_t *sched, word *Wptr)
+	__attribute__ ((noinline, regparm(3))) word kernel_##X (word param0, sched_t *sched, word *Wptr)
 #define K_CALL_DEFINE_0_0(X) _K_CALL_DEFINE(X)
 #define K_CALL_DEFINE_1_0(X) _K_CALL_DEFINE(X)
 #define K_CALL_DEFINE_2_0(X) _K_CALL_DEFINE(X)
