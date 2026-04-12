@@ -253,22 +253,6 @@ struct _sched_t {
 	word 		priofinity;
 	word		loop;
 	atomic_t	rqstate;
-	/* current_desc -- pointer to the running process's descriptor.
-	 *
-	 * Phase 3D: every per-process slot (priofinity, sched_ptr,
-	 * barrier_ptr, escape_ptr, time_f, tlink, resume iptr) currently
-	 * lives at a negative offset from the running Wptr.  Stage 3D-1
-	 * adds this field to the per-thread scheduler so that future
-	 * stages can move those slots out of the workspace's negative
-	 * region (where they would be unsafe under Wptr=SP unification
-	 * in Phase 4) and into a separately-allocated descriptor.
-	 *
-	 * In stage 3D-1 the field is set on every dispatch but no
-	 * reads/writes go through it yet -- it's reserved infrastructure.
-	 * Stage 3D-2 will start migrating the kernel's per-process slot
-	 * accesses to use it.
-	 */
-	process_descriptor_t		*current_desc;
 
 	batch_t 	*free;
 	batch_t 	*laundry;
@@ -329,7 +313,6 @@ static inline void init_sched_t (sched_t *sched) {
 	sched->priofinity	= 0;
 	sched->loop		= 0;
 	att_init (&(sched->rqstate), 0);
-	sched->current_desc	= NULL;
 
 	sched->free		= NULL;
 	sched->laundry		= NULL;

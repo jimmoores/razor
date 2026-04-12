@@ -221,7 +221,6 @@ extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((no
 #define ccsp_restore_context(_s, _w) \
 	do { \
 		TRACE_RETURN (PROC_DESC(_w)->iptr); \
-		(_s)->current_desc = PROC_DESC(_w); \
 		ccsp_dispatch_process ((_s), (_w)); \
 	} while (0)
 
