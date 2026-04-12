@@ -2189,6 +2189,35 @@ static void compose_aarch64_inline_tin (tstate *ts)
 /*}}}*/
 
 /*{{{  static void compose_aarch64_inline_quick_reschedule (tstate *ts)*/
+/*
+ * KNOWN BUG (pre-existing, dormant): the implementation below diverges
+ * from the i386 reference in compose_inline_quick_reschedule_i386 in
+ * two ways:
+ *
+ *   1. The dispatch jumps to (REG_WPTR), i.e. *Wptr[+0], which is the
+ *      per-call return slot of the dispatched process's currently
+ *      active procedure call.  The i386 reference jumps to
+ *      *(REG_WPTR + W_IPTR), i.e. **(Wptr-1), which reads the kernel-
+ *      style resume Iptr that save_resume_iptr writes.
+ *
+ *   2. The Fptr advance step is missing -- the i386 reference does
+ *      `Fptr = Fptr[W_LINK]` after loading Wptr, this version doesn't,
+ *      so the run queue head pointer is left dangling at the just-
+ *      dispatched process.
+ *
+ * This code path is gated by INLINE_SCHEDULER (kroc -is), which is
+ * opt-in and not enabled by either the kroc default driver options or
+ * by anything in the cgtests / cif test suite.  So the bug is dormant
+ * and won't bite anything we currently test.  Phase 3D-1 added
+ * sched->current_desc updates only in ccsp_restore_context, which is
+ * the *only* dispatch path the default build exercises -- so the
+ * descriptor stays in sync as long as INLINE_SCHEDULER is off.
+ *
+ * If we ever turn -is on for aarch64, fix this by porting the i386
+ * reference verbatim AND emit `*sched->current_desc = PROC_DESC(new
+ * Wptr)` before the indirect jump, so the kernel-side current_desc
+ * tracking stays consistent across user-mode reschedules too.
+ */
 static void compose_aarch64_inline_quick_reschedule (tstate *ts)
 {
 	/* Check if there are more processes to run */
