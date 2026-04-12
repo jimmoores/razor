@@ -112,6 +112,18 @@ ccsp_cif_call_asm_resched:
     mov x2, x8            // x2 = wptr
     // x1 is already sched
 
+    // Pre-load x25 = sched so the post-call store of x25 to
+    // wptr[SchedPtr] is correct in BOTH paths:
+    //   (a) Kernel reschedules via K_ZERO_OUT_JRET: x25 is overwritten
+    //       with the (possibly migrated) current sched.
+    //   (b) Kernel returns normally (e.g. kernel_Y_mt_lock when the
+    //       lock is free): x25 is preserved across the call as a
+    //       callee-saved register, so it still holds sched.
+    // Without this, the caller's x25 (which GCC may use to cache an
+    // unrelated value such as a hoisted function pointer) would leak
+    // into wptr[SchedPtr] in path (b), corrupting the workspace.
+    mov x25, x1           // x25 = sched
+
     // Call KRoC function (now on the proper kernel stack)
     blr x3
 

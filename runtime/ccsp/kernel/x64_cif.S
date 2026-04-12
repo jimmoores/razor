@@ -92,6 +92,18 @@ ccsp_cif_x64_kcall_resched:
 	movq	%r8, %rdx		/* rdx = wptr (= Wptr for kernel) */
 	/* rsi = sched (already correct) */
 
+	/* Pre-load r15 = sched so the post-call store of r15 to
+	 * wptr[SchedPtr] is correct in BOTH paths:
+	 *   (a) Kernel reschedules via K_ZERO_OUT_JRET: r15 is overwritten
+	 *       with the (possibly migrated) current sched.
+	 *   (b) Kernel returns normally (e.g. kernel_Y_mt_lock when the
+	 *       lock is free): r15 is preserved across the call as a
+	 *       callee-saved register, so it still holds sched.
+	 * Without this, the caller's r15 (which GCC may use to cache an
+	 * unrelated value such as a hoisted function pointer) would leak
+	 * into wptr[SchedPtr] in path (b), corrupting the workspace. */
+	movq	%rsi, %r15		/* r15 = sched */
+
 	/* Call kernel function */
 	callq	*%rcx
 	/* After K_ZERO_OUT_JRET: r14=wptr, r15=current sched.
