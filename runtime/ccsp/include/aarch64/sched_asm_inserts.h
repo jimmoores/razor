@@ -255,6 +255,7 @@ extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((no
 	do { \
 		DT_LOG("JRET", (_w), (_w) ? PROC_DESC(_w)->iptr : 0, (_s), 0); \
 		TRACE_RETURN (PROC_DESC(_w)->iptr); \
+		(_s)->current_desc = PROC_DESC(_w); \
 		ccsp_dispatch_process ((_s), (_w)); \
 	} while (0)
 #define K_ONE_OUT(A) \
