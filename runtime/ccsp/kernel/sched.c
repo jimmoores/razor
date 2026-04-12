@@ -4460,7 +4460,7 @@ K_CALL_DEFINE_2_3 (X_norm)
 		}
 	}
 	
-	/* Return lo in param0 and hi in cparam0 */
+	/* Return Breg, Areg, Creg via out_block[0..2] (Phase 1D Stage 2) */
 	K_THREE_OUT (Breg, Areg, Creg);
 }
 /*}}}*/

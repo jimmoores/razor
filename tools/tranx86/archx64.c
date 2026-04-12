@@ -472,6 +472,17 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 		call_ins = compose_x64_kjump (ts, INS_CALL, 0, entry);
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
+		/* Multi-output kernel calls (regs_out > 1) take an extra
+		 * `word *extra_out` argument in rcx pointing at the storage
+		 * for the 2nd and 3rd outputs.  We point it at sched->cparam[0]
+		 * so the existing post-call read path (which reads outputs
+		 * 1..N from cparam[]) still works without change. */
+		if (regs_out > 1) {
+			add_to_ins_chain (compose_ins (INS_LEA, 1, 1,
+				ARG_REGIND | ARG_DISP, REG_SCHED,
+				offsetof(ccsp_sched_t, cparam[0]),
+				ARG_REG, REG_RCX));
+		}
 		add_to_ins_chain (call_ins);
 		if (call_ins) {
 			set_implied_inputs (call_ins, r_in > r_out ? r_in : r_out, cregs);

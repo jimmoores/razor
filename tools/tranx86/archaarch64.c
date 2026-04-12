@@ -178,6 +178,7 @@ static int aarch64_fp_from_i64 = 0;  /* set by INS_FILD64, value is in d0 not s0
 #define REG_X2 2
 #define REG_X3 3
 #define REG_X4 4
+#define REG_X5 5
 #define REG_X16 16  /* Temporary register */
 #define REG_X17 17  /* Temporary register */
 #define REG_X29 29  /* Frame pointer */
@@ -1957,6 +1958,19 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, sched_pos));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, wptr_pos));
 
+		/* Phase 2b: multi-output kernel calls (regs_out > 1) take an
+		 * extra `word *extra_out` argument in x(regs_in+2) pointing at
+		 * the storage for the 2nd and 3rd outputs.  Point it at
+		 * sched->cparam[0] so the existing post-call read path still
+		 * works without change. */
+		if (regs_out > 1) {
+			int extra_pos = regs_in + 2;
+			add_to_ins_chain (compose_ins (INS_LEA, 1, 1,
+				ARG_REGIND | ARG_DISP, REG_SCHED,
+				offsetof(ccsp_sched_t, cparam[0]),
+				ARG_REG, extra_pos));
+		}
+
 		/* Phase 3: move from scratch registers to final input positions
 		 * (x0..x(regs_in-1)). */
 		for (i = 0; i < regs_in; i++) {
@@ -1975,6 +1989,7 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	/* Build the call instruction with all argument registers listed */
 	{
 		int total_args = regs_in + 2; /* inputs + sched + Wptr */
+		if (regs_out > 1) total_args++; /* + extra_out for multi-output calls */
 		/* Use the maximum case (5 inputs + sched + Wptr = 7 regs) to size
 		 * the call instruction.  INS_CALL supports up to 8 input args. */
 		switch (total_args) {
@@ -1987,8 +2002,11 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 		case 4: /* 2 inputs: p0=x0, p1=x1, sched=x2, Wptr=x3 */
 			call_ins = compose_ins (INS_CALL, 5, 0, ARG_NAMEDLABEL, entrypoint_name, ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2, ARG_REG, REG_X3);
 			break;
-		case 5: /* 3 inputs: p0=x0, p1=x1, p2=x2, sched=x3, Wptr=x4 */
+		case 5: /* 3 inputs: p0..p2,sched=x3,Wptr=x4 OR 2_3: p0..p1,sched,Wptr,extra=x4 */
 			call_ins = compose_ins (INS_CALL, 6, 0, ARG_NAMEDLABEL, entrypoint_name, ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2, ARG_REG, REG_X3, ARG_REG, REG_X4);
+			break;
+		case 6: /* 3_3: p0..p2,sched=x3,Wptr=x4,extra=x5 */
+			call_ins = compose_ins (INS_CALL, 7, 0, ARG_NAMEDLABEL, entrypoint_name, ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2, ARG_REG, REG_X3, ARG_REG, REG_X4, ARG_REG, REG_X5);
 			break;
 		default:
 			/* 4+ inputs: p0=x0..p3=x3, sched=x4, Wptr=x5 (or more) */

@@ -57,12 +57,14 @@
 /* 2 inputs */
 #define K_CALL_DEFINE_2_0(X) __attribute__((noinline)) void kernel_##X (word p0, word p1, sched_t *sched, word *Wptr)
 #define K_CALL_DEFINE_2_1(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, sched_t *sched, word *Wptr)
-#define K_CALL_DEFINE_2_3(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, sched_t *sched, word *Wptr)
+/* 2 inputs, 3 outputs: 1st output via word return, additional 2 via extra_out[0..1] */
+#define K_CALL_DEFINE_2_3(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, sched_t *sched, word *Wptr, word *extra_out)
 
 /* 3 inputs */
 #define K_CALL_DEFINE_3_0(X) __attribute__((noinline)) void kernel_##X (word p0, word p1, word p2, sched_t *sched, word *Wptr)
 #define K_CALL_DEFINE_3_1(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, word p2, sched_t *sched, word *Wptr)
-#define K_CALL_DEFINE_3_3(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, word p2, sched_t *sched, word *Wptr)
+/* 3 inputs, 3 outputs: 1st output via word return, additional 2 via extra_out[0..1] */
+#define K_CALL_DEFINE_3_3(X) __attribute__((noinline)) word kernel_##X (word p0, word p1, word p2, sched_t *sched, word *Wptr, word *extra_out)
 
 /* 4 inputs */
 #define K_CALL_DEFINE_4_0(X) __attribute__((noinline)) void kernel_##X (word p0, word p1, word p2, word p3, sched_t *sched, word *Wptr)
@@ -110,6 +112,10 @@
 	__attribute__((noinline)) void kernel_##X (word param0, sched_t *sched, word *Wptr)
 #define _K_CALL_DEFINE_O(X) \
 	__attribute__((noinline)) word kernel_##X (word param0, sched_t *sched, word *Wptr)
+/* Multi-output kernel functions: 1st output via word return, extra 2
+ * outputs written through caller-provided extra_out[0..1] */
+#define _K_CALL_DEFINE_M3(X) \
+	__attribute__((noinline)) word kernel_##X (word param0, sched_t *sched, word *Wptr, word *extra_out)
 #define K_CALL_DEFINE_0_0(X) _K_CALL_DEFINE(X)
 #define K_CALL_DEFINE_1_0(X) _K_CALL_DEFINE(X)
 #define K_CALL_DEFINE_2_0(X) _K_CALL_DEFINE(X)
@@ -120,8 +126,8 @@
 #define K_CALL_DEFINE_1_1(X) _K_CALL_DEFINE_O(X)
 #define K_CALL_DEFINE_2_1(X) _K_CALL_DEFINE_O(X)
 #define K_CALL_DEFINE_3_1(X) _K_CALL_DEFINE_O(X)
-#define K_CALL_DEFINE_2_3(X) _K_CALL_DEFINE_O(X)
-#define K_CALL_DEFINE_3_3(X) _K_CALL_DEFINE_O(X)
+#define K_CALL_DEFINE_2_3(X) _K_CALL_DEFINE_M3(X)
+#define K_CALL_DEFINE_3_3(X) _K_CALL_DEFINE_M3(X)
 
 #define K_CALL_PTR(X) \
 	((void *) (kernel_##X))
@@ -250,17 +256,23 @@ LABEL_TYPE( ,X) \
 		K_ONE_OUT (A);\
 	} while (0)
 
+/* K_TWO_OUT / K_THREE_OUT (Phase 1D Stage 2): the 1st output is
+ * returned via the C return value (rax / x0); additional outputs go
+ * through the caller-provided extra_out array instead of
+ * sched->cparam[].  K_TWO_OUT has no users in the current kernel;
+ * K_THREE_OUT is used by kernel_X_norm and kernel_X_trap, both of
+ * which now take an extra `word *extra_out` parameter sized [2]. */
 #define K_TWO_OUT(A,B) \
 	do { \
-		sched->cparam[0] = (word) (B);\
-		K_ONE_OUT (A);\
+		extra_out[0] = (word) (B); \
+		return ((word) (A)); \
 	} while (0)
 
 #define K_THREE_OUT(A,B,C) \
 	do { \
-		sched->cparam[0] = (word) (B);\
-		sched->cparam[1] = (word) (C);\
-		K_ONE_OUT (A);\
+		extra_out[0] = (word) (B); \
+		extra_out[1] = (word) (C); \
+		return ((word) (A)); \
 	} while (0)
 /*}}}*/
 

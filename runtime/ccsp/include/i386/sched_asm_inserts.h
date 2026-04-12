@@ -44,6 +44,11 @@
 #define K_CALL_DEFINE_1_1(X) _K_CALL_DEFINE_O(X)
 #define K_CALL_DEFINE_2_1(X) _K_CALL_DEFINE_O(X)
 #define K_CALL_DEFINE_3_1(X) _K_CALL_DEFINE_O(X)
+/* i386 keeps the legacy multi-output convention: 1st output via word
+ * return, additional outputs via sched->cparam[].  Phase 1D Stage 2's
+ * extra_out parameter is only applied to 64-bit targets where the
+ * calling convention can absorb the extra register-passed argument
+ * cleanly without modifying tranx86's i386 stack-arg handling. */
 #define K_CALL_DEFINE_2_3(X) _K_CALL_DEFINE_O(X)
 #define K_CALL_DEFINE_3_3(X) _K_CALL_DEFINE_O(X)
 
@@ -140,6 +145,8 @@
 		K_ONE_OUT (A);		\
 	} while (0)
 
+/* i386 keeps the legacy K_TWO_OUT / K_THREE_OUT convention: 1st
+ * output via return value, additional outputs via sched->cparam[]. */
 #define K_TWO_OUT(A,B) \
 	do { \
 		sched->cparam[0] = (word) (B);	\
