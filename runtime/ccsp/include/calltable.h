@@ -126,17 +126,17 @@ K_CALL_DEFINE_4_0 (Y_zero_div);
 /* AArch64 assembly adapters: tail-call to preserve x30 for rescheduling. */
 /* Old ABI: (param0=x0, sched=x1, Wptr=x2) + sched->cparam[] */
 /* New ABI: (p0=x0, p1=x1, ..., sched=xN, Wptr=xN+1) */
-static void __attribute__((naked)) calltable_adapter_X_malloc(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_malloc(void) {
 	__asm__ volatile (
 		"b kernel_X_malloc\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mrelease(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mrelease(void) {
 	__asm__ volatile (
 		"b kernel_X_mrelease\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_in(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_in(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -147,7 +147,7 @@ static void __attribute__((naked)) calltable_adapter_Y_in(void) {
 		"b kernel_Y_in\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_out(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_out(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -158,7 +158,7 @@ static void __attribute__((naked)) calltable_adapter_Y_out(void) {
 		"b kernel_Y_out\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_alloc(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_alloc(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -167,17 +167,17 @@ static void __attribute__((naked)) calltable_adapter_X_mt_alloc(void) {
 		"b kernel_X_mt_alloc\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_clone(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_clone(void) {
 	__asm__ volatile (
 		"b kernel_X_mt_clone\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_release(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_release(void) {
 	__asm__ volatile (
 		"b kernel_X_mt_release\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_in32(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_in32(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -186,7 +186,7 @@ static void __attribute__((naked)) calltable_adapter_Y_in32(void) {
 		"b kernel_Y_in32\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_in8(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_in8(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -195,7 +195,7 @@ static void __attribute__((naked)) calltable_adapter_Y_in8(void) {
 		"b kernel_Y_in8\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mt_in(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mt_in(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -204,7 +204,7 @@ static void __attribute__((naked)) calltable_adapter_Y_mt_in(void) {
 		"b kernel_Y_mt_in\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mt_out(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mt_out(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -213,7 +213,7 @@ static void __attribute__((naked)) calltable_adapter_Y_mt_out(void) {
 		"b kernel_Y_mt_out\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mt_xchg(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mt_xchg(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -222,7 +222,7 @@ static void __attribute__((naked)) calltable_adapter_Y_mt_xchg(void) {
 		"b kernel_Y_mt_xchg\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mt_xin(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mt_xin(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -231,7 +231,7 @@ static void __attribute__((naked)) calltable_adapter_Y_mt_xin(void) {
 		"b kernel_Y_mt_xin\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mt_xout(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mt_xout(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -240,7 +240,7 @@ static void __attribute__((naked)) calltable_adapter_Y_mt_xout(void) {
 		"b kernel_Y_mt_xout\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mt_xxchg(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mt_xxchg(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -249,7 +249,7 @@ static void __attribute__((naked)) calltable_adapter_Y_mt_xxchg(void) {
 		"b kernel_Y_mt_xxchg\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_out32(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_out32(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -258,7 +258,7 @@ static void __attribute__((naked)) calltable_adapter_Y_out32(void) {
 		"b kernel_Y_out32\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_out8(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_out8(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -267,7 +267,7 @@ static void __attribute__((naked)) calltable_adapter_Y_out8(void) {
 		"b kernel_Y_out8\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_outbyte(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_outbyte(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -276,7 +276,7 @@ static void __attribute__((naked)) calltable_adapter_Y_outbyte(void) {
 		"b kernel_Y_outbyte\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_outword(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_outword(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -285,7 +285,7 @@ static void __attribute__((naked)) calltable_adapter_Y_outword(void) {
 		"b kernel_Y_outword\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_fbar_enroll(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_fbar_enroll(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -294,12 +294,12 @@ static void __attribute__((naked)) calltable_adapter_X_fbar_enroll(void) {
 		"b kernel_X_fbar_enroll\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_fbar_init(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_fbar_init(void) {
 	__asm__ volatile (
 		"b kernel_X_fbar_init\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_fbar_resign(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_fbar_resign(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -308,14 +308,14 @@ static void __attribute__((naked)) calltable_adapter_X_fbar_resign(void) {
 		"b kernel_X_fbar_resign\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_ldtimer(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_ldtimer(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_X_ldtimer\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_unlock(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_unlock(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -324,7 +324,7 @@ static void __attribute__((naked)) calltable_adapter_X_mt_unlock(void) {
 		"b kernel_X_mt_unlock\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_proc_alloc(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_proc_alloc(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -333,7 +333,7 @@ static void __attribute__((naked)) calltable_adapter_X_proc_alloc(void) {
 		"b kernel_X_proc_alloc\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_proc_mt_copy(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_proc_mt_copy(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -344,7 +344,7 @@ static void __attribute__((naked)) calltable_adapter_X_proc_mt_copy(void) {
 		"b kernel_X_proc_mt_copy\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_proc_mt_move(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_proc_mt_move(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -355,7 +355,7 @@ static void __attribute__((naked)) calltable_adapter_X_proc_mt_move(void) {
 		"b kernel_X_proc_mt_move\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_proc_param(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_proc_param(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -366,27 +366,27 @@ static void __attribute__((naked)) calltable_adapter_X_proc_param(void) {
 		"b kernel_X_proc_param\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_sem_release(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_sem_release(void) {
 	__asm__ volatile (
 		"b kernel_X_sem_release\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_endp(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_endp(void) {
 	__asm__ volatile (
 		"b kernel_Y_endp\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_fbar_sync(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_fbar_sync(void) {
 	__asm__ volatile (
 		"b kernel_Y_fbar_sync\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mreleasep(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mreleasep(void) {
 	__asm__ volatile (
 		"b kernel_Y_mreleasep\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mt_lock(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mt_lock(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -395,17 +395,17 @@ static void __attribute__((naked)) calltable_adapter_Y_mt_lock(void) {
 		"b kernel_Y_mt_lock\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mt_sync(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mt_sync(void) {
 	__asm__ volatile (
 		"b kernel_Y_mt_sync\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_proc_end(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_proc_end(void) {
 	__asm__ volatile (
 		"b kernel_Y_proc_end\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_proc_start(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_proc_start(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -416,12 +416,12 @@ static void __attribute__((naked)) calltable_adapter_Y_proc_start(void) {
 		"b kernel_Y_proc_start\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_sem_claim(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_sem_claim(void) {
 	__asm__ volatile (
 		"b kernel_Y_sem_claim\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_startp(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_startp(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -430,7 +430,7 @@ static void __attribute__((naked)) calltable_adapter_Y_startp(void) {
 		"b kernel_Y_startp\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_xin(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_xin(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -441,7 +441,7 @@ static void __attribute__((naked)) calltable_adapter_Y_xin(void) {
 		"b kernel_Y_xin\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_cdisc(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_cdisc(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -450,7 +450,7 @@ static void __attribute__((naked)) calltable_adapter_X_cdisc(void) {
 		"b kernel_X_cdisc\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_cenbc(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_cenbc(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -459,7 +459,7 @@ static void __attribute__((naked)) calltable_adapter_X_cenbc(void) {
 		"b kernel_X_cenbc\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_disc(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_disc(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -470,7 +470,7 @@ static void __attribute__((naked)) calltable_adapter_X_disc(void) {
 		"b kernel_X_disc\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_enbc(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_enbc(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -479,14 +479,14 @@ static void __attribute__((naked)) calltable_adapter_X_enbc(void) {
 		"b kernel_X_enbc\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_getpas(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_getpas(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_X_getpas\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_enroll(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_enroll(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -495,7 +495,7 @@ static void __attribute__((naked)) calltable_adapter_X_mt_enroll(void) {
 		"b kernel_X_mt_enroll\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_resign(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_resign(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -504,7 +504,7 @@ static void __attribute__((naked)) calltable_adapter_X_mt_resign(void) {
 		"b kernel_X_mt_resign\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_ndisc(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_ndisc(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -515,12 +515,12 @@ static void __attribute__((naked)) calltable_adapter_X_ndisc(void) {
 		"b kernel_X_ndisc\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_runp(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_runp(void) {
 	__asm__ volatile (
 		"b kernel_X_runp\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_enbc2(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_enbc2(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -529,7 +529,7 @@ static void __attribute__((naked)) calltable_adapter_Y_enbc2(void) {
 		"b kernel_Y_enbc2\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_enbc3(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_enbc3(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -540,38 +540,38 @@ static void __attribute__((naked)) calltable_adapter_Y_enbc3(void) {
 		"b kernel_Y_enbc3\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_fasttin(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_fasttin(void) {
 	__asm__ volatile (
 		"b kernel_Y_fasttin\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_pause(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_pause(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_pause\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_stopp(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_stopp(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_stopp\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_tin(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_tin(void) {
 	__asm__ volatile (
 		"b kernel_Y_tin\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_alt(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_alt(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_X_alt\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_cdist(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_cdist(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -580,7 +580,7 @@ static void __attribute__((naked)) calltable_adapter_X_cdist(void) {
 		"b kernel_X_cdist\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_cenbt(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_cenbt(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -589,7 +589,7 @@ static void __attribute__((naked)) calltable_adapter_X_cenbt(void) {
 		"b kernel_X_cenbt\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_dist(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_dist(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -600,7 +600,7 @@ static void __attribute__((naked)) calltable_adapter_X_dist(void) {
 		"b kernel_X_dist\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_enbt(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_enbt(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -609,7 +609,7 @@ static void __attribute__((naked)) calltable_adapter_X_enbt(void) {
 		"b kernel_X_enbt\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_ndist(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_ndist(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -620,45 +620,45 @@ static void __attribute__((naked)) calltable_adapter_X_ndist(void) {
 		"b kernel_X_ndist\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_sem_init(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_sem_init(void) {
 	__asm__ volatile (
 		"b kernel_X_sem_init\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_talt(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_talt(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_X_talt\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_xend(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_xend(void) {
 	__asm__ volatile (
 		"b kernel_X_xend\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_altend(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_altend(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_altend\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_altwt(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_altwt(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_altwt\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_caltend(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_caltend(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_caltend\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_enbt2(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_enbt2(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -667,7 +667,7 @@ static void __attribute__((naked)) calltable_adapter_Y_enbt2(void) {
 		"b kernel_Y_enbt2\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_enbt3(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_enbt3(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -678,29 +678,29 @@ static void __attribute__((naked)) calltable_adapter_Y_enbt3(void) {
 		"b kernel_Y_enbt3\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_taltwt(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_taltwt(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_taltwt\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_xable(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_xable(void) {
 	__asm__ volatile (
 		"b kernel_Y_xable\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_cdiss(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_cdiss(void) {
 	__asm__ volatile (
 		"b kernel_X_cdiss\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_cenbs(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_cenbs(void) {
 	__asm__ volatile (
 		"b kernel_X_cenbs\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_diss(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_diss(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -709,12 +709,12 @@ static void __attribute__((naked)) calltable_adapter_X_diss(void) {
 		"b kernel_X_diss\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_enbs(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_enbs(void) {
 	__asm__ volatile (
 		"b kernel_X_enbs\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_dclone(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_dclone(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -725,7 +725,7 @@ static void __attribute__((naked)) calltable_adapter_X_mt_dclone(void) {
 		"b kernel_X_mt_dclone\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_ndiss(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_ndiss(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -734,12 +734,12 @@ static void __attribute__((naked)) calltable_adapter_X_ndiss(void) {
 		"b kernel_X_ndiss\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_enbs2(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_enbs2(void) {
 	__asm__ volatile (
 		"b kernel_Y_enbs2\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_enbs3(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_enbs3(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -748,7 +748,7 @@ static void __attribute__((naked)) calltable_adapter_Y_enbs3(void) {
 		"b kernel_Y_enbs3\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_fmul(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_fmul(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -757,12 +757,12 @@ static void __attribute__((naked)) calltable_adapter_X_fmul(void) {
 		"b kernel_X_fmul\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_kernel_run(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_kernel_run(void) {
 	__asm__ volatile (
 		"b kernel_X_kernel_run\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_bind(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_bind(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -773,7 +773,7 @@ static void __attribute__((naked)) calltable_adapter_X_mt_bind(void) {
 		"b kernel_X_mt_bind\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mt_resize(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mt_resize(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -784,7 +784,7 @@ static void __attribute__((naked)) calltable_adapter_X_mt_resize(void) {
 		"b kernel_X_mt_resize\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_norm(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_norm(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -793,7 +793,7 @@ static void __attribute__((naked)) calltable_adapter_X_norm(void) {
 		"b kernel_X_norm\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_par_enroll(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_par_enroll(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -802,55 +802,55 @@ static void __attribute__((naked)) calltable_adapter_X_par_enroll(void) {
 		"b kernel_X_par_enroll\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_fastscheduler(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_fastscheduler(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_fastscheduler\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_occscheduler(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_occscheduler(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_occscheduler\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_getaff(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_getaff(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_X_getaff\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_getpri(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_getpri(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_X_getpri\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_setaff(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_setaff(void) {
 	__asm__ volatile (
 		"b kernel_Y_setaff\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_setpri(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_setpri(void) {
 	__asm__ volatile (
 		"b kernel_Y_setpri\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_bx_kill(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_bx_kill(void) {
 	__asm__ volatile (
 		"b kernel_X_bx_kill\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_mppclone(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_mppclone(void) {
 	__asm__ volatile (
 		"b kernel_X_mppclone\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_b_dispatch(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_b_dispatch(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -859,7 +859,7 @@ static void __attribute__((naked)) calltable_adapter_Y_b_dispatch(void) {
 		"b kernel_Y_b_dispatch\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_bx_dispatch(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_bx_dispatch(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -868,7 +868,7 @@ static void __attribute__((naked)) calltable_adapter_Y_bx_dispatch(void) {
 		"b kernel_Y_bx_dispatch\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mppdeserialise(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mppdeserialise(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -879,7 +879,7 @@ static void __attribute__((naked)) calltable_adapter_Y_mppdeserialise(void) {
 		"b kernel_Y_mppdeserialise\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_mppserialise(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_mppserialise(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -890,19 +890,19 @@ static void __attribute__((naked)) calltable_adapter_Y_mppserialise(void) {
 		"b kernel_Y_mppserialise\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_rtthreadinit(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_rtthreadinit(void) {
 	__asm__ volatile (
 		"b kernel_Y_rtthreadinit\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_shutdown(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_shutdown(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_shutdown\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_ldwsmap(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_ldwsmap(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -911,12 +911,12 @@ static void __attribute__((naked)) calltable_adapter_X_ldwsmap(void) {
 		"b kernel_X_ldwsmap\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_rmwsmap(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_rmwsmap(void) {
 	__asm__ volatile (
 		"b kernel_X_rmwsmap\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_trap(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_trap(void) {
 	__asm__ volatile (
 		"mov x4, x2\n\t"          /* x4 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -927,7 +927,7 @@ static void __attribute__((naked)) calltable_adapter_X_trap(void) {
 		"b kernel_X_trap\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_X_ulwsmap(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_X_ulwsmap(void) {
 	__asm__ volatile (
 		"mov x3, x2\n\t"          /* x3 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = sched->cparam[0] */
@@ -936,28 +936,28 @@ static void __attribute__((naked)) calltable_adapter_X_ulwsmap(void) {
 		"b kernel_X_ulwsmap\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_BNSeterr(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_BNSeterr(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_BNSeterr\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_BSeterr(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_BSeterr(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_BSeterr\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_BasicRangeError(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_BasicRangeError(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_BasicRangeError\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_RangeCheckError(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_RangeCheckError(void) {
 	__asm__ volatile (
 		"mov x5, x2\n\t"          /* x5 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = cparam[0] */
@@ -970,7 +970,7 @@ static void __attribute__((naked)) calltable_adapter_Y_RangeCheckError(void) {
 		"b kernel_Y_RangeCheckError\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_Seterr(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_Seterr(void) {
 	__asm__ volatile (
 		"mov x5, x2\n\t"          /* x5 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = cparam[0] */
@@ -983,19 +983,19 @@ static void __attribute__((naked)) calltable_adapter_Y_Seterr(void) {
 		"b kernel_Y_Seterr\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_dynproc_exit(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_dynproc_exit(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_dynproc_exit\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_dynproc_suspend(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_dynproc_suspend(void) {
 	__asm__ volatile (
 		"b kernel_Y_dynproc_suspend\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_floaterr(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_floaterr(void) {
 	__asm__ volatile (
 		"mov x6, x2\n\t"          /* x6 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = cparam[0] */
@@ -1010,7 +1010,7 @@ static void __attribute__((naked)) calltable_adapter_Y_floaterr(void) {
 		"b kernel_Y_floaterr\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_overflow(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_overflow(void) {
 	__asm__ volatile (
 		"mov x5, x2\n\t"          /* x5 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = cparam[0] */
@@ -1023,14 +1023,14 @@ static void __attribute__((naked)) calltable_adapter_Y_overflow(void) {
 		"b kernel_Y_overflow\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_unsupported(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_unsupported(void) {
 	__asm__ volatile (
 		"mov x0, x1\n\t"
 		"mov x1, x2\n\t"
 		"b kernel_Y_unsupported\n\t"
 	);
 }
-static void __attribute__((naked)) calltable_adapter_Y_zero_div(void) {
+void __attribute__((naked, visibility("default"))) calltable_adapter_Y_zero_div(void) {
 	__asm__ volatile (
 		"mov x5, x2\n\t"          /* x5 = Wptr */
 		"ldr x9, [x1, #8]\n\t"    /* x9 = cparam[0] */
@@ -1045,343 +1045,343 @@ static void __attribute__((naked)) calltable_adapter_Y_zero_div(void) {
 }
 #else /* !__aarch64__ */
 /* Non-AArch64: use C adapters (x64/i386 don't have the LR issue) */
-static word __attribute__((noinline)) calltable_adapter_X_malloc(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_malloc(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_malloc(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_mrelease(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_mrelease(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_mrelease(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_in(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_in(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_in(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_out(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_out(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_out(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_mt_alloc(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_alloc(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_mt_alloc(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_mt_clone(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_clone(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_mt_clone(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_mt_release(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_release(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_mt_release(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_in32(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_in32(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_in32(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_in8(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_in8(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_in8(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mt_in(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mt_in(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mt_in(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mt_out(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mt_out(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mt_out(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mt_xchg(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mt_xchg(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mt_xchg(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mt_xin(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mt_xin(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mt_xin(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mt_xout(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mt_xout(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mt_xout(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mt_xxchg(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mt_xxchg(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mt_xxchg(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_out32(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_out32(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_out32(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_out8(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_out8(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_out8(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_outbyte(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_outbyte(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_outbyte(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_outword(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_outword(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_outword(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_fbar_enroll(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_fbar_enroll(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_fbar_enroll(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_fbar_init(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_fbar_init(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_fbar_init(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_fbar_resign(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_fbar_resign(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_fbar_resign(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_ldtimer(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_ldtimer(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_ldtimer(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_mt_unlock(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_unlock(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_mt_unlock(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_proc_alloc(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_proc_alloc(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_proc_alloc(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_proc_mt_copy(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_proc_mt_copy(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_proc_mt_copy(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_proc_mt_move(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_proc_mt_move(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_proc_mt_move(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_proc_param(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_proc_param(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_proc_param(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_sem_release(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_sem_release(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_sem_release(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_endp(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_endp(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_endp(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_fbar_sync(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_fbar_sync(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_fbar_sync(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mreleasep(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mreleasep(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mreleasep(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mt_lock(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mt_lock(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mt_lock(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mt_sync(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mt_sync(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mt_sync(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_proc_end(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_proc_end(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_proc_end(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_proc_start(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_proc_start(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_proc_start(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_sem_claim(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_sem_claim(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_sem_claim(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_startp(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_startp(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_startp(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_xin(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_xin(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_xin(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_cdisc(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_cdisc(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_cdisc(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_cenbc(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_cenbc(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_cenbc(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_disc(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_disc(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_disc(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_enbc(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_enbc(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_enbc(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_getpas(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_getpas(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_getpas(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_mt_enroll(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_enroll(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_mt_enroll(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_mt_resign(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_resign(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_mt_resign(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_ndisc(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_ndisc(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_ndisc(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_runp(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_runp(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_runp(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_enbc2(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_enbc2(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_enbc2(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_Y_enbc3(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_Y_enbc3(word param0, sched_t *sched, word *Wptr) {
 	return kernel_Y_enbc3(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_fasttin(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_fasttin(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_fasttin(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_pause(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_pause(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_pause(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_stopp(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_stopp(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_stopp(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_tin(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_tin(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_tin(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_alt(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_alt(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_alt(sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_cdist(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_cdist(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_cdist(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_cenbt(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_cenbt(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_cenbt(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_dist(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_dist(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_dist(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_enbt(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_enbt(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_enbt(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_ndist(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_ndist(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_ndist(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_sem_init(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_sem_init(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_sem_init(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_talt(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_talt(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_talt(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_xend(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_xend(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_xend(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_altend(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_altend(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_altend(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_altwt(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_altwt(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_altwt(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_caltend(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_caltend(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_caltend(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_enbt2(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_enbt2(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_enbt2(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_Y_enbt3(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_Y_enbt3(word param0, sched_t *sched, word *Wptr) {
 	return kernel_Y_enbt3(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_taltwt(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_taltwt(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_taltwt(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_xable(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_xable(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_xable(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_cdiss(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_cdiss(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_cdiss(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_cenbs(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_cenbs(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_cenbs(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_diss(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_diss(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_diss(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_enbs(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_enbs(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_enbs(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_mt_dclone(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_dclone(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_mt_dclone(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_ndiss(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_ndiss(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_ndiss(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_enbs2(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_enbs2(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_enbs2(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_Y_enbs3(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_Y_enbs3(word param0, sched_t *sched, word *Wptr) {
 	return kernel_Y_enbs3(param0, sched->cparam[0], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_fmul(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_fmul(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_fmul(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_kernel_run(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_kernel_run(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_kernel_run(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_mt_bind(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_bind(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_mt_bind(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_mt_resize(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_mt_resize(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_mt_resize(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_norm(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_norm(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_norm(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_par_enroll(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_par_enroll(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_par_enroll(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_fastscheduler(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_fastscheduler(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_fastscheduler(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_occscheduler(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_occscheduler(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_occscheduler(sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_getaff(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_getaff(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_getaff(sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_getpri(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_getpri(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_getpri(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_setaff(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_setaff(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_setaff(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_setpri(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_setpri(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_setpri(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_bx_kill(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_bx_kill(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_bx_kill(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_mppclone(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_mppclone(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_mppclone(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_b_dispatch(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_b_dispatch(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_b_dispatch(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_bx_dispatch(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_bx_dispatch(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_bx_dispatch(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mppdeserialise(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mppdeserialise(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mppdeserialise(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_mppserialise(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_mppserialise(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_mppserialise(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_rtthreadinit(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_rtthreadinit(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_rtthreadinit(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_shutdown(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_shutdown(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_shutdown(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_ldwsmap(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_ldwsmap(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_ldwsmap(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_rmwsmap(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_rmwsmap(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_rmwsmap(param0, sched, Wptr);
 }
-static word __attribute__((noinline)) calltable_adapter_X_trap(word param0, sched_t *sched, word *Wptr) {
+word __attribute__((noinline, visibility("default"))) calltable_adapter_X_trap(word param0, sched_t *sched, word *Wptr) {
 	return kernel_X_trap(param0, sched->cparam[0], sched->cparam[1], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_X_ulwsmap(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_X_ulwsmap(word param0, sched_t *sched, word *Wptr) {
 	kernel_X_ulwsmap(param0, sched->cparam[0], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_BNSeterr(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_BNSeterr(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_BNSeterr(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_BSeterr(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_BSeterr(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_BSeterr(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_BasicRangeError(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_BasicRangeError(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_BasicRangeError(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_RangeCheckError(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_RangeCheckError(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_RangeCheckError(param0, sched->cparam[0], sched->cparam[1], sched->cparam[2], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_Seterr(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_Seterr(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_Seterr(param0, sched->cparam[0], sched->cparam[1], sched->cparam[2], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_dynproc_exit(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_dynproc_exit(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_dynproc_exit(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_dynproc_suspend(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_dynproc_suspend(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_dynproc_suspend(param0, sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_floaterr(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_floaterr(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_floaterr(param0, sched->cparam[0], sched->cparam[1], sched->cparam[2], sched->cparam[3], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_overflow(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_overflow(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_overflow(param0, sched->cparam[0], sched->cparam[1], sched->cparam[2], sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_unsupported(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_unsupported(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_unsupported(sched, Wptr);
 }
-static void __attribute__((noinline)) calltable_adapter_Y_zero_div(word param0, sched_t *sched, word *Wptr) {
+void __attribute__((noinline, visibility("default"))) calltable_adapter_Y_zero_div(word param0, sched_t *sched, word *Wptr) {
 	kernel_Y_zero_div(param0, sched->cparam[0], sched->cparam[1], sched->cparam[2], sched, Wptr);
 }
 #endif /* __aarch64__ */

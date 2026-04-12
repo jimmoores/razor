@@ -273,7 +273,9 @@ def output_calltable(symbol_list, symbols, fn):
 
 		# Generate naked assembly adapter with tail call.
 		# cparam[0] is at offset 8 from sched, cparam[1] at offset 16.
-		f.write("static void __attribute__((naked)) calltable_adapter_%s(void) {\n" % name)
+		# Non-static so CIF stubs can reference these directly without
+		# going through the runtime calltable[] indirection.
+		f.write("void __attribute__((naked, visibility(\"default\"))) calltable_adapter_%s(void) {\n" % name)
 		f.write("\t__asm__ volatile (\n")
 		if inputs == 0:
 			# Old: (param0=x0, sched=x1, Wptr=x2) -> New: (sched=x0, Wptr=x1)
@@ -344,7 +346,7 @@ def output_calltable(symbol_list, symbols, fn):
 		call_args.append("sched")
 		call_args.append("Wptr")
 
-		f.write("static %s __attribute__((noinline)) calltable_adapter_%s(word param0, sched_t *sched, word *Wptr) {\n" % (ret_type, name))
+		f.write("%s __attribute__((noinline, visibility(\"default\"))) calltable_adapter_%s(word param0, sched_t *sched, word *Wptr) {\n" % (ret_type, name))
 		if has_return:
 			f.write("\treturn kernel_%s(%s);\n" % (name, ", ".join(call_args)))
 		else:
@@ -641,8 +643,6 @@ def gen_x64_cif_stub(f, symbol, inputs, outputs):
 	resched = (symbol["name"][0] == 'Y')
 	in_regs = min(len(inputs), 1)
 	out_regs = min(len(outputs), 1)
-	offset = symbol["offset"]
-	calltable_offset = 48 + offset * 8
 
 	if len(inputs) > 1:
 		for (n, i) in enumerate(inputs):
@@ -650,40 +650,29 @@ def gen_x64_cif_stub(f, symbol, inputs, outputs):
 				f.line("__sched->cparam[%d] = (word) (%s);" % ((n - 1), i))
 
 	param0 = inputs[0] if in_regs > 0 else "0"
+	asm_func = "ccsp_cif_x64_kcall_resched" if resched else "ccsp_cif_x64_kcall"
 
-	if resched:
-		f.line("{")
-		f.indent()
-		f.line("extern word ccsp_cif_x64_kcall_resched(void *, void *, word, void *);")
-		f.line("void *__func = *(void **)((char *)__sched + %d);" % calltable_offset)
-		if out_regs > 0:
-			f.line("%s = (__typeof__(%s)) ccsp_cif_x64_kcall_resched((void *)__wptr, (void *)__sched, (word)(%s), __func);" % (
-				outputs[0], outputs[0], param0))
-		else:
-			f.line("ccsp_cif_x64_kcall_resched((void *)__wptr, (void *)__sched, (word)(%s), __func);" % param0)
-		f.line("__sched = (ccsp_sched_t *)((__wptr)[SchedPtr]);")
-		if len(outputs) > 1:
-			for (n, i) in enumerate(outputs):
-				if n >= 1:
-					f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
-		f.outdent()
-		f.line("}")
+	# Reference the kernel function symbol directly instead of looking it
+	# up via __sched->calltable[].  On x64 CCSP_DIRECT_CALL is disabled,
+	# so kernel functions still use the legacy ABI (param0/cparam[]) and
+	# can be called directly with no adapter.
+	f.line("{")
+	f.indent()
+	f.line("extern word %s(void *, void *, word, void *);" % asm_func)
+	f.line("extern void kernel_%s(void);" % symbol["name"])
+	if out_regs > 0:
+		f.line("%s = (__typeof__(%s)) %s((void *)__wptr, (void *)__sched, (word)(%s), (void *)kernel_%s);" % (
+			outputs[0], outputs[0], asm_func, param0, symbol["name"]))
 	else:
-		f.line("{")
-		f.indent()
-		f.line("extern word ccsp_cif_x64_kcall(void *, void *, word, void *);")
-		f.line("void *__func = *(void **)((char *)__sched + %d);" % calltable_offset)
-		if out_regs > 0:
-			f.line("%s = (__typeof__(%s)) ccsp_cif_x64_kcall((void *)__wptr, (void *)__sched, (word)(%s), __func);" % (
-				outputs[0], outputs[0], param0))
-		else:
-			f.line("ccsp_cif_x64_kcall((void *)__wptr, (void *)__sched, (word)(%s), __func);" % param0)
-		if len(outputs) > 1:
-			for (n, i) in enumerate(outputs):
-				if n >= 1:
-					f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
-		f.outdent()
-		f.line("}")
+		f.line("%s((void *)__wptr, (void *)__sched, (word)(%s), (void *)kernel_%s);" % (asm_func, param0, symbol["name"]))
+	if resched:
+		f.line("__sched = (ccsp_sched_t *)((__wptr)[SchedPtr]);")
+	if len(outputs) > 1:
+		for (n, i) in enumerate(outputs):
+			if n >= 1:
+				f.line("*((word *)(&(%s))) = __sched->cparam[%d];" % (i, (n - 1)))
+	f.outdent()
+	f.line("}")
 
 def gen_x64_header(f):
 	"""Generate x64 CIF header macros."""
@@ -833,9 +822,12 @@ def gen_aarch64_cif_stub(f, symbol, inputs, outputs):
         param0 = inputs[0] if in_regs > 0 else "0"
         asm_func = "ccsp_cif_call_asm_resched" if resched else "ccsp_cif_call_asm"
 
+        # Reference the calltable adapter directly by name instead of looking
+        # it up in the runtime calltable[].  The adapters have external
+        # linkage in libccsp.so (Phase 1D removed the calltable indirection).
         f.line("extern word %s(void *wptr, void *sched, word param0, void *func);" % asm_func)
-        f.line("void *__kernel_func = __sched->calltable[%d];" % symbol["offset"])
-        f.line("word _res = %s((void *)__wptr, (void *)__sched, (word)(%s), __kernel_func);" % (asm_func, param0))
+        f.line("extern void calltable_adapter_%s(void);" % symbol["name"])
+        f.line("word _res = %s((void *)__wptr, (void *)__sched, (word)(%s), (void *)calltable_adapter_%s);" % (asm_func, param0, symbol["name"]))
 
         if resched:
                 f.line("__sched = (ccsp_sched_t *)((__wptr)[SchedPtr]);")
