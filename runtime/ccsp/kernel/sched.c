@@ -464,10 +464,10 @@ static void verify_batch_integrity (batch_t *batch)
 	word *ptr = batch->Fptr;
 	word size = 1;
 
-	while (ptr[Link] != NotProcess_p) {
+	while (PROC_DESC(ptr)->link != NotProcess_p) {
 		ASSERT ( (batch->size & (~BATCH_EMPTIED)) > size );
 		size++;
-		ptr = (word *) ptr[Link];
+		ptr = (word *) PROC_DESC(ptr)->link;
 	}
 
 	ASSERT ( batch->Bptr == ptr );
@@ -615,17 +615,17 @@ static TRIVIAL void release_tqnode (sched_t *sched, tqnode_t *tn)
 /*{{{  static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)*/
 static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)
 {
-	unsigned int current = (unsigned int) Wptr[Priofinity];
+	unsigned int current = (unsigned int) PROC_DESC(Wptr)->priofinity;
 	unsigned int cur_affinity = PHasAffinity (current) ? PAffinity (current) : 0;
 	unsigned int enabled = att_val (&enabled_threads);
 	if (cur_affinity != 0 && (cur_affinity & ~enabled) == 0) {
 		/* Process has valid explicit affinity (e.g. from SETAFF):
 		 * all affinity bits are within the set of enabled schedulers.
 		 * Preserve affinity bits; only update priority. */
-		Wptr[Priofinity] = (word) BuildPriofinity (
+		PROC_DESC(Wptr)->priofinity = (word) BuildPriofinity (
 			cur_affinity, PPriority (sched->priofinity));
 	} else {
-		Wptr[Priofinity] = sched->priofinity;
+		PROC_DESC(Wptr)->priofinity = sched->priofinity;
 	}
 }
 /*}}}*/
@@ -633,7 +633,7 @@ static TRIVIAL void save_priofinity (sched_t *sched, word *Wptr)
 static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address)
 {
 	DT_LOG("save_ret", Wptr, return_address, sched, 0);
-	Wptr[Iptr] = (word) return_address;
+	PROC_DESC(Wptr)->iptr = (word) return_address;
 }
 /*}}}*/
 /*{{{  empty_batch(batch)*/
@@ -645,14 +645,14 @@ static TRIVIAL void save_return (sched_t *sched, word *Wptr, word return_address
 /*{{{  static HOT void enqueue_to_batch_with_hint (batch_t *batch, word *Wptr, bool front)*/
 static HOT void enqueue_to_batch_with_hint (batch_t *batch, word *Wptr, bool front)
 {
-	Wptr[Link] = NotProcess_p;
+	PROC_DESC(Wptr)->link = NotProcess_p;
 
 	if (front) {
 		batch->Fptr = Wptr;
 		batch->Bptr = Wptr;
 		batch->size = 1;
 	} else {
-		batch->Bptr[Link] = (word) Wptr;
+		PROC_DESC(batch->Bptr)->link = (word) Wptr;
 		batch->Bptr = Wptr;
 		batch->size = batch->size + 1;
 	}
@@ -661,13 +661,13 @@ static HOT void enqueue_to_batch_with_hint (batch_t *batch, word *Wptr, bool fro
 /*{{{  static HOT void enqueue_to_batch (batch_t *batch, word *Wptr)*/
 static HOT void enqueue_to_batch (batch_t *batch, word *Wptr)
 {
-	DT_LOG("enqueue", Wptr, Wptr ? Wptr[Iptr] : 0, batch->Fptr, batch->size);
-	Wptr[Link] = NotProcess_p;
+	DT_LOG("enqueue", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, batch->Fptr, batch->size);
+	PROC_DESC(Wptr)->link = NotProcess_p;
 
 	if (batch->Fptr == NotProcess_p) {
 		batch->Fptr = Wptr;
 	} else {
-		batch->Bptr[Link] = (word) Wptr;
+		PROC_DESC(batch->Bptr)->link = (word) Wptr;
 	}
 
 	batch->Bptr = Wptr;
@@ -677,7 +677,7 @@ static HOT void enqueue_to_batch (batch_t *batch, word *Wptr)
 /*{{{  static WARM void enqueue_to_batch_front (batch_t *batch, word *Wptr)*/
 static WARM void enqueue_to_batch_front (batch_t *batch, word *Wptr)
 {
-	if ((Wptr[Link] = (word) batch->Fptr) == NotProcess_p) {
+	if ((PROC_DESC(Wptr)->link = (word) batch->Fptr) == NotProcess_p) {
 		batch->Fptr = Wptr;
 		batch->Bptr = Wptr;
 	} else {
@@ -691,10 +691,10 @@ static WARM void enqueue_to_batch_front (batch_t *batch, word *Wptr)
 static HOT word *dequeue_from_batch (batch_t *batch)
 {
 	word *Wptr = batch->Fptr;
-	DT_LOG("dequeue", Wptr, Wptr ? Wptr[Iptr] : 0, (word *)Wptr[Link], batch->size);
+	DT_LOG("dequeue", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, (word *)PROC_DESC(Wptr)->link, batch->size);
 	word size = batch->size;
 
-	batch->Fptr = (word *) Wptr[Link];
+	batch->Fptr = (word *) PROC_DESC(Wptr)->link;
 	batch->size = ((size - 2) & BATCH_EMPTIED) | (size - 1);
 	/* The previous line is "clever":
 	 *
@@ -706,7 +706,7 @@ static HOT word *dequeue_from_batch (batch_t *batch)
 	 *   with the real new size.
 	 */
 	ASSERT ( batch->Fptr != NotProcess_p || batch->Bptr == Wptr );
-	SAFETY { Wptr[Link] = ~NotProcess_p; };
+	SAFETY { PROC_DESC(Wptr)->link = ~NotProcess_p; };
 
 	return Wptr;
 }	
@@ -717,7 +717,7 @@ static WARM void atomic_enqueue_to_runqueue (runqueue_t *rq, bool workspace, voi
 	void *back;
 	
 	if (workspace) {
-		atw_safe_set (&(((word *) ptr)[Link]), (word) NULL);
+		atw_safe_set (&(PROC_DESC((word *)ptr)->link), (word) NULL);
 	} else {
 		atw_safe_set (&(((batch_t *) ptr)->next), (word) NULL);
 	}
@@ -729,7 +729,7 @@ static WARM void atomic_enqueue_to_runqueue (runqueue_t *rq, bool workspace, voi
 	if (back == NULL) {
 		atw_safe_set ((word *) &(rq->Fptr), (word) ptr);
 	} else if (workspace) {
-		atw_safe_set (&(((word *) back)[Link]), (word) ptr);
+		atw_safe_set (&(PROC_DESC((word *)back)->link), (word) ptr);
 	} else {
 		atw_safe_set (&(((batch_t *) back)->next), (word) ptr);
 	}
@@ -748,7 +748,7 @@ static WARM void *atomic_dequeue_from_runqueue (runqueue_t *rq, bool workspace)
 				atw_safe_cas ((word *) &(rq->Fptr), (word) ptr, (word) NULL);
 				SAFETY {
 					if (workspace) {
-						atw_safe_set (&(((word *) ptr)[Link]), ~NotProcess_p);
+						atw_safe_set (&(PROC_DESC((word *)ptr)->link), ~NotProcess_p);
 					} else {
 						atw_safe_set (&(((batch_t *) ptr)->next), (word) (-1));
 					}
@@ -759,7 +759,7 @@ static WARM void *atomic_dequeue_from_runqueue (runqueue_t *rq, bool workspace)
 		}
 		
 		if (workspace) {
-			next = (void *) atw_safe_val (&(((word *) ptr)[Link]));
+			next = (void *) atw_safe_val (&(PROC_DESC((word *)ptr)->link));
 		} else {
 			next = (void *) atw_safe_val (&(((batch_t *) ptr)->next));
 		}
@@ -769,7 +769,7 @@ static WARM void *atomic_dequeue_from_runqueue (runqueue_t *rq, bool workspace)
 			weak_write_barrier ();
 			SAFETY {
 				if (workspace) {
-					atw_safe_set (&(((word *) ptr)[Link]), ~NotProcess_p);
+					atw_safe_set (&(PROC_DESC((word *)ptr)->link), ~NotProcess_p);
 				} else {
 					atw_safe_set (&(((batch_t *) ptr)->next), (word) (-1));
 				}
@@ -949,10 +949,10 @@ static TEPID void mail_process (word affinity, word *Wptr)
 		if (unlikely (targets == 0)) {
 			BMESSAGE (
 				"impossible affinity detected: %08x (Wptr = %p, Iptr = %p).\n",
-				affinity, Wptr, Wptr != NULL ? (void *) Wptr[Iptr] : 0
+				affinity, Wptr, Wptr != NULL ? (void *) PROC_DESC(Wptr)->iptr : 0
 			);
 			ccsp_show_last_debug_insert ();
-			ccsp_kernel_exit (1, Wptr != NULL ? Wptr[Iptr] : 0);
+			ccsp_kernel_exit (1, Wptr != NULL ? PROC_DESC(Wptr)->iptr : 0);
 		}
 	}
 	
@@ -1018,7 +1018,7 @@ static TEPID void enqueue_far_process (sched_t *sched, word priofinity, word *Wp
 /*{{{  static HOT void enqueue_process (sched_t *sched, word *Wptr)*/
 static HOT void enqueue_process (sched_t *sched, word *Wptr)
 {
-	word priofinity = Wptr[Priofinity];
+	word priofinity = PROC_DESC(Wptr)->priofinity;
 
 	if (sched->priofinity == priofinity
 	    && (!PHasAffinity (priofinity) || (PAffinity (priofinity) & sched->id))) {
@@ -1058,7 +1058,7 @@ static HOT void load_curb (sched_t *sched, batch_t *batch, bool remote)
 	sched->curb.size = batch->size & (~BATCH_EMPTIED);
 
 	sched->dispatches = calculate_dispatches (sched->curb.size);
-	sched->priofinity = sched->curb.Fptr[Priofinity];
+	sched->priofinity = sched->curb.PROC_DESC(Fptr)->priofinity;
 
 	if (!remote) {
 		reinit_batch_t (batch);
@@ -1115,9 +1115,9 @@ static WARM word *schedule_point (sched_t *sched, word *Wptr, word *other)
 /*{{{  static WARM word *reschedule_point (sched_t *sched, word *Wptr, word *other)*/
 static WARM word *reschedule_point (sched_t *sched, word *Wptr, word *other)
 {
-	DT_LOG("rp_in", Wptr, Wptr ? Wptr[Iptr] : 0, other, other ? other[Iptr] : 0);
-	if (sched->priofinity != other[Priofinity]) {
-		if (PPriority (other[Priofinity]) < PPriority (sched->priofinity)) {
+	DT_LOG("rp_in", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, other, other ? PROC_DESC(other)->iptr : 0);
+	if (sched->priofinity != PROC_DESC(other)->priofinity) {
+		if (PPriority (PROC_DESC(other)->priofinity) < PPriority (sched->priofinity)) {
 			enqueue_process (sched, other);
 			save_priofinity (sched, Wptr);
 			enqueue_process_nopri (sched, Wptr);
@@ -1380,9 +1380,9 @@ static HOT void trigger_alt_guard (sched_t *sched, word ptr)
 	word state, nstate;
 
 	do {
-		state = atw_val (&(wptr[State]));
+		state = atw_val (&(PROC_DESC(wptr)->state));
 		nstate = (state - 1) & (~(ALT_NOT_READY | ALT_WAITING));
-	} while (!atw_cas (&(wptr[State]), state, nstate));
+	} while (!atw_cas (&(PROC_DESC(wptr)->state), state, nstate));
 
 	if ((state & ALT_WAITING) || (nstate == 0)) {
 		enqueue_process (sched, wptr);
@@ -1789,15 +1789,15 @@ static bool find_remove_from_batch (batch_t *batch, bool remove, word ws_base, w
 		if (ptr >= ws_base && ptr < ws_limit) {
 			if (remove) {
 				if (prev == NotProcess_p) {
-					batch->Fptr = (word *) wptr[Link];
+					batch->Fptr = (word *) PROC_DESC(wptr)->link;
 				} else {
-					prev[Link] = wptr[Link];
+					PROC_DESC(prev)->link = PROC_DESC(wptr)->link;
 				}
 			}
 			return true;
 		}
 		prev = wptr;
-		wptr = (word *) wptr[Link];
+		wptr = (word *) PROC_DESC(wptr)->link;
 	}
 
 	return false;
@@ -1870,7 +1870,7 @@ static bool find_remove_from_timerq (sched_t *sched, bool remove, word ws_base, 
 						return false;
 					} else {
 						set_batch_clean ((batch_t *) n);
-						((word *)(ptr & (~1)))[TLink] = TimeNotSet_p;
+						PROC_DESC((word *)(ptr & (~1)))->tlink = TimeNotSet_p;
 					}
 				}
 				delete_tqnode (sched, n);
@@ -2228,8 +2228,8 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 	new_curb (sched);
 
 	while (fptr != NotProcess_p) {
-		word *next = (word *) fptr[Link];
-		fptr[Priofinity] = sched->priofinity;
+		word *next = (word *) PROC_DESC(fptr)->link;
+		PROC_DESC(fptr)->priofinity = sched->priofinity;
 		enqueue_process_nopri (sched, fptr);
 		sched->stats.startp++;
 		fptr = next;
@@ -2278,7 +2278,7 @@ BMESSAGE0 ("Y_rtthreadinit()\n");
 	}
 
 	if (Wptr != NotProcess_p) {
-		Wptr[Priofinity] = sched->priofinity;
+		PROC_DESC(Wptr)->priofinity = sched->priofinity;
 		sched->stats.startp++;
 		K_ZERO_OUT_JRET ();
 	} else {
@@ -2507,7 +2507,7 @@ void dump_trap_info (word *Wptr, word *Fptr, word *Bptr, word return_address, wo
 	BMESSAGE ("** TRAP **\n");
 	MESSAGE ("\tWptr  0x%016lx    raddr 0x%016lx\n", (word)Wptr, (word)return_address);
 	MESSAGE ("\tFptr  0x%016lx    Bptr  0x%016lx\n", (word)Fptr, (word)Bptr);
-	MESSAGE ("\tAreg  0x%016lx    Iptr  0x%016lx\n", (word)a_val, (word)Wptr[Iptr]);
+	MESSAGE ("\tAreg  0x%016lx    Iptr  0x%016lx\n", (word)a_val, (word)PROC_DESC(Wptr)->iptr);
 	MESSAGE ("\tBreg  0x%016lx    Creg  0x%016lx\n", (word)b_val, (word)c_val);
 	for (i=6; i >= -5; i-=2) {
 		MESSAGE ("\tWptr[%-2d] @ (0x%016lx) = 0x%016lx", i, (word)&(Wptr[i]), (word)Wptr[i]);
@@ -2633,7 +2633,7 @@ static void fbar_complete (sched_t *sched, word *bar)
 	/* walk the barrier queue and enqueue each waiting process */
 	proc = (word *) bar[FBAR_FPTR];
 	while (proc != (word *) NotProcess_p && proc != NULL) {
-		word *next = (word *) proc[Link];
+		word *next = (word *) PROC_DESC(proc)->link;
 		enqueue_process_nopri (sched, proc);
 		proc = next;
 	}
@@ -2698,13 +2698,13 @@ K_CALL_DEFINE_1_0 (Y_fbar_sync)
 		word *fptr = (word *) bar[FBAR_FPTR];
 
 		save_return (sched, Wptr, return_address);
-		Wptr[Link] = NotProcess_p;
+		PROC_DESC(Wptr)->link = NotProcess_p;
 
 		if (fptr == (word *) NotProcess_p || fptr == NULL) {
 			bar[FBAR_FPTR] = (word) Wptr;
 		} else {
 			word *bptr = (word *) bar[FBAR_BPTR];
-			bptr[Link] = (word) Wptr;
+			PROC_DESC(bptr)->link = (word) Wptr;
 		}
 		bar[FBAR_BPTR] = (word) Wptr;
 
@@ -2791,7 +2791,7 @@ static INLINE word *sem_dequeue (ccsp_sem_t *sem) {
 
 		if (fptr != NotProcess_p) {
 			word *bptr = (word *) atw_val (&(sem->bptr));
-			word *link = (word *) atw_val (&(fptr[Link]));
+			word *link = (word *) atw_val (&(PROC_DESC(fptr)->link));
 
 			if (bptr == fptr) {
 				atw_set (&(sem->fptr), (word) NotProcess_p);
@@ -2805,7 +2805,7 @@ static INLINE word *sem_dequeue (ccsp_sem_t *sem) {
 				atw_set (&(sem->fptr), (word) link);
 				return fptr;
 			} else {
-				to_test = &(fptr[Link]);
+				to_test = &(PROC_DESC(fptr)->link);
 			}
 		} else {
 			to_test = &(sem->fptr);
@@ -2846,7 +2846,7 @@ static INLINE void sem_claim (sched_t *sched, word *Wptr, word return_address, c
 	}
 
 	save_priofinity (sched, Wptr);
-	Wptr[Link] = NotProcess_p;
+	PROC_DESC(Wptr)->link = NotProcess_p;
 	save_return (sched, Wptr, return_address);
 	weak_write_barrier ();
 
@@ -2857,7 +2857,7 @@ static INLINE void sem_claim (sched_t *sched, word *Wptr, word return_address, c
 	if ((val & (~1)) == NotProcess_p) {
 		atw_set (&(sem->fptr), (word) Wptr);
 	} else {
-		atw_set (&(((word *) (val & (~1)))[Link]), (word) Wptr);
+		atw_set (&(PROC_DESC((word *)(val & (~1)))->link), (word) Wptr);
 	}
 
 	weak_write_barrier ();
@@ -2970,7 +2970,7 @@ static INLINE void bar_complete_head (sched_t *sched, bar_t *bar, bool local, ba
 				word *Wptr = batch->Fptr;
 
 				do {
-					word *next = (word *) Wptr[Link];
+					word *next = (word *) PROC_DESC(Wptr)->link;
 					enqueue_process (sched, Wptr);
 					Wptr = next;
 				} while (Wptr != NotProcess_p);
@@ -3291,7 +3291,7 @@ static REGPARM void mproc_bar_complete (sched_t *sched, mproc_bar_t *bar)
 	weak_write_barrier ();
 
 	while (ws != NotProcess_p) {
-		word *next = (word *) ws[Link];
+		word *next = (word *) PROC_DESC(ws)->link;
 		enqueue_process (sched, ws);
 		ws = next;
 	}
@@ -3322,7 +3322,7 @@ static REGPARM void mproc_bar_resign (sched_t *sched, mproc_bar_t *bar, word cou
 			}
 			
 			atw_set (&(bar->state), MPROC_BAR_PHASE);
-			atw_set (&(Wptr[Temp]), 1);
+			atw_set (&(PROC_DESC(Wptr)->temp), 1);
 
 			weak_write_barrier ();
 
@@ -3354,16 +3354,16 @@ static REGPARM void mproc_bar_sync (sched_t *sched, mproc_bar_t *bar, word *Wptr
 				
 				strong_read_barrier ();
 
-				for (ws = bar->fptr; ws != Wptr; ws = (word *) ws[Link]) {
+				for (ws = bar->fptr; ws != Wptr; ws = (word *) PROC_DESC(ws)->link) {
 					prev = ws;
 				}
 
 				if (prev == NotProcess_p) {
-					bar->fptr = (word *) ws[Link];
+					bar->fptr = (word *) PROC_DESC(ws)->link;
 				} else {
-					prev[Link] = ws[Link];
+					PROC_DESC(prev)->link = PROC_DESC(ws)->link;
 				}
-				if (ws[Link] == NotProcess_p) {
+				if (PROC_DESC(ws)->link == NotProcess_p) {
 					bar->bptr = prev;
 				}
 
@@ -3373,7 +3373,7 @@ static REGPARM void mproc_bar_sync (sched_t *sched, mproc_bar_t *bar, word *Wptr
 			if ((state & MPROC_BAR_PHASE) == 0) {
 				/* phase 0: re-schedule just this process */
 				atw_set (&(bar->state), MPROC_BAR_PHASE);
-				atw_set (&(Wptr[Temp]), 1);
+				atw_set (&(PROC_DESC(Wptr)->temp), 1);
 			} else {
 				/* phase 1: re-schedule all processes, reset barrier */
 				mproc_bar_complete (sched, bar);
@@ -3387,8 +3387,8 @@ static REGPARM void mproc_bar_sync (sched_t *sched, mproc_bar_t *bar, word *Wptr
 
 			save_priofinity (sched, Wptr);
 
-			atw_set (&(Wptr[Link]), NotProcess_p);
-			atw_set (&(Wptr[Temp]), 0);
+			atw_set (&(PROC_DESC(Wptr)->link), NotProcess_p);
+			atw_set (&(PROC_DESC(Wptr)->temp), 0);
 			
 			weak_write_barrier ();
 			
@@ -3397,7 +3397,7 @@ static REGPARM void mproc_bar_sync (sched_t *sched, mproc_bar_t *bar, word *Wptr
 			if (bptr == NotProcess_p) {
 				atw_set ((word *) &(bar->fptr), (word) Wptr);
 			} else {
-				atw_set ((word *) &(bptr[Link]), (word) Wptr);
+				atw_set ((word *) &(PROC_DESC(bptr)->link), (word) Wptr);
 			}
 
 			if (atw_cas (&(bar->state), state, state - 1)) {
@@ -3975,7 +3975,7 @@ static void kernel_bsc_dispatch (sched_t *sched, word return_address, word *Wptr
 	}
 	#endif
 	
-	Wptr[Link]	= NotProcess_p;
+	PROC_DESC(Wptr)->link	= NotProcess_p;
 
 	job 		= (bsc_batch_t *) allocate_batch (sched);
 	job->wptr 	= Wptr;
@@ -4634,14 +4634,14 @@ K_CALL_DEFINE_1_0 (Y_endp)
 	
 	K_CALL_PARAMS_1 (ptr);
 	ENTRY_TRACE (Y_endp, "%p", ptr);
-	/* BMESSAGE ("endp: ptr=%p count=%ld Wptr=%p\n", ptr, (long)ptr[Count], Wptr); */
+	/* BMESSAGE ("endp: ptr=%p count=%ld Wptr=%p\n", ptr, (long)PROC_DESC(ptr)->count, Wptr); */
 
 	/* save the return address for CIF */
 	save_return (sched, Wptr, return_address);
 
-	if (atw_dec_z (&(ptr[Count]))) {
-		ptr[Priofinity] = ptr[SavedPriority];
-		ptr[Iptr]	= ptr[IptrSucc]; /* copy Iptr from top of workspace */
+	if (atw_dec_z (&(PROC_DESC(ptr)->count))) {
+		PROC_DESC(ptr)->priofinity = PROC_DESC(ptr)->saved_priority;
+		PROC_DESC(ptr)->iptr	= PROC_DESC(ptr)->iptr_succ; /* copy Iptr from top of workspace */
 
 		enqueue_process (sched, ptr);
 	} else {
@@ -4668,7 +4668,7 @@ K_CALL_DEFINE_2_0 (X_par_enroll)
 	K_CALL_PARAMS_2 (count, ptr);
 	ENTRY_TRACE (X_par_enroll, "%d %p", count, ptr);
 
-	atw_add (&(ptr[Count]), count);
+	atw_add (&(PROC_DESC(ptr)->count), count);
 
 	K_ZERO_OUT ();
 }
@@ -4925,7 +4925,7 @@ K_CALL_DEFINE_1_0 (Y_setaff)
 		/* Migrate if affinity changed OR if process is on the wrong
 		 * scheduler (e.g., started by STARTP which bypasses affinity
 		 * routing but inherits the parent's priofinity). */
-		Wptr[Priofinity] = BuildPriofinity (affinity, PPriority (sched->priofinity));
+		PROC_DESC(Wptr)->priofinity = BuildPriofinity (affinity, PPriority (sched->priofinity));
 		save_return (sched, Wptr, return_address);
 		enqueue_process (sched, Wptr);
 		Wptr = get_process_or_reschedule (sched);
@@ -4993,7 +4993,7 @@ K_CALL_DEFINE_1_0 (Y_setpri)
 	}
 	
 	if (priority != PPriority (sched->priofinity)) {
-		Wptr[Priofinity] = BuildPriofinity (PAffinity (sched->priofinity), priority);
+		PROC_DESC(Wptr)->priofinity = BuildPriofinity (PAffinity (sched->priofinity), priority);
 		save_return (sched, Wptr, return_address);
 		enqueue_process (sched, Wptr);
 		Wptr = get_process_or_reschedule (sched);
@@ -5074,7 +5074,7 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 
 
 	if (temp == NotProcess_p || (temp & 1)) {
-		Wptr[Pointer] = (word) pointer;
+		PROC_DESC(Wptr)->pointer = (word) pointer;
 		save_priofinity (sched, Wptr);
 		weak_write_barrier ();
 
@@ -5093,13 +5093,13 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 		atw_set (channel_address, NotProcess_p);
 	}
 
-	//BMESSAGE ("kernel_chan_io: temp=%p, Pointer=%d, temp[Pointer]=%p\n", (void *)temp, Pointer, (void *)(((word *)temp)[Pointer]));
+	//BMESSAGE ("kernel_chan_io: temp=%p, Pointer=%d, PROC_DESC(temp)->pointer=%p\n", (void *)temp, Pointer, (void *)(PROC_DESC((word *)temp)->pointer));
 
 	if (flags & CIO_INPUT) {
 		destination_address = pointer;
-		source_address = (byte *)(((word *)temp)[Pointer]);
+		source_address = (byte *)(PROC_DESC((word *)temp)->pointer);
 	} else {
-		destination_address = (byte *)(((word *)temp)[Pointer]);
+		destination_address = (byte *)(PROC_DESC((word *)temp)->pointer);
 		source_address = pointer;
 	}
 
@@ -5120,7 +5120,7 @@ static INLINE void kernel_chan_io (word flags, word *Wptr, sched_t *sched, word 
 		Wptr = reschedule_point (sched, Wptr, (word *) temp);
 	}
 
-	DT_LOG("chan_jret", Wptr, Wptr ? Wptr[Iptr] : 0, sched, 0);
+	DT_LOG("chan_jret", Wptr, Wptr ? PROC_DESC(Wptr)->iptr : 0, sched, 0);
 	K_ZERO_OUT_JRET ();
 }
 #define BUILD_CHANNEL_IO(symbol,count,flags) \
@@ -5284,7 +5284,7 @@ K_CALL_DEFINE_1_0 (Y_xable)
 	temp = atw_val (channel_address);
 
 	if (temp == NotProcess_p || (temp & 1)) {
-		atw_set (&(Wptr[State]), ALT_WAITING | 1);
+		atw_set (&(PROC_DESC(Wptr)->state), ALT_WAITING | 1);
 		save_priofinity (sched, Wptr);
 		save_return (sched, Wptr, return_address);
 		weak_write_barrier ();
@@ -5499,7 +5499,7 @@ K_CALL_DEFINE_0_0 (X_alt)
 	K_CALL_PARAMS_0 ();
 	ENTRY_TRACE0 (X_alt);
 
-	atw_set (&(Wptr[State]), ALT_ENABLING | ALT_NOT_READY | 1);
+	atw_set (&(PROC_DESC(Wptr)->state), ALT_ENABLING | ALT_NOT_READY | 1);
 	weak_write_barrier ();
 
 	K_ZERO_OUT ();
@@ -5520,8 +5520,8 @@ K_CALL_DEFINE_0_0 (X_talt)
 	K_CALL_PARAMS_0 ();
 	ENTRY_TRACE0 (X_talt);
 
-	atw_set (&(Wptr[State]), ALT_ENABLING | ALT_NOT_READY | 1);
-	atw_set (&(Wptr[TLink]), TimeNotSet_p);
+	atw_set (&(PROC_DESC(Wptr)->state), ALT_ENABLING | ALT_NOT_READY | 1);
+	atw_set (&(PROC_DESC(Wptr)->tlink), TimeNotSet_p);
 	weak_write_barrier ();
 
 	K_ZERO_OUT ();
@@ -5530,10 +5530,10 @@ K_CALL_DEFINE_0_0 (X_talt)
 /*{{{  static INLINE void kernel_altend (word *Wptr, sched_t *sched, word return_address, bool jump)*/
 static INLINE void kernel_altend (word *Wptr, sched_t *sched, word return_address, bool jump)
 {
-	word state = atw_val (&(Wptr[State]));
+	word state = atw_val (&(PROC_DESC(Wptr)->state));
 
 	if (jump) {
-		return_address += Wptr[Temp];
+		return_address += PROC_DESC(Wptr)->temp;
 	}
 
 	save_return (sched, Wptr, return_address);
@@ -5542,7 +5542,7 @@ static INLINE void kernel_altend (word *Wptr, sched_t *sched, word return_addres
 		save_priofinity (sched, Wptr);
 		weak_write_barrier ();
 
-		if (!atw_dec_z (&(Wptr[State]))) {
+		if (!atw_dec_z (&(PROC_DESC(Wptr)->state))) {
 			kernel_scheduler (sched);
 		}
 	}
@@ -5603,21 +5603,21 @@ K_CALL_DEFINE_0_0 (Y_altwt)
 	K_CALL_PARAMS_0 ();
 	ENTRY_TRACE0 (Y_altwt);
 
-	Wptr[Temp] = NoneSelected_o;
+	PROC_DESC(Wptr)->temp = NoneSelected_o;
 
-	if ((state = atw_val (&(Wptr[State]))) & ALT_NOT_READY) {
+	if ((state = atw_val (&(PROC_DESC(Wptr)->state))) & ALT_NOT_READY) {
 		word nstate = (state | ALT_WAITING) & (~(ALT_ENABLING | ALT_NOT_READY));
 		
 		save_priofinity (sched, Wptr);
 		save_return (sched, Wptr, return_address);
 		weak_write_barrier ();
 		
-		if (likely (atw_cas (&(Wptr[State]), state, nstate))) {
+		if (likely (atw_cas (&(PROC_DESC(Wptr)->state), state, nstate))) {
 			kernel_scheduler (sched);
 		}
 	}
 	
-	atw_clear_bit (&(Wptr[State]), ALT_ENABLING_BIT);
+	atw_clear_bit (&(PROC_DESC(Wptr)->state), ALT_ENABLING_BIT);
 
 	K_ZERO_OUT ();
 }
@@ -5640,14 +5640,14 @@ K_CALL_DEFINE_0_0 (Y_taltwt)
 	K_CALL_PARAMS_0 ();
 	ENTRY_TRACE0 (Y_taltwt);
 
-	Wptr[Temp] = NoneSelected_o;
+	PROC_DESC(Wptr)->temp = NoneSelected_o;
 	
 	now = Time_GetTime (sched);
 
-	if ((state = atw_val (&(Wptr[State]))) & ALT_NOT_READY) {
+	if ((state = atw_val (&(PROC_DESC(Wptr)->state))) & ALT_NOT_READY) {
 		word nstate = (state | ALT_WAITING) & (~(ALT_ENABLING | ALT_NOT_READY));
 
-		if (Wptr[TLink] == TimeSet_p && !Time_AFTER(GetTimeField(Wptr), now)) {
+		if (PROC_DESC(Wptr)->tlink == TimeSet_p && !Time_AFTER(GetTimeField(Wptr), now)) {
 			/* already past or at timeout */
 		} else {
 			tqnode_t *tn = NULL;
@@ -5655,18 +5655,18 @@ K_CALL_DEFINE_0_0 (Y_taltwt)
 			save_priofinity (sched, Wptr);
 			save_return (sched, Wptr, return_address);
 
-			if (Wptr[TLink] == TimeSet_p) {
+			if (PROC_DESC(Wptr)->tlink == TimeSet_p) {
 				tn = add_to_timer_queue (sched, Wptr, GetTimeField(Wptr), true);
-				atw_set (&(Wptr[TLink]), (word) tn);
+				atw_set (&(PROC_DESC(Wptr)->tlink), (word) tn);
 				nstate = nstate + 1;
 			}
 			
 			weak_write_barrier ();
 			
-			if (likely (atw_cas (&(Wptr[State]), state, nstate))) {
+			if (likely (atw_cas (&(PROC_DESC(Wptr)->state), state, nstate))) {
 				kernel_scheduler (sched);
 			} else if (tn != NULL) {
-				Wptr[TLink] = TimeSet_p;
+				PROC_DESC(Wptr)->tlink = TimeSet_p;
 				delete_tqnode (sched, tn);
 				set_batch_clean ((batch_t *) tn);
 				release_tqnode (sched, tn);
@@ -5675,7 +5675,7 @@ K_CALL_DEFINE_0_0 (Y_taltwt)
 	}
 
 	SetTimeField (Wptr, now);
-	atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
+	atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 
 	K_ZERO_OUT ();
 }
@@ -5694,28 +5694,28 @@ static INLINE bool kernel_enbc (word *Wptr, sched_t *sched, word return_address,
 		if (temp != NotProcess_p) {
 			atw_set (channel_address, temp);
 			if (jump) {
-				atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
+				atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 				save_return (sched, Wptr, return_address);
 				K_ZERO_OUT_JRET ();
-			} else if (atw_val (&(Wptr[State])) & ALT_NOT_READY) {
-				atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
+			} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
+				atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 				if (set_address) {
-					atw_set (&(Wptr[Temp]), return_address);
+					atw_set (&(PROC_DESC(Wptr)->temp), return_address);
 				}
 			}
 			return true;
 		} else {
-			atw_inc (&(Wptr[State]));
+			atw_inc (&(PROC_DESC(Wptr)->state));
 		}
 	} else if (temp != ptr) {
 		if (jump) {
-			atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
+			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 			save_return (sched, Wptr, return_address);
 			K_ZERO_OUT_JRET ();
-		} else if (atw_val (&(Wptr[State])) & ALT_NOT_READY) {
-			atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
+		} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
+			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 			if (set_address) {
-				Wptr[Temp] = return_address;
+				PROC_DESC(Wptr)->temp = return_address;
 			}
 		}
 		return true;
@@ -5827,11 +5827,11 @@ K_CALL_DEFINE_2_1 (X_cenbc)
 static INLINE void kernel_enbs (word *Wptr, word return_address, bool jump, bool set_address)
 {
 	if (jump) {
-		atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
-	} else if (atw_val (&(Wptr[State])) & ALT_NOT_READY) {
-		atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
+		atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
+	} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
+		atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 		if (set_address) {
-			Wptr[Temp] = return_address;
+			PROC_DESC(Wptr)->temp = return_address;
 		}
 	}
 }
@@ -5942,22 +5942,22 @@ static INLINE bool kernel_enbt (word *Wptr, sched_t *sched, word return_address,
 	Time now = (jump || check) ? Time_GetTime (sched) : 0;
 
 	if ((jump || check) && !Time_AFTER (timeout, now)) {
-		Wptr[TLink] = TimeSet_p;
+		PROC_DESC(Wptr)->tlink = TimeSet_p;
 		SetTimeField (Wptr, now);
 		if (jump) {
-			atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
+			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 			save_return (sched, Wptr, return_address);
 			K_ZERO_OUT_JRET ();
-		} else if (atw_val (&(Wptr[State])) & ALT_NOT_READY) {
-			atw_and (&(Wptr[State]), ~(ALT_NOT_READY | ALT_ENABLING));
+		} else if (atw_val (&(PROC_DESC(Wptr)->state)) & ALT_NOT_READY) {
+			atw_and (&(PROC_DESC(Wptr)->state), ~(ALT_NOT_READY | ALT_ENABLING));
 			if (set_address) {
-				Wptr[Temp] = return_address;
+				PROC_DESC(Wptr)->temp = return_address;
 			}
 		}
 		return true;
-	} else if (Wptr[TLink] == TimeNotSet_p) {
+	} else if (PROC_DESC(Wptr)->tlink == TimeNotSet_p) {
 		SetTimeField (Wptr, timeout);
-		Wptr[TLink] = TimeSet_p;
+		PROC_DESC(Wptr)->tlink = TimeSet_p;
 	} else if (Time_AFTER (GetTimeField (Wptr), timeout)) {
 		SetTimeField (Wptr, timeout);
 	}
@@ -6073,7 +6073,7 @@ static INLINE word kernel_disc (word *Wptr, word process_address, word **channel
 
 	if (temp == (((word) Wptr) | 1)) {
 		if (atw_cas (channel_address, temp, NotProcess_p)) {
-			atw_dec (&(Wptr[State]));
+			atw_dec (&(PROC_DESC(Wptr)->state));
 			return false;
 		}
 	} else if (temp == NotProcess_p) {
@@ -6081,7 +6081,7 @@ static INLINE word kernel_disc (word *Wptr, word process_address, word **channel
 	}
 	
 	if (set_jump) {
-		Wptr[Temp] = process_address;
+		PROC_DESC(Wptr)->temp = process_address;
 	}
 
 	return true;
@@ -6109,7 +6109,7 @@ K_CALL_DEFINE_3_1 (X_disc)
 		K_ONE_OUT (false);
 	}
 
-	K_ONE_OUT (kernel_disc (Wptr, process_address, channel_address, (Wptr[Temp] == NoneSelected_o)));
+	K_ONE_OUT (kernel_disc (Wptr, process_address, channel_address, (PROC_DESC(Wptr)->temp == NoneSelected_o)));
 }
 /*}}}*/
 /*{{{  void kernel_X_cdisc (void)*/
@@ -6129,7 +6129,7 @@ K_CALL_DEFINE_2_1 (X_cdisc)
 	K_CALL_PARAMS_2 (id, channel_address);
 	ENTRY_TRACE (X_cdisc, "%d %p", id, channel_address);
 
-	K_ONE_OUT (kernel_disc (Wptr, id, channel_address, (Wptr[Temp] == NoneSelected_o)));
+	K_ONE_OUT (kernel_disc (Wptr, id, channel_address, (PROC_DESC(Wptr)->temp == NoneSelected_o)));
 }
 /*}}}*/
 /*{{{  void kernel_X_ndisc (void)*/
@@ -6176,8 +6176,8 @@ K_CALL_DEFINE_2_1 (X_diss)
 	ENTRY_TRACE (X_diss, "%p, %d", (void *)process_address, guard);
 
 	if ((fired = guard)) {
-		if (Wptr[Temp] == NoneSelected_o) {
-			Wptr[Temp] = process_address;
+		if (PROC_DESC(Wptr)->temp == NoneSelected_o) {
+			PROC_DESC(Wptr)->temp = process_address;
 		} else {
 			fired = false;
 		}
@@ -6203,8 +6203,8 @@ K_CALL_DEFINE_1_1 (X_cdiss)
 	K_CALL_PARAMS_1 (id);
 	ENTRY_TRACE (X_cdiss, "%d", id);
 
-	if (Wptr[Temp] == NoneSelected_o) {
-		Wptr[Temp] = id;
+	if (PROC_DESC(Wptr)->temp == NoneSelected_o) {
+		PROC_DESC(Wptr)->temp = id;
 		K_ONE_OUT (true);
 	}
 
@@ -6229,7 +6229,7 @@ K_CALL_DEFINE_2_1 (X_ndiss)
 	ENTRY_TRACE (X_ndiss, "%p, %d", (void *)process_address, guard);
 
 	if ((fired = guard)) {
-		Wptr[Temp] = process_address;
+		PROC_DESC(Wptr)->temp = process_address;
 	}
 	
 	K_ONE_OUT (fired);
@@ -6241,19 +6241,19 @@ K_CALL_DEFINE_2_1 (X_ndiss)
  */
 static INLINE word kernel_dist (word *Wptr, sched_t *sched, word process_address, Time timeout, bool set_jump)
 {
-	word tlink = Wptr[TLink];
+	word tlink = PROC_DESC(Wptr)->tlink;
 	
 	if (tlink == TimeSet_p) {
 		if (!Time_AFTER (timeout, GetTimeField (Wptr))) {
 			if (set_jump)
-				Wptr[Temp] = (word) process_address;
+				PROC_DESC(Wptr)->temp = (word) process_address;
 			return true;
 		}
 	} else if (tlink != TimeNotSet_p) {
 		tqnode_t *tn = (tqnode_t *) tlink;
 		bool fired;
 		
-		Wptr[TLink] = TimeNotSet_p;
+		PROC_DESC(Wptr)->tlink = TimeNotSet_p;
 		
 		if ((fired = remove_from_timer_queue (sched, tn, Wptr))) {
 			Time now = tn->time;
@@ -6261,13 +6261,13 @@ static INLINE word kernel_dist (word *Wptr, sched_t *sched, word process_address
 			SetTimeField (Wptr, now);
 
 			if (Time_AFTER (timeout, now)) {
-				Wptr[TLink] = TimeSet_p;
+				PROC_DESC(Wptr)->tlink = TimeSet_p;
 				fired = false;
 			} else if (set_jump) {
-				Wptr[Temp] = (word) process_address;
+				PROC_DESC(Wptr)->temp = (word) process_address;
 			}
 		} else {
-			atw_dec (&(Wptr[State]));
+			atw_dec (&(PROC_DESC(Wptr)->state));
 		}
 
 		release_tqnode (sched, tn);
@@ -6301,7 +6301,7 @@ K_CALL_DEFINE_3_1 (X_dist)
 		K_ONE_OUT (false);
 	}
 	
-	K_ONE_OUT (kernel_dist (Wptr, sched, process_address, timeout, (Wptr[Temp] == NoneSelected_o)));
+	K_ONE_OUT (kernel_dist (Wptr, sched, process_address, timeout, (PROC_DESC(Wptr)->temp == NoneSelected_o)));
 }
 /*}}}*/
 /*{{{  void kernel_X_cdist (void)*/
@@ -6321,7 +6321,7 @@ K_CALL_DEFINE_2_1 (X_cdist)
 	K_CALL_PARAMS_2 (id, timeout);
 	ENTRY_TRACE (X_cdist, "%d, %d", id, timeout);
 
-	K_ONE_OUT (kernel_dist (Wptr, sched, id, timeout, (Wptr[Temp] == NoneSelected_o)));
+	K_ONE_OUT (kernel_dist (Wptr, sched, id, timeout, (PROC_DESC(Wptr)->temp == NoneSelected_o)));
 }
 /*}}}*/
 /*{{{  void kernel_X_ndist (void)*/
@@ -6567,7 +6567,7 @@ void ccsp_interrupt_handler (int irq)
 {
 	if (inttab[irq] != NotProcess_p) {
 		word *Wptr = inttab[irq];
-		mail_process (PAffinity (Wptr[Priofinity]), Wptr);
+		mail_process (PAffinity (PROC_DESC(Wptr)->priofinity), Wptr);
 		inttab[irq] = NotProcess_p;
 	} else {
 		intcount[irq]++;
@@ -6605,13 +6605,13 @@ K_CALL_DEFINE_2_0 (Y_wait_int)
 		/* no interrupt yet */
 		save_priofinity (sched, Wptr);
 		save_return (sched, Wptr, return_address);
-		Wptr[Temp] = 0;
+		PROC_DESC(Wptr)->temp = 0;
 		inttab[number] = Wptr;
 		sti ();
 		
 		kernel_scheduler (sched);
 	} else {
-		Wptr[Temp] = intcount[number];
+		PROC_DESC(Wptr)->temp = intcount[number];
 		intcount[number] = 0;
 		sti ();
 
@@ -6660,7 +6660,7 @@ K_CALL_DEFINE_1_0 (X_kernel_run)
 		#endif
 		
 		Wptr 			= kr_dptr->ws_ptr;
-		Wptr[IptrSucc]		= (word) K_CALL_PTR (Y_dynproc_exit);
+		PROC_DESC(Wptr)->iptr_succ		= (word) K_CALL_PTR (Y_dynproc_exit);
 		return_address 		= (word) kr_dptr->entrypoint;
 	}
 
@@ -6845,7 +6845,7 @@ K_CALL_DEFINE_3_0 (Y_mppserialise)
 	K_CALL_PARAMS_3 (count, destination_address, channel_address);
 
 	/* actually pass a pointer to it, may need to nullify */
-	process_address = (word)(((word *)(*channel_address))[Pointer]);
+	process_address = (word)(PROC_DESC((word *)(*channel_address))->pointer);
 	if (!mpcb_mpp_serialise ((mp_ctrlblk **)process_address, (unsigned int *)((word *)process_address + 1), (word *)destination_address, (int *)count)) {
 		if (ccsp_ignore_errors) {
 			kernel_scheduler (sched);
@@ -6879,7 +6879,7 @@ K_CALL_DEFINE_3_0 (Y_mppdeserialise)
 	K_CALL_PARAMS_3 (channel_address, source_address, count);
 
 	/* pass a pointer to the ws locn */
-	process_address = (word)(((word *)(*channel_address))[Pointer]);
+	process_address = (word)(PROC_DESC((word *)(*channel_address))->pointer);
 	if (!mpcb_mpp_deserialise ((word)source_address, (int)count, (mp_ctrlblk **)process_address, (unsigned int *)((word *)process_address + 1))) {
 		if (ccsp_ignore_errors) {
 			kernel_scheduler (sched);
