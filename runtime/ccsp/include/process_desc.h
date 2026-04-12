@@ -101,8 +101,22 @@ typedef struct process_descriptor {
  *	is in practice -- both are alignof(word) -- but the diagnostic
  *	is annoyingly conservative).
  */
-#define PROC_DESC(wptr) \
-	((process_descriptor_t *)(void *)((word *)(wptr) - PROC_DESC_NEG_WORDS))
+/*
+ *	An inline function rather than a macro, on purpose: this lets
+ *	the compiler enforce that the argument is a `word *` (i.e. a
+ *	workspace pointer), not a `process_descriptor_t *`.  Phase 3D-3b
+ *	hit a silent bug where a `process_t` (a desc pointer) was
+ *	accidentally wrapped in PROC_DESC, which type-checked because
+ *	the macro version cast to (word *) and so accepted any pointer,
+ *	but produced a wrong address (desc was used as if it were a
+ *	wptr, putting the result 9 words below the descriptor).  With
+ *	a typed parameter, the same bug becomes an "incompatible pointer
+ *	types" diagnostic at every offending call site.
+ */
+static inline process_descriptor_t *PROC_DESC(word *wptr)
+{
+	return (process_descriptor_t *)(void *)((word *)wptr - PROC_DESC_NEG_WORDS);
+}
 
 /*
  *	PROC_WPTR(desc) -- inverse of PROC_DESC, recovering the workspace
