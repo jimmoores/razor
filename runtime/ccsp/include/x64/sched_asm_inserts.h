@@ -242,21 +242,13 @@ extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((no
 /*}}}*/
 
 /*{{{  entry and label functions */
-/* K_ENTRY: switches to kernel stack and calls init function.
- * Set rsp to kernel stack.  Pass stack as param0 (rdi), Fptr as sched (rsi),
- * Wptr as Wptr (rdx) per System V ABI.  Call init function. */
+/* K_ENTRY: kernel boot dispatch (Phase 2).
+ * Calls the noreturn ccsp_kernel_enter helper in x64_cif.S, which
+ * switches rsp to the kernel stack and tail-calls `init` with the
+ * legacy 3-arg runtime convention init(stack, Fptr, Wptr). */
+extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn));
 #define K_ENTRY(init,stack,Wptr,Fptr) \
-	__asm__ __volatile__ ("				\n" \
-		"	movq %0, %%rsp			\n" \
-		"	movq %0, %%rdi			\n" \
-		"	movq %2, %%rsi			\n" \
-		"	movq %1, %%rdx			\n" \
-		"	callq *%3			\n" \
-		: /* no outputs */ \
-		: "r" ((unsigned long)(stack)), "r" ((unsigned long)(Wptr)), \
-		  "r" ((unsigned long)(Fptr)), "r" (init) \
-		: "memory", "rdi", "rsi", "rdx", "rcx", "r8", "r9", \
-		  "r10", "r11", "rax", "cc")
+	ccsp_kernel_enter ((void *)(init), (void *)(stack), (word *)(Wptr), (word *)(Fptr))
 /*}}}*/
 
 /*{{{  CIF helpers */

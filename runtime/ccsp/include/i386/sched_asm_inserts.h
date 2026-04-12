@@ -164,13 +164,13 @@ extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((no
 /*}}}*/
 
 /*{{{  entry and label functions */
+/* K_ENTRY: kernel boot dispatch (Phase 2).
+ * Calls the noreturn ccsp_kernel_enter helper in i386_cif.S, which
+ * switches esp to the kernel stack and tail-jumps to `init` with the
+ * regparm(3) runtime convention init(stack, Fptr, Wptr). */
+extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn));
 #define K_ENTRY(init,stack,Wptr,Fptr) \
-	__asm__ __volatile__ ("				\n" \
-		"	movl %0, %%esp			\n" \
-		"	call *%3			\n" \
-		: "+a" (stack), "+c" (Wptr), "+d" (Fptr) \
-		: "r" (init) \
-		: "memory", "cc")
+	ccsp_kernel_enter ((void *)(init), (void *)(stack), (word *)(Wptr), (word *)(Fptr))
 /*}}}*/
 
 /*{{{  CIF helpers */

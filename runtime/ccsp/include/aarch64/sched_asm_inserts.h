@@ -273,16 +273,13 @@ extern void ccsp_dispatch_process (sched_t *sched, word *Wptr) __attribute__((no
 /*}}}*/
 
 /*{{{  entry and label functions */
+/* K_ENTRY: kernel boot dispatch (Phase 2).
+ * Calls the noreturn ccsp_kernel_enter helper in aarch64_cif.S, which
+ * switches sp to the kernel stack and tail-calls `init` with the
+ * legacy 3-arg runtime convention init(stack, Fptr, Wptr). */
+extern void ccsp_kernel_enter (void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn));
 #define K_ENTRY(init,stack,Wptr,Fptr) \
-	__asm__ __volatile__ ("\t\t\t\t\n" \
-		"\tmov x0, %0\t\t\t\n" \
-		"\tmov x1, %2\t\t\t\n" \
-		"\tmov x2, %1\t\t\t\n" \
-		"\tmov sp, x0\t\t\t\n" \
-		"\tblr %3\t\t\t\n" \
-		: /* no outputs */ \
-		: "r" (stack), "r" (Wptr), "r" (Fptr), "r" (init) \
-		: "x0", "x1", "x2", "memory", "x30", "cc")
+	ccsp_kernel_enter ((void *)(init), (void *)(stack), (word *)(Wptr), (word *)(Fptr))
 /*}}}*/
 
 /*{{{  CIF helpers */

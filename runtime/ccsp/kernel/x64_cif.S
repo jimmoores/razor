@@ -17,6 +17,40 @@
 .align 8
 
 /*
+ * void ccsp_kernel_enter(void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn))
+ *
+ * Phase 2: kernel boot primitive.  Replaces the inline-asm K_ENTRY
+ * macro called from ccsp_kernel_entry() in entry.c.  Switches the
+ * stack pointer to the freshly-laid-out kernel stack and tail-calls
+ * `init` (typically kernel_Y_rtthreadinit) with the legacy 3-arg
+ * runtime convention:  init(stack, Fptr, Wptr) where stack→p0,
+ * Fptr→sched, Wptr→Wptr.
+ *
+ * Arguments (System V x64 ABI):
+ *   rdi = init   (function to call)
+ *   rsi = stack  (kernel stack base; becomes p0 of init)
+ *   rdx = Wptr   (initial process workspace)
+ *   rcx = Fptr   (initial run-queue front pointer; becomes sched of init)
+ */
+.global ccsp_kernel_enter
+.type ccsp_kernel_enter, @function
+ccsp_kernel_enter:
+	movq	%rdi, %r10		/* save init in scratch */
+	movq	%rsi, %rsp		/* sp = stack (16-byte aligned by entry.c) */
+	movq	%rsi, %rdi		/* rdi = stack (p0 of init) */
+	movq	%rcx, %rsi		/* rsi = Fptr (sched of init) */
+	/* rdx = Wptr (already correct) */
+	/* Use callq (not jmpq) so the call instruction pushes a fake
+	 * return address: x64 SysV ABI expects rsp ≡ 8 (mod 16) on
+	 * entry to a function.  We're noreturn so the return address
+	 * is dead, but the alignment must be correct or libc functions
+	 * (notably pthread_create's internal alignment-sensitive code)
+	 * will SIGSEGV. */
+	callq	*%r10			/* call init (never returns) */
+	ud2				/* unreachable */
+.size ccsp_kernel_enter, . - ccsp_kernel_enter
+
+/*
  * void ccsp_dispatch_process(sched_t *sched, word *Wptr) __attribute__((noreturn))
  *
  * Phase 2: kernel-to-user dispatch primitive.  Replaces the inline-asm

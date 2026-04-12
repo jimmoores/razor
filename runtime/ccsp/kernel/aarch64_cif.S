@@ -1,6 +1,33 @@
 .text
 .align 2
 
+// void ccsp_kernel_enter(void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn))
+//
+// Phase 2: kernel boot primitive.  Replaces the inline-asm K_ENTRY
+// macro called from ccsp_kernel_entry() in entry.c.  Switches sp to
+// the freshly-laid-out kernel stack and tail-calls `init` (typically
+// kernel_Y_rtthreadinit) with the legacy 3-arg runtime convention:
+//   init(stack, Fptr, Wptr) where stack->p0, Fptr->sched, Wptr->Wptr.
+//
+// Arguments (AAPCS):
+//   x0 = init
+//   x1 = stack  (becomes p0)
+//   x2 = Wptr
+//   x3 = Fptr   (becomes sched)
+#if defined(__APPLE__)
+.global _ccsp_kernel_enter
+_ccsp_kernel_enter:
+#else
+.global ccsp_kernel_enter
+ccsp_kernel_enter:
+#endif
+    mov x9, x0           // save init in scratch
+    mov sp, x1           // sp = stack
+    mov x0, x1           // x0 = stack (p0)
+    mov x1, x3           // x1 = Fptr (sched)
+    // x2 = Wptr (already correct)
+    br x9                // tail-call init
+
 // void ccsp_dispatch_process(sched_t *sched, word *Wptr) __attribute__((noreturn))
 //
 // Phase 2: kernel-to-user dispatch primitive.  Replaces the inline-asm

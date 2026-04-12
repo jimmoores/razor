@@ -17,6 +17,42 @@
 .align 4
 
 /*
+ * void ccsp_kernel_enter(void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn))
+ *
+ * Phase 2: kernel boot primitive.  Replaces the inline-asm K_ENTRY
+ * macro called from ccsp_kernel_entry() in entry.c.  Switches esp to
+ * the freshly-laid-out kernel stack and tail-jumps to `init`
+ * (typically kernel_Y_rtthreadinit) with the regparm(3) runtime
+ * convention: init(stack, Fptr, Wptr) where eax=stack=p0,
+ * edx=Fptr=sched, ecx=Wptr.
+ *
+ * cdecl args (incoming):
+ *   4(%esp) = init
+ *   8(%esp) = stack
+ *  12(%esp) = Wptr
+ *  16(%esp) = Fptr
+ *
+ * ebx is callee-saved per cdecl, but we're noreturn so the caller can
+ * never observe it.  Use it as a scratch to hold init across the SP
+ * switch (the original args on the old stack become inaccessible).
+ */
+.globl ccsp_kernel_enter
+.type ccsp_kernel_enter, @function
+ccsp_kernel_enter:
+	movl	4(%esp), %ebx		/* ebx = init (scratch) */
+	movl	8(%esp), %eax		/* eax = stack (will be p0) */
+	movl	12(%esp), %ecx		/* ecx = Wptr */
+	movl	16(%esp), %edx		/* edx = Fptr (will be sched) */
+	movl	%eax, %esp		/* esp = stack (16-byte aligned by entry.c) */
+	/* Use call (not jmp) so the call pushes a fake return address:
+	 * i386 cdecl/SysV ABI expects esp ≡ 12 (mod 16) on entry to a
+	 * function.  We're noreturn so the return address is dead, but
+	 * the alignment must be correct. */
+	call	*%ebx			/* call init (never returns) */
+	ud2				/* unreachable */
+.size ccsp_kernel_enter, . - ccsp_kernel_enter
+
+/*
  * void ccsp_dispatch_process(sched_t *sched, word *Wptr) __attribute__((noreturn))
  *
  * Phase 2: kernel-to-user dispatch primitive.  Replaces the inline-asm
