@@ -56,8 +56,8 @@ typedef struct _tqnode_t tqnode_t;
 #define BATCH_ALLOC_SIZE (sizeof(word) * 16)
 struct _batch_t {
 	/* persistent state */
-	word		*Fptr;
-	word		*Bptr;
+	process_t	Fptr;	/* Phase 3D-3b: was `word *Wptr`; now a desc ptr */
+	process_t	Bptr;	/*               see runtime/ccsp/include/process_desc.h */
 	word		size;
 	/* link state */
 	batch_t		*next;
@@ -71,8 +71,8 @@ struct _batch_t {
 } _PACK_STRUCT;
 
 static inline void init_batch_t (batch_t *batch) {
-	batch->Fptr 		= NotProcess_p;
-	batch->Bptr 		= NotProcess_p;
+	batch->Fptr 		= NULL;
+	batch->Bptr 		= NULL;
 	batch->size		= 0;
 	batch->next		= NULL;
 	att_init (&(batch->state), 0);
@@ -80,7 +80,7 @@ static inline void init_batch_t (batch_t *batch) {
 }
 
 static inline void reinit_batch_t (batch_t *batch) {
-	batch->Fptr 	= NotProcess_p;
+	batch->Fptr 	= NULL;
 	batch->size	= 0;
 }
 /*}}}*/
@@ -131,9 +131,17 @@ struct _bsc_job_t {
 } _PACK_STRUCT;
 
 struct _bsc_batch_t {
-	/* batch (must match layout of batch_t */
-	word		*wptr;				/* fptr single proc batch */
-	word		*bptr;				/* don't use */
+	/* batch -- must match layout of batch_t for the schedule_batch
+	 * type-pun.  Phase 3D-3b changed Fptr/Bptr in batch_t from
+	 * `word *` to process_t (a process descriptor pointer); the
+	 * `desc` field below mirrors that.  The legacy name `wptr`
+	 * was misleading -- it was always semantically "the single
+	 * process in this single-element batch", just stored as a
+	 * Wptr.  Now stored as a desc, accessed as `job->desc->iptr`
+	 * etc., and the kernel recovers the AJW Wptr via PROC_WPTR
+	 * if it ever needs to. */
+	process_t	desc;				/* fptr single proc batch */
+	process_t	bdesc;				/* don't use */
 	word		size;				/* don't use */
 	bsc_batch_t	*next;
 	atomic_t	state;				/* don't use */
