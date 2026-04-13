@@ -956,17 +956,15 @@ static void compose_move_loadptrs_aarch64 (tstate *ts)
 	case VALUE_LABADDR:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_c_reg), ARG_REG, REG_X16));
 		break;
-	case VALUE_LOCALPTR: {
-		intptr_t off_c = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_c_reg));
-		if (off_c == 0) {
+	case VALUE_LOCALPTR:
+		if (!constmap_regconst (ts->stack->old_c_reg)) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X16));
 		} else {
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, off_c, ARG_REG, REG_X16));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, REG_X16));
 		}
 		break;
-	}
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_c_reg)), ARG_REG, REG_X16));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, REG_X16));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, REG_X16));
@@ -978,17 +976,15 @@ static void compose_move_loadptrs_aarch64 (tstate *ts)
 	case VALUE_LABADDR:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, REG_X17));
 		break;
-	case VALUE_LOCALPTR: {
-		intptr_t off_b = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg));
-		if (off_b == 0) {
+	case VALUE_LOCALPTR:
+		if (!constmap_regconst (ts->stack->old_b_reg)) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X17));
 		} else {
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, off_b, ARG_REG, REG_X17));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, REG_X17));
 		}
 		break;
-	}
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG, REG_X17));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, REG_X17));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, REG_X17));
@@ -1443,7 +1439,7 @@ static void compose_aarch64_move (tstate *ts) {
 		break;
 	case VALUE_LOCALPTR:
 		if (constmap_regconst (ts->stack->old_c_reg)) {
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_c_reg)), ARG_REG, ts->stack->old_c_reg));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, ts->stack->old_c_reg));
 		} else {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, ts->stack->old_c_reg));
 		}
@@ -1460,7 +1456,7 @@ static void compose_aarch64_move (tstate *ts) {
 		break;
 	case VALUE_LOCALPTR:
 		if (constmap_regconst (ts->stack->old_b_reg)) {
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG, ts->stack->old_b_reg));
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, REG_WPTR, ARG_CONST, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, ts->stack->old_b_reg));
 		} else {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, ts->stack->old_b_reg));
 		}
@@ -1671,7 +1667,7 @@ static void compose_iospace_read_aarch64 (tstate *ts, int portreg, int addrreg, 
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, constmap_regconst (portreg), ARG_REG, tmp_reg));
 		break;
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (portreg)), ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (portreg) << WSH, ARG_REG, tmp_reg));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, portreg, ARG_REG, tmp_reg));
@@ -1697,13 +1693,13 @@ static void compose_iospace_read_aarch64 (tstate *ts, int portreg, int addrreg, 
 	case VALUE_LOCALPTR:
 		switch (width) {
 		case 8:
-			add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REG, data_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (addrreg))));
+			add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REG, data_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (addrreg) << WSH));
 			break;
 		case 16:
-			add_to_ins_chain (compose_ins (INS_MOVEW, 1, 1, ARG_REG, data_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (addrreg))));
+			add_to_ins_chain (compose_ins (INS_MOVEW, 1, 1, ARG_REG, data_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (addrreg) << WSH));
 			break;
 		default:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, data_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (addrreg))));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, data_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (addrreg) << WSH));
 			break;
 		}
 		break;
@@ -1738,13 +1734,13 @@ static void compose_iospace_write_aarch64 (tstate *ts, int portreg, int addrreg,
 	case VALUE_LOCALPTR:
 		switch (width) {
 		case 8:
-			add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (addrreg)), ARG_REG, data_reg));
+			add_to_ins_chain (compose_ins (INS_MOVEB, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (addrreg) << WSH, ARG_REG, data_reg));
 			break;
 		case 16:
-			add_to_ins_chain (compose_ins (INS_MOVEW, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (addrreg)), ARG_REG, data_reg));
+			add_to_ins_chain (compose_ins (INS_MOVEW, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (addrreg) << WSH, ARG_REG, data_reg));
 			break;
 		default:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (addrreg)), ARG_REG, data_reg));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (addrreg) << WSH, ARG_REG, data_reg));
 			break;
 		}
 		break;
@@ -1769,7 +1765,7 @@ static void compose_iospace_write_aarch64 (tstate *ts, int portreg, int addrreg,
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, constmap_regconst (portreg), ARG_REG, tmp_reg));
 		break;
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (portreg)), ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (portreg) << WSH, ARG_REG, tmp_reg));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, portreg, ARG_REG, tmp_reg));
@@ -2360,11 +2356,10 @@ static void compose_aarch64_return (tstate *ts)
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
 	}
 
-	/* Pop (4+M) words for normal PROCs, 4 words for JENTRY PROCs
-	 * (which skip the ETCS4 M drop). */
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((phase4a_cur_proc_is_jentry ? 4 : (4 + PHASE4A_METADATA_RESERVE_WORDS)) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	/* Pop 32 bytes from Wptr (I_CALL frame = 4 words on 64-bit) */
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 32, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 
-	/* Jump to return address at post-pop Wptr - 4*WSH (still -32). */
+	/* Jump to return address at old Wptr[0] (now at Wptr[-32]) */
 	add_to_ins_chain (compose_ins (INS_RET, 0, 0));
 
 	for (i = ts->numfuncresults - 1; i >= 0; i--) {
@@ -3065,7 +3060,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts3, s0")));
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
 					ARG_REGIND, ts->stack->old_a_reg));
@@ -3078,7 +3073,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td3, d0")));
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				char buf[128];
-				int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
 				if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
 					snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
 				} else {
@@ -3101,7 +3096,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\ts3, s0")));
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
 					ARG_REGIND, ts->stack->old_a_reg));
@@ -3114,7 +3109,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tfmov\td3, d0")));
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				char buf[128];
-				int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
+				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
 				if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
 					snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
 				} else {
@@ -3227,7 +3222,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		aarch64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
-				ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
 				ARG_REGIND, ts->stack->old_a_reg));
@@ -3280,7 +3275,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)prec,
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)prec,
@@ -3302,7 +3297,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 	                if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)132,
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)132,
@@ -3325,7 +3320,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		aarch64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
-				ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
 				ARG_REGIND, ts->stack->old_a_reg));
@@ -3343,7 +3338,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		aarch64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
-				ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0,
 				ARG_REGIND, ts->stack->old_a_reg));
@@ -3361,7 +3356,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)164,
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_FIST64, 1, 1,
 					ARG_CONST, (intptr_t)164,
@@ -3381,7 +3376,7 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		aarch64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 			char buf[128];
-			int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
+			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
 			if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
 				snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
 				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));

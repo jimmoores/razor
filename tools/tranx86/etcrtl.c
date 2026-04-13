@@ -65,88 +65,6 @@
 #endif	/* !EXIT_FAILURE */
 /*}}}*/
 
-/*
- * Phase 4A: running local-area depth of the current PROC, tracked
- * from I_AJW operands.  Reset to 0 at each ETCS4 (PROC entry).  Each
- * I_AJW -K adds K to the cutoff; each I_AJW +K subtracts.  Used by
- * LOCAL_BYTE_OFFSET (in transputer.h) to decide whether an LDL/STL
- * operand addresses a local (no shift) or a non-local return/arg
- * slot (shift by M).
- */
-int phase4a_cur_local_cutoff = 0;
-
-/*
- * Phase 4A: in_par_subframe tracks whether the current compilation
- * point is inside a PAR sub-frame (past an I_STARTP in the current
- * PROC, inside a PAR's body branches).  Used to distinguish LDLP 0
- * as a "static link for nested PROC call" (shifted, when false) from
- * "pointer to slot 0 of a PAR sub-frame" (unshifted, when true).
- *
- * Reset to 0 at each ETCS4.  Set to 1 at each I_STARTP.
- */
-int phase4a_in_par_subframe = 0;
-
-/*
- * Phase 4A: set to 1 in ETCS4 handler when the current PROC is the
- * JENTRY target.  These PROCs skip the M-word reservation drop and
- * don't shift LDL/STL/LDLP -- their Wptr is pre-positioned at the
- * baseline by the runtime (libkrocif's _occ_enter and io.c's
- * per-I/O-process workspace setup).
- */
-int phase4a_cur_proc_is_jentry = 0;
-
-/*
- * Phase 4A: PAR sub-frame cutoff transition tracking.
- *
- * occ21's PAR code compiles into:
- *   LOADLABDIFF L5 L4    -- push (L5 - L4) onto the stack
- *   LDLP -N              -- push sub-workspace pointer (N words below)
- *   STARTP               -- spawn a new process at L5 with the sub-workspace
- *   L4: <body 1 code>    -- main thread continues here (inline)
- *       ENDP
- *   L5: <body 2 code>    -- spawned child's iptr points here
- *       ENDP
- *   L2: <joinlab>        -- both branches converge here after ENDP
- *
- * Body 1 runs inline in the parent PROC: its r14 IS the parent's r14,
- * so its LDL accesses need the same cutoff as the parent.
- *
- * Body 2 runs as a spawned child with r14 set to (parent_r14 - N*WSH):
- * its LDL indices for S19-style PARs correspond to slots N words *above*
- * the child's Wptr (= parent's slots).  Slots at body-2-slot indices
- * [N, N+L-1] map to the parent's L-area (locals, unshifted in the parent),
- * and body 2's LDL must match that -- so body 2's effective cutoff is
- * parent_L + N.  Slots at body-2-slot indices >= N+L map to the parent's
- * extras area and stay shifted.
- *
- * To implement this, we track:
- * - phase4a_pending_body2_label: the L5-style label from LOADLABDIFF,
- *   captured when LOADLABDIFF precedes a STARTP.  Set at LOADLABDIFF,
- *   confirmed (latched) at STARTP.
- * - phase4a_last_ldlp_neg_operand: the operand of the most recent LDLP
- *   with a negative operand, captured immediately before a STARTP.  This
- *   is the sub-workspace offset in words (negated).
- * - phase4a_par_sub_offset, phase4a_par_saved_cutoff: at STARTP, record
- *   sub_offset = -phase4a_last_ldlp_neg_operand, and save the parent's
- *   cutoff.  These persist until the body-2 label is emitted.
- * - phase4a_pending_body2_label_active: set at STARTP when the label is
- *   armed; cleared when the SETLABEL transition fires.
- *
- * At SETLABEL(label) where label == phase4a_pending_body2_label and
- * phase4a_pending_body2_label_active is set, raise the cutoff to
- * (saved_cutoff + sub_offset) for the duration of body 2.  The cutoff
- * is NOT automatically restored at any subsequent ENDP -- the joinlab
- * label (L2 in the example) marks the end of the PAR and restores it.
- * (The joinlab is derived from an STL 0 + a saved label earlier in the
- * PAR setup, but for simplicity we just reset at the next ETCS4, since
- * no caller PROC re-enters into the middle of a PAR.)
- */
-int phase4a_pending_body2_label = -1;
-int phase4a_pending_body2_label_active = 0;
-int phase4a_last_ldlp_neg_operand = 0;
-int phase4a_par_sub_offset = 0;
-int phase4a_par_saved_cutoff = 0;
-
 #define CONVMISSING(X) fprintf (stderr, "%s: error: missing conversion for %s\n", progname, X)
 
 /*{{{  private variables*/
@@ -1276,15 +1194,6 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					ts->incasetable = 0;
 				}
 				add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, etc_code->opd));
-				/* Phase 4A: if this label is the pending body-2 entry
-				 * for a STARTP that's been latched, transition to
-				 * body 2's higher cutoff so LDLs that reach into the
-				 * parent's local area (now appearing at higher indices
-				 * from body 2's offset Wptr) are treated as locals. */
-				if (phase4a_pending_body2_label_active && etc_code->opd == phase4a_pending_body2_label) {
-					phase4a_cur_local_cutoff = phase4a_par_saved_cutoff + phase4a_par_sub_offset;
-					phase4a_pending_body2_label_active = 0;
-				}
 				/* might be a relevant label for code-mapping */
 				if (ts->cpinfo && (ts->magic_pending & TS_MAGIC_JOINLAB)) {
 					procinf *refd;
@@ -1685,33 +1594,6 @@ fprintf (stderr, "setting ts->ws_size = %d\n", y_opd);
 				/* not needed anymore -- caller puts return address in for us */
 				        /* pop return address into Wptr[0] */
 				        /* add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REGIND, REG_WPTR)); */
-				/* Phase 4A: reserve M words at the bottom of the PROC's
-				 * frame via an extra Wptr drop.  Balanced by I_RET's
-				 * (4+M)-word pop in compose_*_return.  Reset the local-
-				 * area cutoff tracker since each PROC entry starts with
-				 * an empty locals area.
-				 *
-				 * EXCEPT if this PROC is the JENTRY target: its Wptr
-				 * is set up at baseline position by libkrocif's
-				 * _occ_enter, and its nested PROCs reach its locals
-				 * via static links with baseline byte offsets.  Skip
-				 * the drop for such PROCs, and flag it so LDL/STL/
-				 * LDLP don't shift and compose_*_return pops only 4. */
-				phase4a_cur_local_cutoff = 0;
-				phase4a_in_par_subframe = 0;
-				phase4a_cur_proc_is_jentry = 0;
-				phase4a_pending_body2_label = -1;
-				phase4a_pending_body2_label_active = 0;
-				phase4a_last_ldlp_neg_operand = 0;
-				phase4a_par_sub_offset = 0;
-				phase4a_par_saved_cutoff = 0;
-				if (ts->jentry_name && etc_code->o_len == (int) strlen (ts->jentry_name)
-						&& !strncmp (etc_code->o_bytes, ts->jentry_name, etc_code->o_len)) {
-					phase4a_cur_proc_is_jentry = 1;
-				}
-				if (PHASE4A_METADATA_RESERVE_WORDS > 0 && !phase4a_cur_proc_is_jentry) {
-					add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) -(PHASE4A_METADATA_RESERVE_WORDS << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-				}
 				/* reset FPU */
 				arch->compose_reset_fregs (ts);
 				tstack_fpclear (ts->stack, arch);
@@ -2159,13 +2041,6 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 						labs[1] = etc_code->opd;
 						constmap_new (ts->stack->a_reg, VALUE_LABDIFF, (intptr_t)labs, tmp_ins);
 						add_to_ins_chain (tmp_ins);
-						/* Phase 4A: LOADLABDIFF y_opd etc_code->opd is the
-						 * PAR startp pattern, pushing (y_opd - etc_code->opd)
-						 * = body2_label - body1_label.  Save y_opd as the
-						 * candidate body-2 label; it's latched at STARTP
-						 * and used at the matching SETLABEL to transition
-						 * to body 2's cutoff. */
-						phase4a_pending_body2_label = y_opd;
 					}
 					break;
 					/*}}}*/
@@ -2194,7 +2069,7 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 					}
 					deferred_cond (ts);
 					/* decrement count */
-					add_to_ins_chain (compose_ins (INS_DEC, 1, 2, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff + 1), ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff + 1), ARG_REG | ARG_IMP, REG_CC));
+					add_to_ins_chain (compose_ins (INS_DEC, 1, 2, ARG_REGIND | ARG_DISP, REG_WPTR, (le_wsoff+1) << WSH, ARG_REGIND | ARG_DISP, REG_WPTR, (le_wsoff+1) << WSH, ARG_REG | ARG_IMP, REG_CC));
 					/* jump over if count == 0 */
 					if (unused && !options.pause_at_loopend) {
 						ts->stack->must_set_cmp_flags = 0;
@@ -2204,7 +2079,7 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 						compose_cond_jump (ts, CC_NONE, le_l1);
 						/* increment index */
 						if (!unused) {
-							add_to_ins_chain (compose_ins (INS_INC, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff), ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff)));
+							add_to_ins_chain (compose_ins (INS_INC, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, le_wsoff << WSH, ARG_REGIND | ARG_DISP, REG_WPTR, le_wsoff << WSH));
 						}
 						if (options.pause_at_loopend) {
 							/* FIX: if we're using the new CCSP in multiprocessor-mode, better do this as PAUSE then JUMP */
@@ -2237,15 +2112,15 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 				}
 				deferred_cond (ts);
 				/* decrement count */
-				add_to_ins_chain (compose_ins (INS_DEC, 1, 2, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff + 1), ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff + 1), ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_DEC, 1, 2, ARG_REGIND | ARG_DISP, REG_WPTR, (le_wsoff+1) << WSH, ARG_REGIND | ARG_DISP, REG_WPTR, (le_wsoff+1) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				/* jump over if count == 0 */
 				ts->stack->must_set_cmp_flags = 0;
 				compose_cond_jump (ts, CC_NONE, le_l1);
 				/* increment index (by STEP) */
 				tmp_reg = tstack_newreg (ts->stack);
-				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff + 2), ARG_REG, tmp_reg));
-				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff), ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff)));
-				/* add_to_ins_chain (compose_ins (INS_INC, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff), ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff))); */
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (le_wsoff + 2) << WSH, ARG_REG, tmp_reg));
+				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, le_wsoff << WSH, ARG_REGIND | ARG_DISP, REG_WPTR, le_wsoff << WSH));
+				/* add_to_ins_chain (compose_ins (INS_INC, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, le_wsoff << WSH, ARG_REGIND | ARG_DISP, REG_WPTR, le_wsoff << WSH)); */
 				if (options.pause_at_loopend) {
 					/* FIX: if we're using the new CCSP in multiprocessor-mode, better do this as PAUSE then JUMP */
 					if ((options.kernel_interface & (KRNLIFACE_NEWCCSP | KRNLIFACE_MP)) == (KRNLIFACE_NEWCCSP | KRNLIFACE_MP)) {
@@ -2275,12 +2150,12 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 				}
 				deferred_cond (ts);
 				/* decrement count */
-				add_to_ins_chain (compose_ins (INS_DEC, 1, 2, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff + 1), ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff + 1), ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_DEC, 1, 2, ARG_REGIND | ARG_DISP, REG_WPTR, (le_wsoff+1) << WSH, ARG_REGIND | ARG_DISP, REG_WPTR, (le_wsoff+1) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				/* jump over if count == 0 */
 				ts->stack->must_set_cmp_flags = 0;
 				compose_cond_jump (ts, CC_NONE, le_l1);
 				/* increment index */
-				add_to_ins_chain (compose_ins (INS_DEC, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff), ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_SLOT_BYTE_OFFSET (le_wsoff)));
+				add_to_ins_chain (compose_ins (INS_DEC, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, le_wsoff << WSH, ARG_REGIND | ARG_DISP, REG_WPTR, le_wsoff << WSH));
 				if (options.pause_at_loopend) {
 					/* FIX: if we're using the new CCSP in multiprocessor-mode, better do this as PAUSE then JUMP */
 					if ((options.kernel_interface & (KRNLIFACE_NEWCCSP | KRNLIFACE_MP)) == (KRNLIFACE_NEWCCSP | KRNLIFACE_MP)) {
@@ -3544,50 +3419,21 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 			ts->stack->must_set_cmp_flags = 1;
 			break;
 		case I_LDL:
-			/* Phase 4A: shift by M if operand addresses non-local. */
-			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (operand), ARG_REG, ts->stack->a_reg);
+			tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, operand << WSH, ARG_REG, ts->stack->a_reg);
 			constmap_new (ts->stack->a_reg, VALUE_LOCAL, operand, tmp_ins);
 			add_to_ins_chain (tmp_ins);
 			ts->stack->must_set_cmp_flags = 1;
 			break;
-		case I_LDLP: {
-			/* Phase 4A: LDLP 0 is used by occ21 as a static-link
-			 * convention in the main PROC body: it passes a pointer
-			 * that the nested callee dereferences with *unshifted*
-			 * LDNL offsets to reach the parent's slots.  For that
-			 * to work, LDLP 0 must return a pointer equivalent to
-			 * the parent's *baseline* Wptr_final -- not the
-			 * Phase-4A-shifted Wptr that r14 currently holds.
-			 *
-			 * Only shifted in non-jentry PROCs: jentry PROCs already
-			 * have their Wptr at the baseline position (no ETCS4
-			 * drop), so LDLP 0 returns a valid static-link pointer
-			 * without any adjustment.  Inside a PAR sub-frame after
-			 * STARTP, LDLP 0 is "pointer to slot 0 of the sub-frame"
-			 * and also stays unshifted.  Other LDLP operands follow
-			 * the usual local-vs-non-local cutoff rule. */
-			intptr_t ldlp_off;
-			if (PHASE4A_METADATA_RESERVE_WORDS > 0 && operand == 0 && !phase4a_in_par_subframe && !phase4a_cur_proc_is_jentry) {
-				ldlp_off = (intptr_t) PHASE4A_METADATA_RESERVE_WORDS << WSH;
-			} else {
-				ldlp_off = LOCAL_BYTE_OFFSET (operand);
-			}
-			/* Phase 4A: remember the last negative LDLP operand.  If
-			 * the very next I_STARTP fires, this is the sub-frame
-			 * offset for the PAR body-2 cutoff transition. */
-			if (operand < 0) {
-				phase4a_last_ldlp_neg_operand = operand;
-			}
-			if (ldlp_off == 0) {
+		case I_LDLP:
+			if (operand == 0) {
 				tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, ts->stack->a_reg);
 			} else {
-				tmp_ins = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, ldlp_off, ARG_REG, ts->stack->a_reg);
+				tmp_ins = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, operand << WSH, ARG_REG, ts->stack->a_reg);
 			}
 			constmap_new (ts->stack->a_reg, VALUE_LOCALPTR, operand, tmp_ins);
 			add_to_ins_chain (tmp_ins);
 			ts->stack->must_set_cmp_flags = 1;
 			break;
-		}
 		case I_LDNL:
 			add_to_ins_chain (compose_ins_ex (EtcPrimary (I_LDNL), INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, ts->stack->a_reg, operand << WSH, ARG_REG, ts->stack->a_reg));
 			constmap_remove (ts->stack->a_reg);
@@ -3600,25 +3446,22 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 			}
 			ts->stack->must_set_cmp_flags = 1;
 			break;
-		case I_STL: {
-			/* Phase 4A: shift by M if operand addresses non-local. */
-			intptr_t stl_off = LOCAL_BYTE_OFFSET (operand);
+		case I_STL:
 			switch (constmap_typeof (ts->stack->old_a_reg)) {
 			case VALUE_CONST:
-				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP, REG_WPTR, stl_off));
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP, REG_WPTR, operand << WSH));
 				break;
 			case VALUE_LABADDR:
-				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP, REG_WPTR, stl_off));
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_a_reg), ARG_REGIND | ARG_DISP, REG_WPTR, operand << WSH));
 				break;
 			default:
-				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, REG_WPTR, stl_off));
+				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, REG_WPTR, operand << WSH));
 				break;
 			}
 			/* trash any constant offset at that location */
 			constmap_removelocal (operand);
 			ts->stack->must_set_cmp_flags = 1;
 			break;
-		}
 		case I_STNL:
 			switch (constmap_typeof (ts->stack->old_b_reg)) {
 			case VALUE_CONST:
@@ -3673,7 +3516,7 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 						 * Load the workspace value into a register and truncate
 						 * it to 32 bits for consistent comparison. */
 						add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
-							ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->a_reg)),
+							ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->a_reg) << WSH,
 							ARG_REG, ts->stack->a_reg));
 						constmap_remove (ts->stack->a_reg);
 						add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->a_reg, ARG_REG, ts->stack->a_reg));
@@ -3681,7 +3524,7 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 					} else
 #endif
 					{
-						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, eqc_const, ARG_REGIND | ARG_DISP, REG_WPTR, (LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->a_reg))), ARG_REG | ARG_IMP, REG_CC));
+						add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, eqc_const, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (ts->stack->a_reg) << WSH), ARG_REG | ARG_IMP, REG_CC));
 					}
 					break;
 				}
@@ -3729,10 +3572,6 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 		case I_AJW:
 			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) operand << WSH, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 			constmap_clearall ();
-			/* Phase 4A: track local-area depth.  AJW -N (negative
-			 * operand) allocates N local slots; AJW +N (positive)
-			 * deallocates.  Update cutoff accordingly. */
-			phase4a_cur_local_cutoff -= operand;
 			break;
 		case I_J:
 		case I_CJ:
@@ -3764,8 +3603,7 @@ static void do_code_special (tstate *ts, int ins, int opd, arch_t *arch)
 			sprintf (sbuf, "XSTL %d", opd);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuf)));
 		}
-		/* Phase 4A: shift local offset via LOCAL_BYTE_OFFSET. */
-		tmp_ins = compose_ins_ex (EtcSpecial(I_XSTL), INS_MOVE, 1, 1, ARG_REG, ts->stack->a_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (opd));
+		tmp_ins = compose_ins_ex (EtcSpecial(I_XSTL), INS_MOVE, 1, 1, ARG_REG, ts->stack->a_reg, ARG_REGIND | ARG_DISP, REG_WPTR, opd << WSH);
 		add_to_ins_chain (tmp_ins);
 		break;
 	case I_XSTLN:
@@ -3773,9 +3611,6 @@ static void do_code_special (tstate *ts, int ins, int opd, arch_t *arch)
 			sprintf (sbuf, "XSTLN -%d", opd);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuf)));
 		}
-		/* XSTLN uses NEGATIVE offsets -- these address per-call
-		 * metadata slots below Wptr (historical W_COUNT area).
-		 * Phase 4A does not move those, so no shift. */
 		tmp_ins = compose_ins_ex (EtcSpecial(I_XSTLN), INS_MOVE, 1, 1, ARG_REG, ts->stack->a_reg, ARG_REGIND | ARG_DISP, REG_WPTR, -(opd << WSH));
 		add_to_ins_chain (tmp_ins);
 		break;
@@ -4649,14 +4484,14 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 			 * Force constmap to materialize register values first. */
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCAL) {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg)),
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH,
 					ARG_REG, ts->stack->old_a_reg));
 				constmap_remove (ts->stack->old_a_reg);
 			}
 			add_to_ins_chain (compose_ins (INS_AND, 2, 1, ARG_CONST, (intptr_t)0xFFFFFFFFULL, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg));
 			if (constmap_typeof (ts->stack->old_b_reg) == VALUE_LOCAL) {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)),
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH,
 					ARG_REG, ts->stack->old_b_reg));
 				constmap_remove (ts->stack->old_b_reg);
 			}
@@ -4706,7 +4541,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 			case VALUE_LOCAL:
 				/* old_b_reg value is in workspace -- load via memory operand */
 				add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)),
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH,
 					ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->a_reg));
 				break;
 			default:
@@ -4725,7 +4560,7 @@ static void do_code_secondary (tstate *ts, int sec, arch_t *arch)
 		case VALUE_LOCAL:
 			add_to_ins_chain (compose_ins (INS_SHL, 2, 1, ARG_CONST, (intptr_t) WShift, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg));
 			ts->stack->a_reg = ts->stack->old_b_reg;
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg)),
+			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH,
 						ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->a_reg));
 			break;
 		default:
@@ -5184,7 +5019,7 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 				break;
 			case VALUE_LOCAL:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_a_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				break;
 			case VALUE_CONST:
 				/* invert condition */
@@ -5200,18 +5035,18 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 				break;
 			case VALUE_LOCAL:
 				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t)(int32_t)constmap_regconst (ts->stack->old_a_reg),
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG | ARG_IMP, REG_CC));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				break;
 			}
 			break;
 		case VALUE_LOCAL:
 			switch (constmap_typeof (ts->stack->old_b_reg)) {
 			default:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg)), ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 				break;
 			case VALUE_CONST:
 				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_b_reg),
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg)), ARG_REG | ARG_IMP, REG_CC));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				ts->cond = CC_LT;
 			}
 			break;
@@ -5456,29 +5291,6 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		} else {
 			arch->compose_kcall (ts, K_STARTP, 2, 0);
 		}
-		/* Phase 4A: after STARTP, subsequent code runs in PAR
-		 * sub-frames.  Body 1 continues inline in the parent
-		 * (same r14, same cutoff).  Body 2 runs as a spawned child
-		 * with r14 = parent_r14 - N*WSH, and the compiler emits
-		 * LDL indices that are offset by N words from the parent's
-		 * slot numbering.  Body 2's effective cutoff is therefore
-		 * (parent_cutoff + N).
-		 *
-		 * We latch the body-2 label (captured by LOADLABDIFF above)
-		 * and save parent_cutoff + N.  The SETLABEL handler (ETC6/
-		 * ETC7) performs the transition when it sees the matching
-		 * label.
-		 *
-		 * Also mark that we're in a PAR sub-frame so LDLP 0 is
-		 * interpreted as "pointer to slot 0 of the sub-frame"
-		 * (unshifted) rather than a static-link pointer (shifted). */
-		phase4a_in_par_subframe = 1;
-		if (phase4a_pending_body2_label >= 0 && phase4a_last_ldlp_neg_operand < 0) {
-			phase4a_par_sub_offset = -phase4a_last_ldlp_neg_operand;
-			phase4a_par_saved_cutoff = phase4a_cur_local_cutoff;
-			phase4a_pending_body2_label_active = 1;
-		}
-		phase4a_last_ldlp_neg_operand = 0;
 		break;
 		/*}}}*/
 		/*{{{  I_ENDP -- end process*/
@@ -5606,14 +5418,10 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			intptr_t slot = constmap_regconst (ts->stack->old_b_reg);
 			/* Zero the entire word slot before IN32 writes 4 bytes.
 			 * This ensures the upper 4 bytes are clean for subsequent
-			 * word-sized loads (LDL).  Phase 4A: use LOCAL_BYTE_OFFSET
-			 * so the init writes to the same byte offset that LDLP
-			 * produced -- otherwise the init lands at the wrong slot
-			 * (possibly clobbering the channel word itself, causing
-			 * the rendezvous to deadlock). */
+			 * word-sized loads (LDL). */
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
 				ARG_CONST, (intptr_t) 0,
-				ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (slot)));
+				ARG_REGIND | ARG_DISP, REG_WPTR, slot << WSH));
 		}
 #endif
 		if ((options.inline_options & INLINE_IN2) && arch->compose_inline_in_2) {
@@ -6476,7 +6284,7 @@ static void generate_constmapped_21instr (tstate *ts, int etc_instr, int instr, 
 			/* RISC targets: arithmetic instructions can't use memory operands
 			 * directly.  Materialize the value into the register first. */
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
-				ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (src_reg1)),
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (src_reg1) << WSH,
 				ARG_REG, src_reg1));
 			constmap_remove (src_reg1);
 			if (usecc) {
@@ -6487,9 +6295,9 @@ static void generate_constmapped_21instr (tstate *ts, int etc_instr, int instr, 
 		} else {
 			/* CISC targets (x86, x64): can use memory operands in arithmetic */
 			if (usecc) {
-				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_REGIND | ARG_DISP, REG_WPTR, (LOCAL_BYTE_OFFSET (constmap_regconst (src_reg1))), ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 2, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (src_reg1) << WSH), ARG_REG, src_reg2, ARG_REG, dst_reg, ARG_REG | ARG_IMP, REG_CC));
 			} else {
-				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (LOCAL_BYTE_OFFSET (constmap_regconst (src_reg1))), ARG_REG, src_reg2, ARG_REG, dst_reg));
+				add_to_ins_chain (compose_ins_ex (etc_instr, instr, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (constmap_regconst (src_reg1) << WSH), ARG_REG, src_reg2, ARG_REG, dst_reg));
 			}
 		}
 		break;
@@ -6559,13 +6367,13 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 		 * first, then zero-extend.  Constants don't need truncation. */
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCAL) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
-				ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg)),
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH,
 				ARG_REG, ts->stack->old_a_reg));
 			constmap_remove (ts->stack->old_a_reg);
 		}
 		if (constmap_typeof (ts->stack->old_b_reg) == VALUE_LOCAL) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
-				ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)),
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH,
 				ARG_REG, ts->stack->old_b_reg));
 			constmap_remove (ts->stack->old_b_reg);
 		}
@@ -6590,7 +6398,7 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_B, ARG_LABEL, thislab));
 				break;
 			case VALUE_LOCAL:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg)), ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REG, ts->stack->old_b_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, thislab));
 				break;
 			}
@@ -6600,11 +6408,11 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 			case VALUE_CONST:
 				/* invert comparison */
 				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_a_reg),
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG | ARG_IMP, REG_CC));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_B, ARG_LABEL, thislab));
 				break;
 			default:
-				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
+				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, thislab));
 				break;
 			}
@@ -6617,7 +6425,7 @@ static void translate_csub0 (tstate *ts, arch_t *arch)
 				break;
 			case VALUE_LOCAL:
 				add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, (intptr_t) constmap_regconst (ts->stack->old_b_reg),
-					ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg)), ARG_REG | ARG_IMP, REG_CC));
+					ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 				add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_A, ARG_LABEL, thislab));
 				break;
 			}

@@ -1481,7 +1481,7 @@ static void compose_pre_enbc_i386 (tstate *ts)
 	} else if (constmap_typeof (ts->stack->old_b_reg) != VALUE_CONST) {
 		/* dunno, test and maybe skip */
 		if (constmap_typeof (ts->stack->old_b_reg) == VALUE_LOCAL) {
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 		} else {
 			add_to_ins_chain (compose_ins (INS_OR, 2, 2, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 		}
@@ -1524,7 +1524,7 @@ static void compose_pre_enbt_i386 (tstate *ts)
 	} else if (constmap_typeof (ts->stack->old_b_reg) != VALUE_CONST) {
 		/* dunno, test and maybe skip */
 		if (constmap_typeof (ts->stack->old_b_reg) == VALUE_LOCAL) {
-			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG | ARG_IMP, REG_CC));
+			add_to_ins_chain (compose_ins (INS_CMP, 2, 1, ARG_CONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG | ARG_IMP, REG_CC));
 		} else {
 			add_to_ins_chain (compose_ins (INS_OR, 2, 2, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG, ts->stack->old_b_reg, ARG_REG | ARG_IMP, REG_CC));
 		}
@@ -2226,7 +2226,7 @@ static void compose_iospace_read_i386 (tstate *ts, int portreg, int addrreg, int
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, constmap_regconst (portreg), ARG_REG, tmp_reg));
 		break;
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (portreg)), ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (portreg) << WSH, ARG_REG, tmp_reg));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, portreg, ARG_REG, tmp_reg));
@@ -2239,7 +2239,7 @@ static void compose_iospace_read_i386 (tstate *ts, int portreg, int addrreg, int
 
 	switch (constmap_typeof (addrreg)) {
 	case VALUE_LOCALPTR:
-		add_to_ins_chain (compose_ins (mvinstr, 1, 1, ARG_REG, tmp_reg2, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (addrreg))));
+		add_to_ins_chain (compose_ins (mvinstr, 1, 1, ARG_REG, tmp_reg2, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (addrreg) << WSH));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (mvinstr, 1, 1, ARG_REG, tmp_reg2, ARG_REGIND, addrreg));
@@ -2288,7 +2288,7 @@ static void compose_iospace_write_i386 (tstate *ts, int portreg, int addrreg, in
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, constmap_regconst (portreg), ARG_REG, tmp_reg));
 		break;
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (portreg)), ARG_REG, tmp_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (portreg) << WSH, ARG_REG, tmp_reg));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, portreg, ARG_REG, tmp_reg));
@@ -2309,17 +2309,15 @@ static void compose_move_loadptrs_i386 (tstate *ts)
 	case VALUE_LABADDR:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_c_reg), ARG_REG, REG_JPTR));
 		break;
-	case VALUE_LOCALPTR: {
-		intptr_t off_c = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_c_reg));
-		if (off_c == 0) {
+	case VALUE_LOCALPTR:
+		if (!constmap_regconst (ts->stack->old_c_reg)) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_JPTR));
 		} else {
-			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, off_c, ARG_REG, REG_JPTR));
+			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, REG_JPTR));
 		}
 		break;
-	}
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_c_reg)), ARG_REG, REG_JPTR));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, REG_JPTR));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, REG_JPTR));
@@ -2329,17 +2327,15 @@ static void compose_move_loadptrs_i386 (tstate *ts)
 	case VALUE_LABADDR:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, REG_LPTR));
 		break;
-	case VALUE_LOCALPTR: {
-		intptr_t off_b = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg));
-		if (off_b == 0) {
+	case VALUE_LOCALPTR:
+		if (!constmap_regconst (ts->stack->old_b_reg)) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_LPTR));
 		} else {
-			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, off_b, ARG_REG, REG_LPTR));
+			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, REG_LPTR));
 		}
 		break;
-	}
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG, REG_LPTR));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, REG_LPTR));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, REG_LPTR));
@@ -2366,7 +2362,7 @@ static void compose_move_i386 (tstate *ts)
 		}
 		switch (constmap_typeof (ts->stack->old_b_reg)) {
 		case VALUE_LOCALPTR:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg))));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH));
 			break;
 		default:
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND, ts->stack->old_b_reg));
@@ -2629,7 +2625,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 	case I_FPLDNLDB:
 		ts->stack->fs_depth++;
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FLD64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FLD64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FLD64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -2641,7 +2637,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 	case I_FPLDNLSN:
 		ts->stack->fs_depth++;
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FLD32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -2652,7 +2648,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 		/*{{{  I_FPLDNLADDDB -- add non-local REAL64 (to top of FP stack)*/
 	case I_FPLDNLADDDB:
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FADD64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FADD64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FADD64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -2663,7 +2659,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 		/*{{{  I_FPLDNLADDSN -- add non-local REAL32 (to top of FP stack)*/
 	case I_FPLDNLADDSN:
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FADD32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FADD32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FADD32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -2674,7 +2670,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 		/*{{{  I_FPLDNLMULDB -- multiply non-local REAL64 (with top of FP stack)*/
 	case I_FPLDNLMULDB:
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FMUL64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FMUL64, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FMUL64, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -2685,7 +2681,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 		/*{{{  I_FPLDNLMULSN -- multiply non-local REAL32 (with top of FP stack)*/
 	case I_FPLDNLMULSN:
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FMUL32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FMUL32, 1, 0, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FMUL32, 1, 0, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -2712,7 +2708,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 		/*{{{  I_FPSTNLDB -- store non-local REAL64*/
 	case I_FPSTNLDB:
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FST64, 0, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FST64, 0, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FST64, 0, 1, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -2724,7 +2720,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 		/*{{{  I_FPSTNLSN -- store non-local REAL32*/
 	case I_FPSTNLSN:
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FST32, 0, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FST32, 0, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FST32, 0, 1, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -2737,7 +2733,7 @@ static void compose_fpop_i386 (tstate *ts, int sec)
 	case I_FPSTNLI32:
 		/* FIST64 is horribly mis-named -- generates fistpl, which means long INTEGER, not long floating-point value */
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			add_to_ins_chain (compose_ins (INS_FIST64, 0, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg))));
+			add_to_ins_chain (compose_ins (INS_FIST64, 0, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
 		} else {
 			add_to_ins_chain (compose_ins (INS_FIST64, 0, 1, ARG_REGIND, ts->stack->old_a_reg));
 		}
@@ -3273,9 +3269,7 @@ static void compose_return_i386 (tstate *ts)
 	int toldregs[3];
 	int i;
 
-	/* Pop (4+M) words for normal PROCs, 4 words for JENTRY PROCs
-	 * (which skip the ETCS4 M drop). */
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((phase4a_cur_proc_is_jentry ? 4 : (4 + PHASE4A_METADATA_RESERVE_WORDS)) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, 16, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 	toldregs[0] = ts->stack->old_a_reg;
 	toldregs[1] = ts->stack->old_b_reg;
 	toldregs[2] = ts->stack->old_c_reg;
