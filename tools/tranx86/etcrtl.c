@@ -95,6 +95,58 @@ int phase4a_in_par_subframe = 0;
  */
 int phase4a_cur_proc_is_jentry = 0;
 
+/*
+ * Phase 4A: PAR sub-frame cutoff transition tracking.
+ *
+ * occ21's PAR code compiles into:
+ *   LOADLABDIFF L5 L4    -- push (L5 - L4) onto the stack
+ *   LDLP -N              -- push sub-workspace pointer (N words below)
+ *   STARTP               -- spawn a new process at L5 with the sub-workspace
+ *   L4: <body 1 code>    -- main thread continues here (inline)
+ *       ENDP
+ *   L5: <body 2 code>    -- spawned child's iptr points here
+ *       ENDP
+ *   L2: <joinlab>        -- both branches converge here after ENDP
+ *
+ * Body 1 runs inline in the parent PROC: its r14 IS the parent's r14,
+ * so its LDL accesses need the same cutoff as the parent.
+ *
+ * Body 2 runs as a spawned child with r14 set to (parent_r14 - N*WSH):
+ * its LDL indices for S19-style PARs correspond to slots N words *above*
+ * the child's Wptr (= parent's slots).  Slots at body-2-slot indices
+ * [N, N+L-1] map to the parent's L-area (locals, unshifted in the parent),
+ * and body 2's LDL must match that -- so body 2's effective cutoff is
+ * parent_L + N.  Slots at body-2-slot indices >= N+L map to the parent's
+ * extras area and stay shifted.
+ *
+ * To implement this, we track:
+ * - phase4a_pending_body2_label: the L5-style label from LOADLABDIFF,
+ *   captured when LOADLABDIFF precedes a STARTP.  Set at LOADLABDIFF,
+ *   confirmed (latched) at STARTP.
+ * - phase4a_last_ldlp_neg_operand: the operand of the most recent LDLP
+ *   with a negative operand, captured immediately before a STARTP.  This
+ *   is the sub-workspace offset in words (negated).
+ * - phase4a_par_sub_offset, phase4a_par_saved_cutoff: at STARTP, record
+ *   sub_offset = -phase4a_last_ldlp_neg_operand, and save the parent's
+ *   cutoff.  These persist until the body-2 label is emitted.
+ * - phase4a_pending_body2_label_active: set at STARTP when the label is
+ *   armed; cleared when the SETLABEL transition fires.
+ *
+ * At SETLABEL(label) where label == phase4a_pending_body2_label and
+ * phase4a_pending_body2_label_active is set, raise the cutoff to
+ * (saved_cutoff + sub_offset) for the duration of body 2.  The cutoff
+ * is NOT automatically restored at any subsequent ENDP -- the joinlab
+ * label (L2 in the example) marks the end of the PAR and restores it.
+ * (The joinlab is derived from an STL 0 + a saved label earlier in the
+ * PAR setup, but for simplicity we just reset at the next ETCS4, since
+ * no caller PROC re-enters into the middle of a PAR.)
+ */
+int phase4a_pending_body2_label = -1;
+int phase4a_pending_body2_label_active = 0;
+int phase4a_last_ldlp_neg_operand = 0;
+int phase4a_par_sub_offset = 0;
+int phase4a_par_saved_cutoff = 0;
+
 #define CONVMISSING(X) fprintf (stderr, "%s: error: missing conversion for %s\n", progname, X)
 
 /*{{{  private variables*/
@@ -1224,6 +1276,15 @@ fprintf (stderr, "*** I64TOREAL: ts_depth=%d, fs_depth=%d\n", ts->stack->ts_dept
 					ts->incasetable = 0;
 				}
 				add_to_ins_chain (compose_ins (INS_SETLABEL, 1, 0, ARG_LABEL, etc_code->opd));
+				/* Phase 4A: if this label is the pending body-2 entry
+				 * for a STARTP that's been latched, transition to
+				 * body 2's higher cutoff so LDLs that reach into the
+				 * parent's local area (now appearing at higher indices
+				 * from body 2's offset Wptr) are treated as locals. */
+				if (phase4a_pending_body2_label_active && etc_code->opd == phase4a_pending_body2_label) {
+					phase4a_cur_local_cutoff = phase4a_par_saved_cutoff + phase4a_par_sub_offset;
+					phase4a_pending_body2_label_active = 0;
+				}
 				/* might be a relevant label for code-mapping */
 				if (ts->cpinfo && (ts->magic_pending & TS_MAGIC_JOINLAB)) {
 					procinf *refd;
@@ -1639,6 +1700,11 @@ fprintf (stderr, "setting ts->ws_size = %d\n", y_opd);
 				phase4a_cur_local_cutoff = 0;
 				phase4a_in_par_subframe = 0;
 				phase4a_cur_proc_is_jentry = 0;
+				phase4a_pending_body2_label = -1;
+				phase4a_pending_body2_label_active = 0;
+				phase4a_last_ldlp_neg_operand = 0;
+				phase4a_par_sub_offset = 0;
+				phase4a_par_saved_cutoff = 0;
 				if (ts->jentry_name && etc_code->o_len == (int) strlen (ts->jentry_name)
 						&& !strncmp (etc_code->o_bytes, ts->jentry_name, etc_code->o_len)) {
 					phase4a_cur_proc_is_jentry = 1;
@@ -2093,6 +2159,13 @@ fprintf (stderr, "MAINDYNCALL: label_name = [%s], fcn_name = [%s]\n", trtl->u.dy
 						labs[1] = etc_code->opd;
 						constmap_new (ts->stack->a_reg, VALUE_LABDIFF, (intptr_t)labs, tmp_ins);
 						add_to_ins_chain (tmp_ins);
+						/* Phase 4A: LOADLABDIFF y_opd etc_code->opd is the
+						 * PAR startp pattern, pushing (y_opd - etc_code->opd)
+						 * = body2_label - body1_label.  Save y_opd as the
+						 * candidate body-2 label; it's latched at STARTP
+						 * and used at the matching SETLABEL to transition
+						 * to body 2's cutoff. */
+						phase4a_pending_body2_label = y_opd;
 					}
 					break;
 					/*}}}*/
@@ -3498,6 +3571,12 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 				ldlp_off = (intptr_t) PHASE4A_METADATA_RESERVE_WORDS << WSH;
 			} else {
 				ldlp_off = LOCAL_BYTE_OFFSET (operand);
+			}
+			/* Phase 4A: remember the last negative LDLP operand.  If
+			 * the very next I_STARTP fires, this is the sub-frame
+			 * offset for the PAR body-2 cutoff transition. */
+			if (operand < 0) {
+				phase4a_last_ldlp_neg_operand = operand;
 			}
 			if (ldlp_off == 0) {
 				tmp_ins = compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, ts->stack->a_reg);
@@ -5378,20 +5457,28 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			arch->compose_kcall (ts, K_STARTP, 2, 0);
 		}
 		/* Phase 4A: after STARTP, subsequent code runs in PAR
-		 * sub-frames.  Both sub-frames inherit the parent PROC's
-		 * cutoff (keep it unchanged): the parent's STL/LDL at
-		 * indices >= cutoff were shifted, and the sub-frames must
-		 * use the SAME shift for the same slots to match.  For PAR
-		 * children accessing slots that are numerically outside
-		 * the parent's cutoff, the shifted byte offset still lands
-		 * correctly because the child's Wptr is derived from the
-		 * parent's Wptr via LDLP -N (which itself is shifted for
-		 * non-zero offsets), keeping the relative positions intact.
+		 * sub-frames.  Body 1 continues inline in the parent
+		 * (same r14, same cutoff).  Body 2 runs as a spawned child
+		 * with r14 = parent_r14 - N*WSH, and the compiler emits
+		 * LDL indices that are offset by N words from the parent's
+		 * slot numbering.  Body 2's effective cutoff is therefore
+		 * (parent_cutoff + N).
 		 *
-		 * Mark that we're in a PAR sub-frame so LDLP 0 is
+		 * We latch the body-2 label (captured by LOADLABDIFF above)
+		 * and save parent_cutoff + N.  The SETLABEL handler (ETC6/
+		 * ETC7) performs the transition when it sees the matching
+		 * label.
+		 *
+		 * Also mark that we're in a PAR sub-frame so LDLP 0 is
 		 * interpreted as "pointer to slot 0 of the sub-frame"
 		 * (unshifted) rather than a static-link pointer (shifted). */
 		phase4a_in_par_subframe = 1;
+		if (phase4a_pending_body2_label >= 0 && phase4a_last_ldlp_neg_operand < 0) {
+			phase4a_par_sub_offset = -phase4a_last_ldlp_neg_operand;
+			phase4a_par_saved_cutoff = phase4a_cur_local_cutoff;
+			phase4a_pending_body2_label_active = 1;
+		}
+		phase4a_last_ldlp_neg_operand = 0;
 		break;
 		/*}}}*/
 		/*{{{  I_ENDP -- end process*/
@@ -5519,10 +5606,14 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			intptr_t slot = constmap_regconst (ts->stack->old_b_reg);
 			/* Zero the entire word slot before IN32 writes 4 bytes.
 			 * This ensures the upper 4 bytes are clean for subsequent
-			 * word-sized loads (LDL). */
+			 * word-sized loads (LDL).  Phase 4A: use LOCAL_BYTE_OFFSET
+			 * so the init writes to the same byte offset that LDLP
+			 * produced -- otherwise the init lands at the wrong slot
+			 * (possibly clobbering the channel word itself, causing
+			 * the rendezvous to deadlock). */
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
 				ARG_CONST, (intptr_t) 0,
-				ARG_REGIND | ARG_DISP, REG_WPTR, slot << WSH));
+				ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (slot)));
 		}
 #endif
 		if ((options.inline_options & INLINE_IN2) && arch->compose_inline_in_2) {
