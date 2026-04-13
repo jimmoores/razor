@@ -1570,15 +1570,18 @@ static void compose_x64_move_loadptrs (tstate *ts)
 	case VALUE_LABADDR:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_c_reg), ARG_REG, REG_RSI));
 		break;
-	case VALUE_LOCALPTR:
-		if (!constmap_regconst (ts->stack->old_c_reg)) {
+	case VALUE_LOCALPTR: {
+		/* Phase 4A: check the actual byte offset, not the raw index. */
+		intptr_t off_c = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_c_reg));
+		if (off_c == 0) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_RSI));
 		} else {
-			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, REG_RSI));
+			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, off_c, ARG_REG, REG_RSI));
 		}
 		break;
+	}
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_c_reg) << WSH, ARG_REG, REG_RSI));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_c_reg)), ARG_REG, REG_RSI));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_c_reg, ARG_REG, REG_RSI));
@@ -1588,15 +1591,18 @@ static void compose_x64_move_loadptrs (tstate *ts)
 	case VALUE_LABADDR:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_LABEL | ARG_ISCONST, constmap_regconst (ts->stack->old_b_reg), ARG_REG, REG_RDI));
 		break;
-	case VALUE_LOCALPTR:
-		if (!constmap_regconst (ts->stack->old_b_reg)) {
+	case VALUE_LOCALPTR: {
+		/* Phase 4A: check the actual byte offset, not the raw index. */
+		intptr_t off_b = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg));
+		if (off_b == 0) {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_RDI));
 		} else {
-			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, REG_RDI));
+			add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, off_b, ARG_REG, REG_RDI));
 		}
 		break;
+	}
 	case VALUE_LOCAL:
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH, ARG_REG, REG_RDI));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg)), ARG_REG, REG_RDI));
 		break;
 	default:
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_b_reg, ARG_REG, REG_RDI));
@@ -1629,7 +1635,7 @@ static void compose_x64_move (tstate *ts)
 		}
 		switch (constmap_typeof (ts->stack->old_b_reg)) {
 		case VALUE_LOCALPTR:
-			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_b_reg) << WSH));
+			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_WPTR, LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_b_reg))));
 			break;
 		default:
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND, ts->stack->old_b_reg));
@@ -1926,11 +1932,12 @@ static void compose_x64_return (tstate *ts)
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
 	}
 
-	/* Pop I_CALL frame: 4 words = 32 bytes on 64-bit.
-	 * The return address was stored at Wptr[0] (by the I_CALL stub or JENTRY)
-	 * BEFORE the frame pop.  After adding 4<<WSH, read it back at -(4<<WSH)
-	 * from the new Wptr -- matching the i386 pattern (PUSH Wptr[-16]; RET). */
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)(4 << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	/* Pop I_CALL frame plus Phase 4A reservation: (4+M) words.
+	 * I_CALL drops 4 words, ETCS4 drops M more at PROC entry, and
+	 * I_RET pops the full (4+M).  The return address is at pre-drop
+	 * caller_Wptr - 4*WSH, which equals post-pop Wptr - 4*WSH, so
+	 * the jmp target offset stays at -(4 << WSH). */
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((4 + PHASE4A_METADATA_RESERVE_WORDS) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_REGIND | ARG_IND | ARG_DISP, REG_WPTR, -(4 << WSH)));
 
 	for (i = ts->numfuncresults - 1; i >= 0; i--) {
@@ -2577,7 +2584,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		if (x64_fp_stack_depth >= 1) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				/* Workspace-local: store full 64-bit word */
-				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 				if (x64_fp_had_fpint || x64_fp_rounding_mode == FPU_Z) {
 					x64_fp_emit_anno (ts, "\tcvttsd2siq\t%s, %%r11", x64_xmm_name(0));
 				} else {
@@ -2656,7 +2663,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		x64_fp_stack_depth++;
 		x64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+			int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 			x64_fp_emit_anno (ts, "\tmovsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
 		} else {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
@@ -2704,7 +2711,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 	case I_FPSTNLDB:  /* Store REAL64 from FA to [old_a_reg] */
 		if (x64_fp_stack_depth >= 1) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 				x64_fp_emit_anno (ts, "\tmovsd\t%s, %d(%%r14)", x64_xmm_name(0), offset);
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
@@ -2764,7 +2771,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		x64_fp_stack_depth++;
 		x64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+			int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 			x64_fp_emit_anno (ts, "\tcvtsi2sdl\t%d(%%r14), %s", offset, x64_xmm_name(0));
 		} else {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
@@ -2784,7 +2791,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 	case I_FPLDNLADDDB:
 		if (x64_fp_stack_depth >= 1) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 				x64_fp_emit_anno (ts, "\taddsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
@@ -2800,7 +2807,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			/* Load single into scratch xmm, widen, then add to xmm0.
 			 * AT&T: addsd src, dst => dst = dst + src */
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 				x64_fp_emit_anno (ts, "\tcvtss2sd\t%d(%%r14), %s", offset, x64_xmm_name(X64_XMM_SCRATCH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
@@ -2816,7 +2823,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 	case I_FPLDNLMULDB:
 		if (x64_fp_stack_depth >= 1) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 				x64_fp_emit_anno (ts, "\tmulsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
@@ -2832,7 +2839,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			/* Load single into scratch xmm, widen, then multiply with xmm0.
 			 * AT&T: mulsd src, dst => dst = dst * src */
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+				int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 				x64_fp_emit_anno (ts, "\tcvtss2sd\t%d(%%r14), %s", offset, x64_xmm_name(X64_XMM_SCRATCH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
@@ -2902,7 +2909,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		x64_fp_stack_depth++;
 		x64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
-			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
+			int offset = LOCAL_BYTE_OFFSET (constmap_regconst (ts->stack->old_a_reg));
 			x64_fp_emit_anno (ts, "\tcvtsi2sdq\t%d(%%r14), %s", offset, x64_xmm_name(0));
 		} else {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));

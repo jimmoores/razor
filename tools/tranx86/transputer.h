@@ -33,6 +33,80 @@
 #define WShift		2		/* x4 -- INT is always 32-bit (4 bytes) */
 #define DWShift		3		/* x8 */
 
+/*
+ * PHASE4A_METADATA_RESERVE_WORDS -- Phase 4A frame-size expansion.
+ *
+ * Phase 4's end goal is to unify Wptr with SP, which requires the
+ * per-call metadata (currently at Wptr[-1..-9]) to migrate to
+ * positive offsets so it survives signal handlers.  Phase 4A is the
+ * preparatory step: enlarge every PROC's frame by M words at the
+ * bottom via an extra Wptr drop in ETCS4 (proc entry), and shift
+ * every non-local (return + args) access up by M to compensate.
+ *
+ * Local variables (LDL N for N < cutoff) are UNCHANGED -- they stay
+ * at their baseline byte offsets within the PROC's own frame.  Only
+ * accesses into the return slot or the caller's arg area need to
+ * shift, and they shift by exactly M to land on the correct physical
+ * address in the caller's frame (which may or may not itself be
+ * Phase-4A-shifted, depending on whether the caller is Phase 4A or
+ * not -- the shift compensates correctly in both cases).
+ *
+ * The cutoff between locals and non-locals is tracked per-PROC as
+ * the running AJW depth (reset at ETCS4).
+ *
+ * Starts at 1 -- the smallest reservation that lets us verify the
+ * mechanism end-to-end.  Phase 4B onward bumps this up as concrete
+ * metadata slots get moved into the new region.
+ */
+#define PHASE4A_METADATA_RESERVE_WORDS 1
+
+/*
+ * phase4a_cur_local_cutoff -- running depth of the current PROC's
+ * local area, tracked from I_AJW operands.  LDL/STL/LDLP operand N
+ * is a *local* if N < phase4a_cur_local_cutoff, and is a *non-local*
+ * (return slot or caller-supplied arg) otherwise.
+ *
+ * Reset to 0 at each ETCS4 (PROC entry).  On each I_AJW -K, the
+ * cutoff increases by K (AJW drops K local slots).  On each I_AJW +K
+ * the cutoff decreases by K.  Nested PAR sub-frames with their own
+ * AJW nest correctly via this additive scheme.
+ */
+extern int phase4a_cur_local_cutoff;
+
+/*
+ * phase4a_in_par_subframe -- set to 1 after the current PROC has
+ * executed an I_STARTP (= compiled into a PAR sub-frame).  Reset
+ * to 0 at each ETCS4 (PROC entry).  Used to disambiguate LDLP 0
+ * as static-link (shifted) vs pointer-to-local-0 (unshifted) --
+ * see the I_LDLP handler in etcrtl.c.
+ */
+extern int phase4a_in_par_subframe;
+
+/*
+ * LOCAL_BYTE_OFFSET(local_idx) -- convert a local-variable index to a
+ * byte offset from Wptr, applying the Phase 4A M-word shift *only*
+ * when the index addresses a non-local slot (return address or
+ * caller's arg area).  True locals (idx < cutoff) stay at baseline
+ * byte offsets.
+ *
+ * Use this macro in every backend site that generates an
+ * ARG_REGIND|ARG_DISP operand relative to REG_WPTR from a
+ * local-variable index, whether the index is coming from the current
+ * ETC operand (I_LDL/I_STL/I_LDLP) or from `constmap_regconst(reg)`
+ * for a register with constmap type VALUE_LOCAL/VALUE_LOCALPTR.
+ */
+#define LOCAL_BYTE_OFFSET(local_idx) \
+	((((intptr_t)(local_idx)) + (((intptr_t)(local_idx) >= phase4a_cur_local_cutoff) ? PHASE4A_METADATA_RESERVE_WORDS : 0)) << WSH)
+
+/*
+ * LOCAL_SLOT_BYTE_OFFSET(local_idx) -- variant that assumes the index
+ * is known-local and unconditionally skips the shift.  Used by loop
+ * iterator slot accesses (ETCL1/L2/L3 LOOPEND) where the compiler
+ * allocated the slot via AJW and we know it's a local.
+ */
+#define LOCAL_SLOT_BYTE_OFFSET(local_idx) \
+	((intptr_t)(local_idx) << WSH)
+
 
 /*{{{  Primaries*/
 #define I_J		0x00
