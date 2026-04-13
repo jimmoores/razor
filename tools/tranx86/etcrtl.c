@@ -86,6 +86,15 @@ int phase4a_cur_local_cutoff = 0;
  */
 int phase4a_in_par_subframe = 0;
 
+/*
+ * Phase 4A: set to 1 in ETCS4 handler when the current PROC is the
+ * JENTRY target.  These PROCs skip the M-word reservation drop and
+ * don't shift LDL/STL/LDLP -- their Wptr is pre-positioned at the
+ * baseline by the runtime (libkrocif's _occ_enter and io.c's
+ * per-I/O-process workspace setup).
+ */
+int phase4a_cur_proc_is_jentry = 0;
+
 #define CONVMISSING(X) fprintf (stderr, "%s: error: missing conversion for %s\n", progname, X)
 
 /*{{{  private variables*/
@@ -1619,10 +1628,24 @@ fprintf (stderr, "setting ts->ws_size = %d\n", y_opd);
 				 * frame via an extra Wptr drop.  Balanced by I_RET's
 				 * (4+M)-word pop in compose_*_return.  Reset the local-
 				 * area cutoff tracker since each PROC entry starts with
-				 * an empty locals area. */
-				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) -(PHASE4A_METADATA_RESERVE_WORDS << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+				 * an empty locals area.
+				 *
+				 * EXCEPT if this PROC is the JENTRY target: its Wptr
+				 * is set up at baseline position by libkrocif's
+				 * _occ_enter, and its nested PROCs reach its locals
+				 * via static links with baseline byte offsets.  Skip
+				 * the drop for such PROCs, and flag it so LDL/STL/
+				 * LDLP don't shift and compose_*_return pops only 4. */
 				phase4a_cur_local_cutoff = 0;
 				phase4a_in_par_subframe = 0;
+				phase4a_cur_proc_is_jentry = 0;
+				if (ts->jentry_name && etc_code->o_len == (int) strlen (ts->jentry_name)
+						&& !strncmp (etc_code->o_bytes, ts->jentry_name, etc_code->o_len)) {
+					phase4a_cur_proc_is_jentry = 1;
+				}
+				if (!phase4a_cur_proc_is_jentry) {
+					add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) -(PHASE4A_METADATA_RESERVE_WORDS << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+				}
 				/* reset FPU */
 				arch->compose_reset_fregs (ts);
 				tstack_fpclear (ts->stack, arch);
@@ -3461,15 +3484,17 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 			 * LDNL offsets to reach the parent's slots.  For that
 			 * to work, LDLP 0 must return a pointer equivalent to
 			 * the parent's *baseline* Wptr_final -- not the
-			 * Phase-4A-shifted Wptr that r14 currently holds.  So
-			 * LDLP 0 shifts by +M when we're in the main body
-			 * (in_par_subframe == 0).  Inside a PAR sub-frame after
+			 * Phase-4A-shifted Wptr that r14 currently holds.
+			 *
+			 * Only shifted in non-jentry PROCs: jentry PROCs already
+			 * have their Wptr at the baseline position (no ETCS4
+			 * drop), so LDLP 0 returns a valid static-link pointer
+			 * without any adjustment.  Inside a PAR sub-frame after
 			 * STARTP, LDLP 0 is "pointer to slot 0 of the sub-frame"
-			 * (e.g., destination pointer for IN8) and stays
-			 * unshifted.  Other LDLP operands follow the usual
-			 * local-vs-non-local cutoff rule. */
+			 * and also stays unshifted.  Other LDLP operands follow
+			 * the usual local-vs-non-local cutoff rule. */
 			intptr_t ldlp_off;
-			if (operand == 0 && !phase4a_in_par_subframe) {
+			if (operand == 0 && !phase4a_in_par_subframe && !phase4a_cur_proc_is_jentry) {
 				ldlp_off = (intptr_t) PHASE4A_METADATA_RESERVE_WORDS << WSH;
 			} else {
 				ldlp_off = LOCAL_BYTE_OFFSET (operand);
@@ -5353,18 +5378,19 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 			arch->compose_kcall (ts, K_STARTP, 2, 0);
 		}
 		/* Phase 4A: after STARTP, subsequent code runs in PAR
-		 * sub-frames (body 1 inline + body 2 spawned).  These access
-		 * the parent PROC's slots via LDL indices that can go up to
-		 * ws_size - 1.  None of these accesses need the +M shift
-		 * because both sub-frames inherit the parent's ETCS4 drop
-		 * and track the parent's physical layout.  Bump the cutoff
-		 * to ws_size - 4 so all parent-frame accesses are treated
-		 * as local (no shift).  Mark that we're now in a PAR
-		 * sub-frame so LDLP 0 is interpreted as "pointer to slot 0"
-		 * (unshifted) rather than a static link (shifted). */
-		if (phase4a_cur_local_cutoff < ts->ws_size - 4) {
-			phase4a_cur_local_cutoff = ts->ws_size - 4;
-		}
+		 * sub-frames.  Both sub-frames inherit the parent PROC's
+		 * cutoff (keep it unchanged): the parent's STL/LDL at
+		 * indices >= cutoff were shifted, and the sub-frames must
+		 * use the SAME shift for the same slots to match.  For PAR
+		 * children accessing slots that are numerically outside
+		 * the parent's cutoff, the shifted byte offset still lands
+		 * correctly because the child's Wptr is derived from the
+		 * parent's Wptr via LDLP -N (which itself is shifted for
+		 * non-zero offsets), keeping the relative positions intact.
+		 *
+		 * Mark that we're in a PAR sub-frame so LDLP 0 is
+		 * interpreted as "pointer to slot 0 of the sub-frame"
+		 * (unshifted) rather than a static-link pointer (shifted). */
 		phase4a_in_par_subframe = 1;
 		break;
 		/*}}}*/

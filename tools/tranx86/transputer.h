@@ -83,6 +83,25 @@ extern int phase4a_cur_local_cutoff;
 extern int phase4a_in_par_subframe;
 
 /*
+ * phase4a_cur_proc_is_jentry -- set to 1 in the ETCS4 handler when
+ * the current PROC is the JENTRY target (i.e., the top-level PROC
+ * entered from _occam_start, not called via I_CALL).  For these
+ * PROCs we skip the M-word ETCS4 drop entirely: the runtime
+ * (libkrocif's _occ_enter) sets up Wptr at the baseline position,
+ * and the PROC's nested callees expect to reach its locals via
+ * static links at baseline byte offsets.
+ *
+ * When set:
+ *  - ETCS4 does not emit the `sub M*WSH, Wptr` drop
+ *  - LOCAL_BYTE_OFFSET treats all indices as locals (no shift)
+ *  - compose_*_return pops 4 words (not 4+M)
+ *
+ * Reset to 0 at each ETCS4; set to 1 only if the PROC's name
+ * matches ts->jentry_name.
+ */
+extern int phase4a_cur_proc_is_jentry;
+
+/*
  * LOCAL_BYTE_OFFSET(local_idx) -- convert a local-variable index to a
  * byte offset from Wptr, applying the Phase 4A M-word shift *only*
  * when the index addresses a non-local slot (return address or
@@ -96,7 +115,7 @@ extern int phase4a_in_par_subframe;
  * for a register with constmap type VALUE_LOCAL/VALUE_LOCALPTR.
  */
 #define LOCAL_BYTE_OFFSET(local_idx) \
-	((((intptr_t)(local_idx)) + (((intptr_t)(local_idx) >= phase4a_cur_local_cutoff) ? PHASE4A_METADATA_RESERVE_WORDS : 0)) << WSH)
+	((((intptr_t)(local_idx)) + ((!phase4a_cur_proc_is_jentry && (intptr_t)(local_idx) >= phase4a_cur_local_cutoff) ? PHASE4A_METADATA_RESERVE_WORDS : 0)) << WSH)
 
 /*
  * LOCAL_SLOT_BYTE_OFFSET(local_idx) -- variant that assumes the index

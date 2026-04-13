@@ -3273,9 +3273,9 @@ static void compose_return_i386 (tstate *ts)
 	int toldregs[3];
 	int i;
 
-	/* Pop (4+M) words: I_CALL's 4 + Phase 4A's M reservation.
-	 * Return is still at -16 bytes (-4 words) from post-pop Wptr. */
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((4 + PHASE4A_METADATA_RESERVE_WORDS) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	/* Pop (4+M) words for normal PROCs, 4 words for JENTRY PROCs
+	 * (which skip the ETCS4 M drop). */
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((phase4a_cur_proc_is_jentry ? 4 : (4 + PHASE4A_METADATA_RESERVE_WORDS)) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 	toldregs[0] = ts->stack->old_a_reg;
 	toldregs[1] = ts->stack->old_b_reg;
 	toldregs[2] = ts->stack->old_c_reg;

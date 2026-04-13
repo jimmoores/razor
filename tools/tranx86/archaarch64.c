@@ -2360,11 +2360,9 @@ static void compose_aarch64_return (tstate *ts)
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
 	}
 
-	/* Pop (4+M) words from Wptr: I_CALL's 4 + Phase 4A's M reservation.
-	 * INS_RET below still reads return at [x28, #-32] (post-pop Wptr
-	 * - 4 words), because I_CALL writes it at pre-drop caller_Wptr - 32
-	 * which equals post-pop Wptr - 32 regardless of M. */
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((4 + PHASE4A_METADATA_RESERVE_WORDS) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	/* Pop (4+M) words for normal PROCs, 4 words for JENTRY PROCs
+	 * (which skip the ETCS4 M drop). */
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((phase4a_cur_proc_is_jentry ? 4 : (4 + PHASE4A_METADATA_RESERVE_WORDS)) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 
 	/* Jump to return address at post-pop Wptr - 4*WSH (still -32). */
 	add_to_ins_chain (compose_ins (INS_RET, 0, 0));

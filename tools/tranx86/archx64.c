@@ -1932,12 +1932,10 @@ static void compose_x64_return (tstate *ts)
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, toldregs[i], ARG_REG, tfixedregs[i]));
 	}
 
-	/* Pop I_CALL frame plus Phase 4A reservation: (4+M) words.
-	 * I_CALL drops 4 words, ETCS4 drops M more at PROC entry, and
-	 * I_RET pops the full (4+M).  The return address is at pre-drop
-	 * caller_Wptr - 4*WSH, which equals post-pop Wptr - 4*WSH, so
-	 * the jmp target offset stays at -(4 << WSH). */
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((4 + PHASE4A_METADATA_RESERVE_WORDS) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	/* Pop I_CALL frame plus Phase 4A reservation.
+	 * Normal PROCs: I_CALL drops 4 + ETCS4 drops M = pop (4+M).
+	 * JENTRY PROCs: no ETCS4 drop, pop just 4 words. */
+	add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t)((phase4a_cur_proc_is_jentry ? 4 : (4 + PHASE4A_METADATA_RESERVE_WORDS)) << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 	add_to_ins_chain (compose_ins (INS_JUMP, 1, 0, ARG_REGIND | ARG_IND | ARG_DISP, REG_WPTR, -(4 << WSH)));
 
 	for (i = ts->numfuncresults - 1; i >= 0; i--) {
