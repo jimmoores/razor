@@ -1709,7 +1709,7 @@ fprintf (stderr, "setting ts->ws_size = %d\n", y_opd);
 						&& !strncmp (etc_code->o_bytes, ts->jentry_name, etc_code->o_len)) {
 					phase4a_cur_proc_is_jentry = 1;
 				}
-				if (!phase4a_cur_proc_is_jentry) {
+				if (PHASE4A_METADATA_RESERVE_WORDS > 0 && !phase4a_cur_proc_is_jentry) {
 					add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) -(PHASE4A_METADATA_RESERVE_WORDS << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 				}
 				/* reset FPU */
@@ -3567,7 +3567,7 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 			 * and also stays unshifted.  Other LDLP operands follow
 			 * the usual local-vs-non-local cutoff rule. */
 			intptr_t ldlp_off;
-			if (operand == 0 && !phase4a_in_par_subframe && !phase4a_cur_proc_is_jentry) {
+			if (PHASE4A_METADATA_RESERVE_WORDS > 0 && operand == 0 && !phase4a_in_par_subframe && !phase4a_cur_proc_is_jentry) {
 				ldlp_off = (intptr_t) PHASE4A_METADATA_RESERVE_WORDS << WSH;
 			} else {
 				ldlp_off = LOCAL_BYTE_OFFSET (operand);

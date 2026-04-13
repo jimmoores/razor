@@ -54,11 +54,38 @@
  * The cutoff between locals and non-locals is tracked per-PROC as
  * the running AJW depth (reset at ETCS4).
  *
- * Starts at 1 -- the smallest reservation that lets us verify the
- * mechanism end-to-end.  Phase 4B onward bumps this up as concrete
- * metadata slots get moved into the new region.
+ * Started at 1 -- the smallest reservation to verify the mechanism.
+ *
+ * 2026-04-13: REVERTED TO 0.  The "shift LDL operands above the
+ * cutoff" approach is broken for nested PROCs that pass per-call
+ * data via the static-link convention (parent's LDLP 0 + callee's
+ * LDNL N).  occ21 emits the LDNL N with a *fixed* byte offset that
+ * matches the parent's *baseline* layout; with M >= 1 the parent's
+ * shifted slot lands at byte (N+M)*8 but the callee still reads
+ * (N)*8 from the static-link pointer.
+ *
+ * Concrete failures with M=1: cgtest01 ("Static chains"), cgtest02..
+ * cgtest27 (similar static-chain patterns), S19's inner-PAR-body
+ * channel access in cgtest00.  cgtest00 deadlocks during the
+ * "Testing space allocation" sequence because S19's child PAR body
+ * reads parent_Wptr+96 (= s19's slot 12 in baseline = arg 1 of s19),
+ * but with M=1 s19's slot 12 lives at byte 104 (shifted) -- the
+ * uninitialised slot at byte 96 reads MostNeg, which Y_out32 then
+ * derefs and segfaults.
+ *
+ * The infrastructure (cutoff tracking, ETCS4 drop, RET pop, LDLP 0
+ * static-link shift, PAR body-2 transition state machine, I_IN32
+ * destination init shift) is correct for the *frame-local* cases
+ * but doesn't compose with LDNL-based static link.  A future Phase 4A
+ * attempt needs a different design -- e.g., M words inserted *below*
+ * the AJW area without disturbing any LDL/STL/LDNL offset, or a
+ * coordinated change to occ21 to bias LDNL operands by M too.
+ *
+ * Set to 0 leaves the cutoff tracking and per-arch backend changes
+ * compiled but emitting no actual shift -- a clean no-op.  The
+ * infrastructure is preserved for the next attempt.
  */
-#define PHASE4A_METADATA_RESERVE_WORDS 1
+#define PHASE4A_METADATA_RESERVE_WORDS 0
 
 /*
  * phase4a_cur_local_cutoff -- running depth of the current PROC's
