@@ -64,6 +64,7 @@ extern BOOL minimal_debugoutput; /* Just enough for backtracing */
 extern BOOL iobycall;
 extern BOOL realign_virtual_channels;
 extern BOOL chanaspointer;
+extern BOOL descending_workspace; /* Phase 4B: lay out locals at negative Wptr offsets */
 extern BOOL stdlibsenabled;
 extern BOOL vlibsenabled;
 extern BOOL checkalias; /* bug TS/1563 means that the backend needs it! */
