@@ -49,7 +49,44 @@
 #define ALT_NOT_READY		(1 << ALT_NOT_READY_BIT)
 #define ALT_GUARDS		0xffffff
 
-/* Workspace offsets */
+/*
+ * Phase 4B (option III): bias every PROC's workspace frame by
+ * PROC_DESC_BIAS slots, reserving the bottom N slots for the per-call
+ * kernel descriptor.  The compiler's own local area starts at slot
+ * PROC_DESC_BIAS (instead of slot 0) and every LDL/STL/LDLP operand
+ * is biased accordingly, including the wssize reported to libkrocif
+ * so the workspace is large enough.
+ *
+ * The target end state is: descriptor fields live at positive offsets
+ * Wptr[0..PROC_DESC_BIAS-1] instead of Wptr[-1..-9]; the compiler's
+ * locals live at Wptr[PROC_DESC_BIAS..PROC_DESC_BIAS+L-1]; and below
+ * Wptr becomes dead space that C function prologues and signal frames
+ * can freely clobber.  That unlocks Phase 4B-part-2 where tranx86 can
+ * map REG_WPTR directly onto the hardware stack pointer.
+ *
+ * Size chosen as 12 slots (96 bytes = 16-byte aligned) to cover all
+ * of the legacy descriptor fields in one contiguous area:
+ *   - 9 currently-negative fields (iptr..escape_ptr)
+ *   - 3 currently-positive fields (temp/iptr_succ, count, saved_priority)
+ *
+ * PROC_DESC_BIAS must stay in sync with:
+ *   tools/occ21/include/genhdr.h       -- PROC_DESC_BIAS
+ *   tools/tranx86/transputer.h         -- PROC_DESC_BIAS
+ *   tools/tranx86/proc_desc.h          -- struct size
+ * If these drift, the compiler and runtime disagree about where
+ * each slot lives.  A _Static_assert is dangerous here because the
+ * three files see different compile-time environments; rely on the
+ * comments and the fact that nobody should be editing this number
+ * lightly.
+ */
+#define PROC_DESC_BIAS		12
+
+/* Workspace offsets.  These are the legacy NEGATIVE-offset constants
+ * that currently address the descriptor area below Wptr.  They stay
+ * valid until commit C3 flips the struct to positive offsets; commit
+ * C2 merely biases the compiler's frame so the slots below (and at)
+ * the new cutoff become dead space, ready for the descriptor to
+ * move into. */
 #define SavedPriority	2
 #define Count 		1
 #define IptrSucc 	0

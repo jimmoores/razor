@@ -88,6 +88,23 @@ extern int genhdr_w_time_slot (void);
 #define REG_PARAMS MAXREGS
 /* One below workspace slot contains the return address */
 #define INS_EXTRA  ((INT32)1)
+
+/*
+ * Phase 4B (option III): per-call descriptor bias.  Every PROC's
+ * frame is enlarged by PROC_DESC_BIAS slots at the bottom; the
+ * compiler's own locals start at slot PROC_DESC_BIAS instead of
+ * slot 0.  The bottom N slots are reserved for the kernel's
+ * per-call descriptor, which commit C3 migrates from Wptr[-1..-9]
+ * to Wptr[0..PROC_DESC_BIAS-1].
+ *
+ * Must stay in sync with:
+ *   runtime/ccsp/include/ccsp_consts.h  -- PROC_DESC_BIAS
+ *   tools/tranx86/transputer.h          -- PROC_DESC_BIAS
+ *   tools/tranx86/proc_desc.h           -- struct size
+ *
+ * See ccsp_consts.h for the rationale on the size choice.
+ */
+#define PROC_DESC_BIAS 12
 /* requirements for recursive stuff */
 #define RECURSIVE_WS -1
 #define RECURSIVE_VS -2

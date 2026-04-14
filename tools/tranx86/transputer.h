@@ -33,6 +33,16 @@
 #define WShift		2		/* x4 -- INT is always 32-bit (4 bytes) */
 #define DWShift		3		/* x8 */
 
+/*
+ * Phase 4B (option III) per-call descriptor bias.  Must stay in sync
+ * with:
+ *   tools/occ21/include/genhdr.h       -- PROC_DESC_BIAS
+ *   runtime/ccsp/include/ccsp_consts.h -- PROC_DESC_BIAS
+ *   tools/tranx86/proc_desc.h          -- struct size
+ * Rationale is documented in ccsp_consts.h.
+ */
+#define PROC_DESC_BIAS 12
+
 
 /*{{{  Primaries*/
 #define I_J		0x00
