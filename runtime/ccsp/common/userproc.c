@@ -66,8 +66,9 @@
 #include <kernel.h>
 #include <rts.h>
 
-#if (defined(USEFUL_SEGFAULT) || defined(USEFUL_FPEDEBUG)) && !defined(RMOX_BUILD)
+#if !defined(RMOX_BUILD)
 	#include <signal.h>
+	#include <string.h>
 #endif
 
 #if !defined(RMOX_BUILD) && defined(ENABLE_CPU_TIMERS)
@@ -680,17 +681,108 @@ void ccsp_safe_pause_timeout (sched_t *sched)
 	#endif
 }
 /*}}}*/
+/*{{{  void ccsp_install_sigaltstack (void)*/
+/*
+ *	Allocates an alternate signal-delivery stack and installs it for
+ *	the *current* thread via sigaltstack().  Signal handlers installed
+ *	with the SA_ONSTACK flag will run on this alt stack instead of the
+ *	thread's main stack.
+ *
+ *	Why we want this (Phase 4 prep): at present Wptr is held in a
+ *	dedicated register (%r14 on x64, %x28 on aarch64) distinct from
+ *	the hardware stack pointer, so signal frames the kernel writes
+ *	below %rsp never touch workspace memory.  The Phase 4 plan maps
+ *	Wptr to the hardware SP so occam PROC calls can use native call/
+ *	ret and free up the dedicated register -- but then signals would
+ *	deliver onto the workspace, clobbering the per-call descriptor
+ *	area at Wptr[-1..-9].  Setting up an alt stack now makes that
+ *	future mapping safe without requiring a descriptor relocation.
+ *
+ *	Per-thread: each scheduler thread needs its own alt stack; the
+ *	main thread calls this from set_user_process_signals() and each
+ *	pthread calls it from user_thread() before ccsp_kernel_entry().
+ *
+ *	Failure is non-fatal: we log a warning and continue.  On platforms
+ *	without sigaltstack() or where allocation fails, the runtime still
+ *	works -- it just isn't Phase-4-ready on that thread.
+ */
+void ccsp_install_sigaltstack (void)
+{
+	#if defined(HAVE_SIGALTSTACK) || defined(SIGSTKSZ)
+	stack_t ss;
+	size_t alt_size;
+
+	/*
+	 * SIGSTKSZ is the POSIX minimum (typically 8KB).  We bump to
+	 * MINSIGSTKSZ * 4 or 32KB whichever is larger, because some
+	 * glibc signal-delivery code paths (SA_SIGINFO context save)
+	 * push sizable ucontext frames that can blow out an 8KB stack
+	 * when nested with ftrace / sanitizer instrumentation.  32KB
+	 * per thread is cheap.
+	 */
+	alt_size = SIGSTKSZ;
+	if (alt_size < 32 * 1024) {
+		alt_size = 32 * 1024;
+	}
+
+	ss.ss_sp = malloc (alt_size);
+	if (ss.ss_sp == NULL) {
+		BMESSAGE ("ccsp_install_sigaltstack: malloc failed, signals will deliver on main stack\n");
+		return;
+	}
+	ss.ss_size = alt_size;
+	ss.ss_flags = 0;
+
+	if (sigaltstack (&ss, NULL) < 0) {
+		BMESSAGE ("ccsp_install_sigaltstack: sigaltstack() failed (errno=%d)\n", errno);
+		free (ss.ss_sp);
+		return;
+	}
+	/* intentional: alt stack memory is now owned by the kernel for
+	 * the life of the thread; we don't free it.  Threads don't
+	 * exit during normal CCSP operation.  On process exit the OS
+	 * reclaims everything. */
+	#endif
+}
+/*}}}*/
+
+/*{{{  static void install_signal_handler (int sig, void (*handler)(int))*/
+/*
+ *	Helper: install a plain signal handler (int-taking) via sigaction
+ *	with SA_ONSTACK so the handler runs on the alt stack installed by
+ *	ccsp_install_sigaltstack().  Falls back to plain signal() if
+ *	sigaction fails.
+ */
+static void install_signal_handler (int sig, void (*handler)(int))
+{
+	struct sigaction act;
+
+	memset (&act, 0, sizeof act);
+	act.sa_handler = handler;
+	act.sa_flags = SA_ONSTACK | SA_RESTART;
+	sigemptyset (&act.sa_mask);
+	if (sigaction (sig, &act, NULL) < 0) {
+		BMESSAGE ("install_signal_handler: sigaction(%d) failed, falling back to signal()\n", sig);
+		signal (sig, handler);
+	}
+}
+/*}}}*/
+
 /*{{{  static bool set_user_process_signals (void)*/
 /*
  *	sets up signal handling for CCSP
  */
 static bool set_user_process_signals (void)
 {
+	/* Install an alt stack for the main thread before wiring any
+	 * handlers so SA_ONSTACK is effective from the first delivery. */
+	ccsp_install_sigaltstack ();
+
 	/* Modifies kernel tim_sync variable */
-	signal (SIGALRM, user_tim_handler);
+	install_signal_handler (SIGALRM, user_tim_handler);
 	#if 0
 		/* Called by user if they panic */
-		signal (SIGPANIC, (SigParam)user_panic_handler);
+		install_signal_handler (SIGPANIC, (SigParam)user_panic_handler);
 	#endif
 
 	#ifdef BLOCKING_SYSCALLS
@@ -699,35 +791,35 @@ static bool set_user_process_signals (void)
 	#endif
 
 	/* 'Error' signals */
-	signal (SIGILL, user_trap_handler);  /* illegal instruction */
-	signal (SIGBUS, user_trap_handler);  /* bus error */
+	install_signal_handler (SIGILL, user_trap_handler);  /* illegal instruction */
+	install_signal_handler (SIGBUS, user_trap_handler);  /* bus error */
 	faulted = 0;
 	#ifdef USEFUL_SEGFAULT
 		segv_action.sa_sigaction = user_segv_handler;
-		segv_action.sa_flags = SA_SIGINFO;
+		segv_action.sa_flags = SA_SIGINFO | SA_ONSTACK;
 		sigemptyset (&segv_action.sa_mask);
 		if (sigaction (SIGSEGV, &segv_action, NULL) < 0) {
 			BMESSAGE ("unable to sigaction SEGV, using normal.\n");
-			signal (SIGSEGV, user_trap_handler);
+			install_signal_handler (SIGSEGV, user_trap_handler);
 		}
 	#else	/* !USEFUL_SEGFAULT */
 		#ifndef DEFAULT_CORES
-			signal (SIGSEGV, user_trap_handler); /* segmentation violation */
+			install_signal_handler (SIGSEGV, user_trap_handler); /* segmentation violation */
 		#endif
 	#endif	/* !USEFUL_SEGFAULT */
 	#if defined(TARGET_CPU_ALPHA)
-		signal (SIGTRAP, user_trap_handler);
+		install_signal_handler (SIGTRAP, user_trap_handler);
 	#endif
 	#ifdef USEFUL_FPEDEBUG
 		fpe_action.sa_sigaction = user_fpe_handler;
-		fpe_action.sa_flags = SA_SIGINFO;
+		fpe_action.sa_flags = SA_SIGINFO | SA_ONSTACK;
 		sigemptyset (&fpe_action.sa_mask);
 		if (sigaction (SIGFPE, &fpe_action, NULL) < 0) {
 			BMESSAGE ("unable to sigaction FPE, using normal.\n");
-			signal (SIGFPE, user_fp_handler);
+			install_signal_handler (SIGFPE, user_fp_handler);
 		}
 	#else	/* !USEFUL_FPEDEBUG */
-		signal (SIGFPE, user_fp_handler);
+		install_signal_handler (SIGFPE, user_fp_handler);
 	#endif	/* !USEFUL_FPEDEBUG */
 
 	return true; /* FIXME: do more checking? */
@@ -814,9 +906,18 @@ unsigned int ccsp_spin_us (void)
 /*{{{  static void *user_thread (void *arg)*/
 static void *user_thread (void *arg)
 {
+	/* Each scheduler pthread needs its own signal alt stack so that
+	 * once Wptr is mapped onto the hardware SP (Phase 4), signal
+	 * frames delivered while the thread is running occam code don't
+	 * clobber the workspace at Wptr[-1..-9].  Must be set before the
+	 * thread first has any chance of receiving a signal.  SA_ONSTACK
+	 * on the handlers was set once by the main thread; that's a
+	 * process-wide sigaction but the alt stack itself is per-thread. */
+	ccsp_install_sigaltstack ();
+
 	ccsp_kernel_entry (NotProcess_p, NotProcess_p);
 	return NULL;
-} 
+}
 /*}}}*/
 /*{{{  void ccsp_new_thread (void)*/
 void ccsp_new_thread (void)

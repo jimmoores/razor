@@ -139,6 +139,9 @@ unsigned int ccsp_spin_us (void);
 void ccsp_new_thread (void);
 void ccsp_start_threads (void);
 bool ccsp_user_process_init (void);
+#if !defined(RMOX_BUILD)
+void ccsp_install_sigaltstack (void);
+#endif
 /*}}}*/
 
 #endif /* rts.h */

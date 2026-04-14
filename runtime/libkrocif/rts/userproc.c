@@ -58,9 +58,13 @@
 
 #include <rts.h>
 
-#if (defined(USEFUL_SEGFAULT) || defined(USEFUL_FPEDEBUG))
-	#include <signal.h>
-#endif
+#include <signal.h>
+#include <string.h>
+
+/* Declared in libccsp (runtime/ccsp/common/userproc.c).  Allocates and
+ * installs a per-thread sigaltstack so SA_ONSTACK handlers run off the
+ * main stack.  See the Phase 4 commentary in ccsp/common/userproc.c. */
+extern void ccsp_install_sigaltstack (void);
 
 #define MESSAGE(fmt,args...) fprintf (stderr,fmt,##args)
 #define FFLUSH(stream) fflush(stream)
@@ -179,38 +183,86 @@ static void user_crash_signal (int sig)
 	kill (getpid (), sig);
 }
 /*}}}*/
+/*{{{  static void install_handler (int sig, void (*handler)(int))*/
+/*
+ *	Helper: install a plain signal handler via sigaction with
+ *	SA_ONSTACK so delivery happens on the alt stack set up by
+ *	ccsp_install_sigaltstack().  Falls back to signal() if sigaction
+ *	is unavailable at runtime.
+ */
+static void install_handler (int sig, void (*handler)(int))
+{
+	struct sigaction act;
+
+	memset (&act, 0, sizeof act);
+	act.sa_handler = handler;
+	act.sa_flags = SA_ONSTACK | SA_RESTART;
+	sigemptyset (&act.sa_mask);
+	if (sigaction (sig, &act, NULL) < 0) {
+		/* last-ditch fallback */
+		signal (sig, handler);
+	}
+}
+/*}}}*/
+/*{{{  static int handler_is_set_to_default (int sig)*/
+/*
+ *	Returns 1 if the given signal's current disposition is the
+ *	default (SIG_DFL), 0 otherwise.  Used for the "only catch this
+ *	if it's not already being ignored" dance below.  We can't use
+ *	signal()'s return value the way the old code did, because that
+ *	race-installs the default handler as a side effect.
+ */
+static int handler_is_set_to_default (int sig)
+{
+	struct sigaction act;
+	if (sigaction (sig, NULL, &act) < 0) {
+		return 1;	/* assume default on error */
+	}
+	return act.sa_handler == SIG_DFL;
+}
+/*}}}*/
+
 /*{{{  static void set_user_process_signals (void)*/
 /*
  *	sets up signal handling for KRoC
  */
 static void set_user_process_signals (void)
 {
-	/* Process termination signals */
-	signal (SIGHUP, user_signal_good_exit);	/* hangup */
-	#if 0
-	signal (SIGEMT, user_bad_exit);		/* emulator trap */
-	#endif
-	signal (SIGTERM, user_signal_good_exit); /* software termination */
-	signal (SIGPIPE, user_signal_good_exit); /* broken pipe -- usually from "prog | head -10" or similar */
+	/* Install an alt stack for this (main) thread before wiring any
+	 * handlers.  Phase 4 prep: once tranx86 maps Wptr onto the
+	 * hardware SP, signals delivered on the main stack would clobber
+	 * the workspace at Wptr[-1..-9].  SA_ONSTACK + sigaltstack keeps
+	 * them on a dedicated area.  ccsp_install_sigaltstack is defined
+	 * in libccsp; libkrocif links against libccsp so the call just
+	 * resolves at link time. */
+	ccsp_install_sigaltstack ();
 
-	/* Only catch if not being ignored */
-	if (signal (SIGINT, SIG_IGN) != SIG_IGN) {
-		signal (SIGINT, user_signal_good_exit);	/* interrupt (^C) */
+	/* Process termination signals */
+	install_handler (SIGHUP, user_signal_good_exit);	/* hangup */
+	#if 0
+	install_handler (SIGEMT, user_bad_exit);		/* emulator trap */
+	#endif
+	install_handler (SIGTERM, user_signal_good_exit); /* software termination */
+	install_handler (SIGPIPE, user_signal_good_exit); /* broken pipe -- usually from "prog | head -10" or similar */
+
+	/* Only catch if not already being ignored */
+	if (handler_is_set_to_default (SIGINT)) {
+		install_handler (SIGINT, user_signal_good_exit);	/* interrupt (^C) */
 	}
-	if (signal (SIGQUIT, SIG_IGN) != SIG_IGN) {
-		signal (SIGQUIT, user_signal_quit_exit); /* quit */
+	if (handler_is_set_to_default (SIGQUIT)) {
+		install_handler (SIGQUIT, user_signal_quit_exit); /* quit */
 	}
 
 	/* stop signal generated from keyboard (^Z) */
 	/* Only catch this if running with job-control */
-	if (signal (SIGTSTP, SIG_IGN) == SIG_DFL) {
-		signal (SIGTSTP, user_stop_signal);
+	if (handler_is_set_to_default (SIGTSTP)) {
+		install_handler (SIGTSTP, user_stop_signal);
 	}
 
 	/* crash signals -- restore tty state before core dump */
-	signal (SIGSEGV, user_crash_signal);
-	signal (SIGBUS, user_crash_signal);
-	signal (SIGABRT, user_crash_signal);
+	install_handler (SIGSEGV, user_crash_signal);
+	install_handler (SIGBUS, user_crash_signal);
+	install_handler (SIGABRT, user_crash_signal);
 }
 /*}}}*/
 
