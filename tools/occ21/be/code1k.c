@@ -1283,8 +1283,32 @@ PUBLIC void mark_flag_clean (const BOOL fpu_not_int)
  *
  **************************************************************************/
 /*}}}*/
-PUBLIC void genprimary (const int instruction, const INT32 operand)
+PUBLIC void genprimary (const int instruction, const INT32 operand_in)
 {
+	INT32 operand = operand_in;
+
+	/*
+	 * Phase 4B: in the descending-workspace layout, AJW direction
+	 * flips: the legacy convention is `AJW -L` to drop Wptr by L
+	 * words (allocating L locals at positive offsets from the new
+	 * Wptr), while the descending convention is `AJW +L` to raise
+	 * Wptr by L words (so locals live at negative offsets from
+	 * the new Wptr -- the layout movename() / loadlex() emit).
+	 *
+	 * The 17 genprimary(I_AJW, ...) call sites in the back end
+	 * pass either explicit -L or +L integers depending on whether
+	 * they're allocating or deallocating.  Negating uniformly here
+	 * inverts every site in one place.
+	 *
+	 * tranx86 doesn't need to change for AJW: its I_AJW handler
+	 * just emits subq/addq based on the operand sign, so a
+	 * negated operand naturally produces the opposite Wptr
+	 * direction in the generated asm.
+	 */
+	if (descending_workspace && instruction == I_AJW) {
+		operand = -operand;
+	}
+
 	if (!dead) {
 		note_tstack ();
 		if (instruction == I_ADC) {
