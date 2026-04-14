@@ -1283,7 +1283,106 @@ PUBLIC void mark_flag_clean (const BOOL fpu_not_int)
  *
  **************************************************************************/
 /*}}}*/
-PUBLIC void genprimary (const int instruction, const INT32 operand)
+/*
+ * Phase 4B-III C2 helper: emit a primary instruction WITHOUT the
+ * PROC_DESC_BIAS shift.  This is the old genprimary, factored out so
+ * the biasing wrapper below can call through to it after applying
+ * the bias, and so the handful of sites that need the unbiased form
+ * (e.g. loadstaticlink's "current Wptr" branch, the recursive-PROC
+ * save path in gen8.c) can call it directly.
+ */
+PUBLIC void genprimary_raw (const int instruction, const INT32 operand);
+
+PUBLIC void genprimary (const int instruction, const INT32 operand_in)
+{
+	INT32 operand = operand_in;
+
+	/*
+	 * Phase 4B-III C2: bias frame-relative operands by
+	 * PROC_DESC_BIAS slots so the compiler's locals shift up and
+	 * the bottom BIAS slots of every PROC frame become dead space
+	 * reserved for the per-call descriptor that C3 migrates there.
+	 *
+	 * Instructions biased:
+	 *  - I_LDL, I_STL, I_LDLP with operand >= 0:
+	 *        Wptr-relative local access.  Bias so that what the
+	 *        allocator calls "slot N" lands at physical byte
+	 *        (N + BIAS) * WSH.  Operand 0 is treated as positive
+	 *        here: movename emits `LDLP 0` for a slot-0 variable's
+	 *        address, which should go through the bias.  Sites
+	 *        that want an *unbiased* LDLP 0 meaning "current Wptr
+	 *        value" (static-link passing, recursive PROC save)
+	 *        must call genprimary_raw() directly.
+	 *  - I_LDL, I_STL, I_LDLP with negative operand:
+	 *        Below-Wptr access (param write area etc.).  No bias
+	 *        -- the descriptor migration puts its slots above
+	 *        Wptr, not below, so below-Wptr addressing is
+	 *        unaffected.
+	 *  - I_LDNL, I_STNL, I_LDNLP:
+	 *        These dereference a pointer at a data-structure
+	 *        offset, NOT at a Wptr-relative frame slot.  Bias
+	 *        applies if and only if the pointer being dereferenced
+	 *        is itself a Wptr value (static-link access to a
+	 *        parent frame).  occ21 emits those through the same
+	 *        call path as local LDL/STL (movename with
+	 *        nonlocal=TRUE), so they also get the bias here.
+	 *        Other LDNL/STNL sites (record/array element
+	 *        dereference via a heap pointer, mobile type access,
+	 *        etc.) do NOT want the bias and must call
+	 *        genprimary_raw() directly.
+	 *  - I_AJW (any sign):
+	 *        Bias the magnitude so every frame is BIAS slots
+	 *        bigger.  No ambiguity: every I_AJW represents
+	 *        frame-size change.
+	 *  - Everything else (I_LDC, I_ADC, I_EQC, control flow,
+	 *    etc.): not biased.
+	 */
+	switch (instruction) {
+	case I_LDL:
+	case I_STL:
+	case I_LDLP:
+		/*
+		 * Wptr-relative frame slot access.  Bias positive slot
+		 * indices so the allocator's "slot N" lands at physical
+		 * byte (N + PROC_DESC_BIAS) * WSH.  Negative operands
+		 * address below-Wptr (param write area etc.) and are
+		 * not affected by the descriptor migration.
+		 */
+		if (operand >= 0) {
+			operand += PROC_DESC_BIAS;
+		}
+		break;
+	case I_AJW:
+		/*
+		 * Every AJW represents a frame-size change.  Bias the
+		 * magnitude so each frame has PROC_DESC_BIAS extra slots
+		 * reserved for the per-call descriptor.  Applies to both
+		 * allocate (negative operand) and deallocate (positive).
+		 */
+		if (operand < 0) {
+			operand -= PROC_DESC_BIAS;
+		} else if (operand > 0) {
+			operand += PROC_DESC_BIAS;
+		}
+		break;
+	default:
+		/*
+		 * I_LDNL / I_STNL / I_LDNLP are NOT biased here.  Those
+		 * dereference a pointer at a data-structure byte offset
+		 * and the pointer isn't necessarily a Wptr.  For the
+		 * static-link subset of LDNL (where the pointer IS a
+		 * parent-Wptr and the operand is a parent-slot index),
+		 * the caller (movename with nonlocal=TRUE) biases the
+		 * operand manually before calling genprimary so the
+		 * final emit value is still correct.
+		 */
+		break;
+	}
+
+	genprimary_raw (instruction, operand);
+}
+
+PUBLIC void genprimary_raw (const int instruction, const INT32 operand)
 {
 	if (!dead) {
 		note_tstack ();
@@ -2066,7 +2165,16 @@ PUBLIC void coder_add_entry (treenode *const nptr)
 			const wordnode *const nameptr = translate_from_internal (NNameOf (nptr));
 
 			etc_oinst (GLOBNAME, WNameOf (nameptr));
-			etc_cinst (SETWS, NPDatasizeOf (nptr));
+			/*
+			 * Phase 4B-III C2: bias the per-PROC workspace size
+			 * by PROC_DESC_BIAS.  genprimary biases every AJW
+			 * operand, so each PROC's frame is PROC_DESC_BIAS
+			 * slots larger than what the allocator calculated,
+			 * and SETWS must report the enlarged size so
+			 * libkrocif allocates enough memory for the root
+			 * workspace and tranx86 tracks ws_size correctly.
+			 */
+			etc_cinst (SETWS, NPDatasizeOf (nptr) + PROC_DESC_BIAS);
 			etc_cinst (SETVS, NPVSUsageOf (nptr));
 #ifdef MOBILES
 			etc_msusageinst (NPMSUsageOf (nptr));

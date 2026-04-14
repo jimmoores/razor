@@ -2088,8 +2088,18 @@ fprintf (stderr, "tinstance: alloc_ws_slots = %d, alloc_vs_slots = %d, alloc_ms_
 		}
 		/*}}}*/
 		/*{{{  save current Wptr in new workspace*/
-		/* stuff current Wptr into new workspace */
-		genprimary (I_LDLP, 0);
+		/* stuff current Wptr into new workspace.
+		 * Phase 4B-III C2: LDLP 0 here means "current Wptr
+		 * value" (so we can save it for the recursive PROC to
+		 * restore on return), NOT "address of local slot 0".
+		 * Use genprimary_raw to bypass the PROC_DESC_BIAS that
+		 * genprimary would otherwise apply to LDLP.  The
+		 * subsequent STNL goes through plain genprimary so that
+		 * RECURSIVE_SAVED_WS (= 0) gets biased to the first
+		 * usable slot of the new workspace past its own
+		 * descriptor area.
+		 */
+		genprimary_raw (I_LDLP, 0);
 		genprimary (I_LDL, RECURSIVE_WS);
 		genprimary (I_STNL, RECURSIVE_SAVED_WS);
 		/*}}}*/
