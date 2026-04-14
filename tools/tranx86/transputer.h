@@ -33,16 +33,6 @@
 #define WShift		2		/* x4 -- INT is always 32-bit (4 bytes) */
 #define DWShift		3		/* x8 */
 
-/*
- * Phase 4B (option III) per-call descriptor bias.  Must stay in sync
- * with:
- *   tools/occ21/include/genhdr.h       -- PROC_DESC_BIAS
- *   runtime/ccsp/include/ccsp_consts.h -- PROC_DESC_BIAS
- *   tools/tranx86/proc_desc.h          -- struct size
- * Rationale is documented in ccsp_consts.h.
- */
-#define PROC_DESC_BIAS 12
-
 
 /*{{{  Primaries*/
 #define I_J		0x00
@@ -589,20 +579,20 @@
 #define W_IPTRSUCC	PROC_DESC_OFF(temp)	/* alias of W_TEMP */
 
 /*
- * Phase 4B-III C3 compile-time check: the typed offsets derived
- * via offsetof(tranx86_proc_desc_t, field) in proc_desc.h must
- * match the positive-offset layout that ccsp_consts.h encodes and
- * that process_desc.h lays out.
+ * Compile-time check that the typed offsets are numerically
+ * identical to the legacy literal-shift definitions.  If a future
+ * change to proc_desc.h reorders the struct, or to transputer.h
+ * changes WSH, these assertions catch it.
  */
-_Static_assert (W_TIME     == (3 << WSH),  "W_TIME drift");
-_Static_assert (W_TLINK    == (4 << WSH),  "W_TLINK drift");
-_Static_assert (W_POINTER  == (5 << WSH),  "W_POINTER drift");
-_Static_assert (W_PRIORITY == (6 << WSH),  "W_PRIORITY drift");
-_Static_assert (W_LINK     == (7 << WSH),  "W_LINK drift");
-_Static_assert (W_IPTR     == (8 << WSH),  "W_IPTR drift");
-_Static_assert (W_TEMP     == (9 << WSH),  "W_TEMP drift");
-_Static_assert (W_COUNT    == (10 << WSH), "W_COUNT drift");
-_Static_assert (W_IPTRSUCC == (9 << WSH),  "W_IPTRSUCC drift");
+_Static_assert (W_TIME     == -(6 << WSH), "W_TIME drift");
+_Static_assert (W_TLINK    == -(5 << WSH), "W_TLINK drift");
+_Static_assert (W_POINTER  == -(4 << WSH), "W_POINTER drift");
+_Static_assert (W_PRIORITY == -(3 << WSH), "W_PRIORITY drift");
+_Static_assert (W_LINK     == -(2 << WSH), "W_LINK drift");
+_Static_assert (W_IPTR     == -(1 << WSH), "W_IPTR drift");
+_Static_assert (W_TEMP     ==  0,          "W_TEMP drift");
+_Static_assert (W_COUNT    ==  (1 << WSH), "W_COUNT drift");
+_Static_assert (W_IPTRSUCC ==  0,          "W_IPTRSUCC drift");
 
 #define Z_ENABLING	(NOT_PROCESS + 1)
 #define Z_WAITING	(NOT_PROCESS + 2)

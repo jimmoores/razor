@@ -48,16 +48,6 @@ extern void (*code_link_map_fn)(void);
 /*{{{  routines*/
 void compress_code (void);
 void genprimary (int instruction, INT32 operand);
-/*
- * genprimary_raw: emit a primary without applying the Phase 4B-III
- * PROC_DESC_BIAS adjustment.  Use for sites that need unbiased frame
- * operands -- loadstaticlink's "current Wptr" branch, recursive /
- * FORK / DYNCALL / MPA saved-Wptr setup, and any direct ETC emission
- * where the operand is already a raw byte or data-structure offset
- * rather than a compiler-slot index.  See the long comment in
- * code1k.c::genprimary for the rules.
- */
-void genprimary_raw (int instruction, INT32 operand);
 void genbranch (int instruction, int label);
 void genjump (int label);
 void genlabeldiff (int instruction, int label1, int label2);

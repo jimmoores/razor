@@ -199,11 +199,6 @@ PRIVATE BOOL loadlex (int l)
 		int level = be_lexlevel - 1;
 		INT32 sloffset = sloffsetof (be_lexlevel);
 
-		/*
-		 * Phase 4B-III C2: `sloffset` is a compiler-slot index
-		 * into the CURRENT frame (where the static link is
-		 * stored).  Plain genprimary biases LDL for us.
-		 */
 		genprimary (I_LDL, sloffset);
 		gencomment0 ("PTR staticlink");
 		/*{{{  load static link for level */
@@ -211,21 +206,7 @@ PRIVATE BOOL loadlex (int l)
 			/* If it is a repl PAR static link the static link contains the
 			   workspace pointer of the routine setting up the repl
 			   AT THE TIME OF SETTING UP THE REPL */
-			/*
-			 * Phase 4B-III C2: chain walk via LDNL.  The pointer
-			 * on top of the stack is the UNBIASED parent Wptr
-			 * (emitted as unbiased LDLP 0 in loadstaticlink), and
-			 * we want to read the parent's compiler slot
-			 * sloffsetof(level) -- which lives at physical offset
-			 * (sloffsetof(level) + PROC_DESC_BIAS) in the biased
-			 * parent frame.  genprimary does NOT bias LDNL, so
-			 * we bias the operand manually here.
-			 */
-			INT32 op = sloffsetof (level);
-			if (op >= 0) {
-				op += PROC_DESC_BIAS;
-			}
-			genprimary (I_LDNL, op);
+			genprimary (I_LDNL, sloffsetof (level));
 			gencomment1 ("PTR staticlink %d", level - l);
 		}
 		/*}}} */
@@ -243,16 +224,7 @@ PUBLIC void loadstaticlink (int newlevel)
 fprintf (stderr, "loadstaticlink: newlevel = %d, be_lexlevel = %d\n", newlevel, be_lexlevel);
 #endif
 	if (newlevel == (be_lexlevel + 1)) {
-		/*
-		 * Phase 4B-III C2: passing "current Wptr" as the static
-		 * link for a child call.  Must be UNBIASED -- the child's
-		 * movename/loadlex/loadstaticlink will bias its LDNL
-		 * operands by PROC_DESC_BIAS when it reads parent's slots
-		 * through this pointer, so the pointer value itself needs
-		 * to be the raw parent Wptr.  genprimary_raw bypasses the
-		 * bias that genprimary would otherwise apply to I_LDLP.
-		 */
-		genprimary_raw (I_LDLP, wspadjusts[be_lexlevel]);
+		genprimary (I_LDLP, wspadjusts[be_lexlevel]);
 		/* This should be the current workspace offset */
 	} else {
 		int nonlocal = loadlex (newlevel);
@@ -260,33 +232,11 @@ fprintf (stderr, "loadstaticlink: newlevel = %d, be_lexlevel = %d\n", newlevel, 
 #if 0
 fprintf (stderr, "loadstaticlink: sloffsetof(newlevel) = %d\n", sloffsetof (newlevel));
 #endif
-		/*
-		 * Phase 4B-III C2: this reads a static-link pointer out
-		 * of a compiler slot `sloffsetof(newlevel)`.
-		 *  - LDL (nonlocal=FALSE): slot is in CURRENT frame;
-		 *    plain genprimary biases LDL for us.
-		 *  - LDNL (nonlocal=TRUE): slot is in a PARENT frame,
-		 *    reached via the unbiased pointer loadlex left on
-		 *    the stack; bias the operand manually since
-		 *    genprimary doesn't bias LDNL.
-		 */
-		{
-			INT32 sl = sloffsetof (newlevel);
-			if (nonlocal && sl >= 0) {
-				sl += PROC_DESC_BIAS;
-			}
-			genprimary (nonlocal ? I_LDNL : I_LDL, sl);
-		}
+		genprimary (nonlocal ? I_LDNL : I_LDL, sloffsetof (newlevel));
 
 		/* if required static link isn't normalised, normalise it */
 		if (staticlinkoffsets[newlevel] & REPL_FLAG) {
-			/*
-			 * LDNLP adds a byte-count adjustment to the pointer
-			 * on top of the stack.  wspadjusts is a running
-			 * "back-end view of where Wptr moved" count, not a
-			 * compiler-slot index, so no bias: use the raw form.
-			 */
-			genprimary_raw (I_LDNLP, wspadjusts[newlevel - 1]);
+			genprimary (I_LDNLP, wspadjusts[newlevel - 1]);
 		}
 	}
 	gencomment0 ("PTR staticlink");
@@ -652,30 +602,7 @@ printtreenl (stderr, 4, nptr);
 		/*{{{  move to/from a normal variable */
 		const int level = NLexLevelOf (nptr);
 		const BOOL nonlocal = loadlex (level);
-		INT32 wsposn = NVOffsetOf (nptr) + w + nameoffsetof (level);
-
-		/*
-		 * Phase 4B-III C2: when accessing a parent's variable via
-		 * the static link (nonlocal = TRUE), the emitted
-		 * LDNL/STNL operand is a parent-slot index that the
-		 * child reads through a parent-Wptr pointer.  genprimary
-		 * does NOT bias LDNL/STNL (too ambiguous -- most LDNL
-		 * sites address record/array fields, not frame slots),
-		 * so we apply the bias explicitly here.  The ilocal
-		 * (LDL/STL/LDLP) path is biased inside genprimary, so
-		 * wsposn stays unbiased for that path.
-		 *
-		 * The static-link base pointer itself is emitted
-		 * UNBIASED by loadstaticlink(), so the expression
-		 *     biased_parent_Wptr = parent_Wptr + 0
-		 *     access = biased_parent_Wptr + (N + BIAS) * WSH
-		 *            = parent_Wptr + (N + BIAS) * WSH
-		 * reaches parent's slot N at its physical, biased
-		 * position in the parent's frame.
-		 */
-		if (nonlocal && wsposn >= 0) {
-			wsposn += PROC_DESC_BIAS;
-		}
+		const INT32 wsposn = NVOffsetOf (nptr) + w + nameoffsetof (level);
 
 		genprimary ((nonlocal ? inonlocal : ilocal), wsposn);
 		/*}}} */

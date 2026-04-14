@@ -46,47 +46,45 @@
 #include "ukcthreads_types.h"		/* word */
 
 /*
- *	Phase 4B-III C3: the descriptor now lives at positive offsets
- *	above Wptr, not negative offsets below.  PROC_DESC_NEG_WORDS
- *	was 9 in the legacy layout; it is now 0, and PROC_DESC() returns
- *	the workspace pointer directly cast to a descriptor pointer.
- *	The compiler's locals area has been biased up by PROC_DESC_BIAS
- *	(= 12) slots in commit C2, so Wptr[0..11] is guaranteed to be
- *	descriptor-only dead space from the compiler's perspective.
+ *	Number of words occupied by the descriptor strictly *below* the
+ *	workspace pointer.  This must match the negative-offset constants
+ *	in ccsp_consts.h (EscapePtr = -9 today).  PROC_DESC() subtracts
+ *	this many words from Wptr to find the descriptor base.
  */
-#define PROC_DESC_NEG_WORDS	0
+#define PROC_DESC_NEG_WORDS	9
 
 /*
  *	process_descriptor_t -- typed view of the per-process metadata.
  *
- *	Fields are in memory order, lowest address first.  In this
- *	positive-offset layout the first field (escape_ptr) lives at
- *	wptr[+0], the last (saved_priority) at wptr[+11].  Total 12
- *	words = PROC_DESC_BIAS.  Anonymous unions alias fields that
- *	share a slot under different names in different contexts.
+ *	The fields are listed in *memory order*, lowest address first, so
+ *	that &desc->iptr == &wptr[-1] when the descriptor pointer was
+ *	obtained via PROC_DESC(wptr).  Anonymous unions provide aliases
+ *	for fields that share a slot in the legacy layout but are used
+ *	for different purposes at different times -- e.g. SchedPtr and
+ *	StackPtr both live at wptr[-7].  Stage 3E will split those.
  */
 typedef struct process_descriptor {
-	word	escape_ptr;		/* wptr[+0]  -- CIF only */
-	word	barrier_ptr;		/* wptr[+1]  -- CIF only */
-	union {				/* wptr[+2] */
+	word	escape_ptr;		/* wptr[-9]  -- CIF only */
+	word	barrier_ptr;		/* wptr[-8]  -- CIF only */
+	union {				/* wptr[-7] */
 		word	sched_ptr;	/*   CIF: pointer to ccsp_sched_t */
 		word	stack_ptr;	/*   CIF: workspace top, init only */
 	};
-	word	time_f;			/* wptr[+3]  -- timer queue value */
-	word	tlink;			/* wptr[+4]  -- timer queue link */
-	union {				/* wptr[+5] */
+	word	time_f;			/* wptr[-6]  -- timer queue value */
+	word	tlink;			/* wptr[-5]  -- timer queue link */
+	union {				/* wptr[-4] */
 		word	pointer;	/*   channel I/O pointer */
 		word	state;		/*   ALT state */
 	};
-	word	priofinity;		/* wptr[+6]  -- priority + affinity */
-	word	link;			/* wptr[+7]  -- run-queue link */
-	word	iptr;			/* wptr[+8]  -- saved instruction pointer */
-	union {				/* wptr[+9] */
+	word	priofinity;		/* wptr[-3]  -- priority + affinity */
+	word	link;			/* wptr[-2]  -- run-queue link */
+	word	iptr;			/* wptr[-1]  -- saved instruction pointer */
+	union {				/* wptr[ 0] */
 		word	temp;		/*   scratch */
 		word	iptr_succ;	/*   successor Iptr (LightProc) */
 	};
-	word	count;			/* wptr[+10] -- PAR reference count */
-	word	saved_priority;		/* wptr[+11] -- caller's priofinity */
+	word	count;			/* wptr[+1]  -- PAR reference count */
+	word	saved_priority;		/* wptr[+2]  -- caller's priofinity */
 } process_descriptor_t;
 
 /*
@@ -117,16 +115,7 @@ typedef struct process_descriptor {
  */
 static inline process_descriptor_t *PROC_DESC(word *wptr)
 {
-	/*
-	 * Phase 4B-III C3: descriptor lives at Wptr[+0..+11] now, so
-	 * PROC_DESC(wptr) == (process_descriptor_t *)wptr.  Kept as a
-	 * function (not a macro or a plain cast) to preserve the typed
-	 * parameter discipline from Phase 3D-3: accidentally passing a
-	 * process_descriptor_t* (already a desc) to PROC_DESC would be
-	 * a type error, caught at compile time.  The function form
-	 * also keeps PROC_WPTR() symmetric.
-	 */
-	return (process_descriptor_t *)(void *)wptr;
+	return (process_descriptor_t *)(void *)((word *)wptr - PROC_DESC_NEG_WORDS);
 }
 
 /*
@@ -175,23 +164,23 @@ typedef process_descriptor_t *process_t;
 #define PROC_DESC_FIELD_AT(field, slot) \
 	_Static_assert( \
 		offsetof(process_descriptor_t, field) == \
-		((slot) * sizeof(word)), \
-		"process_descriptor_t::" #field " not at wptr[+" #slot "]")
+		(((slot) + PROC_DESC_NEG_WORDS) * sizeof(word)), \
+		"process_descriptor_t::" #field " not at wptr[" #slot "]")
 
-PROC_DESC_FIELD_AT(escape_ptr,     0);
-PROC_DESC_FIELD_AT(barrier_ptr,    1);
-PROC_DESC_FIELD_AT(sched_ptr,      2);
-PROC_DESC_FIELD_AT(stack_ptr,      2);
-PROC_DESC_FIELD_AT(time_f,         3);
-PROC_DESC_FIELD_AT(tlink,          4);
-PROC_DESC_FIELD_AT(pointer,        5);
-PROC_DESC_FIELD_AT(state,          5);
-PROC_DESC_FIELD_AT(priofinity,     6);
-PROC_DESC_FIELD_AT(link,           7);
-PROC_DESC_FIELD_AT(iptr,           8);
-PROC_DESC_FIELD_AT(temp,           9);
-PROC_DESC_FIELD_AT(iptr_succ,      9);
-PROC_DESC_FIELD_AT(count,         10);
-PROC_DESC_FIELD_AT(saved_priority,11);
+PROC_DESC_FIELD_AT(escape_ptr,    -9);
+PROC_DESC_FIELD_AT(barrier_ptr,   -8);
+PROC_DESC_FIELD_AT(sched_ptr,     -7);
+PROC_DESC_FIELD_AT(stack_ptr,     -7);
+PROC_DESC_FIELD_AT(time_f,        -6);
+PROC_DESC_FIELD_AT(tlink,         -5);
+PROC_DESC_FIELD_AT(pointer,       -4);
+PROC_DESC_FIELD_AT(state,         -4);
+PROC_DESC_FIELD_AT(priofinity,    -3);
+PROC_DESC_FIELD_AT(link,          -2);
+PROC_DESC_FIELD_AT(iptr,          -1);
+PROC_DESC_FIELD_AT(temp,           0);
+PROC_DESC_FIELD_AT(iptr_succ,      0);
+PROC_DESC_FIELD_AT(count,          1);
+PROC_DESC_FIELD_AT(saved_priority, 2);
 
 #endif /* __PROCESS_DESC_H */

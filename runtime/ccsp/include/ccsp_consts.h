@@ -49,60 +49,22 @@
 #define ALT_NOT_READY		(1 << ALT_NOT_READY_BIT)
 #define ALT_GUARDS		0xffffff
 
-/*
- * Phase 4B (option III): bias every PROC's workspace frame by
- * PROC_DESC_BIAS slots, reserving the bottom N slots for the per-call
- * kernel descriptor.  The compiler's own local area starts at slot
- * PROC_DESC_BIAS (instead of slot 0) and every LDL/STL/LDLP operand
- * is biased accordingly, including the wssize reported to libkrocif
- * so the workspace is large enough.
- *
- * The target end state is: descriptor fields live at positive offsets
- * Wptr[0..PROC_DESC_BIAS-1] instead of Wptr[-1..-9]; the compiler's
- * locals live at Wptr[PROC_DESC_BIAS..PROC_DESC_BIAS+L-1]; and below
- * Wptr becomes dead space that C function prologues and signal frames
- * can freely clobber.  That unlocks Phase 4B-part-2 where tranx86 can
- * map REG_WPTR directly onto the hardware stack pointer.
- *
- * Size chosen as 12 slots (96 bytes = 16-byte aligned) to cover all
- * of the legacy descriptor fields in one contiguous area:
- *   - 9 currently-negative fields (iptr..escape_ptr)
- *   - 3 currently-positive fields (temp/iptr_succ, count, saved_priority)
- *
- * PROC_DESC_BIAS must stay in sync with:
- *   tools/occ21/include/genhdr.h       -- PROC_DESC_BIAS
- *   tools/tranx86/transputer.h         -- PROC_DESC_BIAS
- *   tools/tranx86/proc_desc.h          -- struct size
- * If these drift, the compiler and runtime disagree about where
- * each slot lives.  A _Static_assert is dangerous here because the
- * three files see different compile-time environments; rely on the
- * comments and the fact that nobody should be editing this number
- * lightly.
- */
-#define PROC_DESC_BIAS		12
-
-/* Workspace offsets.  Phase 4B-III C3 has migrated these from
- * Wptr[-9..+2] to Wptr[+0..+11].  The struct layout in
- * process_desc.h is the authoritative source; these #defines are
- * the legacy macro names, updated to the new positions and kept
- * around so that sched.c's #include of ccsp_consts.h still resolves
- * W_IPTR / W_LINK / ... to consistent byte offsets via the
- * W_* macros in tools/tranx86/transputer.h. */
-#define EscapePtr	0	/* for CIF */
-#define BarrierPtr	1	/* for CIF */
-#define SchedPtr	2	/* for CIF */
-#define StackPtr	2	/* for CIF */
-#define Time_f		3
-#define TLink		4
-#define Pointer		5
-#define State		5
-#define Priofinity	6
-#define Link		7
-#define Iptr		8
-#define IptrSucc	9
-#define Temp		9
-#define Count		10
-#define SavedPriority	11
+/* Workspace offsets */
+#define SavedPriority	2
+#define Count 		1
+#define IptrSucc 	0
+#define Temp 		0
+#define Iptr 		-1
+#define Link 		-2
+#define Priofinity	-3
+#define Pointer		-4
+#define State		-4
+#define TLink		-5
+#define Time_f		-6
+#define SchedPtr	-7	/* for CIF */
+#define StackPtr	-7	/* for CIF */
+#define BarrierPtr	-8	/* for CIF */
+#define EscapePtr	-9	/* for CIF */
 
 /* buffered channel constants */
 #ifdef BUFFERED_CHANNELS

@@ -65,15 +65,10 @@ ccsp_cif_occam_call:
 	movq	%rsp, (%r8)		/* save_area[0] = current SP */
 	movq	%r8, -80(%r14)		/* ws[-10] = save_area address */
 
-	/* Set up the occam return label so I_RET lands inside us.
-	 * Phase 4B-III: Iptr is at wptr[+8] = byte 64.  IptrSucc is the
-	 * same slot as Temp at wptr[+9] = byte 72, but the historic
-	 * alternate ws[0] write is left as a second slot for code that
-	 * still reads escape_ptr (which is also at wptr[+0] but is only
-	 * referenced via PROC_DESC(wptr)->escape_ptr in C code). */
+	/* Set up the occam return label so I_RET lands inside us */
 	leaq	.Loccam_call_return(%rip), %r9
-	movq	%r9, 72(%r14)		/* ws[IptrSucc] = return label */
-	movq	%r9, 64(%r14)		/* ws[Iptr] = return label */
+	movq	%r9, (%r14)		/* ws[0] = return label (IptrSucc) */
+	movq	%r9, -8(%r14)		/* ws[-1] = return label (Iptr) */
 
 	/* Switch SP to a private stack below the workspace */
 	leaq	-256(%r14), %rsp
@@ -203,10 +198,8 @@ ccsp_cif_external_call:
  * the dead return address is harmless because the call never returns.
  */
 .equ X64_CIF_PROCESS_BYTES, 192		/* CIF_PROCESS_WORDS * 8 */
-/* Phase 4B-III: descriptor slots moved to POSITIVE offsets.
- * BarrierPtr=1, SchedPtr=2. */
-.equ X64_BARRIER_PTR_BYTES, 8		/* BarrierPtr * 8 = 1*8 */
-.equ X64_SCHED_PTR_BYTES, 16		/* SchedPtr * 8 = 2*8 */
+.equ X64_BARRIER_PTR_BYTES, -64		/* BarrierPtr * 8 = -8*8 */
+.equ X64_SCHED_PTR_BYTES, -56		/* SchedPtr * 8 = -7*8 */
 
 .global ccsp_cif_proc_stub_label
 .type ccsp_cif_proc_stub_label, @function
@@ -250,9 +243,8 @@ ccsp_cif_light_proc_stub_label:
  * Code-only label whose address is returned by kernel_CIF_endp_resume_stub
  * and stored as the IptrSucc of every LightProc barrier.  When a child
  * process ends and the barrier count drops to zero, the parent resumes
- * here (Phase 4B-III): load the parent's Wptr from wptr[Pointer]
- * (= byte 40 from current r14, since Pointer = +5) and jump to its
- * saved Iptr at wptr[Iptr] (= byte 64, since Iptr = +8).
+ * here: load the parent's Wptr from wptr[-4] (= byte -32 from current
+ * r14) and jump to its saved Iptr at wptr[-1] (= byte -8 from r14).
  *
  * This is NOT a callable function -- it has no prologue and is only
  * ever entered via Iptr-jump from the scheduler, with r14 already
@@ -261,8 +253,8 @@ ccsp_cif_light_proc_stub_label:
 .global ccsp_cif_endp_resume_label
 .type ccsp_cif_endp_resume_label, @function
 ccsp_cif_endp_resume_label:
-	movq	40(%r14), %r14		/* r14 = parent Wptr (from Pointer slot) */
-	jmpq	*64(%r14)		/* jump to parent Wptr[Iptr] */
+	movq	-32(%r14), %r14		/* r14 = parent Wptr */
+	jmpq	*-8(%r14)		/* jump to parent Wptr[Iptr] */
 .size ccsp_cif_endp_resume_label, . - ccsp_cif_endp_resume_label
 
 /*
@@ -308,8 +300,7 @@ ccsp_kernel_enter:
  *
  * Sets the runtime register convention for the dispatched process,
  * restores the kernel SP from sched->stack, and jumps to the saved
- * instruction pointer at Wptr[Iptr] (= byte 64 from Wptr after
- * Phase 4B-III descriptor relocation).
+ * instruction pointer at Wptr[-1] (= byte -8 from Wptr).
  *
  * Arguments (System V x64 ABI):
  *   rdi = sched
@@ -321,7 +312,7 @@ ccsp_dispatch_process:
 	movq	%rsi, %r14		/* r14 = Wptr (runtime convention) */
 	movq	%rdi, %r15		/* r15 = sched (runtime convention) */
 	movq	(%r15), %rsp		/* rsp = sched->stack */
-	jmpq	*64(%r14)		/* jump to Wptr[Iptr] (positive slot 8) */
+	jmpq	*-8(%r14)		/* jump to Wptr[Iptr] */
 .size ccsp_dispatch_process, . - ccsp_dispatch_process
 
 /*
@@ -419,7 +410,7 @@ ccsp_cif_x64_kcall_resched:
 	 * the rescheduling call, r15 now points to the NEW scheduler.
 	 * Update wptr[SchedPtr] so the CIF C code picks up the correct
 	 * scheduler for subsequent kernel calls. */
-	movq	%r15, 16(%r14)		/* wptr[SchedPtr] = current sched (positive slot 2) */
+	movq	%r15, -56(%r14)		/* wptr[SchedPtr] = current sched */
 	movq	-80(%r14), %rsp		/* restore SP from wptr[-10] */
 	movq	-96(%r14), %rbp
 	movq	-128(%r14), %r15
