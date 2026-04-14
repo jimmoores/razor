@@ -4908,7 +4908,20 @@ fprintf (stderr, "troutine: adding %d bytes of workspace-map data\n", mapbytes);
 	/*}}} */
 	/*{{{  ajw */
 	if (((code_style_flags & CODE_STYLE_NO_PREAMBLE) == 0) || (be_lexlevel != 1)) {
-		genprimary (I_AJW, -wssize);	/* ajw 0 will be ignored by coder */
+		/*
+		 * Phase 4B-III C2: always emit a negative I_AJW, even when
+		 * the user wssize is 0, so the per-call descriptor area
+		 * Wptr[+0..+PROC_DESC_BIAS-1] is always reserved below the
+		 * caller's Wptr.  Historically occ21 would elide I_AJW -0
+		 * but that elision is incompatible with the biased frame:
+		 * without the AJW the LDL-bias shift has nothing to cancel
+		 * against and physical arg offsets land PROC_DESC_BIAS
+		 * slots too high.  We call genprimary_raw so the wrapper's
+		 * own I_AJW biasing doesn't double-shift; the constant
+		 * -(wssize + PROC_DESC_BIAS) is already the fully biased
+		 * value.
+		 */
+		genprimary_raw (I_AJW, -(wssize + PROC_DESC_BIAS));
 	}
 	/*}}} */
 	/*{{{  constant table pointer */

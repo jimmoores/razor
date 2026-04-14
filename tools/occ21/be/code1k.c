@@ -1804,7 +1804,13 @@ PUBLIC void genprocreturn (const int tag, SOURCEPOSN elocn, const int regs, cons
 		}
 
 	} else {
-		genprimary (I_AJW, ws);	/* maybe include adjustment implicit in RET */
+		/*
+		 * Phase 4B-III C2: unwind the entry AJW, always including
+		 * the PROC_DESC_BIAS bump.  Mirror gen1.c's always-emit
+		 * negative AJW at entry; use genprimary_raw so the wrapper
+		 * doesn't re-bias the already-biased constant.
+		 */
+		genprimary_raw (I_AJW, ws + PROC_DESC_BIAS);
 		gensecondary (I_RET);
 	}
 	/*{{{  post-comment */

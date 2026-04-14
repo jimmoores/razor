@@ -42,10 +42,11 @@ ccsp_cif_occam_call:
     // Stash save_area address at ws[-10]
     stur x9, [x28, #-80]
 
-    // Set up the occam return label
+    // Set up the occam return label (Phase 4B-III: positive slots).
+    // Iptr = +8 (byte 64), IptrSucc/Temp = +9 (byte 72).
     adr x10, .Locc_call_return
-    str x10, [x28]           // ws[0] = return label
-    stur x10, [x28, #-8]     // ws[-1] = return label
+    str x10, [x28, #72]      // ws[IptrSucc] = return label
+    str x10, [x28, #64]      // ws[Iptr] = return label
 
     // Switch SP to private stack
     sub x10, x28, #256
@@ -138,9 +139,10 @@ ccsp_cif_external_call:
 // CIF process trampoline labels.  Same idea as x64 versions: when the
 // scheduler dispatches a CIF process, control lands here with x28 =
 // process Wptr, x25 = sched.  The process workspace top (wptr[0])
-// holds [func, ws_arg].  We:
+// initially holds the private stack top (ProcStart wrote it at +0
+// which is temporarily repurposed before the CIF body runs).  We:
 //   1. Switch sp to wptr[0] (private stack)
-//   2. Save sched into wptr[SchedPtr] (= -56)
+//   2. Save sched into wptr[SchedPtr] (= +16, Phase 4B-III)
 //   3. Pop func into x30, ws into x0 (1st AAPCS arg)
 //   4. Call func(ws)
 //   5. Restore sched from wptr[SchedPtr]
@@ -149,7 +151,7 @@ ccsp_cif_external_call:
 //   8. Tail-jump to kernel_Y_proc_end / kernel_Y_endp
 //
 // proc_stub:        p0 = wptr - CIF_PROCESS_WORDS*8 = wptr - 192
-// light_proc_stub:  p0 = *(wptr + BarrierPtr*8) = *(wptr - 64)
+// light_proc_stub:  p0 = *(wptr + BarrierPtr*8) = *(wptr + 8)
 //
 // Uses `b` (tail call) since AAPCS sp is 16-byte aligned both before
 // and after a function call -- no +8 bias to maintain.
@@ -162,12 +164,12 @@ _ccsp_cif_proc_stub_label:
 ccsp_cif_proc_stub_label:
 #endif
     ldr x9, [x28, #0]            // x9 = wptr[0] (private stack top)
-    str x25, [x28, #-56]         // wptr[SchedPtr] = sched
+    stur x25, [x28, #-56]        // scratch save of sched
     mov sp, x9                   // sp = private stack
     ldr x30, [sp], #16           // x30 = func; sp += 16
     ldur x0, [sp, #-8]           // x0 = ws (was at sp+8 before increment)
     blr x30                      // call func(ws)
-    ldr x25, [x28, #-56]         // restore sched
+    ldur x25, [x28, #-56]        // restore sched from scratch
     ldr x9, [x25, #0]            // x9 = sched->stack
     mov sp, x9                   // sp = kernel stack
     sub x0, x28, #192            // p0 = wptr - CIF_PROCESS_WORDS*8
@@ -183,15 +185,15 @@ _ccsp_cif_light_proc_stub_label:
 ccsp_cif_light_proc_stub_label:
 #endif
     ldr x9, [x28, #0]            // x9 = wptr[0] (private stack top)
-    str x25, [x28, #-56]         // wptr[SchedPtr] = sched
+    stur x25, [x28, #-56]        // scratch save of sched
     mov sp, x9                   // sp = private stack
     ldr x30, [sp], #16           // x30 = func; sp += 16
     ldur x0, [sp, #-8]           // x0 = ws
     blr x30                      // call func(ws)
-    ldr x25, [x28, #-56]         // restore sched
+    ldur x25, [x28, #-56]        // restore sched from scratch
     ldr x9, [x25, #0]            // x9 = sched->stack
     mov sp, x9                   // sp = kernel stack
-    ldur x0, [x28, #-64]         // p0 = *(wptr + BarrierPtr*8)
+    ldur x0, [x28, #-64]         // p0 = old-layout barrier scratch (unchanged)
     mov x1, x25                  // x1 = sched
     mov x2, x28                  // x2 = Wptr
     b kernel_Y_endp              // tail-call
@@ -201,8 +203,9 @@ ccsp_cif_light_proc_stub_label:
 // Code-only label whose address is returned by kernel_CIF_endp_resume_stub
 // and stored as the IptrSucc of every LightProc barrier.  When a child
 // process ends and the barrier count drops to zero, the parent resumes
-// here: load the parent's Wptr from wptr[-4] (= byte -32 from current
-// x28) and jump to its saved Iptr at wptr[-1] (= byte -8 from x28).
+// here (Phase 4B-III): load the parent's Wptr from wptr[Pointer]
+// (= byte 40 from current x28, since Pointer = +5) and jump to its
+// saved Iptr at wptr[Iptr] (= byte 64, since Iptr = +8).
 //
 // This is NOT a callable function -- it has no prologue and is only
 // ever entered via Iptr-jump from the scheduler, with x28 already
@@ -214,8 +217,8 @@ _ccsp_cif_endp_resume_label:
 .global ccsp_cif_endp_resume_label
 ccsp_cif_endp_resume_label:
 #endif
-    ldr x28, [x28, #-32]   // x28 = parent Wptr
-    ldr x9, [x28, #-8]     // x9 = parent Wptr[Iptr]
+    ldr x28, [x28, #40]    // x28 = parent Wptr (from Pointer slot +5)
+    ldr x9, [x28, #64]     // x9 = parent Wptr[Iptr] (slot +8)
     br x9                  // jump
 
 // void ccsp_kernel_enter(void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn))
@@ -253,7 +256,8 @@ ccsp_kernel_enter:
 //
 // Sets the runtime register convention for the dispatched process,
 // restores the kernel SP from sched->stack, and jumps to the saved
-// instruction pointer at Wptr[-1] (= byte -8 from Wptr).
+// instruction pointer at Wptr[Iptr] (= byte 64 from Wptr after
+// Phase 4B-III descriptor relocation).
 //
 // Arguments (AAPCS):
 //   x0 = sched
@@ -269,7 +273,7 @@ ccsp_dispatch_process:
     mov x25, x0            // x25 = sched (runtime convention)
     ldr x9, [x25]          // x9 = sched->stack
     mov sp, x9             // sp = kernel stack
-    ldr x9, [x28, #-8]     // x9 = Wptr[Iptr]
+    ldr x9, [x28, #64]     // x9 = Wptr[Iptr] (positive slot +8)
     br x9                  // jump
 
 // word ccsp_cif_call_asm(void *wptr, void *sched, void *param0, void *func)
@@ -363,8 +367,8 @@ ccsp_cif_call_asm_resched:
     mov x9, sp
     stur x9, [x0, #-80]   // wptr[-10] = saved private SP
 
-    // Save sched at wptr[-7] (SchedPtr)
-    str x1, [x0, #-56]
+    // Save sched at wptr[SchedPtr] (slot +2, byte 16)
+    str x1, [x0, #16]
 
     mov x28, x0           // x28 = wptr
 
@@ -404,7 +408,7 @@ ccsp_cif_call_asm_resched:
     // rescheduling call, x25 now points to the NEW scheduler.
     // Update wptr[SchedPtr] so the CIF C code picks up the correct
     // scheduler for subsequent kernel calls.
-    stur x25, [x28, #-56]  // wptr[SchedPtr] = current sched (x25)
+    str x25, [x28, #16]    // wptr[SchedPtr] = current sched (slot +2)
 
     // Restore callee-saved registers from the WORKSPACE.
     ldur x9, [x28, #-80]   // restore SP from wptr[-10]
@@ -488,9 +492,9 @@ ccsp_cif_process_call:
     add x9, x28, #8             // x9 = Wptr + 8 = wptr
     ldur x30, [x9, #-184]       // restore LR from wptr[-23]
     // Load the CURRENT scheduler's stack via wptr[SchedPtr].
-    // wptr[SchedPtr] (byte -56) is always updated by
-    // ccsp_cif_call_asm_resched after each rescheduling call.
-    ldur x9, [x9, #-56]         // x9 = wptr[SchedPtr] = current sched
+    // wptr[SchedPtr] (byte 16, slot +2, Phase 4B-III) is always updated
+    // by ccsp_cif_call_asm_resched after each rescheduling call.
+    ldr x9, [x9, #16]           // x9 = wptr[SchedPtr] = current sched
     ldr x9, [x9]                // x9 = sched->stack
     mov sp, x9                  // restore to current scheduler's stack
 

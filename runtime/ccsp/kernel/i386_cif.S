@@ -70,8 +70,10 @@ ccsp_cif_occam_call:
 	call	1f
 1:	popl	%ecx
 	addl	$(.Locc_call_return - 1b), %ecx
-	movl	%ecx, (%ebp)		/* ws[0] = return label */
-	movl	%ecx, -4(%ebp)		/* ws[-1] = return label */
+	/* Phase 4B-III: descriptor slots are at positive offsets now.
+	 * Iptr=+8 (byte 32), IptrSucc/Temp=+9 (byte 36) on 32-bit. */
+	movl	%ecx, 36(%ebp)		/* ws[IptrSucc] = return label */
+	movl	%ecx, 32(%ebp)		/* ws[Iptr] = return label */
 
 	/* Switch SP to private stack (ws - 256, 16-byte aligned) */
 	leal	-256(%ebp), %esp
@@ -182,8 +184,9 @@ ccsp_cif_external_call:
  * kernel function is ≡ 12 (mod 16).
  */
 .equ I386_CIF_PROCESS_BYTES, 32		/* CIF_PROCESS_WORDS * 4 = 8*4 */
-.equ I386_BARRIER_PTR_BYTES, -32	/* BarrierPtr * 4 = -8*4 */
-.equ I386_SCHED_PTR_BYTES, -28		/* SchedPtr * 4 = -7*4 */
+/* Phase 4B-III: descriptor at positive slots.  BarrierPtr=+1, SchedPtr=+2. */
+.equ I386_BARRIER_PTR_BYTES, 4		/* BarrierPtr * 4 = 1*4 */
+.equ I386_SCHED_PTR_BYTES, 8		/* SchedPtr * 4 = 2*4 */
 
 .globl ccsp_cif_proc_stub_label
 .type ccsp_cif_proc_stub_label, @function
@@ -224,9 +227,9 @@ ccsp_cif_light_proc_stub_label:
  * Code-only label whose address is returned by kernel_CIF_endp_resume_stub
  * and stored as the IptrSucc of every LightProc barrier.  When a child
  * process ends and the barrier count drops to zero, the parent resumes
- * here: load the parent's Wptr from wptr[-4] (= byte -16 from current
- * ebp on 32-bit) and jump to its saved Iptr at wptr[-1] (= byte -4
- * from ebp).
+ * here (Phase 4B-III): load the parent's Wptr from wptr[Pointer]
+ * (= byte 20 from current ebp, since Pointer=+5 on 32-bit) and jump
+ * to its saved Iptr at wptr[Iptr] (= byte 32, since Iptr=+8).
  *
  * This is NOT a callable function -- it has no prologue and is only
  * ever entered via Iptr-jump from the scheduler, with ebp already
@@ -235,8 +238,8 @@ ccsp_cif_light_proc_stub_label:
 .globl ccsp_cif_endp_resume_label
 .type ccsp_cif_endp_resume_label, @function
 ccsp_cif_endp_resume_label:
-	movl	-16(%ebp), %ebp		/* ebp = parent Wptr */
-	jmp	*-4(%ebp)		/* jump to parent Wptr[Iptr] */
+	movl	20(%ebp), %ebp		/* ebp = parent Wptr (Pointer slot +5) */
+	jmp	*32(%ebp)		/* jump to parent Wptr[Iptr] (slot +8) */
 .size ccsp_cif_endp_resume_label, . - ccsp_cif_endp_resume_label
 
 /*
@@ -284,7 +287,8 @@ ccsp_kernel_enter:
  *
  * Sets the runtime register convention for the dispatched process,
  * restores the kernel SP from sched->stack, and jumps to the saved
- * instruction pointer at Wptr[-1] (= byte -4 from Wptr on 32-bit).
+ * instruction pointer at Wptr[Iptr] (= byte 32 from Wptr on 32-bit
+ * after Phase 4B-III descriptor relocation).
  *
  * Calling convention: cdecl, args on the stack.
  *   4(%esp) = sched
@@ -296,7 +300,7 @@ ccsp_dispatch_process:
 	movl	4(%esp), %esi		/* esi = sched */
 	movl	8(%esp), %ebp		/* ebp = Wptr */
 	movl	(%esi), %esp		/* esp = sched->stack */
-	jmp	*-4(%ebp)		/* jump to Wptr[Iptr] */
+	jmp	*32(%ebp)		/* jump to Wptr[Iptr] (slot +8) */
 .size ccsp_dispatch_process, . - ccsp_dispatch_process
 
 .section .note.GNU-stack,"",@progbits

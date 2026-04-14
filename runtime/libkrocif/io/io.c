@@ -133,20 +133,35 @@ int init_occam_io (int tlpiface)
 	err_chan = setup_chan (0x00010002); /* client shared not claimed, server unshared */
 
 	/*
-	 * Phase 4B-III C3: the per-call descriptor has moved from
-	 * Wptr[-1..-9] to Wptr[+0..+11].  Wptr needs to be positioned
-	 * so that there are at least PROC_DESC_BIAS (= 12) slots above
-	 * it (for the descriptor area).  Previously Wptr was placed 4
-	 * slots from the top (plenty of space below for deeply-nested
-	 * call chains, only 4 slots above for the legacy positive
-	 * slots temp/count/saved_priority).  Now we need 12 slots
-	 * above, so bump the Wptr position down by that amount
-	 * (equivalently: leave more space above the Wptr).
+	 * Phase 4B-III C3: the per-call descriptor spans slot offsets
+	 * Wptr[+0..+11] *from the post-AJW Wptr*, not from the
+	 * pre-AJW value we store into scr_ws / kbd_ws / err_ws here.
 	 *
-	 * Iptr, Link, Priofinity etc. come from ccsp_consts.h, which
-	 * has been updated to the positive-offset values.
+	 * The compiler now biases every PROC's AJW by PROC_DESC_BIAS
+	 * (=12) AND biases every LDL/STL/LDLP operand by the same
+	 * amount, so the bias cancels across the frame: a user local
+	 * or arg at slot N is still at physical address
+	 * (pre-AJW Wptr) + N*sizeof(word), same as pre-Phase-4B.  We
+	 * therefore write arg N at scr_ws[N], NOT at scr_ws[BIAS+N].
+	 *
+	 * What *does* change is that when the scheduler jumps to
+	 * O_kroc_..._process, the PROC's entry prolog does
+	 * AJW -(L+PROC_DESC_BIAS) rather than AJW -L.  That drops
+	 * Wptr by an extra PROC_DESC_BIAS slots below scr_ws; the
+	 * resulting space is used for the post-AJW descriptor
+	 * (the metadata slots sched.c reads via PROC_DESC(Wptr)->X).
+	 * Since L + PROC_DESC_BIAS is at most a couple dozen words
+	 * even for the larger kbd/scr/err processes, the existing
+	 * ..._WORKSPACE_WORDS allocation is still comfortably big
+	 * enough.
+	 *
+	 * Iptr, Link, Priofinity, ... come from ccsp_consts.h and are
+	 * the positive-offset values.  These writes go into the
+	 * scheduler-visible slots *at* scr_ws / kbd_ws / err_ws,
+	 * which is the pre-AJW Wptr the scheduler sees when it picks
+	 * the process off the run-queue.
 	 */
-	kbd_ws = &(kbd_workspace_bottom[KBD_WORKSPACE_WORDS - 12]);
+	kbd_ws = &(kbd_workspace_bottom[KBD_WORKSPACE_WORDS - 4]);
 	kbd_ws[Priofinity] = 0;
 	kbd_ws[Link] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
@@ -167,22 +182,22 @@ int init_occam_io (int tlpiface)
 	}
 	kbd_ws[Link] = (word) NotProcess_p;
 	/*
-	 * The following slots carry "arguments" to the keyboard PROC.
-	 * In the biased layout the compiler reads these via LDL with
-	 * biased operands, but the bias cancels across AJW so the
-	 * physical addresses are the same: arg N lives at Wptr[+N]
-	 * below the AJW and at (biased Wptr) + byte ((N+BIAS)*WSH)
-	 * after AJW -(L+BIAS).  We still write at the raw positive
-	 * slot index because that's the physical offset below the
-	 * pre-AJW Wptr.  PROC_DESC_BIAS slots are in use by the
-	 * descriptor so the first arg slot is now at position
-	 * PROC_DESC_BIAS (not 1).
+	 * Args at raw positive slots starting at scr_ws[+1] (the same
+	 * physical offsets the pre-Phase-4B runtime used).  The PROC's
+	 * own AJW -(L+PROC_DESC_BIAS) moves the runtime-visible Wptr
+	 * down by L+12 slots, and the compiler biases its LDL operand
+	 * for arg N up by the same amount, so (biased LDL) reads
+	 * scr_ws + (N+1)*WSH physically.  These writes are below the
+	 * scheduler-visible descriptor area (Wptr[+0] / EscapePtr at
+	 * scr_ws[0] is the only slot collision, and it's zeroed anyway
+	 * because scr_process is a plain-occam PROC with no CIF
+	 * escape_ptr in use).
 	 */
-	kbd_ws[PROC_DESC_BIAS + 0] = (word) kbd_chan;
-	kbd_ws[PROC_DESC_BIAS + 1] = (word) &kbd_termchan;
+	kbd_ws[1] = (word) kbd_chan;
+	kbd_ws[2] = (word) &kbd_termchan;
 	kbd_termchan = NotProcess_p;
 
-	scr_ws = &(scr_workspace_bottom[SCR_WORKSPACE_WORDS - 12]);
+	scr_ws = &(scr_workspace_bottom[SCR_WORKSPACE_WORDS - 4]);
 	for (i = 0; i < 12; i++) {
 		scr_ws[i] = 0;
 	}
@@ -199,9 +214,9 @@ int init_occam_io (int tlpiface)
 #elif defined(__i386__)
 	asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[Iptr]));
 #endif
-	scr_ws[PROC_DESC_BIAS + 0] = (word) scr_chan;
+	scr_ws[1] = (word) scr_chan;
 
-	err_ws = &(err_workspace_bottom[ERR_WORKSPACE_WORDS - 12]);
+	err_ws = &(err_workspace_bottom[ERR_WORKSPACE_WORDS - 4]);
 	for (i = 0; i < 12; i++) {
 		err_ws[i] = 0;
 	}
@@ -218,7 +233,7 @@ int init_occam_io (int tlpiface)
 #elif defined(__i386__)
 	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[Iptr]));
 #endif
-	err_ws[PROC_DESC_BIAS + 0] = (word) err_chan;
+	err_ws[1] = (word) err_chan;
 
 	return 0;
 }
