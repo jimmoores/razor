@@ -132,66 +132,93 @@ int init_occam_io (int tlpiface)
 	scr_chan = setup_chan (0x00010002); /* client shared not claimed, server unshared */
 	err_chan = setup_chan (0x00010002); /* client shared not claimed, server unshared */
 
-	kbd_ws = &(kbd_workspace_bottom[KBD_WORKSPACE_WORDS - 4]);
-	kbd_ws[-3] = 0;
-	kbd_ws[-2] = (word) NotProcess_p;
+	/*
+	 * Phase 4B-III C3: the per-call descriptor has moved from
+	 * Wptr[-1..-9] to Wptr[+0..+11].  Wptr needs to be positioned
+	 * so that there are at least PROC_DESC_BIAS (= 12) slots above
+	 * it (for the descriptor area).  Previously Wptr was placed 4
+	 * slots from the top (plenty of space below for deeply-nested
+	 * call chains, only 4 slots above for the legacy positive
+	 * slots temp/count/saved_priority).  Now we need 12 slots
+	 * above, so bump the Wptr position down by that amount
+	 * (equivalently: leave more space above the Wptr).
+	 *
+	 * Iptr, Link, Priofinity etc. come from ccsp_consts.h, which
+	 * has been updated to the positive-offset values.
+	 */
+	kbd_ws = &(kbd_workspace_bottom[KBD_WORKSPACE_WORDS - 12]);
+	kbd_ws[Priofinity] = 0;
+	kbd_ws[Link] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
 #if defined(__aarch64__) && defined(__APPLE__)
 	asm ("adrp %0, _O_kroc_keyboard_process@PAGE\n\t"
-		 "add  %0, %0, _O_kroc_keyboard_process@PAGEOFF" : "=r" (kbd_ws[-1]));
+		 "add  %0, %0, _O_kroc_keyboard_process@PAGEOFF" : "=r" (kbd_ws[Iptr]));
 #elif defined(__aarch64__)
 	asm ("adrp %0, :got:O_kroc_keyboard_process\n\t"
-		 "ldr  %0, [%0, :got_lo12:O_kroc_keyboard_process]" : "=r" (kbd_ws[-1]));
+		 "ldr  %0, [%0, :got_lo12:O_kroc_keyboard_process]" : "=r" (kbd_ws[Iptr]));
 #elif defined(__x86_64__)
-	asm ("leaq O_kroc_keyboard_process(%%rip), %0" : "=r" (kbd_ws[-1]));
+	asm ("leaq O_kroc_keyboard_process(%%rip), %0" : "=r" (kbd_ws[Iptr]));
 #elif defined(__i386__)
-	asm ("movl $O_kroc_keyboard_process, %0" : "=r" (kbd_ws[-1]));
+	asm ("movl $O_kroc_keyboard_process, %0" : "=r" (kbd_ws[Iptr]));
 #endif
-	for (i = -10; i <= 2; i++) {
-		if (i != -1) kbd_ws[i] = 0;
+	/* Zero the descriptor area (skipping Iptr which we just set). */
+	for (i = 0; i < 12; i++) {
+		if (i != Iptr) kbd_ws[i] = 0;
 	}
-	kbd_ws[-2] = (word) NotProcess_p;
-	kbd_ws[1] = (word) kbd_chan;
-	kbd_ws[2] = (word) &kbd_termchan;
+	kbd_ws[Link] = (word) NotProcess_p;
+	/*
+	 * The following slots carry "arguments" to the keyboard PROC.
+	 * In the biased layout the compiler reads these via LDL with
+	 * biased operands, but the bias cancels across AJW so the
+	 * physical addresses are the same: arg N lives at Wptr[+N]
+	 * below the AJW and at (biased Wptr) + byte ((N+BIAS)*WSH)
+	 * after AJW -(L+BIAS).  We still write at the raw positive
+	 * slot index because that's the physical offset below the
+	 * pre-AJW Wptr.  PROC_DESC_BIAS slots are in use by the
+	 * descriptor so the first arg slot is now at position
+	 * PROC_DESC_BIAS (not 1).
+	 */
+	kbd_ws[PROC_DESC_BIAS + 0] = (word) kbd_chan;
+	kbd_ws[PROC_DESC_BIAS + 1] = (word) &kbd_termchan;
 	kbd_termchan = NotProcess_p;
 
-	scr_ws = &(scr_workspace_bottom[SCR_WORKSPACE_WORDS - 4]);
-	for (i = -10; i <= 2; i++) {
-		if (i != -1) scr_ws[i] = 0;
+	scr_ws = &(scr_workspace_bottom[SCR_WORKSPACE_WORDS - 12]);
+	for (i = 0; i < 12; i++) {
+		scr_ws[i] = 0;
 	}
-	scr_ws[-2] = (word) NotProcess_p;
+	scr_ws[Link] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
 #if defined(__aarch64__) && defined(__APPLE__)
 	asm ("adrp %0, _O_kroc_screen_process@PAGE\n\t"
-	     "add  %0, %0, _O_kroc_screen_process@PAGEOFF" : "=r" (scr_ws[-1]));
+	     "add  %0, %0, _O_kroc_screen_process@PAGEOFF" : "=r" (scr_ws[Iptr]));
 #elif defined(__aarch64__)
 	asm ("adrp %0, :got:O_kroc_screen_process\n\t"
-	     "ldr  %0, [%0, :got_lo12:O_kroc_screen_process]" : "=r" (scr_ws[-1]));
+	     "ldr  %0, [%0, :got_lo12:O_kroc_screen_process]" : "=r" (scr_ws[Iptr]));
 #elif defined(__x86_64__)
-	asm ("leaq O_kroc_screen_process(%%rip), %0" : "=r" (scr_ws[-1]));
+	asm ("leaq O_kroc_screen_process(%%rip), %0" : "=r" (scr_ws[Iptr]));
 #elif defined(__i386__)
-	asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[-1]));
+	asm ("movl $O_kroc_screen_process, %0" : "=r" (scr_ws[Iptr]));
 #endif
-	scr_ws[1] = (word) scr_chan;
+	scr_ws[PROC_DESC_BIAS + 0] = (word) scr_chan;
 
-	err_ws = &(err_workspace_bottom[ERR_WORKSPACE_WORDS - 4]);
-	for (i = -10; i <= 2; i++) {
-		if (i != -1) err_ws[i] = 0;
+	err_ws = &(err_workspace_bottom[ERR_WORKSPACE_WORDS - 12]);
+	for (i = 0; i < 12; i++) {
+		err_ws[i] = 0;
 	}
-	err_ws[-2] = (word) NotProcess_p;
+	err_ws[Link] = (word) NotProcess_p;
 	/* Get the address of the occam-generated symbol, bypassing C name-mangling. */
 #if defined(__aarch64__) && defined(__APPLE__)
 	asm ("adrp %0, _O_kroc_error_process@PAGE\n\t"
-	     "add  %0, %0, _O_kroc_error_process@PAGEOFF" : "=r" (err_ws[-1]));
+	     "add  %0, %0, _O_kroc_error_process@PAGEOFF" : "=r" (err_ws[Iptr]));
 #elif defined(__aarch64__)
 	asm ("adrp %0, :got:O_kroc_error_process\n\t"
-	     "ldr  %0, [%0, :got_lo12:O_kroc_error_process]" : "=r" (err_ws[-1]));
+	     "ldr  %0, [%0, :got_lo12:O_kroc_error_process]" : "=r" (err_ws[Iptr]));
 #elif defined(__x86_64__)
-	asm ("leaq O_kroc_error_process(%%rip), %0" : "=r" (err_ws[-1]));
+	asm ("leaq O_kroc_error_process(%%rip), %0" : "=r" (err_ws[Iptr]));
 #elif defined(__i386__)
-	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[-1]));
+	asm ("movl $O_kroc_error_process, %0" : "=r" (err_ws[Iptr]));
 #endif
-	err_ws[1] = (word) err_chan;
+	err_ws[PROC_DESC_BIAS + 0] = (word) err_chan;
 
 	return 0;
 }

@@ -81,27 +81,28 @@
  */
 #define PROC_DESC_BIAS		12
 
-/* Workspace offsets.  These are the legacy NEGATIVE-offset constants
- * that currently address the descriptor area below Wptr.  They stay
- * valid until commit C3 flips the struct to positive offsets; commit
- * C2 merely biases the compiler's frame so the slots below (and at)
- * the new cutoff become dead space, ready for the descriptor to
- * move into. */
-#define SavedPriority	2
-#define Count 		1
-#define IptrSucc 	0
-#define Temp 		0
-#define Iptr 		-1
-#define Link 		-2
-#define Priofinity	-3
-#define Pointer		-4
-#define State		-4
-#define TLink		-5
-#define Time_f		-6
-#define SchedPtr	-7	/* for CIF */
-#define StackPtr	-7	/* for CIF */
-#define BarrierPtr	-8	/* for CIF */
-#define EscapePtr	-9	/* for CIF */
+/* Workspace offsets.  Phase 4B-III C3 has migrated these from
+ * Wptr[-9..+2] to Wptr[+0..+11].  The struct layout in
+ * process_desc.h is the authoritative source; these #defines are
+ * the legacy macro names, updated to the new positions and kept
+ * around so that sched.c's #include of ccsp_consts.h still resolves
+ * W_IPTR / W_LINK / ... to consistent byte offsets via the
+ * W_* macros in tools/tranx86/transputer.h. */
+#define EscapePtr	0	/* for CIF */
+#define BarrierPtr	1	/* for CIF */
+#define SchedPtr	2	/* for CIF */
+#define StackPtr	2	/* for CIF */
+#define Time_f		3
+#define TLink		4
+#define Pointer		5
+#define State		5
+#define Priofinity	6
+#define Link		7
+#define Iptr		8
+#define IptrSucc	9
+#define Temp		9
+#define Count		10
+#define SavedPriority	11
 
 /* buffered channel constants */
 #ifdef BUFFERED_CHANNELS

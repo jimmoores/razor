@@ -66,33 +66,40 @@
  *	Field types are `long`, which equals the host word size: this
  *	is what transputer.h's WSH already assumes.
  */
+/*
+ *	Phase 4B-III C3: the descriptor now lives at POSITIVE Wptr
+ *	offsets.  The layout below mirrors the flipped
+ *	process_descriptor_t in runtime/ccsp/include/process_desc.h:
+ *	escape_ptr at +0, saved_priority at +11.  The net size is
+ *	PROC_DESC_BIAS words (12), which is the amount commit C2
+ *	biased the compiler's frame by.
+ */
 typedef struct tranx86_proc_desc {
-	long	escape_ptr;		/* offset -9 from wptr (CIF only) */
-	long	barrier_ptr;		/* offset -8         (CIF only) */
-	long	sched_ptr;		/* offset -7         (CIF only) */
-	long	time_f;			/* offset -6 */
-	long	tlink;			/* offset -5 */
-	long	pointer;		/* offset -4 (alias state) */
-	long	priofinity;		/* offset -3 */
-	long	link;			/* offset -2 */
-	long	iptr;			/* offset -1 */
-	long	temp;			/* offset  0 (alias iptr_succ) */
-	long	count;			/* offset +1 */
-	long	saved_priority;		/* offset +2 */
+	long	escape_ptr;		/* wptr[+0]  -- CIF only */
+	long	barrier_ptr;		/* wptr[+1]  -- CIF only */
+	long	sched_ptr;		/* wptr[+2]  -- CIF only (alias stack_ptr) */
+	long	time_f;			/* wptr[+3] */
+	long	tlink;			/* wptr[+4] */
+	long	pointer;		/* wptr[+5]  (alias state) */
+	long	priofinity;		/* wptr[+6] */
+	long	link;			/* wptr[+7] */
+	long	iptr;			/* wptr[+8] */
+	long	temp;			/* wptr[+9]  (alias iptr_succ) */
+	long	count;			/* wptr[+10] */
+	long	saved_priority;		/* wptr[+11] */
 } tranx86_proc_desc_t;
 
 /*
- *	Number of words below wptr that the descriptor occupies, i.e.
- *	the constant subtracted from a wptr value to land at the
- *	descriptor base.  Must match PROC_DESC_NEG_WORDS in the runtime
- *	header.
+ *	Number of words below wptr that the descriptor occupies.  Zero
+ *	now: the descriptor lives entirely at and above Wptr.  Kept as
+ *	a macro so PROC_DESC_OFF() still does the right arithmetic.
  */
-#define TRANX86_PROC_DESC_NEG_WORDS	9
+#define TRANX86_PROC_DESC_NEG_WORDS	0
 
 /*
- *	PROC_DESC_OFF(field) -- byte offset of `field` measured from
- *	the workspace pointer (NOT from the struct base).  Negative
- *	for slots below wptr, zero or positive for slots at and above.
+ *	PROC_DESC_OFF(field) -- byte offset of `field` from the
+ *	workspace pointer.  With NEG_WORDS = 0, this is just the
+ *	byte offsetof the field in the struct.
  */
 #define PROC_DESC_OFF(field) \
 	((long) offsetof(tranx86_proc_desc_t, field) \
