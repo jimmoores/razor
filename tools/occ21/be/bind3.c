@@ -1014,7 +1014,7 @@ PRIVATE BOOL vars_overlap (const INT32 b1, const INT32 l1, const INT32 b2, const
 /*}}}*/
 /*{{{  PRIVATE INT32 numslots (nptr)*/
 /* Give number of slots needed to store name nptr */
-PUBLIC INT32 numslots (treenode * nptr)
+PRIVATE INT32 numslots (treenode * nptr)
 {
 	INT32 length = 0;	/* initialised to shut up gcc's optimiser */
 	switch (TagOf (nptr)) {

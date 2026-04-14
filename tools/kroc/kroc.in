@@ -392,11 +392,6 @@ do
 		occopts="$occopts -strict"
 		;;
 		#}}}
-		#{{{  --descending-workspace  Phase 4B: descending workspace layout
-	--descending-workspace)
-		occopts="$occopts -DESCWS"
-		;;
-		#}}}
 		#{{{  --rmox  building for RMoX
 	--rmox)
 		octranopts="$octranopts -kr --exporttab ."

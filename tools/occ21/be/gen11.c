@@ -199,23 +199,14 @@ PRIVATE BOOL loadlex (int l)
 		int level = be_lexlevel - 1;
 		INT32 sloffset = sloffsetof (be_lexlevel);
 
-		/*
-		 * Phase 4B: the static link slot is a single-word pointer
-		 * at slot `sloffset` (positive in the legacy layout).  In
-		 * the descending layout it lives at byte -(sloffset + 1) * WSH
-		 * from current Wptr.  Same shape applies to each chain step
-		 * via LDNL into the parent's frame, since the parent is also
-		 * flipped.
-		 */
-		genprimary (I_LDL, descending_workspace ? -(sloffset + 1) : sloffset);
+		genprimary (I_LDL, sloffset);
 		gencomment0 ("PTR staticlink");
 		/*{{{  load static link for level */
 		for (; level > l; level--) {
 			/* If it is a repl PAR static link the static link contains the
 			   workspace pointer of the routine setting up the repl
 			   AT THE TIME OF SETTING UP THE REPL */
-			const INT32 sl = sloffsetof (level);
-			genprimary (I_LDNL, descending_workspace ? -(sl + 1) : sl);
+			genprimary (I_LDNL, sloffsetof (level));
 			gencomment1 ("PTR staticlink %d", level - l);
 		}
 		/*}}} */
@@ -233,18 +224,7 @@ PUBLIC void loadstaticlink (int newlevel)
 fprintf (stderr, "loadstaticlink: newlevel = %d, be_lexlevel = %d\n", newlevel, be_lexlevel);
 #endif
 	if (newlevel == (be_lexlevel + 1)) {
-		/*
-		 * Phase 4B: when calling into a child PROC, pass it a
-		 * pointer to the parent's "frame base".  In the legacy
-		 * layout that's `current_Wptr + wspadjusts*WSH` (the
-		 * parent's pre-AJW Wptr position, positive offset because
-		 * AJW lowered current Wptr).  In the descending layout
-		 * the parent's base sits *above* current Wptr (because
-		 * AJW raised it), so the byte offset is -wspadjusts*WSH.
-		 */
-		genprimary (I_LDLP, descending_workspace
-				? -wspadjusts[be_lexlevel]
-				: wspadjusts[be_lexlevel]);
+		genprimary (I_LDLP, wspadjusts[be_lexlevel]);
 		/* This should be the current workspace offset */
 	} else {
 		int nonlocal = loadlex (newlevel);
@@ -252,25 +232,11 @@ fprintf (stderr, "loadstaticlink: newlevel = %d, be_lexlevel = %d\n", newlevel, 
 #if 0
 fprintf (stderr, "loadstaticlink: sloffsetof(newlevel) = %d\n", sloffsetof (newlevel));
 #endif
-		{
-			const INT32 sl = sloffsetof (newlevel);
-			/* sl is a 1-word pointer slot in the parent's frame
-			 * (or current frame if local) -- flip it the same way
-			 * loadlex flips its chain reads.
-			 */
-			genprimary (nonlocal ? I_LDNL : I_LDL,
-					descending_workspace ? -(sl + 1) : sl);
-		}
+		genprimary (nonlocal ? I_LDNL : I_LDL, sloffsetof (newlevel));
 
 		/* if required static link isn't normalised, normalise it */
 		if (staticlinkoffsets[newlevel] & REPL_FLAG) {
-			/* LDNLP wspadjusts adds a byte offset; in the
-			 * descending layout that offset has the opposite
-			 * sign for the same physical adjustment.
-			 */
-			genprimary (I_LDNLP, descending_workspace
-					? -wspadjusts[newlevel - 1]
-					: wspadjusts[newlevel - 1]);
+			genprimary (I_LDNLP, wspadjusts[newlevel - 1]);
 		}
 	}
 	gencomment0 ("PTR staticlink");
@@ -636,28 +602,7 @@ printtreenl (stderr, 4, nptr);
 		/*{{{  move to/from a normal variable */
 		const int level = NLexLevelOf (nptr);
 		const BOOL nonlocal = loadlex (level);
-		INT32 wsposn;
-
-		if (descending_workspace) {
-			/*
-			 * Phase 4B: in the descending-workspace layout, locals
-			 * mirror across Wptr.  A variable at base slot S, size L,
-			 * accessed at word w within it, lives at byte
-			 *   -(S + L - w + adj) * WSH
-			 * from current Wptr.  This puts the variable at the
-			 * lowest-address end of its mirror range, with element
-			 * order preserved (word 0 lowest, word L-1 highest).
-			 *
-			 * The static-link case (LDNL/STNL into the parent's
-			 * frame) uses the same formula -- the parent's frame is
-			 * also flipped, so the byte offset from the parent's
-			 * Wptr to its variable obeys the same arithmetic.
-			 */
-			const INT32 size = numslots (nptr);
-			wsposn = -(NVOffsetOf (nptr) + size - w + nameoffsetof (level));
-		} else {
-			wsposn = NVOffsetOf (nptr) + w + nameoffsetof (level);
-		}
+		const INT32 wsposn = NVOffsetOf (nptr) + w + nameoffsetof (level);
 
 		genprimary ((nonlocal ? inonlocal : ilocal), wsposn);
 		/*}}} */

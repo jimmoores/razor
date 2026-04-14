@@ -314,16 +314,6 @@ PUBLIC  BOOL stop_after_trans          = FALSE;
 PUBLIC  BOOL iobycall                  = TRUE;
 PUBLIC  BOOL realign_virtual_channels  = FALSE;
 PUBLIC  BOOL chanaspointer             = TRUE;
-/*
- * Phase 4B: when TRUE, the workspace allocator places locals at
- * negative Wptr offsets and the per-process descriptor moves to
- * positive offsets, mirroring the legacy ascending-stack layout
- * across Wptr.  The flag is plumbed end-to-end (harness -> codegen
- * -> emit) but starts inert; subsequent commits enable individual
- * sites under the flag.  Default FALSE leaves baseline behaviour
- * bit-identical.
- */
-PUBLIC  BOOL descending_workspace      = FALSE;
 PUBLIC  BOOL prtree                    = FALSE;
 PUBLIC  BOOL prxmltree		       = FALSE;
 PUBLIC  BOOL prsrc                     = FALSE;
@@ -1988,7 +1978,6 @@ const arg2_descriptor cloptions[] = {
 	#endif
 	{"C",         arg2_single,    &generatecode,  clear_flag,         HELP_FUL, "check only"},
 	{"DEF",       arg2_operand,   NULL,           optdefine,	  HELP_FUL, "<name[=val]>|define <name[=val]> (pre-processor)"},
-	{"DESCWS",    arg2_single,    &descending_workspace, set_flag,    HELP_FUL, "Phase 4B: descending workspace layout (WIP)"},
 	{"DTRACES",   arg2_single,    &enable_dtraces, set_flag,          HELP_FUL, "enable debugging traces"},
 	#if !(defined(CONFIG2) || defined(CONFIG3))
 	{"D",         arg2_single,    &minimal_debugoutput, set_flag,     HELP_USE, "minimum debugging data"},

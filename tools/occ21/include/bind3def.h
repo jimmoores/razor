@@ -64,7 +64,6 @@ int create_immortalvar (treenode *nptr);
 treenode *alloc_fixedws (INT32 slot, INT32 size);
 void free_fixedwslist (void);
 INT32 allocsize (treenode *tptr);
-INT32 numslots (treenode *nptr);
 void initallocvars (const BOOL needmap);
 void save_wsallocmap (treenode *nptr);
 int size_wsallocmap (treenode *nptr);
