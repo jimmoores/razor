@@ -96,7 +96,8 @@
 	unsigned long return_address; \
 	__asm__ volatile ("mov %0, x30" : "=r" (return_address)); \
 	return_address = (return_address & 0x0000FFFFFFFFFFFFUL) \
-		+ CCSP_KCALL_RETURN_BUMP_BYTES;
+		+ CCSP_KCALL_RETURN_BUMP_BYTES; \
+	Wptr = (word *)((char *)Wptr + CCSP_KCALL_SHIFT_BYTES);
 
 /* K_CALL_PARAM: map parameter index to the corresponding C argument.
  * Token pasting is used since all call sites use literal indices 0-4. */
@@ -157,7 +158,8 @@
 	unsigned long return_address; \
 	__asm__ volatile ("mov %0, x30" : "=r" (return_address)); \
 	return_address = (return_address & 0x0000FFFFFFFFFFFFUL) \
-		+ CCSP_KCALL_RETURN_BUMP_BYTES;
+		+ CCSP_KCALL_RETURN_BUMP_BYTES; \
+	Wptr = (word *)((char *)Wptr + CCSP_KCALL_SHIFT_BYTES);
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
 /*}}}*/

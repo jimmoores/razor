@@ -94,17 +94,20 @@
  * With noinline, __builtin_return_address(0) reliably returns the
  * caller's return address on x64.
  *
- * Phase 4B-IV: when KSHIFT is active, the caller wrapped the call
- * in a sub/bl/add bracket, so __builtin_return_address points at
- * the caller's `add Wptr, KSHIFT_BYTES` instruction.  Bumping by
- * CCSP_KCALL_RETURN_BUMP_BYTES lands the stored resume iptr past
- * that `add`, so that on wake-up dispatch's own `add` restores
- * user mode without executing the caller's `add` a second time.
- * At KSHIFT=0 the bump constant is 0 and this is a no-op. */
+ * Phase 4B-IV: when KSHIFT is active the caller wraps the call in a
+ * sub/call/add bracket, so (a) __builtin_return_address points at
+ * the caller's `add Wptr, KSHIFT_BYTES` instruction, bumped by
+ * CCSP_KCALL_RETURN_BUMP_BYTES so the stored resume iptr lands past
+ * that `add`; and (b) the `Wptr` parameter arrives in shifted form
+ * (Wptr = user_wptr - KSHIFT_BYTES).  We normalise it to user-mode
+ * right here so the rest of sched.c can work in one consistent
+ * mode.  At KSHIFT=0 both adjustments are zero and this collapses
+ * to the baseline capture. */
 #define K_CALL_HEADER \
 	__attribute__ ((unused)) \
 	unsigned long return_address = ((unsigned long) __builtin_return_address (0)) \
-		+ CCSP_KCALL_RETURN_BUMP_BYTES;
+		+ CCSP_KCALL_RETURN_BUMP_BYTES; \
+	Wptr = (word *)((char *)Wptr + CCSP_KCALL_SHIFT_BYTES);
 
 /* K_CALL_PARAM: map parameter index to the corresponding C argument.
  * Token pasting is used since all call sites use literal indices 0-4. */
@@ -144,14 +147,14 @@
 #define K_CALL_PTR(X) \
 	((void *) (kernel_##X))
 
-/* Capture the return address.  With noinline, __builtin_return_address(0)
- * reliably returns the caller's return address on x64.  Phase 4B-IV:
- * bump by CCSP_KCALL_RETURN_BUMP_BYTES to skip past the caller's
- * post-call `add Wptr, KSHIFT_BYTES` (0 at KSHIFT=0). */
+/* Capture the return address and normalise Wptr to user-mode.
+ * See the corresponding K_CALL_HEADER in the CCSP_DIRECT_CALL
+ * section above for the rationale. */
 #define K_CALL_HEADER \
 	__attribute__ ((unused)) \
 	unsigned long return_address = ((unsigned long) __builtin_return_address (0)) \
-		+ CCSP_KCALL_RETURN_BUMP_BYTES;
+		+ CCSP_KCALL_RETURN_BUMP_BYTES; \
+	Wptr = (word *)((char *)Wptr + CCSP_KCALL_SHIFT_BYTES);
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
 /*}}}*/

@@ -113,18 +113,19 @@ typedef struct process_descriptor {
  *	a typed parameter, the same bug becomes an "incompatible pointer
  *	types" diagnostic at every offending call site.
  *
- *	Phase 4B-IV: the subtraction depends on whether the caller
- *	passes a user-mode Wptr (KSHIFT=0) or a shifted Wptr that the
- *	sub/call/add bracket has already biased down by KSHIFT words
- *	(KSHIFT>0).  The effective subtraction is
- *	(PROC_DESC_NEG_WORDS - CCSP_KCALL_SHIFT_WORDS) words -- 9 at
- *	KSHIFT=0, 0 at KSHIFT=9.  At KSHIFT=0 this is identical to the
- *	legacy subtraction and emits byte-for-byte the same code.
+ *	Phase 4B-IV: this unconditionally subtracts PROC_DESC_NEG_WORDS
+ *	(i.e. always treats its input as a user-mode Wptr).  The per-
+ *	kcall shift scheme normalises Wptr to user-mode inside
+ *	K_CALL_HEADER (see {x64,aarch64,i386}/sched_asm_inserts.h), so
+ *	every `word *Wptr` that PROC_DESC is ever called on is already
+ *	in user-mode form.  Do not change this to be conditional on
+ *	KSHIFT -- sched.c holds user-mode Wptrs in locals (returned by
+ *	PROC_WPTR from dequeue paths), and a conditional subtract would
+ *	silently break those call sites.
  */
 static inline process_descriptor_t *PROC_DESC(word *wptr)
 {
-	return (process_descriptor_t *)(void *)
-		((word *)wptr - (PROC_DESC_NEG_WORDS - CCSP_KCALL_SHIFT_WORDS));
+	return (process_descriptor_t *)(void *)((word *)wptr - PROC_DESC_NEG_WORDS);
 }
 
 /*
