@@ -112,10 +112,19 @@ typedef struct process_descriptor {
  *	wptr, putting the result 9 words below the descriptor).  With
  *	a typed parameter, the same bug becomes an "incompatible pointer
  *	types" diagnostic at every offending call site.
+ *
+ *	Phase 4B-IV: the subtraction depends on whether the caller
+ *	passes a user-mode Wptr (KSHIFT=0) or a shifted Wptr that the
+ *	sub/call/add bracket has already biased down by KSHIFT words
+ *	(KSHIFT>0).  The effective subtraction is
+ *	(PROC_DESC_NEG_WORDS - CCSP_KCALL_SHIFT_WORDS) words -- 9 at
+ *	KSHIFT=0, 0 at KSHIFT=9.  At KSHIFT=0 this is identical to the
+ *	legacy subtraction and emits byte-for-byte the same code.
  */
 static inline process_descriptor_t *PROC_DESC(word *wptr)
 {
-	return (process_descriptor_t *)(void *)((word *)wptr - PROC_DESC_NEG_WORDS);
+	return (process_descriptor_t *)(void *)
+		((word *)wptr - (PROC_DESC_NEG_WORDS - CCSP_KCALL_SHIFT_WORDS));
 }
 
 /*
