@@ -44,6 +44,9 @@
 #ifndef X64_SCHED_ASM_INSERTS_H
 #define X64_SCHED_ASM_INSERTS_H
 
+/* CCSP_KCALL_RETURN_BUMP_BYTES is referenced by K_CALL_HEADER below. */
+#include "ccsp_consts.h"
+
 /* CCSP_DIRECT_CALL: direct C calling convention for kernel functions.
  * Instead of passing all parameters through param0/cparam[], each kernel
  * function receives its parameters as normal C function arguments.
@@ -89,10 +92,19 @@
 
 /* K_CALL_HEADER: still capture return address for error handlers.
  * With noinline, __builtin_return_address(0) reliably returns the
- * caller's return address on x64. */
+ * caller's return address on x64.
+ *
+ * Phase 4B-IV: when KSHIFT is active, the caller wrapped the call
+ * in a sub/bl/add bracket, so __builtin_return_address points at
+ * the caller's `add Wptr, KSHIFT_BYTES` instruction.  Bumping by
+ * CCSP_KCALL_RETURN_BUMP_BYTES lands the stored resume iptr past
+ * that `add`, so that on wake-up dispatch's own `add` restores
+ * user mode without executing the caller's `add` a second time.
+ * At KSHIFT=0 the bump constant is 0 and this is a no-op. */
 #define K_CALL_HEADER \
 	__attribute__ ((unused)) \
-	unsigned long return_address = (unsigned long) __builtin_return_address (0);
+	unsigned long return_address = ((unsigned long) __builtin_return_address (0)) \
+		+ CCSP_KCALL_RETURN_BUMP_BYTES;
 
 /* K_CALL_PARAM: map parameter index to the corresponding C argument.
  * Token pasting is used since all call sites use literal indices 0-4. */
@@ -133,10 +145,13 @@
 	((void *) (kernel_##X))
 
 /* Capture the return address.  With noinline, __builtin_return_address(0)
- * reliably returns the caller's return address on x64. */
+ * reliably returns the caller's return address on x64.  Phase 4B-IV:
+ * bump by CCSP_KCALL_RETURN_BUMP_BYTES to skip past the caller's
+ * post-call `add Wptr, KSHIFT_BYTES` (0 at KSHIFT=0). */
 #define K_CALL_HEADER \
 	__attribute__ ((unused)) \
-	unsigned long return_address = (unsigned long) __builtin_return_address (0);
+	unsigned long return_address = ((unsigned long) __builtin_return_address (0)) \
+		+ CCSP_KCALL_RETURN_BUMP_BYTES;
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
 /*}}}*/

@@ -122,6 +122,38 @@
 #endif
 #define CCSP_KCALL_SHIFT_BYTES	(CCSP_KCALL_SHIFT_WORDS * (int)sizeof(word))
 
+/*
+ *	Size in bytes of the `add Wptr, KSHIFT_BYTES` instruction that
+ *	tranx86 emits immediately after every kernel call (the "add"
+ *	half of the Phase 4B-IV sub/call/add bracket).  When a process
+ *	is descheduled inside a kernel call, K_CALL_HEADER needs to
+ *	bump the stored resume iptr past this instruction, so that on
+ *	wake-up the dispatch path's own `add` restores user mode
+ *	without running the caller's `add` a second time.
+ *
+ *	At CCSP_KCALL_SHIFT_WORDS == 0 the sub/add bracket is elided
+ *	and this constant is 0 (no bump).
+ *
+ *	When activated:
+ *	  - x86-64: `addq $72, %r14` with REX.W + imm8 = 4 bytes.
+ *	  - AArch64: `add x28, x28, #72` is a fixed 4-byte instruction.
+ *	  - i386:   `addl $36, %ebp` = 3 bytes.
+ *	All three assume KSHIFT_BYTES fits in an imm8 (<=127), i.e.
+ *	KSHIFT_WORDS * sizeof(word) <= 127.  At KSHIFT_WORDS==9 this
+ *	gives 72 (64-bit) or 36 (32-bit), both well within range.
+ */
+#if CCSP_KCALL_SHIFT_WORDS > 0
+#  if defined(__x86_64__) || defined(__aarch64__)
+#    define CCSP_KCALL_RETURN_BUMP_BYTES	4
+#  elif defined(__i386__)
+#    define CCSP_KCALL_RETURN_BUMP_BYTES	3
+#  else
+#    error "CCSP_KCALL_SHIFT_WORDS > 0 requires per-arch CCSP_KCALL_RETURN_BUMP_BYTES"
+#  endif
+#else
+#  define CCSP_KCALL_RETURN_BUMP_BYTES	0
+#endif
+
 /* CIF constants */
 #define CIF_STACK_ALIGN		4 /* words */
 #if defined(__aarch64__) || defined(__x86_64__)

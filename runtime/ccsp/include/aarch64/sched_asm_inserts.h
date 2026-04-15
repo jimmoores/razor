@@ -30,6 +30,9 @@
 #ifndef AARCH64_SCHED_ASM_INSERTS_H
 #define AARCH64_SCHED_ASM_INSERTS_H
 
+/* CCSP_KCALL_RETURN_BUMP_BYTES is referenced by K_CALL_HEADER below. */
+#include "ccsp_consts.h"
+
 
 /* CCSP_DIRECT_CALL: direct C calling convention for kernel functions.
  * Instead of passing all parameters through param0/cparam[], each kernel
@@ -92,7 +95,8 @@
 #define K_CALL_HEADER \
 	unsigned long return_address; \
 	__asm__ volatile ("mov %0, x30" : "=r" (return_address)); \
-	return_address &= 0x0000FFFFFFFFFFFFUL;
+	return_address = (return_address & 0x0000FFFFFFFFFFFFUL) \
+		+ CCSP_KCALL_RETURN_BUMP_BYTES;
 
 /* K_CALL_PARAM: map parameter index to the corresponding C argument.
  * Token pasting is used since all call sites use literal indices 0-4. */
@@ -152,7 +156,8 @@
 #define K_CALL_HEADER \
 	unsigned long return_address; \
 	__asm__ volatile ("mov %0, x30" : "=r" (return_address)); \
-	return_address &= 0x0000FFFFFFFFFFFFUL;
+	return_address = (return_address & 0x0000FFFFFFFFFFFFUL) \
+		+ CCSP_KCALL_RETURN_BUMP_BYTES;
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
 /*}}}*/

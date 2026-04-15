@@ -29,6 +29,9 @@
 #ifndef I386_SCHED_ASM_INSERTS_H
 #define I386_SCHED_ASM_INSERTS_H
 
+/* CCSP_KCALL_RETURN_BUMP_BYTES is referenced by K_CALL_HEADER below. */
+#include "ccsp_consts.h"
+
 /*{{{  architecture dependent kernel call declarations */
 /* No `static`: tranx86 generates direct calls (`call kernel_<name>`)
  * since Phase 1B for i386, so the kernel functions need external
@@ -60,7 +63,8 @@
 
 #define K_CALL_HEADER \
 	__attribute__ ((unused)) \
-	unsigned int return_address = (unsigned int) __builtin_return_address (0);
+	unsigned int return_address = ((unsigned int) __builtin_return_address (0)) \
+		+ CCSP_KCALL_RETURN_BUMP_BYTES;
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
 /*}}}*/

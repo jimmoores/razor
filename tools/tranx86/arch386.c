@@ -244,6 +244,13 @@ fprintf (stderr, "compose_kcall_i386: regs_in = %d, regs_out = %d, r_in = %d, r_
 			sprintf (sbuf, "CCSP [%s]", entry->entrypoint);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuf)));
 		}
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+		/* Phase 4B-IV: shift Wptr down by KSHIFT_BYTES so the kernel
+		 * sees the descriptor at positive offsets. */
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
+			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+#endif
 		call_ins = compose_kjump_i386 (ts, INS_CALL, 0, entry);
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
@@ -251,6 +258,14 @@ fprintf (stderr, "compose_kcall_i386: regs_in = %d, regs_out = %d, r_in = %d, r_
 		if (call_ins) {
 			set_implied_inputs (call_ins, r_in > r_out ? r_in : r_out, cregs);
 		}
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+		/* Restore user-mode Wptr.  The kernel's bumped resume_iptr
+		 * points past this `add` on wake-up; see K_CALL_HEADER in
+		 * i386/sched_asm_inserts.h. */
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+#endif
 	} else if (options.kernel_interface & KRNLIFACE_MESH) {
 		/* unsupported as yet */
 		fprintf (stderr, "%s: warning: MESH kernel interface not supported yet (ungenerated kernel call %d)\n", progname, call);

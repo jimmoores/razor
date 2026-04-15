@@ -468,6 +468,14 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 			sprintf (sbuf, "CCSP [%s]", entry->entrypoint);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuf)));
 		}
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+		/* Phase 4B-IV: shift Wptr down by KSHIFT_BYTES so the kernel
+		 * sees the descriptor at positive offsets above (Wptr=SP once
+		 * Phase 4D lands), keeping it signal-safe during the call. */
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
+			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+#endif
 		/* Move sched (r15) to rsi, Wptr (r14) to rdx before call */
 		call_ins = compose_x64_kjump (ts, INS_CALL, 0, entry);
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
@@ -487,6 +495,14 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 		if (call_ins) {
 			set_implied_inputs (call_ins, r_in > r_out ? r_in : r_out, cregs);
 		}
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+		/* Restore user-mode Wptr.  The `add` is what the kernel's
+		 * bumped resume_iptr points past on wake-up; see K_CALL_HEADER
+		 * in x64/sched_asm_inserts.h. */
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+#endif
 	}
 	ts->stack_drift = 0;
 
