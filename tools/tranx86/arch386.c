@@ -3203,7 +3203,26 @@ static void compose_bcall_i386 (tstate *ts, int i, int kernel_call, int inlined,
 	if (options.kernel_interface & (KRNLIFACE_NEWCCSP | KRNLIFACE_RMOX)) {
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+		/* Phase 4B-IV: bracket the blocking-call dispatch.  See the
+		 * rationale in archaarch64.c's compose_bcall_aarch64 --
+		 * without this bracket, K_CALL_HEADER's return_address bump
+		 * lands on the wrong instruction when the process wakes from
+		 * the blocking call. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket sub")));
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
+			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-sub end")));
+#endif
 		add_to_ins_chain (compose_kjump_i386 (ts, INS_CALL, 0, kif_entry (kernel_call)));
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket add")));
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-add end")));
+#endif
 	} else if (options.kernel_interface & KRNLIFACE_MESH) {
 		fprintf (stderr, "%s: error: do not have blocking call support in MESH yet\n", progname);
 	} else if (options.kernel_interface & KRNLIFACE_CSPLINUX) {

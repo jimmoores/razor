@@ -1054,8 +1054,32 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 		/* sched -> x2, Wptr -> x3 */
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, REG_X2));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X3));
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+		/* Phase 4B-IV: kernel-call bracket around the blocking-call
+		 * dispatch.  The kernel's K_CALL_HEADER bumps its captured
+		 * return_address by CCSP_KCALL_RETURN_BUMP_BYTES on the
+		 * assumption that the post-`bl` instruction is the bracket's
+		 * `add Wptr, KSHIFT_BYTES`; without that bracket, the bump
+		 * lands one instruction past the bl, misaligning the resume
+		 * point.  x64's compose_x64_bcall already goes through
+		 * compose_x64_kcall which has the bracket built in; here
+		 * we're emitting a direct INS_CALL so we need to bracket
+		 * it explicitly. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket sub")));
+		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
+			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-sub end")));
+#endif
 		add_to_ins_chain (compose_ins (INS_CALL, 5, 0, ARG_NAMEDLABEL, entrypoint_name,
 			ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2, ARG_REG, REG_X3));
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket add")));
+		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
+			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-add end")));
+#endif
 
 		/* Consume transputer stack entries used by this call */
 		tstack_undefine (ts->stack);
