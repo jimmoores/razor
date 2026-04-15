@@ -95,6 +95,33 @@
 		((P) & PRIORITY_MASK) \
 	)
 
+/*
+ *	Per-kcall Wptr shift (Phase 4B-IV).
+ *
+ *	When > 0, every kernel call is bracketed by a `sub Wptr, KSHIFT_BYTES`
+ *	/ `add Wptr, KSHIFT_BYTES` pair, so that during the call the process
+ *	descriptor (which lives at Wptr[-1..-9] in user mode) sits at
+ *	Wptr[+0..+64] in shifted mode -- i.e. above the kernel's current
+ *	stack pointer once Wptr=SP is unified.  This makes the descriptor
+ *	signal-safe during kernel calls.
+ *
+ *	Queue entries and dispatch follow the invariant that the queue
+ *	stores shifted Wptr and iptr points at user-mode code; the dispatch
+ *	path performs the `add` before jumping.  See the Phase 4 design
+ *	notes in ai/plan-*.md.
+ *
+ *	At value 0 this is a pure no-op -- all scaffolding added in
+ *	S0..S5 of the phase collapses to baseline code.  Activation is a
+ *	single-constant flip at S6.
+ *
+ *	Must stay in step with TRANX86_KCALL_SHIFT_WORDS in
+ *	tools/tranx86/proc_desc.h.
+ */
+#ifndef CCSP_KCALL_SHIFT_WORDS
+#define CCSP_KCALL_SHIFT_WORDS	0
+#endif
+#define CCSP_KCALL_SHIFT_BYTES	(CCSP_KCALL_SHIFT_WORDS * (int)sizeof(word))
+
 /* CIF constants */
 #define CIF_STACK_ALIGN		4 /* words */
 #if defined(__aarch64__) || defined(__x86_64__)
