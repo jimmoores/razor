@@ -102,7 +102,7 @@ typedef struct tranx86_proc_desc {
  *	off TRANX86_KCALL_SHIFT_BYTES elide their extra instructions.
  */
 #ifndef TRANX86_KCALL_SHIFT_WORDS
-#define TRANX86_KCALL_SHIFT_WORDS	0
+#define TRANX86_KCALL_SHIFT_WORDS	9
 #endif
 #define TRANX86_KCALL_SHIFT_BYTES	(TRANX86_KCALL_SHIFT_WORDS * BytesPerWord)
 

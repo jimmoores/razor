@@ -2077,10 +2077,21 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	 * call window, AFTER the Wptr arg has been copied to x2.  The
 	 * kernel receives user-mode Wptr in its C parameter; x28 itself
 	 * is shifted only for signal safety (descriptor above SP once
-	 * Phase 4D unifies Wptr with SP). */
+	 * Phase 4D unifies Wptr with SP).
+	 *
+	 * The INS_ANNO annotations bracket the sub/add pair so the
+	 * ADD-combining optimiser in optimise.c ("pack up ADDs and
+	 * SUBs") does not merge them with adjacent AJW adds/subs.
+	 * Such a merge is semantically correct for straight-line
+	 * code but breaks the deschedule/resume path, which relies on
+	 * the bracket's `add` being a standalone 4-byte instruction
+	 * so that K_CALL_HEADER's return_address bump lands just past
+	 * it. */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket sub")));
 	add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
 		ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
 		ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-sub end")));
 #endif
 	add_to_ins_chain (call_ins);
 
@@ -2088,9 +2099,11 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	/* Restore user-mode Wptr.  The kernel's bumped resume_iptr
 	 * points past this `add` on wake-up -- see K_CALL_HEADER in
 	 * aarch64/sched_asm_inserts.h. */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket add")));
 	add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
 		ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
 		ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-add end")));
 #endif
 
 	if (regs_out > 0 && ts->stack) {

@@ -251,10 +251,18 @@ fprintf (stderr, "compose_kcall_i386: regs_in = %d, regs_out = %d, r_in = %d, r_
 		/* Phase 4B-IV: shift Wptr (ebp) down for the duration of
 		 * the call window, AFTER the Wptr arg has been copied to
 		 * xregs[2].  The kernel's C parameter receives user-mode
-		 * Wptr; ebp itself is shifted only for signal safety. */
+		 * Wptr; ebp itself is shifted only for signal safety.
+		 *
+		 * The INS_ANNO annotations prevent the ADD/SUB combining
+		 * optimiser in optimise.c ("pack up ADDs and SUBs") from
+		 * folding the bracket with adjacent AJW sub/adds.  The
+		 * fold is semantically safe for straight-line code but
+		 * breaks the deschedule/resume path. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket sub")));
 		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
 			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
 			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-sub end")));
 #endif
 		add_to_ins_chain (call_ins);
 		if (call_ins) {
@@ -264,9 +272,11 @@ fprintf (stderr, "compose_kcall_i386: regs_in = %d, regs_out = %d, r_in = %d, r_
 		/* Restore user-mode Wptr.  The kernel's bumped resume_iptr
 		 * points past this `add` on wake-up; see K_CALL_HEADER in
 		 * i386/sched_asm_inserts.h. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket add")));
 		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
 			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
 			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-add end")));
 #endif
 	} else if (options.kernel_interface & KRNLIFACE_MESH) {
 		/* unsupported as yet */

@@ -482,10 +482,21 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 		 * ends up at shifted_r14[+0..+64], above the shifted SP once
 		 * Phase 4D unifies Wptr with SP.  The rdx argument above
 		 * still holds the user-mode address, so the kernel's
-		 * `word *Wptr` parameter is user-mode. */
+		 * `word *Wptr` parameter is user-mode.
+		 *
+		 * The INS_ANNO annotations bracket the sub so the ADD/SUB
+		 * combining optimiser in optimise.c ("pack up ADDs and
+		 * SUBs") does not merge it with any adjacent AJW sub.
+		 * Folding is semantically correct for straight-line code
+		 * but breaks the deschedule/resume path, which relies on
+		 * the bracket's instruction staying a standalone 4-byte
+		 * `add` so that K_CALL_HEADER's return_address bump lands
+		 * just past it. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket sub")));
 		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
 			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
 			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-sub end")));
 #endif
 		/* Multi-output kernel calls (regs_out > 1) take an extra
 		 * `word *extra_out` argument in rcx pointing at the storage
@@ -506,9 +517,11 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 		/* Restore user-mode Wptr.  The `add` is what the kernel's
 		 * bumped resume_iptr points past on wake-up; see K_CALL_HEADER
 		 * in x64/sched_asm_inserts.h. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket add")));
 		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
 			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
 			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-add end")));
 #endif
 	}
 	ts->stack_drift = 0;
