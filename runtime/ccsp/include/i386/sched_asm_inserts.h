@@ -64,8 +64,7 @@
 #define K_CALL_HEADER \
 	__attribute__ ((unused)) \
 	unsigned int return_address = ((unsigned int) __builtin_return_address (0)) \
-		+ CCSP_KCALL_RETURN_BUMP_BYTES; \
-	Wptr = (word *)((char *)Wptr + CCSP_KCALL_SHIFT_BYTES);
+		+ CCSP_KCALL_RETURN_BUMP_BYTES;
 #define K_CALL_PARAM(N) \
 	((N) == 0 ? param0 : sched->cparam[(N) - 1])
 /*}}}*/

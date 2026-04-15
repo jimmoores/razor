@@ -73,21 +73,10 @@ void ccsp_kernel_entry (word *wptr, word *fptr)
 	 * but now references the symbol directly so build_calltable and the
 	 * global calltable can be removed.  Y_rtthreadinit takes one input
 	 * (the stack base) so its ABI is identical under both legacy and
-	 * CCSP_DIRECT_CALL: void f(word p0, sched_t *sched, word *Wptr).
-	 *
-	 * Phase 4B-IV: K_CALL_HEADER normalises its Wptr parameter to
-	 * user-mode by adding CCSP_KCALL_SHIFT_BYTES (because the usual
-	 * caller is a tranx86-emitted kcall bracket that shifts Wptr
-	 * down before the call).  K_ENTRY is a different, non-bracketed
-	 * path, so we pre-subtract KSHIFT here to compensate for the
-	 * header's addition and leave the in-kernel Wptr in the correct
-	 * (user-mode) form.  Y_rtthreadinit actually ignores its Wptr
-	 * parameter entirely, but keeping this correct avoids a
-	 * latent bug the first time something uses it. */
+	 * CCSP_DIRECT_CALL: void f(word p0, sched_t *sched, word *Wptr). */
 	{
 		extern void kernel_Y_rtthreadinit (word, void *, word *);
-		word *wptr_shifted = (word *)((char *)wptr - CCSP_KCALL_SHIFT_BYTES);
-		K_ENTRY ((void *) kernel_Y_rtthreadinit, sched_base, wptr_shifted, fptr);
+		K_ENTRY ((void *) kernel_Y_rtthreadinit, sched_base, wptr, fptr);
 	}
 }
 /*}}}*/

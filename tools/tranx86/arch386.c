@@ -244,16 +244,18 @@ fprintf (stderr, "compose_kcall_i386: regs_in = %d, regs_out = %d, r_in = %d, r_
 			sprintf (sbuf, "CCSP [%s]", entry->entrypoint);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuf)));
 		}
+		call_ins = compose_kjump_i386 (ts, INS_CALL, 0, entry);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
 #if TRANX86_KCALL_SHIFT_BYTES > 0
-		/* Phase 4B-IV: shift Wptr down by KSHIFT_BYTES so the kernel
-		 * sees the descriptor at positive offsets. */
+		/* Phase 4B-IV: shift Wptr (ebp) down for the duration of
+		 * the call window, AFTER the Wptr arg has been copied to
+		 * xregs[2].  The kernel's C parameter receives user-mode
+		 * Wptr; ebp itself is shifted only for signal safety. */
 		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
 			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
 			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 #endif
-		call_ins = compose_kjump_i386 (ts, INS_CALL, 0, entry);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
 		add_to_ins_chain (call_ins);
 		if (call_ins) {
 			set_implied_inputs (call_ins, r_in > r_out ? r_in : r_out, cregs);

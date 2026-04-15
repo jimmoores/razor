@@ -1899,16 +1899,6 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 		entrypoint_name = aarch64_convert_symbol_name(entry->entrypoint);
 	}
 
-#if TRANX86_KCALL_SHIFT_BYTES > 0
-	/* Phase 4B-IV: shift Wptr down by KSHIFT_BYTES so the kernel sees
-	 * the descriptor at positive offsets.  Placed before any argument
-	 * marshalling so the subsequent INS_MOVE REG_WPTR -> xN captures
-	 * the already-shifted value. */
-	add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
-		ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
-		ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-#endif
-
 				/* Map stack registers to aarch64 registers */
 	if (ts->stack) {
 		cregs[0] = ts->stack->old_a_reg;
@@ -2081,11 +2071,22 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	call_ins = compose_ins (INS_CALL, 4, 0, ARG_NAMEDLABEL, entrypoint_name, ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2);
 	/*}}}*/
 #endif /* CCSP_DIRECT_CALL */
+
+#if TRANX86_KCALL_SHIFT_BYTES > 0
+	/* Phase 4B-IV: shift Wptr (x28) down for the duration of the
+	 * call window, AFTER the Wptr arg has been copied to x2.  The
+	 * kernel receives user-mode Wptr in its C parameter; x28 itself
+	 * is shifted only for signal safety (descriptor above SP once
+	 * Phase 4D unifies Wptr with SP). */
+	add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
+		ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+		ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+#endif
 	add_to_ins_chain (call_ins);
 
 #if TRANX86_KCALL_SHIFT_BYTES > 0
-	/* Restore user-mode Wptr.  The kernel's bumped resume_iptr points
-	 * past this `add` on wake-up -- see K_CALL_HEADER in
+	/* Restore user-mode Wptr.  The kernel's bumped resume_iptr
+	 * points past this `add` on wake-up -- see K_CALL_HEADER in
 	 * aarch64/sched_asm_inserts.h. */
 	add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
 		ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,

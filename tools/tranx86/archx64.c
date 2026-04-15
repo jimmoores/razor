@@ -468,18 +468,25 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 			sprintf (sbuf, "CCSP [%s]", entry->entrypoint);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuf)));
 		}
+		/* Move sched (r15) to rsi, Wptr (r14) to rdx before call.
+		 * Phase 4B-IV: the Wptr arg to rdx must be captured BEFORE
+		 * r14 gets shifted, so the kernel receives user-mode Wptr
+		 * in its C parameter while r14 itself is shifted during the
+		 * call window for signal safety. */
+		call_ins = compose_x64_kjump (ts, INS_CALL, 0, entry);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
 #if TRANX86_KCALL_SHIFT_BYTES > 0
-		/* Phase 4B-IV: shift Wptr down by KSHIFT_BYTES so the kernel
-		 * sees the descriptor at positive offsets above (Wptr=SP once
-		 * Phase 4D lands), keeping it signal-safe during the call. */
+		/* Shift r14 down by KSHIFT_BYTES for the duration of the
+		 * call window.  The descriptor (at r14[-1..-9] in user mode)
+		 * ends up at shifted_r14[+0..+64], above the shifted SP once
+		 * Phase 4D unifies Wptr with SP.  The rdx argument above
+		 * still holds the user-mode address, so the kernel's
+		 * `word *Wptr` parameter is user-mode. */
 		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
 			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
 			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 #endif
-		/* Move sched (r15) to rsi, Wptr (r14) to rdx before call */
-		call_ins = compose_x64_kjump (ts, INS_CALL, 0, entry);
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
-		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
 		/* Multi-output kernel calls (regs_out > 1) take an extra
 		 * `word *extra_out` argument in rcx pointing at the storage
 		 * for the 2nd and 3rd outputs.  We point it at sched->cparam[0]
