@@ -118,7 +118,7 @@
  *	tools/tranx86/proc_desc.h.
  */
 #ifndef CCSP_KCALL_SHIFT_WORDS
-#define CCSP_KCALL_SHIFT_WORDS	9
+#define CCSP_KCALL_SHIFT_WORDS	0
 #endif
 #define CCSP_KCALL_SHIFT_BYTES	(CCSP_KCALL_SHIFT_WORDS * (int)sizeof(word))
 
