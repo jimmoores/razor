@@ -60,18 +60,18 @@ struct mp_ctrlblk_struct {
 	mp_mapchain *mapchain;	/* map-chain for the process */
 	/* 4-7 */
 	void *wsbase;		/* workspace base */
-	int wssize;		/* workspace size (bytes) */
+	word wssize;		/* workspace size (bytes); word-sized so slot 5 aligns on 64-bit */
 	void *vsbase;		/* vectorspace base */
 	void *msbase;		/* mobilespace base */
 	/* 8-13 */
 	mproc_bar_t *barrier;	/* barrier */
-	int unused[3];		/* unused */
-	unsigned int typehash;	/* typehash for this process */
+	word unused[3];		/* unused; word-sized to fill slots 9-11 on both 32 and 64-bit */
+	word typehash;		/* typehash for this process; word-sized to occupy slot 12 */
 	char *codemap;		/* pointer to the compiled-in code map */
 	/* 14-17 */
-	int vssize;		/* vectorspace size (bytes) */
+	word vssize;		/* vectorspace size (bytes); word-sized for slot alignment */
 	void **mshook;		/* MS hook pointer */
-	int mssize;		/* mobilespace size (bytes) */
+	word mssize;		/* mobilespace size (bytes); word-sized for slot alignment */
 	void *msdesc;		/* mobilespace descriptor-block */
 #ifdef __GNUC__
 	} __attribute__ ((packed));

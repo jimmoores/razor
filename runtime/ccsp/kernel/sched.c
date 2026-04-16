@@ -3360,8 +3360,10 @@ static REGPARM void mproc_bar_resign (sched_t *sched, mproc_bar_t *bar, word cou
 static REGPARM void mproc_bar_sync (sched_t *sched, mproc_bar_t *bar, word *Wptr)
 {
 	word retry = false;
+	#if 0
 	BMESSAGE ("mproc_bar_sync: bar=%p Wptr=%p enrolled=%ld state=0x%lx\n",
 		bar, Wptr, (long)bar->enrolled, (unsigned long)atw_val(&(bar->state)));
+	#endif
 
 	for (;;) {
 		word state = atw_val (&(bar->state));
