@@ -4060,7 +4060,17 @@ fprintf (stderr, "tprocess (dynamic replpar): acount @%d, ws_aslot @%d, vs_aslot
 #endif
 					}
 					if (replisconst) {
-						genprimary (I_LDLP, (int) (-(DS_MIN + replparslots + after_par_setup_slots)));
+						int wstemp_off = DS_MIN + replparslots + after_par_setup_slots;
+						if (needs_quadalign) {
+							/* Phase 4D: WS_TEMP is the top of the replicated
+							 * child's workspace; the child's Wptr is derived
+							 * from WS_TEMP by the treplpar emission.  For
+							 * 16-byte sp alignment on aarch64, WS_TEMP's
+							 * offset (in words) from the parent's aligned
+							 * Wptr must be even. */
+							wstemp_off = (wstemp_off + 1) & ~1;
+						}
+						genprimary (I_LDLP, (int) -wstemp_off);
 						genprimary (I_STL, REPLPAR_WS_TEMP);	/*     stl    wstemp              */
 						gencomment0 ("PTR wstemp");
 					} else if (disable_dynmem) {

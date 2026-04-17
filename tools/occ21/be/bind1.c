@@ -1049,19 +1049,37 @@ fprintf (stderr, "mapreplpar: mobilereplparnmaped() > 0, so allocating MSP slot.
 #endif
 		}
 #endif
+		if (needs_quadalign) {
+			/* Round maxwsp_locals to even BEFORE adding rpspecials so
+			 * that thisbranchwsp - rpspecials (the child-frame size
+			 * below the REPLPAR specials) is always even.  treplpar
+			 * emits `I_LDNLP, rpspecials - thisbranchwsp` to derive
+			 * the child's Wptr from WS_TEMP; that offset must be a
+			 * multiple of two words for Phase 4D sp alignment. */
+			maxwsp = (maxwsp + 1) & (~1);
+		}
 		maxwsp = maxwsp + rpspecials;	/* Add special slots to maxwsp */
 		if (needs_quadalign) {
 			datasize = (datasize + 1) & (~1);	/* round up to even number */
-			maxwsp = (maxwsp + 1) & (~1);	/* round up to even number */
 		}
+		{
+			INT32 branchsize = maxwsp + datasize;
+			if (needs_quadalign) {
+				/* SpDatasize (= branchsize here) is used as the per-
+				 * iteration stride in treplpar.  Ensure it's a
+				 * multiple of two words so successive child Wptrs
+				 * remain 16-byte aligned. */
+				branchsize = (branchsize + 1) & (~1);
+			}
 #ifdef MOBILES
-		spptr = newspacenode (S_SPACEUSAGE, NOPOSN, pprocess,
-				      maxwsp, maxwsp + datasize, maxvsp, savedvsp, sub_msp, -1, consttablechain, (int) NVOffsetOf (constantnptr));
-		mobilereplparfinish (spptr);
+			spptr = newspacenode (S_SPACEUSAGE, NOPOSN, pprocess,
+					      maxwsp, branchsize, maxvsp, savedvsp, sub_msp, -1, consttablechain, (int) NVOffsetOf (constantnptr));
+			mobilereplparfinish (spptr);
 #else
-		spptr = newspacenode (S_SPACEUSAGE, NOPOSN, pprocess,
-				      maxwsp, maxwsp + datasize, maxvsp, savedvsp, consttablechain, (int) NVOffsetOf (constantnptr));
+			spptr = newspacenode (S_SPACEUSAGE, NOPOSN, pprocess,
+					      maxwsp, branchsize, maxvsp, savedvsp, consttablechain, (int) NVOffsetOf (constantnptr));
 #endif
+		}
 		SetReplCBody (tptr, spptr);
 		if (inside_suspends) {
 			/* mark locations of hidden workspace entries -- relative to the replicated process */
