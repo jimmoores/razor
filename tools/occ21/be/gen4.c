@@ -1995,7 +1995,7 @@ else fprintf (stderr, "\n    [NULL]\n");
 				 * The inner call's setup overwrote RECURSIVE_WS with
 				 * its own workspace pointer, but the outer call needs
 				 * the original value for parameter storage. */
-				genprimary (I_LDL, RECURSIVE_WS - 3);
+				genprimary (I_LDL, RECURSIVE_SAVE);
 				genprimary (I_STL, RECURSIVE_WS);
 			}
 		}

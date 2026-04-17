@@ -88,15 +88,25 @@ extern int genhdr_w_time_slot (void);
 #define REG_PARAMS MAXREGS
 /* One below workspace slot contains the return address */
 #define INS_EXTRA  ((INT32)1)
-/* requirements for recursive stuff */
-#define RECURSIVE_WS -1
-#define RECURSIVE_VS -2
+/* requirements for recursive stuff.
+ * These temporaries hold pointers to the dynamically-allocated workspace,
+ * vectorspace and mobilespace during a recursive call setup.  They MUST
+ * be at positive (above-Wptr) offsets so they do not collide with the
+ * CCSP kernel descriptor slots (Iptr at -1, Link at -2, etc.) which
+ * the kernel writes during kernel calls such as I_MALLOC.
+ * Slot 0 is reserved for IptrSucc/Temp (used by I_CALL return address),
+ * so the recursive temporaries start at slot 1. */
+#define RECURSIVE_WS 1
+#define RECURSIVE_VS 2
 #ifdef MOBILES
-	#define RECURSIVE_MS -3
-	#define RECURSIVE_SLOTS 3
+	#define RECURSIVE_MS 3
+	#define RECURSIVE_SAVE 4	/* save slot for outer RECURSIVE_WS in nested calls */
+	#define RECURSIVE_SLOTS 5	/* above-workspace slots to reserve (0..4) */
 #else
-	#define RECURSIVE_SLOTS 2
+	#define RECURSIVE_SAVE 3	/* save slot for outer RECURSIVE_WS in nested calls */
+	#define RECURSIVE_SLOTS 4	/* above-workspace slots to reserve (0..3) */
 #endif
+#define RECURSIVE_BELOWWS 0		/* below-workspace slots needed (none now) */
 
 #define RECURSIVE_SAVED_WS 0	/* in the allocated workspace */
 #define MIN_RECURSIVE_SLOTS 2	/* for the saved Wptr (+ result) */
