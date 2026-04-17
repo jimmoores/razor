@@ -1017,9 +1017,17 @@ PRIVATE arg_control optprocessor ( const char *opt, const char *arg, void *data 
 	}
 	
 	/* Automatically enable ETC output for 64-bit targets */
-	if (new != UNKNOWN_PROCESSOR_TYPE && 
+	if (new != UNKNOWN_PROCESSOR_TYPE &&
 	    (strcmp(opt_upper, "AARCH64") == 0 || strcmp(opt_upper, "X64") == 0 || strcmp(opt_upper, "AXP") == 0)) {
 		etc_output = TRUE;
+		/* Phase 4D: workspace sizes must be even word counts so that
+		 * Wptr (= sp on aarch64/x64) stays 16-byte aligned.  The
+		 * quadalign flag rounds PAR child workspace, vectorspace,
+		 * and data sizes up to even words in the mapper (bind1.c,
+		 * bind3.c).  Without this, PAR children get odd-word offsets
+		 * producing Wptr mod 16 = 8, which faults on aarch64's
+		 * SCTLR.SA sp alignment check. */
+		needs_quadalign = TRUE;
 	}
 	
 	return (new != UNKNOWN_PROCESSOR_TYPE);
