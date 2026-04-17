@@ -2111,6 +2111,13 @@ fprintf (stderr, "tinstance: calling augmentparams()\n");
 		/*{{{  allocate memory for recursive process*/
 		/*{{{  get memory requirements*/
 		alloc_ws_slots = (NPMaxwspOf (iname) + ((recparamslots < MAXREGS) ? MAXREGS : recparamslots)+ NPDatasizeOf (iname) + MAXREGS);
+		if (needs_quadalign && ((alloc_ws_slots & 1) == 0)) {
+			/* Phase 4D: the "top" pointer is set at (alloc_ws_slots - 1)
+			 * words above the malloc base.  For sp to stay 16-byte aligned
+			 * the offset (alloc_ws_slots - 1) must be even, i.e.
+			 * alloc_ws_slots must be odd.  Round up. */
+			alloc_ws_slots += 1;
+		}
 		alloc_vs_slots = NPVSUsageOf (iname);
 #ifdef MOBILES
 		alloc_ms_slots = NPMSUsageOf (iname);
