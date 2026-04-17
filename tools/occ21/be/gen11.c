@@ -5045,7 +5045,8 @@ fprintf (stderr, "tassign: dest=%p, source=%p\n", dest, source);
 					tpredef (sourceitem, dest);
 				} else {
 					const BOOL recursive = (nodetypeoftag (TagOf (sourceitem)) == INSTANCENODE) ? IRecursiveOf (sourceitem) : FALSE;
-					const int temp = RECURSIVE_WS;
+					/* Phase 4D: RECURSIVE_WS lives above Wptr; legacy: below. */
+					const int temp = needs_quadalign ? RECURSIVE_WS : -1;
 
 					tinstance (sourceitem);
 

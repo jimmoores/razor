@@ -1951,7 +1951,13 @@ else fprintf (stderr, "\n    [NULL]\n");
 		} else {
 			const BOOL recursive = (nodetypeoftag (TagOf (tptr)) == INSTANCENODE) ? IRecursiveOf (tptr) : FALSE;
 			const int nregresults = 1;
-			const int temp = RECURSIVE_WS;
+			/* Phase 4D: RECURSIVE_WS lives above Wptr; legacy: below. */
+			const int temp = needs_quadalign ? RECURSIVE_WS : -1;
+#ifdef MOBILES
+			const int save = needs_quadalign ? RECURSIVE_SAVE : -4;
+#else
+			const int save = needs_quadalign ? RECURSIVE_SAVE : -3;
+#endif
 
 			tinstance (tptr);
 
@@ -1995,8 +2001,8 @@ else fprintf (stderr, "\n    [NULL]\n");
 				 * The inner call's setup overwrote RECURSIVE_WS with
 				 * its own workspace pointer, but the outer call needs
 				 * the original value for parameter storage. */
-				genprimary (I_LDL, RECURSIVE_SAVE);
-				genprimary (I_STL, RECURSIVE_WS);
+				genprimary (I_LDL, save);
+				genprimary (I_STL, temp);
 			}
 		}
 		break;

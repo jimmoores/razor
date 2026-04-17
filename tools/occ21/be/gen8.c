@@ -83,6 +83,49 @@ typedef struct {
 PRIVATE treenode **valofdestlist;
 /*}}}*/
 
+/*{{{  recursive-call slot helpers */
+/* The RECURSIVE_WS/VS/MS/SAVE slots hold transient workspace pointers
+ * while a recursive call is being set up.  On Phase 4D targets
+ * (needs_quadalign: x64/aarch64) they live at positive (above-Wptr)
+ * offsets so they don't collide with the kernel's Iptr descriptor slot
+ * at Wptr[-1] that save_resume_iptr touches during kernel calls.
+ * On non-Phase-4D targets (i386) Wptr[-1] is safe during non-blocking
+ * kernel calls like MALLOC, so we keep the classic below-workspace
+ * layout to avoid conflicts with caller-frame above-Wptr slots. */
+PRIVATE int rec_ws_slot (void)
+{
+	return needs_quadalign ? RECURSIVE_WS : -1;
+}
+PRIVATE int rec_vs_slot (void)
+{
+	return needs_quadalign ? RECURSIVE_VS : -2;
+}
+#ifdef MOBILES
+PRIVATE int rec_ms_slot (void)
+{
+	return needs_quadalign ? RECURSIVE_MS : -3;
+}
+#endif
+PRIVATE int rec_save_slot (void)
+{
+#ifdef MOBILES
+	return needs_quadalign ? RECURSIVE_SAVE : -4;
+#else
+	return needs_quadalign ? RECURSIVE_SAVE : -3;
+#endif
+}
+/* Below-workspace slot count needed in the caller's frame for the
+ * legacy layout (non-Phase-4D). */
+PRIVATE int rec_belowws_legacy (void)
+{
+#ifdef MOBILES
+	return 3;	/* -1, -2, -3 (WS, VS, MS) */
+#else
+	return 2;	/* -1, -2 (WS, VS) */
+#endif
+}
+/*}}}*/
+
 /*{{{  PRIVATE treenode *hiddenparamnodeof(aparam, dimension)*/
 /*{{{  comment*/
 /*****************************************************************************
@@ -903,9 +946,11 @@ fprintf (stderr, "maproutinename: name=%s, recursive=%d, forked=%d, set_wssize=%
 #endif
 		} else if (ptype & PROC_REC) {
 			/* recursive (dynamic) calls to a PROC/FUNCTION need to be handled a bit specially.
-			 * Recursive temporaries (RECURSIVE_WS, RECURSIVE_VS, etc.) are now at
-			 * positive workspace offsets, so they don't need below-workspace slots. */
-			ws = RECURSIVE_BELOWWS;
+			 * Phase 4D (needs_quadalign): RECURSIVE_WS/VS/MS live above Wptr;
+			 * slots are reserved via reservelowworkspace() in mapinstance.
+			 * Legacy: they live at negative offsets which are reserved here
+			 * by inflating the below-workspace data size. */
+			ws = needs_quadalign ? RECURSIVE_BELOWWS : rec_belowws_legacy ();
 			vs = 0;
 #ifdef MOBILES
 			ms = 0;
@@ -1294,10 +1339,12 @@ fprintf (stderr, "mapinstance: found SIZE'd dynamic mobile array in parameters.\
 		SetIRPSlots (tptr, datasize);
 		datasize = saved_datasize;
 	}
-	if (recursive) {
-		/* Reserve above-workspace slots for recursive temporaries
-		 * (RECURSIVE_WS, RECURSIVE_VS, etc.) which must live above Wptr
-		 * to avoid colliding with kernel descriptor slots below Wptr. */
+	if (recursive && needs_quadalign) {
+		/* Phase 4D: reserve above-workspace slots for recursive
+		 * temporaries (RECURSIVE_WS/VS/MS/SAVE) which live above Wptr
+		 * to avoid colliding with the kernel's Iptr slot at Wptr[-1].
+		 * On non-Phase-4D targets the slots live below Wptr and are
+		 * reserved by maproutinename inflating datasize. */
 		reservelowworkspace (RECURSIVE_SLOTS);
 	}
 	if (mprocact || forked || dyncall) {
@@ -1420,7 +1467,7 @@ PRIVATE void trecstoreparam (const int type, const int slot, const BOOL copy, co
 		}
 
 		if (type & PROC_REC) {
-			genprimary (I_LDL, RECURSIVE_WS);
+			genprimary (I_LDL, rec_ws_slot ());
 		} else if (type & PROC_MPA) {
 			genprimary (I_LDL, MPA_SETUP_TEMP);
 		} else if (type & PROC_DYNCALL) {
@@ -1452,7 +1499,7 @@ PRIVATE void trecparamexpopd (const int opdmode, treenode *const opd, const BOOL
 			trecstoreparam (ptype, paramslot, FALSE, FALSE);
 		} else {
 			if (ptype & PROC_REC) {
-				genprimary (I_LDL, RECURSIVE_WS);
+				genprimary (I_LDL, rec_ws_slot ());
 			} else if (ptype & PROC_DYNCALL) {
 				genprimary (I_LDL, DYNCALL_SETUP_TEMP_WS);
 			} else if (ptype & PROC_MPA) {
@@ -1475,7 +1522,7 @@ printtreenl (stderr, 4, formaltype);
 			if (ptype & PROC_FORKED) {
 				genprimary (I_LDLP, FORK_SETUP_TEMP_VS);
 			} else if (ptype & PROC_REC) {
-				genprimary (I_LDL, RECURSIVE_VS);
+				genprimary (I_LDL, rec_vs_slot ());
 			} else if (ptype & PROC_MPA) {
 				genprimary (I_LDL, MPA_SETUP_TEMP_VS);
 			} else if (ptype & PROC_DYNCALL) {
@@ -1493,7 +1540,7 @@ printtreenl (stderr, 4, formaltype);
 				/* should never happen! */
 				gensecondary (I_NULL);
 			} else if (ptype & PROC_REC) {
-				genprimary (I_LDL, RECURSIVE_MS);
+				genprimary (I_LDL, rec_ms_slot ());
 			} else if (ptype & PROC_MPA) {
 				genprimary (I_LDL, MPA_SETUP_TEMP_MS);
 			}
@@ -1625,7 +1672,7 @@ fprintf (stderr, "gen8: done size fiddling, stored = %d, carried = %d\n", stored
 				int skiplab = newlab ();
 
 				if (ptype & PROC_REC) {
-					genprimary (I_LDL, RECURSIVE_WS);
+					genprimary (I_LDL, rec_ws_slot ());
 				} else if (ptype & PROC_DYNCALL) {
 					genprimary (I_LDL, DYNCALL_SETUP_TEMP_WS);
 				} else if (ptype & PROC_MPA) {
@@ -2082,23 +2129,23 @@ fprintf (stderr, "tinstance: alloc_ws_slots = %d, alloc_vs_slots = %d, alloc_ms_
 		 * For nested recursive function calls like f(f(x)), the inner
 		 * call's setup would overwrite the outer's workspace pointer.
 		 * Save the outer pointer so trecstoreparam can find it later. */
-		genprimary (I_LDL, RECURSIVE_WS);
-		genprimary (I_STL, RECURSIVE_SAVE);
+		genprimary (I_LDL, rec_ws_slot ());
+		genprimary (I_STL, rec_save_slot ());
 
 		genprimary (I_LDC, (alloc_ws_slots << WSH));
 		gensecondary (I_MALLOC);
 		genprimary (I_ADC, ((alloc_ws_slots - 1) << WSH));	/* point at top element */
-		genprimary (I_STL, RECURSIVE_WS);
+		genprimary (I_STL, rec_ws_slot ());
 		if (alloc_vs_slots) {
 			genprimary (I_LDC, (alloc_vs_slots << WSH));
 			gensecondary (I_MALLOC);
-			genprimary (I_STL, RECURSIVE_VS);
+			genprimary (I_STL, rec_vs_slot ());
 		}
 		/*}}}*/
 		/*{{{  save current Wptr in new workspace*/
 		/* stuff current Wptr into new workspace */
 		genprimary (I_LDLP, 0);
-		genprimary (I_LDL, RECURSIVE_WS);
+		genprimary (I_LDL, rec_ws_slot ());
 		genprimary (I_STNL, RECURSIVE_SAVED_WS);
 		/*}}}*/
 		/*{{{  augment params here if vs/ms needed*/
@@ -2145,7 +2192,7 @@ fprintf (stderr, "tinstance: yikes, hope we mapped out mobilespace already..\n")
 				loadnewmsp (0);
 				genprimary (I_LDNL, IRMSPOffsetOf (tptr));
 				gencomment0 ("PTR MSP");
-				genprimary (I_STL, RECURSIVE_MS);
+				genprimary (I_STL, rec_ms_slot ());
 				genbranch (I_J, skiplab);
 
 				/* better allocate */
@@ -2157,13 +2204,13 @@ printtreenl (stderr, 4, msp_ptr);
 				genprimary (I_LDC, (alloc_ms_slots << 2));
 				gensecondary (I_MALLOC);
 				/* store MINT into first allocated word, causes initialisation of mobilespace */
-				genprimary (I_STL, RECURSIVE_MS);	/* temporary */
+				genprimary (I_STL, rec_ms_slot ());	/* temporary */
 				gensecondary (I_MINT);
-				genprimary (I_LDL, RECURSIVE_MS);
+				genprimary (I_LDL, rec_ms_slot ());
 				genprimary (I_STNL, 0);
 
 				/* store allocated pointer in mobile-space */
-				genprimary (I_LDL, RECURSIVE_MS);
+				genprimary (I_LDL, rec_ms_slot ());
 				gencomment0 ("PTR MSP");
 				loadnewmsp (0);
 				genprimary (I_STNL, IRMSPOffsetOf (tptr));		/* store allocated space in mobilespace slot (IRSMPOffset) */
@@ -2600,10 +2647,10 @@ gencomment0 ("gen non-register param 2..0");
 	} else if (ptype & PROC_REC) {
 		/*{{{  setup new workspace (recursive call)*/
 		gencomment0 ("{{{  switch workspaces");
-		genprimary (I_LDL, RECURSIVE_WS);
+		genprimary (I_LDL, rec_ws_slot ());
 		gensecondary (I_GAJW);
 		throw_the_result_away ();
-		/* genprimary (I_STL, RECURSIVE_SAVED_WS); */
+		/* genprimary (I_STL, rec_save_slot ()D_WS); */
 		/* advance target workspace to the point just past the parameters */
 		{
 			int rec_frame = ((nparams > MAXREGS) ? nparams : MAXREGS) + MIN_RECURSIVE_SLOTS;
@@ -2816,7 +2863,7 @@ gencomment0 ("gen non-register param 2..0");
 			if (paramtable[i].mobile_outslot > -4) {
 				/* new_occam_line (*(paramtable[i].pparamexp), TRUE, FALSE, FALSE); */
 				if (ptype & PROC_REC) {
-					genprimary (I_LDL, RECURSIVE_WS);
+					genprimary (I_LDL, rec_ws_slot ());
 					genprimary (I_LDNL, paramtable[i].pslot + paramtable[i].mobile_outslot);
 				} else if (ptype & PROC_DYNCALL) {
 					genprimary (I_LDL, DYNCALL_SETUP_TEMP_WS);
@@ -2893,7 +2940,7 @@ printtreenl (stderr, 4, foo);
 				}
 
 				if (ptype & PROC_REC) {
-					genprimary (I_LDL, RECURSIVE_WS);
+					genprimary (I_LDL, rec_ws_slot ());
 					genprimary (I_LDNL, slot);
 				} else if (ptype & PROC_DYNCALL) {
 					genprimary (I_LDL, DYNCALL_SETUP_TEMP_WS);
@@ -2927,12 +2974,12 @@ printtreenl (stderr, 4, foo);
 	/*{{{  free memory associated with call (if recursive or dynamic) */
 	if (ptype & PROC_REC) {
 		if (alloc_vs_slots) {
-			genprimary (I_LDL, RECURSIVE_VS);
+			genprimary (I_LDL, rec_vs_slot ());
 			if (TagOf (tptr) != S_FINSTANCE) {
 				gensecondary (I_MRELEASE);
 			}
 		}
-		genprimary (I_LDL, RECURSIVE_WS);
+		genprimary (I_LDL, rec_ws_slot ());
 		genprimary (I_ADC, -((alloc_ws_slots - 1) << WSH));
 
 		if (TagOf (tptr) != S_FINSTANCE) {
@@ -2940,9 +2987,9 @@ printtreenl (stderr, 4, foo);
 		} else {
 			if (alloc_vs_slots) {
 				gensecondary (I_DUP);
-				genprimary (I_STL, RECURSIVE_WS);
+				genprimary (I_STL, rec_ws_slot ());
 				genprimary (I_STNL, 0);
-				genprimary (I_LDL, RECURSIVE_WS);
+				genprimary (I_LDL, rec_ws_slot ());
 			}
 		}
 	} else if (ptype & PROC_DYNCALL) {
