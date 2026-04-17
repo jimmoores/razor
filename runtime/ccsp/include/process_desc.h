@@ -122,15 +122,12 @@ typedef struct process_descriptor {
  *	a typed parameter, the same bug becomes an "incompatible pointer
  *	types" diagnostic at every offending call site.
  *
- *	Phase 4B-IV: this unconditionally subtracts PROC_DESC_NEG_WORDS
- *	(i.e. always treats its input as a user-mode Wptr).  The per-
- *	kcall shift scheme normalises Wptr to user-mode inside
- *	K_CALL_HEADER (see {x64,aarch64,i386}/sched_asm_inserts.h), so
- *	every `word *Wptr` that PROC_DESC is ever called on is already
- *	in user-mode form.  Do not change this to be conditional on
- *	KSHIFT -- sched.c holds user-mode Wptrs in locals (returned by
- *	PROC_WPTR from dequeue paths), and a conditional subtract would
- *	silently break those call sites.
+ *	PROC_DESC unconditionally subtracts PROC_DESC_NEG_WORDS: the
+ *	input is always a user-mode Wptr.  On Phase 4D targets (x64,
+ *	aarch64) the kernel runs on sched->stack during kcalls, so the
+ *	user-mode Wptr is preserved in registers/locals and passed to
+ *	the kernel as an argument; it is never mangled before reaching
+ *	PROC_DESC.
  */
 static inline process_descriptor_t *PROC_DESC(word *wptr)
 {

@@ -90,20 +90,16 @@
 #define K_CALL_PTR(X) \
 	((void *) (kernel_##X))
 
-/* K_CALL_HEADER: still capture return address for error handlers.
- * With noinline, __builtin_return_address(0) reliably returns the
- * caller's return address on x64.
+/* K_CALL_HEADER: capture the return address for error handlers and
+ * for save_resume_iptr.  With noinline, __builtin_return_address(0)
+ * reliably returns the caller's return address on x64.
  *
- * Phase 4B-IV: when KSHIFT is active the caller wraps the call in a
- * sub/call/add bracket, so __builtin_return_address points at the
- * caller's `add Wptr, KSHIFT_BYTES` instruction; bumping by
- * CCSP_KCALL_RETURN_BUMP_BYTES lands the stored resume iptr past
- * that `add` so that on wake-up dispatch jumps to the post-add
- * user-mode code without executing the caller's `add` a second
- * time.  The `Wptr` parameter arrives in user-mode form already
- * because tranx86 captures it into the arg register BEFORE the
- * bracket's `sub` modifies Wptr -- so no Wptr fixup is needed
- * here.  At KSHIFT=0 the bump constant is 0 -> no effect. */
+ * Phase 4D: tranx86 emits a `mov 48(%r15), %rsp` (4 bytes) immediately
+ * after every kernel callq to restore user-mode sp from
+ * sched->saved_user_sp.  We bump return_address by
+ * CCSP_KCALL_RETURN_BUMP_BYTES (4) so the stored resume iptr lands
+ * past this restore -- on wake-up, dispatch jumps straight into the
+ * user-mode code rather than executing the restore a second time. */
 #define K_CALL_HEADER \
 	__attribute__ ((unused)) \
 	unsigned long return_address = ((unsigned long) __builtin_return_address (0)) \
@@ -148,8 +144,8 @@
 	((void *) (kernel_##X))
 
 /* Capture the return address, bumped past the caller's post-call
- * `add Wptr, KSHIFT_BYTES` so deschedule/wake resumes cleanly.
- * See the corresponding K_CALL_HEADER above. */
+ * `mov 48(%r15), %rsp` (Phase 4D sp restore) so deschedule/wake
+ * resumes cleanly.  See the corresponding K_CALL_HEADER above. */
 #define K_CALL_HEADER \
 	__attribute__ ((unused)) \
 	unsigned long return_address = ((unsigned long) __builtin_return_address (0)) \

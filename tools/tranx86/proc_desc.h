@@ -91,23 +91,6 @@ typedef struct tranx86_proc_desc {
 #define TRANX86_PROC_DESC_NEG_WORDS	10
 
 /*
- *	Per-kcall Wptr shift (Phase 4B-IV).
- *
- *	Bytes subtracted from Wptr before every kernel call and added
- *	back after it returns, so that the process descriptor ends up
- *	above SP during the call window (signal-safe).  Must stay in
- *	step with CCSP_KCALL_SHIFT_WORDS in
- *	runtime/ccsp/include/ccsp_consts.h.
- *
- *	At value 0 this is a pure no-op -- all emission paths that key
- *	off TRANX86_KCALL_SHIFT_BYTES elide their extra instructions.
- */
-#ifndef TRANX86_KCALL_SHIFT_WORDS
-#define TRANX86_KCALL_SHIFT_WORDS	0
-#endif
-#define TRANX86_KCALL_SHIFT_BYTES	(TRANX86_KCALL_SHIFT_WORDS * BytesPerWord)
-
-/*
  *	PROC_DESC_OFF(field) -- byte offset of `field` measured from
  *	the workspace pointer (NOT from the struct base).  Negative
  *	for slots below wptr, zero or positive for slots at and above.

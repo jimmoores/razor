@@ -96,65 +96,25 @@
 	)
 
 /*
- *	Per-kcall Wptr shift (Phase 4B-IV).
- *
- *	When > 0, every kernel call is bracketed by a `sub Wptr, KSHIFT_BYTES`
- *	/ `add Wptr, KSHIFT_BYTES` pair, so that during the call the process
- *	descriptor (which lives at Wptr[-1..-9] in user mode) sits at
- *	Wptr[+0..+64] in shifted mode -- i.e. above the kernel's current
- *	stack pointer once Wptr=SP is unified.  This makes the descriptor
- *	signal-safe during kernel calls.
- *
- *	Queue entries and dispatch follow the invariant that the queue
- *	stores shifted Wptr and iptr points at user-mode code; the dispatch
- *	path performs the `add` before jumping.  See the Phase 4 design
- *	notes in ai/plan-*.md.
- *
- *	At value 0 this is a pure no-op -- all scaffolding added in
- *	S0..S5 of the phase collapses to baseline code.  Activation is a
- *	single-constant flip at S6.
- *
- *	Must stay in step with TRANX86_KCALL_SHIFT_WORDS in
- *	tools/tranx86/proc_desc.h.
- */
-#ifndef CCSP_KCALL_SHIFT_WORDS
-#define CCSP_KCALL_SHIFT_WORDS	0
-#endif
-#define CCSP_KCALL_SHIFT_BYTES	(CCSP_KCALL_SHIFT_WORDS * (int)sizeof(word))
-
-/*
- *	Size in bytes of the post-call instruction that tranx86 emits
+ *	Size in bytes of the post-call instruction(s) that tranx86 emits
  *	immediately after every kernel call.  When a process is
- *	descheduled inside a kernel call, K_CALL_HEADER needs to bump
- *	the stored resume iptr past this instruction, so that on
- *	wake-up the dispatch path skips the caller's post-call restore.
+ *	descheduled inside a kernel call, K_CALL_HEADER bumps the stored
+ *	resume iptr past this instruction, so that on wake-up the dispatch
+ *	path skips the caller's post-call restore.
  *
  *	Phase 4D (x86-64): the post-call instruction is
  *	`mov 48(%r15), %rsp` (restore user sp from sched->saved_user_sp),
- *	encoded as `49 8b 67 30` = 4 bytes.  This is unconditional
- *	regardless of CCSP_KCALL_SHIFT_WORDS.
+ *	encoded as `49 8b 67 30` = 4 bytes.
  *
  *	Phase 4D (AArch64): the post-call sequence is two 4-byte A64
  *	instructions: `ldr x9, [x25, #48]` + `mov sp, x9` = 8 bytes.
- *	This is unconditional regardless of CCSP_KCALL_SHIFT_WORDS.
  *
- *	For i386 the bump is still gated on KSHIFT:
- *	  - i386:   `addl $36, %ebp` = 3 bytes.
+ *	i386 has no post-call restore (Wptr stays in ebp), so the bump is 0.
  */
 #if defined(__x86_64__)
-   /* Phase 4D: unconditional bump -- the save/switch/restore bracket
-    * always emits a 4-byte restore after the callq. */
 #  define CCSP_KCALL_RETURN_BUMP_BYTES	4
 #elif defined(__aarch64__)
-   /* Phase 4D: unconditional bump -- the post-bl sequence is two
-    * 4-byte instructions: `ldr x9, [x25, #48]` + `mov sp, x9` = 8 bytes. */
 #  define CCSP_KCALL_RETURN_BUMP_BYTES	8
-#elif CCSP_KCALL_SHIFT_WORDS > 0
-#  if defined(__i386__)
-#    define CCSP_KCALL_RETURN_BUMP_BYTES	3
-#  else
-#    error "CCSP_KCALL_SHIFT_WORDS > 0 requires per-arch CCSP_KCALL_RETURN_BUMP_BYTES"
-#  endif
 #else
 #  define CCSP_KCALL_RETURN_BUMP_BYTES	0
 #endif

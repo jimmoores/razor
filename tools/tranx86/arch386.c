@@ -247,37 +247,10 @@ fprintf (stderr, "compose_kcall_i386: regs_in = %d, regs_out = %d, r_in = %d, r_
 		call_ins = compose_kjump_i386 (ts, INS_CALL, 0, entry);
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
-#if TRANX86_KCALL_SHIFT_BYTES > 0
-		/* Phase 4B-IV: shift Wptr (ebp) down for the duration of
-		 * the call window, AFTER the Wptr arg has been copied to
-		 * xregs[2].  The kernel's C parameter receives user-mode
-		 * Wptr; ebp itself is shifted only for signal safety.
-		 *
-		 * The INS_ANNO annotations prevent the ADD/SUB combining
-		 * optimiser in optimise.c ("pack up ADDs and SUBs") from
-		 * folding the bracket with adjacent AJW sub/adds.  The
-		 * fold is semantically safe for straight-line code but
-		 * breaks the deschedule/resume path. */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket sub")));
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
-			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
-			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-sub end")));
-#endif
 		add_to_ins_chain (call_ins);
 		if (call_ins) {
 			set_implied_inputs (call_ins, r_in > r_out ? r_in : r_out, cregs);
 		}
-#if TRANX86_KCALL_SHIFT_BYTES > 0
-		/* Restore user-mode Wptr.  The kernel's bumped resume_iptr
-		 * points past this `add` on wake-up; see K_CALL_HEADER in
-		 * i386/sched_asm_inserts.h. */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket add")));
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
-			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
-			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-add end")));
-#endif
 	} else if (options.kernel_interface & KRNLIFACE_MESH) {
 		/* unsupported as yet */
 		fprintf (stderr, "%s: warning: MESH kernel interface not supported yet (ungenerated kernel call %d)\n", progname, call);
@@ -3203,26 +3176,7 @@ static void compose_bcall_i386 (tstate *ts, int i, int kernel_call, int inlined,
 	if (options.kernel_interface & (KRNLIFACE_NEWCCSP | KRNLIFACE_RMOX)) {
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
-#if TRANX86_KCALL_SHIFT_BYTES > 0
-		/* Phase 4B-IV: bracket the blocking-call dispatch.  See the
-		 * rationale in archaarch64.c's compose_bcall_aarch64 --
-		 * without this bracket, K_CALL_HEADER's return_address bump
-		 * lands on the wrong instruction when the process wakes from
-		 * the blocking call. */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket sub")));
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
-			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
-			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-sub end")));
-#endif
 		add_to_ins_chain (compose_kjump_i386 (ts, INS_CALL, 0, kif_entry (kernel_call)));
-#if TRANX86_KCALL_SHIFT_BYTES > 0
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket add")));
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
-			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
-			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-add end")));
-#endif
 	} else if (options.kernel_interface & KRNLIFACE_MESH) {
 		fprintf (stderr, "%s: error: do not have blocking call support in MESH yet\n", progname);
 	} else if (options.kernel_interface & KRNLIFACE_CSPLINUX) {
