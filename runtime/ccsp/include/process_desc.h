@@ -48,10 +48,16 @@
 /*
  *	Number of words occupied by the descriptor strictly *below* the
  *	workspace pointer.  This must match the negative-offset constants
- *	in ccsp_consts.h (EscapePtr = -9 today).  PROC_DESC() subtracts
- *	this many words from Wptr to find the descriptor base.
+ *	in ccsp_consts.h (EscapePtr = -9 today) PLUS one padding word
+ *	at position -10.
+ *
+ *	Phase 4D alignment: 10 words × 8 bytes = 80 bytes.  Since
+ *	workspace allocations are 16-byte aligned (malloc),
+ *	Wptr = desc_base + 80 is guaranteed 16-byte aligned, which is
+ *	required by aarch64 hardware when Wptr is unified with sp.
+ *	(9 words × 8 = 72 bytes gave Wptr ≡ 8 mod 16 — alignment fault.)
  */
-#define PROC_DESC_NEG_WORDS	9
+#define PROC_DESC_NEG_WORDS	10
 
 /*
  *	process_descriptor_t -- typed view of the per-process metadata.
@@ -64,6 +70,9 @@
  *	StackPtr both live at wptr[-7].  Stage 3E will split those.
  */
 typedef struct process_descriptor {
+	word	_pad_align;		/* wptr[-10] -- unused padding for 16-byte
+					 * alignment of Wptr (Phase 4D).  10 words
+					 * × sizeof(word) = 80, a multiple of 16. */
 	word	escape_ptr;		/* wptr[-9]  -- CIF only */
 	word	barrier_ptr;		/* wptr[-8]  -- CIF only */
 	union {				/* wptr[-7] */
@@ -177,6 +186,7 @@ typedef process_descriptor_t *process_t;
 		(((slot) + PROC_DESC_NEG_WORDS) * sizeof(word)), \
 		"process_descriptor_t::" #field " not at wptr[" #slot "]")
 
+PROC_DESC_FIELD_AT(_pad_align,   -10);
 PROC_DESC_FIELD_AT(escape_ptr,    -9);
 PROC_DESC_FIELD_AT(barrier_ptr,   -8);
 PROC_DESC_FIELD_AT(sched_ptr,     -7);

@@ -67,6 +67,7 @@
  *	is what transputer.h's WSH already assumes.
  */
 typedef struct tranx86_proc_desc {
+	long	_pad_align;		/* offset -10 from wptr (16-byte alignment pad) */
 	long	escape_ptr;		/* offset -9 from wptr (CIF only) */
 	long	barrier_ptr;		/* offset -8         (CIF only) */
 	long	sched_ptr;		/* offset -7         (CIF only) */
@@ -87,7 +88,7 @@ typedef struct tranx86_proc_desc {
  *	descriptor base.  Must match PROC_DESC_NEG_WORDS in the runtime
  *	header.
  */
-#define TRANX86_PROC_DESC_NEG_WORDS	9
+#define TRANX86_PROC_DESC_NEG_WORDS	10
 
 /*
  *	Per-kcall Wptr shift (Phase 4B-IV).
