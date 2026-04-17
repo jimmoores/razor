@@ -3405,6 +3405,23 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tscvtf\td0, w17")));
 		ts->stack->fs_depth++;
 		break;
+	case I_FPI64TOR64:  /* 0xf6 (246) - Convert INT64 to REAL64, push onto FP stack */
+		/* I64TOREAL on 64-bit targets: load a 64-bit integer from
+		 * [old_a_reg] and convert to REAL64 in d0.  Emits:
+		 *   ldr x17, [addr]; scvtf d0, x17
+		 * via INS_FILD64, which also sets aarch64_fp_from_i64 so a
+		 * subsequent FIST64 narrows d0 -> s0 before storing as REAL32. */
+		aarch64_fp_push (64);
+		aarch64_fp_emit_push (ts);
+		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
+			add_to_ins_chain (compose_ins (INS_FILD64, 1, 0,
+				ARG_REGIND | ARG_DISP, REG_WPTR, constmap_regconst (ts->stack->old_a_reg) << WSH));
+		} else {
+			add_to_ins_chain (compose_ins (INS_FILD64, 1, 0,
+				ARG_REGIND, ts->stack->old_a_reg));
+		}
+		ts->stack->fs_depth++;
+		break;
 	case I_FPSTNLDB:  /* 0x84 - Store REAL64 from FA to memory */
 		/* Store d0 (REAL64 bits) to [old_a_reg].
 		 * Use INS_FIST64 with precision=164 to signal "store REAL64 bits".
