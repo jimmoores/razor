@@ -1,0 +1,9670 @@
+.TCOFF 1 "LINKABLE" 0 []
+.TCOFF 2 "START.MODULE" 12 [\xfd\x1b\x03\x1e\x00\xfd\xd6\xe8\x0b\x00\x03\x00]
+.TCOFF 27 "VERSION" 24 [\x05occ21\x11g3dgenerators.occ]
+.TCOFF 20 "COMMENT" 76 [\x00\x01Ioccam 2.1 compiler Version OFA 1.4.1K (Apr  7 2026) (x86_64-pc-linux-gnu)]
+.TCOFF 20 "COMMENT" 17 [\x00\x01\x0e.ENDIAN little]
+.TCOFF 11 "SELECTION" 12 [\x06\x02\x09text%base]
+.TCOFF 4 "SET.LOAD.POINT" 1 [\x00]
+.TCOFF 30 "SYMBOL" 12 [\x01\x0alocal%text]
+.TCOFF 14 "DEFINE.LABEL" 1 [\x01]
+.TCOFF 30 "SYMBOL" 28 [\x82\x1ag3dgenerators.occ:FA9432EE]
+.TCOFF 26 "DESCRIPTOR" 7 [\x02\x03\x04\xff\x00\x00\x00]
+.TCOFF 20 "COMMENT" 17 [\x00\x01\x0e.USELIB course]
+.TCOFF 20 "COMMENT" 19 [\x00\x01\x10.USELIB snglmath]
+.TCOFF 20 "COMMENT" 18 [\x00\x01\x0f.USELIB dblmath]
+.TCOFF 20 "COMMENT" 17 [\x00\x01\x0e.USELIB occSDL]
+.TCOFF 20 "COMMENT" 17 [\x00\x01\x0e.LDFLAGS -lSDL]
+.TCOFF 20 "COMMENT" 20 [\x00\x01\x11.USELIB sdlraster]
+.JENTRY heightfieldpoint.generator
+
+L0:
+.STUBNAME COS
+
+L1:
+.STUBNAME SIN
+.ALIGN 3
+.ALIGN 3
+
+L2:
+.DATABYTES 8
+	db 0f c9 40 00 00 00 00 
+
+L3:
+.FILENAME g3dgenerators.occ
+.LINE 43
+.PROC reset
+	AJW -4
+	.LINE 44
+	.LINE 45
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 16
+	DUP
+	ADD
+	ADC 2
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	STNL 6
+	.LINE 47
+.OCCCOMMENT {{{  gendynmobilearraycreate
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+.OCCCOMMENT }}}
+	CJ L4
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	DUP
+	NULL
+	REV
+	STNL 2
+	DUP
+	NULL
+	REV
+	STNL 3
+	LDC 0    -- #00000000
+	REV
+	STNL 4
+.OCCCOMMENT }}}
+
+L4:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	.SLLIMM 4
+	LDC 259    -- #00000103
+	MT_ALLOC
+.OCCCOMMENT storemobile_iorexp {{{
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	STNL 3
+.OCCCOMMENT }}}
+	LDL 5
+.OCCCOMMENT PTR staticlink
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDNL 3
+	LDNL 0
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	STNL 2
+.OCCCOMMENT }}}
+.OCCCOMMENT store mobile ptr
+.OCCCOMMENT post any mobile sub-initialisation
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (1)
+	DUP
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+	STNL 1
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	STNL 4
+.OCCCOMMENT }}}
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 51
+	.LOADLABADDR L2
+.OCCCOMMENT constant table
+	FPLDNLSN
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNLP 16
+	FPI32TOR32
+	FPDIV
+	LDLP 7
+	FPCHKERR
+	FPSTNLSN
+	.LINE 52
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 16
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L7
+
+L6:
+	.LINE 54
+	.LINE 55
+	LDLP 0
+	FPI32TOR32
+	LDLP 7
+	FPLDNLMULSN
+	LDLP 6
+	FPCHKERR
+	FPSTNLSN
+	.LINE 56
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 2
+.OCCCOMMENT tinstance():
+	LDL 6
+	CALL L1
+.OCCCOMMENT Call SIN
+	.REALRESULT 1
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNLP 17
+	FPLDNLMULSN
+	LDL 2
+	FPCHKERR
+	FPSTNLSN
+	FPLDZEROSN
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNLP 7
+	FPLDNLSN
+	FPDIVBY2
+	FPSUB
+	LDL 2
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+.OCCCOMMENT tinstance():
+	LDL 6
+	CALL L0
+.OCCCOMMENT Call COS
+	.REALRESULT 1
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNLP 17
+	FPLDNLMULSN
+	LDL 2
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LINE 57
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDL 0
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 16
+	ADD
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 58
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNLP 7
+	FPLDNLSN
+	FPDIVBY2
+	LDL 0
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 16
+	ADD
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 53
+	.LEND 0 L7 L6
+	.LINE 51
+	.LINE 61
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	ADC -2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 0
+	LDC 0    -- #00000000
+	LDL 0
+	Unsupported 595
+	FPLDZEROSN
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNLP 7
+	FPLDNLSN
+	FPDIVBY2
+	FPSUB
+	LDL 0
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	LDC 0    -- #00000000
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	.LINE 62
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	ADC -1
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 0
+	LDC 0    -- #00000000
+	LDL 0
+	Unsupported 595
+	LDL 5
+.OCCCOMMENT PTR staticlink
+	LDNLP 7
+	FPLDNLSN
+	FPDIVBY2
+	LDL 0
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	LDC 0    -- #00000000
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	AJW 4
+	RET
+	.ALIGN 3
+
+L9:
+.DATABYTES 8
+	00 00 80 3f 00 00 00 00 
+
+L10:
+.GLOBAL flatpolypoints.generator
+.SETWS 38
+.SETVS 2
+.SETMS 0
+.LINE 38
+.PROC flatpolypoints.generator
+	AJW -14
+	.LOADLABADDR L9
+.OCCCOMMENT constant table
+	STL 8
+.OCCCOMMENT INT constptr
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+	.LINE 67
+	.LINE 69
+	LDL 8
+.OCCCOMMENT PTR constptr
+	LDNL 0
+	STL 7
+	.LINE 70
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L3
+.OCCCOMMENT Call reset
+	.LINE 74
+	LDC 0    -- #00000000
+	STL 9
+.OCCCOMMENT INIT
+	LDC 1    -- #00000001
+	STL 9
+	.LINE 75
+
+L12:
+	LDL 9
+	CJ L13
+	.LINE 76
+	.LINE 77
+.OCCCOMMENT BEGIN PRE-ENABLING
+	.LINE 78
+	LDL 19
+	LDC 1    -- #00000001
+	.LOADLABADDR L16
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 116
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L17
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+.OCCCOMMENT END PRE-ENABLING
+	ALT
+	.LINE 78
+	LDL 19
+	LDC 1    -- #00000001
+	.LOADLABADDR L18
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 116
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L19
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTWT
+	J L20
+
+L20:
+
+L19:
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABDIFF L17 L15
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 78
+
+L18:
+	LDL 19
+	LDC 1    -- #00000001
+	.LOADLABDIFF L16 L15
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTEND
+
+L15:
+
+L16:
+	LDC 0    -- #00000000
+	STL 5
+.OCCCOMMENT INIT
+	LDLP 5
+	LDL 19
+	LDC 1    -- #00000001
+	IN
+	LDL 5
+	LDC 2    -- #00000002
+	GT
+	CJ L28
+	LDC 3    -- #00000003
+	LDL 5
+	DIFF
+	CJ L25
+	LDL 5
+	EQC 4
+	CJ L27
+	J L26
+
+L28:
+	LDL 5
+	CJ L22
+	LDC 1    -- #00000001
+	LDL 5
+	DIFF
+	CJ L23
+	LDL 5
+	EQC 2
+	CJ L27
+	J L24
+
+L27:
+	SETERR
+
+L22:
+	.LINE 80
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L3
+.OCCCOMMENT Call reset
+	J L21
+
+L23:
+	.LINE 82
+	LDL 20
+	LDL 19
+	LDC 12    -- #0000000c
+	IN
+	.LINE 83
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 6
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L30
+
+L29:
+	.LINE 84
+	.LINE 85
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 86
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 87
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L30 L29
+	.LINE 81
+	J L21
+
+L24:
+	.LINE 89
+	LDL 20
+	LDL 19
+	LDC 12    -- #0000000c
+	IN
+	.LINE 90
+	.LINE 91
+	LDL 8
+.OCCCOMMENT PTR constptr
+	LDNL 0
+	STL 7
+	.LINE 92
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L3
+.OCCCOMMENT Call reset
+	.LINE 93
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 6
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L32
+
+L31:
+	.LINE 94
+	.LINE 95
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 96
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 97
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L32 L31
+	.LINE 88
+	J L21
+
+L25:
+	.LINE 99
+	LDL 20
+	LDL 19
+	LDC 12    -- #0000000c
+	IN
+	.LINE 100
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 6
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L34
+
+L33:
+	.LINE 101
+	.LINE 102
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 103
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 104
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L34 L33
+	.LINE 98
+	J L21
+
+L26:
+	.LINE 106
+	LDL 20
+	LDL 19
+	LDC 12    -- #0000000c
+	IN
+	.LINE 107
+	.LINE 108
+	LDL 8
+.OCCCOMMENT PTR constptr
+	LDNL 0
+	STL 7
+	.LINE 109
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L3
+.OCCCOMMENT Call reset
+	.LINE 110
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 6
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L36
+
+L35:
+	.LINE 111
+	.LINE 112
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 113
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 114
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 20
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L36 L35
+	.LINE 105
+	J L21
+
+L21:
+	.LINE 78
+	J L14
+
+L17:
+	.LINE 116
+	LDLP 1
+	LDL 15
+	LDC 4    -- #00000004
+	IN
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+	.LINE 117
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	CJ L38
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+
+L38:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L37
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 11
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 11
+	DUP
+	LDNL 0
+	STL 10
+	LDNL 1
+	STL 12
+.OCCCOMMENT }}}
+
+L37:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	LDLP 11
+	LDL 18
+	MT_OUT
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	CJ L39
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+
+L39:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 115
+	J L14
+
+L14:
+	J L12
+
+L13:
+	.LINE 74
+	.LINE 39
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L40
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+
+L40:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 40
+	.LINE 41
+	AJW 14
+	RET
+.GLOBALEND flatpolypoints.generator
+	.ALIGN 3
+
+L42:
+.DATABYTES 8
+	db 0f c9 40 00 00 00 00 
+
+L43:
+.LINE 139
+.PROC reset
+	AJW -10
+	.LINE 140
+	.LINE 141
+	LDC 8    -- #00000008
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 16
+	MUL
+	ADC 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	STNL 7
+	.LINE 143
+.OCCCOMMENT {{{  gendynmobilearraycreate
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+.OCCCOMMENT }}}
+	CJ L44
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	DUP
+	NULL
+	REV
+	STNL 2
+	DUP
+	NULL
+	REV
+	STNL 3
+	LDC 0    -- #00000000
+	REV
+	STNL 4
+.OCCCOMMENT }}}
+
+L44:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+	.SLLIMM 4
+	LDC 259    -- #00000103
+	MT_ALLOC
+.OCCCOMMENT storemobile_iorexp {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	STNL 3
+.OCCCOMMENT }}}
+	LDL 11
+.OCCCOMMENT PTR staticlink
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDNL 3
+	LDNL 0
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	STNL 2
+.OCCCOMMENT }}}
+.OCCCOMMENT store mobile ptr
+.OCCCOMMENT post any mobile sub-initialisation
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (1)
+	DUP
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+	STNL 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	STNL 4
+.OCCCOMMENT }}}
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 147
+	LDC 4    -- #00000004
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 16
+	MUL
+	STL 5
+	.LINE 148
+	.LOADLABADDR L42
+.OCCCOMMENT constant table
+	FPLDNLSN
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 16
+	FPI32TOR32
+	FPDIV
+	LDLP 13
+	FPCHKERR
+	FPSTNLSN
+	.LINE 149
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 19
+	FPLDNLSN
+	FPDIVBY2
+	LDLP 7
+	FPCHKERR
+	FPSTNLSN
+	.LINE 150
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 20
+	FPLDNLSN
+	FPDIVBY2
+	LDLP 6
+	FPCHKERR
+	FPSTNLSN
+	.LINE 151
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 8
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 16
+	STL 9
+	LDL 9
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L47
+
+L46:
+	.LINE 154
+	.LINE 155
+	LDLP 8
+	FPI32TOR32
+	LDLP 13
+	FPLDNLMULSN
+	LDLP 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 156
+	LDC 4    -- #00000004
+	LDL 8
+	MUL
+	STL 0
+	.LINE 157
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 2
+.OCCCOMMENT tinstance():
+	LDLP 4
+	FPLDNLSN
+	LDLP 7
+	FPLDNLSN
+	FPSUB
+	LDLP 1
+	FPCHKERR
+	FPSTNLSN
+	LDL 1
+	CALL L1
+.OCCCOMMENT Call SIN
+	.REALRESULT 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 17
+	FPLDNLMULSN
+	LDL 2
+	FPCHKERR
+	FPSTNLSN
+	LDC 0    -- #00000000
+	LDL 2
+	ADC 4
+	Unsupported 595
+.OCCCOMMENT tinstance():
+	LDLP 4
+	FPLDNLSN
+	LDLP 7
+	FPLDNLSN
+	FPSUB
+	LDLP 1
+	FPCHKERR
+	FPSTNLSN
+	LDL 1
+	CALL L0
+.OCCCOMMENT Call COS
+	.REALRESULT 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 17
+	FPLDNLMULSN
+	LDL 2
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LINE 158
+	LDL 0
+	ADC 1
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 2
+.OCCCOMMENT tinstance():
+	LDLP 4
+	FPLDNLSN
+	LDLP 6
+	FPLDNLSN
+	FPSUB
+	LDLP 1
+	FPCHKERR
+	FPSTNLSN
+	LDL 1
+	CALL L1
+.OCCCOMMENT Call SIN
+	.REALRESULT 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 18
+	FPLDNLMULSN
+	LDL 2
+	FPCHKERR
+	FPSTNLSN
+	LDC 0    -- #00000000
+	LDL 2
+	ADC 4
+	Unsupported 595
+.OCCCOMMENT tinstance():
+	LDLP 4
+	FPLDNLSN
+	LDLP 6
+	FPLDNLSN
+	FPSUB
+	LDLP 1
+	FPCHKERR
+	FPSTNLSN
+	LDL 1
+	CALL L0
+.OCCCOMMENT Call COS
+	.REALRESULT 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 18
+	FPLDNLMULSN
+	LDL 2
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LINE 159
+	.LINE 160
+	LDLP 6
+	FPLDNLSN
+	FPLDZEROSN
+	FPEQ
+	FPCHKERR
+	CJ L49
+	.LINE 161
+	LDL 0
+	ADC 1
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDL 0
+	ADC 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	J L48
+
+L49:
+	.LINE 162
+	.LINE 163
+	LDL 0
+	ADC 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 2
+.OCCCOMMENT tinstance():
+	LDLP 4
+	FPLDNLSN
+	LDLP 6
+	FPLDNLADDSN
+	LDLP 1
+	FPCHKERR
+	FPSTNLSN
+	LDL 1
+	CALL L1
+.OCCCOMMENT Call SIN
+	.REALRESULT 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 18
+	FPLDNLMULSN
+	LDL 2
+	FPCHKERR
+	FPSTNLSN
+	LDC 0    -- #00000000
+	LDL 2
+	ADC 4
+	Unsupported 595
+.OCCCOMMENT tinstance():
+	LDLP 4
+	FPLDNLSN
+	LDLP 6
+	FPLDNLADDSN
+	LDLP 1
+	FPCHKERR
+	FPSTNLSN
+	LDL 1
+	CALL L0
+.OCCCOMMENT Call COS
+	.REALRESULT 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 18
+	FPLDNLMULSN
+	LDL 2
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	J L48
+
+L48:
+	.LINE 164
+	LDL 0
+	ADC 3
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 2
+.OCCCOMMENT tinstance():
+	LDLP 4
+	FPLDNLSN
+	LDLP 7
+	FPLDNLADDSN
+	LDLP 1
+	FPCHKERR
+	FPSTNLSN
+	LDL 1
+	CALL L1
+.OCCCOMMENT Call SIN
+	.REALRESULT 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 17
+	FPLDNLMULSN
+	LDL 2
+	FPCHKERR
+	FPSTNLSN
+	LDC 0    -- #00000000
+	LDL 2
+	ADC 4
+	Unsupported 595
+.OCCCOMMENT tinstance():
+	LDLP 4
+	FPLDNLSN
+	LDLP 7
+	FPLDNLADDSN
+	LDLP 1
+	FPCHKERR
+	FPSTNLSN
+	LDL 1
+	CALL L0
+.OCCCOMMENT Call COS
+	.REALRESULT 1
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 17
+	FPLDNLMULSN
+	LDL 2
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LINE 166
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 2
+	LDC 4    -- #00000004
+	STL 3
+
+L50:
+	.LINE 167
+	.LINE 168
+	LDL 0
+	LDL 2
+	ADD
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDL 0
+	LDL 2
+	ADD
+	LDL 5
+	ADD
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 169
+	FPLDZEROSN
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 5
+	FPLDNLSN
+	FPDIVBY2
+	FPSUB
+	LDL 0
+	LDL 2
+	ADD
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 170
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 5
+	FPLDNLSN
+	FPDIVBY2
+	LDL 0
+	LDL 2
+	ADD
+	LDL 5
+	ADD
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LEND 2 L51 L50
+	.LINE 152
+	.LINE 153
+	.LEND 8 L47 L46
+	.LINE 150
+	.LINE 149
+	.LINE 148
+	.LINE 147
+	.LINE 172
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+	ADC -2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 0
+	LDC 0    -- #00000000
+	LDL 0
+	Unsupported 595
+	FPLDZEROSN
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 5
+	FPLDNLSN
+	FPDIVBY2
+	FPSUB
+	LDL 0
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	LDC 0    -- #00000000
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	.LINE 173
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+	ADC -1
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	STL 0
+	LDC 0    -- #00000000
+	LDL 0
+	Unsupported 595
+	LDL 11
+.OCCCOMMENT PTR staticlink
+	LDNLP 5
+	FPLDNLSN
+	FPDIVBY2
+	LDL 0
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	LDC 0    -- #00000000
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	AJW 10
+	RET
+	.ALIGN 3
+
+L53:
+.DATABYTES 8
+	00 00 80 3f 00 00 00 00 
+
+L54:
+.GLOBAL cogpoints.generator
+.SETWS 44
+.SETVS 2
+.SETMS 0
+.LINE 133
+.PROC cogpoints.generator
+	AJW -14
+	.LOADLABADDR L53
+.OCCCOMMENT constant table
+	STL 8
+.OCCCOMMENT INT constptr
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+	.LINE 177
+	.LINE 179
+	LDL 8
+.OCCCOMMENT PTR constptr
+	LDNL 0
+	STL 5
+	.LINE 180
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L43
+.OCCCOMMENT Call reset
+	.LINE 184
+	LDC 0    -- #00000000
+	STL 9
+.OCCCOMMENT INIT
+	LDC 1    -- #00000001
+	STL 9
+	.LINE 185
+
+L56:
+	LDL 9
+	CJ L57
+	.LINE 186
+	.LINE 187
+.OCCCOMMENT BEGIN PRE-ENABLING
+	.LINE 188
+	LDL 22
+	LDC 1    -- #00000001
+	.LOADLABADDR L60
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 226
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L61
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+.OCCCOMMENT END PRE-ENABLING
+	ALT
+	.LINE 188
+	LDL 22
+	LDC 1    -- #00000001
+	.LOADLABADDR L62
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 226
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L63
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTWT
+	J L64
+
+L64:
+
+L63:
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABDIFF L61 L59
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 188
+
+L62:
+	LDL 22
+	LDC 1    -- #00000001
+	.LOADLABDIFF L60 L59
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTEND
+
+L59:
+
+L60:
+	LDC 0    -- #00000000
+	STL 6
+.OCCCOMMENT INIT
+	LDLP 6
+	LDL 22
+	LDC 1    -- #00000001
+	IN
+	LDL 6
+	LDC 2    -- #00000002
+	GT
+	CJ L72
+	LDC 3    -- #00000003
+	LDL 6
+	DIFF
+	CJ L69
+	LDL 6
+	EQC 4
+	CJ L71
+	J L70
+
+L72:
+	LDL 6
+	CJ L66
+	LDC 1    -- #00000001
+	LDL 6
+	DIFF
+	CJ L67
+	LDL 6
+	EQC 2
+	CJ L71
+	J L68
+
+L71:
+	SETERR
+
+L66:
+	.LINE 190
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L43
+.OCCCOMMENT Call reset
+	J L65
+
+L67:
+	.LINE 192
+	LDL 23
+	LDL 22
+	LDC 12    -- #0000000c
+	IN
+	.LINE 193
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 7
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L74
+
+L73:
+	.LINE 194
+	.LINE 195
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 196
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 197
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L74 L73
+	.LINE 191
+	J L65
+
+L68:
+	.LINE 199
+	LDL 23
+	LDL 22
+	LDC 12    -- #0000000c
+	IN
+	.LINE 200
+	.LINE 201
+	LDL 8
+.OCCCOMMENT PTR constptr
+	LDNL 0
+	STL 5
+	.LINE 202
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L43
+.OCCCOMMENT Call reset
+	.LINE 203
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 7
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L76
+
+L75:
+	.LINE 204
+	.LINE 205
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 206
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 207
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L76 L75
+	.LINE 198
+	J L65
+
+L69:
+	.LINE 209
+	LDL 23
+	LDL 22
+	LDC 12    -- #0000000c
+	IN
+	.LINE 210
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 7
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L78
+
+L77:
+	.LINE 211
+	.LINE 212
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 213
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 214
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L78 L77
+	.LINE 208
+	J L65
+
+L70:
+	.LINE 216
+	LDL 23
+	LDL 22
+	LDC 12    -- #0000000c
+	IN
+	.LINE 217
+	.LINE 218
+	LDL 8
+.OCCCOMMENT PTR constptr
+	LDNL 0
+	STL 5
+	.LINE 219
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L43
+.OCCCOMMENT Call reset
+	.LINE 220
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 7
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L80
+
+L79:
+	.LINE 221
+	.LINE 222
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 223
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 224
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 23
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L80 L79
+	.LINE 215
+	J L65
+
+L65:
+	.LINE 188
+	J L58
+
+L61:
+	.LINE 226
+	LDLP 1
+	LDL 15
+	LDC 4    -- #00000004
+	IN
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+	.LINE 227
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	CJ L82
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+
+L82:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L81
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 11
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 11
+	DUP
+	LDNL 0
+	STL 10
+	LDNL 1
+	STL 12
+.OCCCOMMENT }}}
+
+L81:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	LDLP 11
+	LDL 21
+	MT_OUT
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	CJ L83
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+
+L83:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 225
+	J L58
+
+L58:
+	J L56
+
+L57:
+	.LINE 184
+	.LINE 135
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L84
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+
+L84:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 136
+	.LINE 137
+	AJW 14
+	RET
+.GLOBALEND cogpoints.generator
+	.ALIGN 3
+
+L86:
+.DATABYTES 16
+	00 00 80 bf 00 00 80 3f 
+	00 00 80 bf 00 00 00 00 
+.ALIGN 3
+
+L87:
+.DATABYTES 16
+	00 00 80 bf 00 00 80 bf 
+	00 00 80 bf 00 00 00 00 
+.ALIGN 3
+
+L88:
+.DATABYTES 16
+	00 00 80 3f 00 00 80 bf 
+	00 00 80 bf 00 00 00 00 
+.ALIGN 3
+
+L89:
+.DATABYTES 16
+	00 00 80 3f 00 00 80 3f 
+	00 00 80 bf 00 00 00 00 
+.ALIGN 3
+
+L90:
+.DATABYTES 16
+	00 00 80 bf 00 00 80 3f 
+	00 00 80 3f 00 00 00 00 
+.ALIGN 3
+
+L91:
+.DATABYTES 16
+	00 00 80 bf 00 00 80 bf 
+	00 00 80 3f 00 00 00 00 
+.ALIGN 3
+
+L92:
+.DATABYTES 16
+	00 00 80 3f 00 00 80 bf 
+	00 00 80 3f 00 00 00 00 
+.ALIGN 3
+
+L93:
+.DATABYTES 16
+	00 00 80 3f 00 00 80 3f 
+	00 00 80 3f 00 00 00 00 
+
+L94:
+.LINE 241
+.PROC reset
+	AJW -2
+	.LINE 242
+	.LINE 243
+.OCCCOMMENT {{{  gendynmobilearraycreate
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+.OCCCOMMENT }}}
+	CJ L95
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	DUP
+	NULL
+	REV
+	STNL 6
+	DUP
+	NULL
+	REV
+	STNL 7
+	LDC 0    -- #00000000
+	REV
+	STNL 8
+.OCCCOMMENT }}}
+
+L95:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	LDC 128    -- #00000080
+	LDC 259    -- #00000103
+	MT_ALLOC
+.OCCCOMMENT storemobile_iorexp {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 7
+.OCCCOMMENT }}}
+	LDL 3
+.OCCCOMMENT PTR staticlink
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDNL 7
+	LDNL 0
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 6
+.OCCCOMMENT }}}
+.OCCCOMMENT store mobile ptr
+.OCCCOMMENT post any mobile sub-initialisation
+	LDC 8    -- #00000008
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (1)
+	DUP
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+	STNL 1
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 8
+.OCCCOMMENT }}}
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 245
+	.LOADLABADDR L93
+	LDC 0    -- #00000000
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 246
+	.LOADLABADDR L92
+	LDC 1    -- #00000001
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 247
+	.LOADLABADDR L91
+	LDC 2    -- #00000002
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 248
+	.LOADLABADDR L90
+	LDC 3    -- #00000003
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 249
+	.LOADLABADDR L89
+	LDC 4    -- #00000004
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 250
+	.LOADLABADDR L88
+	LDC 5    -- #00000005
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 251
+	.LOADLABADDR L87
+	LDC 6    -- #00000006
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 252
+	.LOADLABADDR L86
+	LDC 7    -- #00000007
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	AJW 2
+	RET
+
+L105:
+.GLOBAL cubepoints.generator
+.SETWS 24
+.SETVS 2
+.SETMS 0
+.LINE 238
+.PROC cubepoints.generator
+	AJW -14
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+	.LINE 256
+	.LINE 258
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L94
+.OCCCOMMENT Call reset
+	.LINE 259
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L106
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 3
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 3
+	DUP
+	LDNL 0
+	STL 2
+	LDNL 1
+	STL 4
+.OCCCOMMENT }}}
+
+L106:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	.LINE 263
+	LDC 0    -- #00000000
+	STL 9
+.OCCCOMMENT INIT
+	LDC 1    -- #00000001
+	STL 9
+	.LINE 264
+
+L107:
+	LDL 9
+	CJ L108
+	.LINE 265
+	.LINE 266
+.OCCCOMMENT BEGIN PRE-ENABLING
+	.LINE 267
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L111
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 309
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L112
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+.OCCCOMMENT END PRE-ENABLING
+	ALT
+	.LINE 267
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L113
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 309
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L114
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTWT
+	J L115
+
+L115:
+
+L114:
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABDIFF L112 L110
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 267
+
+L113:
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABDIFF L111 L110
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTEND
+
+L110:
+
+L111:
+	LDC 0    -- #00000000
+	STL 5
+.OCCCOMMENT INIT
+	LDLP 5
+	LDL 17
+	LDC 1    -- #00000001
+	IN
+	LDL 5
+	LDC 2    -- #00000002
+	GT
+	CJ L123
+	LDC 3    -- #00000003
+	LDL 5
+	DIFF
+	CJ L120
+	LDL 5
+	EQC 4
+	CJ L122
+	J L121
+
+L123:
+	LDL 5
+	CJ L117
+	LDC 1    -- #00000001
+	LDL 5
+	DIFF
+	CJ L118
+	LDL 5
+	EQC 2
+	CJ L122
+	J L119
+
+L122:
+	SETERR
+
+L117:
+	.LINE 269
+	.LINE 270
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L94
+.OCCCOMMENT Call reset
+	.LINE 271
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L124
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 3
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 3
+	DUP
+	LDNL 0
+	STL 2
+	LDNL 1
+	STL 4
+.OCCCOMMENT }}}
+
+L124:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	J L116
+
+L118:
+	.LINE 273
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 275
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 8    -- #00000008
+	STL 1
+
+L125:
+	.LINE 276
+	.LINE 277
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 278
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 279
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L126 L125
+	.LINE 272
+	J L116
+
+L119:
+	.LINE 282
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 284
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 8    -- #00000008
+	STL 1
+
+L127:
+	.LINE 285
+	.LINE 286
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 287
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 288
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L128 L127
+	.LINE 281
+	J L116
+
+L120:
+	.LINE 291
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 293
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 8    -- #00000008
+	STL 1
+
+L129:
+	.LINE 294
+	.LINE 295
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 296
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 297
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L130 L129
+	.LINE 290
+	J L116
+
+L121:
+	.LINE 300
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 302
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 8    -- #00000008
+	STL 1
+
+L131:
+	.LINE 303
+	.LINE 304
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 305
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 306
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L132 L131
+	.LINE 299
+	J L116
+
+L116:
+	.LINE 267
+	J L109
+
+L112:
+	.LINE 309
+	LDLP 1
+	LDL 15
+	LDC 4    -- #00000004
+	IN
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+	.LINE 310
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	CJ L134
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+
+L134:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L133
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 11
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 11
+	DUP
+	LDNL 0
+	STL 10
+	LDNL 1
+	STL 12
+.OCCCOMMENT }}}
+
+L133:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	LDLP 11
+	LDL 16
+	MT_OUT
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	CJ L135
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+
+L135:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 308
+	J L109
+
+L109:
+	J L107
+
+L108:
+	.LINE 263
+	.LINE 239
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L136
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+
+L136:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L137
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+
+L137:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	AJW 14
+	RET
+.GLOBALEND cubepoints.generator
+	.ALIGN 3
+
+L139:
+.DATABYTES 8
+	cd cc 4c 3d 00 00 00 00 
+.ALIGN 3
+
+L140:
+.DATABYTES 16
+	cd cc 4c 3e 00 00 80 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L141:
+.DATABYTES 16
+	cd cc 4c be 00 00 80 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L142:
+.DATABYTES 16
+	cd cc cc 3d 66 66 26 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L143:
+.DATABYTES 16
+	cd cc cc bd 66 66 26 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L144:
+.DATABYTES 16
+	0a d7 23 3d 00 00 00 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L145:
+.DATABYTES 16
+	cd cc 4c 3e cd cc 4c 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L146:
+.DATABYTES 16
+	00 00 00 3f 00 00 80 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L147:
+.DATABYTES 16
+	cd cc 4c 3f cd cc 4c 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L148:
+.DATABYTES 16
+	9a 99 19 3f cd cc cc 3e 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L149:
+.DATABYTES 16
+	cd cc 4c bf cd cc 4c 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L150:
+.DATABYTES 16
+	00 00 00 bf 00 00 80 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L151:
+.DATABYTES 16
+	cd cc 4c be cd cc 4c 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L152:
+.DATABYTES 16
+	0a d7 23 bd 00 00 00 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L153:
+.DATABYTES 16
+	9a 99 19 bf cd cc cc 3e 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L154:
+.DATABYTES 16
+	00 00 00 00 66 66 66 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L155:
+.DATABYTES 16
+	00 00 00 00 33 33 33 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L156:
+.DATABYTES 16
+	9a 99 19 3e 9a 99 19 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L157:
+.DATABYTES 16
+	8f c2 75 3d cd cc 4c 3e 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L158:
+.DATABYTES 16
+	cd cc cc 3e 00 00 00 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L159:
+.DATABYTES 16
+	33 33 33 3f 00 00 00 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L160:
+.DATABYTES 16
+	00 00 80 3f 9a 99 19 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L161:
+.DATABYTES 16
+	cd cc 4c 3f cd cc 4c bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L162:
+.DATABYTES 16
+	cd cc cc 3e cd cc 4c bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L163:
+.DATABYTES 16
+	00 00 80 bf 9a 99 19 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L164:
+.DATABYTES 16
+	33 33 33 bf 00 00 00 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L165:
+.DATABYTES 16
+	cd cc cc be 00 00 00 3f 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L166:
+.DATABYTES 16
+	8f c2 75 bd cd cc 4c 3e 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L167:
+.DATABYTES 16
+	9a 99 19 be 9a 99 19 bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L168:
+.DATABYTES 16
+	cd cc cc be cd cc 4c bf 
+	00 00 00 00 00 00 00 00 
+.ALIGN 3
+
+L169:
+.DATABYTES 16
+	cd cc 4c bf cd cc 4c bf 
+	00 00 00 00 00 00 00 00 
+
+L170:
+.LINE 326
+.PROC reset
+	AJW -2
+	.LINE 327
+	.LINE 328
+.OCCCOMMENT {{{  gendynmobilearraycreate
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+.OCCCOMMENT }}}
+	CJ L171
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	DUP
+	NULL
+	REV
+	STNL 2
+	DUP
+	NULL
+	REV
+	STNL 3
+	LDC 0    -- #00000000
+	REV
+	STNL 4
+.OCCCOMMENT }}}
+
+L171:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	LDC 480    -- #000001e0
+	LDC 259    -- #00000103
+	MT_ALLOC
+.OCCCOMMENT storemobile_iorexp {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 3
+.OCCCOMMENT }}}
+	LDL 3
+.OCCCOMMENT PTR staticlink
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDNL 3
+	LDNL 0
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 2
+.OCCCOMMENT }}}
+.OCCCOMMENT store mobile ptr
+.OCCCOMMENT post any mobile sub-initialisation
+	LDC 30    -- #0000001e
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (1)
+	DUP
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 3
+	STNL 1
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 4
+.OCCCOMMENT }}}
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 331
+	.LOADLABADDR L169
+	LDC 0    -- #00000000
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 332
+	.LOADLABADDR L168
+	LDC 1    -- #00000001
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 333
+	.LOADLABADDR L167
+	LDC 2    -- #00000002
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 334
+	.LOADLABADDR L166
+	LDC 3    -- #00000003
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 335
+	.LOADLABADDR L165
+	LDC 4    -- #00000004
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 336
+	.LOADLABADDR L164
+	LDC 5    -- #00000005
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 337
+	.LOADLABADDR L163
+	LDC 6    -- #00000006
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 340
+	.LOADLABADDR L162
+	LDC 7    -- #00000007
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 341
+	.LOADLABADDR L161
+	LDC 8    -- #00000008
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 342
+	.LOADLABADDR L160
+	LDC 9    -- #00000009
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 343
+	.LOADLABADDR L159
+	LDC 10    -- #0000000a
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 344
+	.LOADLABADDR L158
+	LDC 11    -- #0000000b
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 345
+	.LOADLABADDR L157
+	LDC 12    -- #0000000c
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 346
+	.LOADLABADDR L156
+	LDC 13    -- #0000000d
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 349
+	.LOADLABADDR L155
+	LDC 14    -- #0000000e
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 350
+	.LOADLABADDR L154
+	LDC 15    -- #0000000f
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 353
+	.LOADLABADDR L153
+	LDC 16    -- #00000010
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 354
+	.LOADLABADDR L152
+	LDC 17    -- #00000011
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 355
+	.LOADLABADDR L151
+	LDC 18    -- #00000012
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 356
+	.LOADLABADDR L150
+	LDC 19    -- #00000013
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 357
+	.LOADLABADDR L149
+	LDC 20    -- #00000014
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 360
+	.LOADLABADDR L148
+	LDC 21    -- #00000015
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 361
+	.LOADLABADDR L147
+	LDC 22    -- #00000016
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 362
+	.LOADLABADDR L146
+	LDC 23    -- #00000017
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 363
+	.LOADLABADDR L145
+	LDC 24    -- #00000018
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 364
+	.LOADLABADDR L144
+	LDC 25    -- #00000019
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 367
+	.LOADLABADDR L143
+	LDC 26    -- #0000001a
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 368
+	.LOADLABADDR L142
+	LDC 27    -- #0000001b
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 369
+	.LOADLABADDR L141
+	LDC 28    -- #0000001c
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 370
+	.LOADLABADDR L140
+	LDC 29    -- #0000001d
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 2
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 372
+	LDC 0    -- #00000000
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 5
+	.LINE 373
+	.LOADLABADDR L139
+.OCCCOMMENT constant table
+	LDNL 0
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 9
+	AJW 2
+	RET
+
+L204:
+	.LINE 376
+.PROC rot.point.y
+	AJW -2
+	.LINE 378
+	.LINE 379
+	LDL 3
+	Unsupported 594
+	STL 0
+	.LINE 380
+	LDL 3
+	FPLDNLSN
+	LDLP 5
+	FPLDNLMULSN
+	LDL 3
+	LDNLP 1
+	FPLDNLSN
+	LDLP 4
+	FPLDNLMULSN
+	FPADD
+	LDL 3
+	FPCHKERR
+	FPSTNLSN
+	.LINE 381
+	LDL 3
+	LDNLP 1
+	FPLDNLSN
+	LDLP 5
+	FPLDNLMULSN
+	LDLP 0
+	FPLDNLSN
+	LDLP 4
+	FPLDNLMULSN
+	FPSUB
+	LDL 3
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LINE 377
+	AJW 2
+	RET
+	.ALIGN 3
+
+L206:
+.DATABYTES 8
+	00 00 00 bf 00 00 00 00 
+.DATABYTES 8
+	00 00 00 3f 00 00 00 00 
+
+L207:
+.GLOBAL fbypoints.generator
+.SETWS 30
+.SETVS 2
+.SETMS 0
+.LINE 322
+.PROC fbypoints.generator
+	AJW -14
+	.LOADLABADDR L206
+.OCCCOMMENT constant table
+	STL 10
+.OCCCOMMENT INT constptr
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+	.LINE 385
+	.LINE 387
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L170
+.OCCCOMMENT Call reset
+	.LINE 391
+	LDC 0    -- #00000000
+	STL 11
+.OCCCOMMENT INIT
+	LDC 1    -- #00000001
+	STL 11
+	.LINE 392
+
+L209:
+	LDL 11
+	CJ L210
+	.LINE 393
+	.LINE 395
+.OCCCOMMENT BEGIN PRE-ENABLING
+	.LINE 397
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L213
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 477
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L214
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+.OCCCOMMENT END PRE-ENABLING
+	ALT
+	.LINE 397
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L215
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 477
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L216
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTWT
+	J L217
+
+L217:
+
+L216:
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABDIFF L214 L212
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 397
+
+L215:
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABDIFF L213 L212
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTEND
+
+L212:
+
+L213:
+	LDLP 12
+	LDL 15
+	LDC 4    -- #00000004
+	IN
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+	.LINE 399
+	.LINE 400
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L218
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 7
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 7
+	DUP
+	LDNL 0
+	STL 6
+	LDNL 1
+	STL 8
+.OCCCOMMENT }}}
+
+L218:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	.LINE 403
+	.LINE 404
+	LDLP 9
+	FPLDNLSN
+	FPLDZEROSN
+	FPGT
+	FPCHKERR
+	CJ L220
+	.LINE 406
+	.LINE 407
+.OCCCOMMENT tinstance():
+	LDL 5
+	CALL L1
+.OCCCOMMENT Call SIN
+	.REALRESULT 1
+	LDLP 0
+	FPSTNLSN
+	.LINE 408
+.OCCCOMMENT tinstance():
+	LDL 5
+	CALL L0
+.OCCCOMMENT Call COS
+	.REALRESULT 1
+	LDLP 1
+	FPSTNLSN
+	.LINE 409
+	LDLP 5
+	FPLDNLSN
+	LDLP 9
+	FPLDNLADDSN
+	LDLP 5
+	FPCHKERR
+	FPSTNLSN
+	.LINE 411
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 0    -- #00000000
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 412
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 1    -- #00000001
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 413
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 6    -- #00000006
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 414
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 5    -- #00000005
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 415
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 4    -- #00000004
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 416
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 16    -- #00000010
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 417
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 20    -- #00000014
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 418
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 19    -- #00000013
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 419
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 18    -- #00000012
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 421
+	FPLDZEROSN
+	LDLP 0
+	FPLDNLSN
+	FPSUB
+	LDLP 0
+	FPCHKERR
+	FPSTNLSN
+	.LINE 423
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 7    -- #00000007
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 424
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 8    -- #00000008
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 425
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 9    -- #00000009
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 426
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 10    -- #0000000a
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 427
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 11    -- #0000000b
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 428
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 21    -- #00000015
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 429
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 22    -- #00000016
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 430
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 23    -- #00000017
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 431
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 24    -- #00000018
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 433
+	.LINE 434
+	LDLP 5
+	FPLDNLSN
+	LDL 10
+.OCCCOMMENT PTR constptr
+	LDNLP 1
+	FPLDNLSN
+	FPGT
+	FPCHKERR
+	CJ L222
+	.LINE 435
+	FPLDZEROSN
+	LDLP 9
+	FPLDNLSN
+	FPSUB
+	LDLP 9
+	FPCHKERR
+	FPSTNLSN
+	J L221
+
+L222:
+	.LINE 436
+
+L221:
+	.LINE 405
+	J L219
+
+L220:
+	.LINE 438
+	FPLDZEROSN
+	LDLP 9
+	FPLDNLSN
+	FPGT
+	FPCHKERR
+	CJ L223
+	.LINE 440
+	.LINE 441
+.OCCCOMMENT tinstance():
+	LDL 5
+	CALL L1
+.OCCCOMMENT Call SIN
+	.REALRESULT 1
+	LDLP 0
+	FPSTNLSN
+	.LINE 442
+.OCCCOMMENT tinstance():
+	LDL 5
+	CALL L0
+.OCCCOMMENT Call COS
+	.REALRESULT 1
+	LDLP 1
+	FPSTNLSN
+	.LINE 443
+	LDLP 5
+	FPLDNLSN
+	LDLP 9
+	FPLDNLADDSN
+	LDLP 5
+	FPCHKERR
+	FPSTNLSN
+	.LINE 445
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 0    -- #00000000
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 446
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 1    -- #00000001
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 447
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 6    -- #00000006
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 448
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 5    -- #00000005
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 449
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 4    -- #00000004
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 450
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 16    -- #00000010
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 451
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 20    -- #00000014
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 452
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 19    -- #00000013
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 453
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 18    -- #00000012
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 455
+	FPLDZEROSN
+	LDLP 0
+	FPLDNLSN
+	FPSUB
+	LDLP 0
+	FPCHKERR
+	FPSTNLSN
+	.LINE 457
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 7    -- #00000007
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 458
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 8    -- #00000008
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 459
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 9    -- #00000009
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 460
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 10    -- #0000000a
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 461
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 11    -- #0000000b
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 462
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 21    -- #00000015
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 463
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 22    -- #00000016
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 464
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 23    -- #00000017
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 465
+.OCCCOMMENT tinstance():
+	LDL 1
+	LDC 24    -- #00000018
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 6
+	WSUB
+	LDL 0
+	REV
+	CALL L204
+.OCCCOMMENT Call rot.point.y
+	.LINE 467
+	.LINE 468
+	LDL 10
+.OCCCOMMENT PTR constptr
+	FPLDNLSN
+	LDLP 5
+	FPLDNLSN
+	FPGT
+	FPCHKERR
+	CJ L225
+	.LINE 469
+	FPLDZEROSN
+	LDLP 9
+	FPLDNLSN
+	FPSUB
+	LDLP 9
+	FPCHKERR
+	FPSTNLSN
+	J L224
+
+L225:
+	.LINE 470
+
+L224:
+	.LINE 439
+	J L219
+
+L223:
+	.LINE 472
+
+L219:
+	.LINE 476
+	LDLP 7
+	LDL 16
+	MT_OUT
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+	.LINE 398
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L226
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+
+L226:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 396
+	J L211
+
+L214:
+	.LINE 477
+	LDC 0    -- #00000000
+	STL 6
+.OCCCOMMENT INIT
+	LDLP 6
+	LDL 17
+	LDC 1    -- #00000001
+	IN
+	LDL 6
+	LDC 2    -- #00000002
+	GT
+	CJ L234
+	LDC 3    -- #00000003
+	LDL 6
+	DIFF
+	CJ L231
+	LDL 6
+	EQC 4
+	CJ L233
+	J L232
+
+L234:
+	LDL 6
+	CJ L228
+	LDC 1    -- #00000001
+	LDL 6
+	DIFF
+	CJ L229
+	LDL 6
+	EQC 2
+	CJ L233
+	J L230
+
+L233:
+	SETERR
+
+L228:
+	.LINE 479
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L170
+.OCCCOMMENT Call reset
+	J L227
+
+L229:
+	.LINE 481
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 482
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 30    -- #0000001e
+	STL 1
+
+L235:
+	.LINE 483
+	.LINE 484
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 485
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 486
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L236 L235
+	.LINE 480
+	J L227
+
+L230:
+	.LINE 488
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 489
+	.LINE 487
+	J L227
+
+L231:
+	.LINE 491
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 492
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 30    -- #0000001e
+	STL 1
+
+L237:
+	.LINE 493
+	.LINE 494
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 495
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 496
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L238 L237
+	.LINE 490
+	J L227
+
+L232:
+	.LINE 498
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 499
+	.LINE 497
+	J L227
+
+L227:
+	.LINE 477
+	J L211
+
+L211:
+	J L209
+
+L210:
+	.LINE 391
+	.LINE 323
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L239
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+
+L239:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 324
+	AJW 14
+	RET
+.GLOBALEND fbypoints.generator
+	.ALIGN 3
+
+L241:
+.DATABYTES 16
+	00 00 80 bf 00 00 00 00 
+	00 00 80 3f 00 00 00 00 
+.ALIGN 3
+
+L242:
+.DATABYTES 16
+	00 00 80 bf 00 00 00 00 
+	00 00 80 bf 00 00 00 00 
+.ALIGN 3
+
+L243:
+.DATABYTES 16
+	00 00 80 3f 00 00 00 00 
+	00 00 80 bf 00 00 00 00 
+.ALIGN 3
+
+L244:
+.DATABYTES 16
+	00 00 80 3f 00 00 00 00 
+	00 00 80 3f 00 00 00 00 
+
+L245:
+.LINE 513
+.PROC reset
+	AJW -2
+	.LINE 514
+	.LINE 515
+.OCCCOMMENT {{{  gendynmobilearraycreate
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+.OCCCOMMENT }}}
+	CJ L246
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	DUP
+	NULL
+	REV
+	STNL 6
+	DUP
+	NULL
+	REV
+	STNL 7
+	LDC 0    -- #00000000
+	REV
+	STNL 8
+.OCCCOMMENT }}}
+
+L246:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	LDC 64    -- #00000040
+	LDC 259    -- #00000103
+	MT_ALLOC
+.OCCCOMMENT storemobile_iorexp {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 7
+.OCCCOMMENT }}}
+	LDL 3
+.OCCCOMMENT PTR staticlink
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDNL 7
+	LDNL 0
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 6
+.OCCCOMMENT }}}
+.OCCCOMMENT store mobile ptr
+.OCCCOMMENT post any mobile sub-initialisation
+	LDC 4    -- #00000004
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (1)
+	DUP
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+	STNL 1
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 8
+.OCCCOMMENT }}}
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 517
+	.LOADLABADDR L244
+	LDC 0    -- #00000000
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 518
+	.LOADLABADDR L243
+	LDC 1    -- #00000001
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 519
+	.LOADLABADDR L242
+	LDC 2    -- #00000002
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	.LINE 520
+	.LOADLABADDR L241
+	LDC 3    -- #00000003
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	LDC 16    -- #00000010
+	LMOVE
+	AJW 2
+	RET
+
+L252:
+.GLOBAL squarepoints.generator
+.SETWS 24
+.SETVS 2
+.SETMS 0
+.LINE 510
+.PROC squarepoints.generator
+	AJW -14
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+	.LINE 524
+	.LINE 526
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L245
+.OCCCOMMENT Call reset
+	.LINE 527
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L253
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 3
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 3
+	DUP
+	LDNL 0
+	STL 2
+	LDNL 1
+	STL 4
+.OCCCOMMENT }}}
+
+L253:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	.LINE 531
+	LDC 0    -- #00000000
+	STL 9
+.OCCCOMMENT INIT
+	LDC 1    -- #00000001
+	STL 9
+	.LINE 532
+
+L254:
+	LDL 9
+	CJ L255
+	.LINE 533
+	.LINE 534
+.OCCCOMMENT BEGIN PRE-ENABLING
+	.LINE 535
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L258
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 577
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L259
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+.OCCCOMMENT END PRE-ENABLING
+	ALT
+	.LINE 535
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L260
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 577
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABADDR L261
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTWT
+	J L262
+
+L262:
+
+L261:
+	LDL 15
+	LDC 1    -- #00000001
+	.LOADLABDIFF L259 L257
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 535
+
+L260:
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABDIFF L258 L257
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTEND
+
+L257:
+
+L258:
+	LDC 0    -- #00000000
+	STL 5
+.OCCCOMMENT INIT
+	LDLP 5
+	LDL 17
+	LDC 1    -- #00000001
+	IN
+	LDL 5
+	LDC 2    -- #00000002
+	GT
+	CJ L270
+	LDC 3    -- #00000003
+	LDL 5
+	DIFF
+	CJ L267
+	LDL 5
+	EQC 4
+	CJ L269
+	J L268
+
+L270:
+	LDL 5
+	CJ L264
+	LDC 1    -- #00000001
+	LDL 5
+	DIFF
+	CJ L265
+	LDL 5
+	EQC 2
+	CJ L269
+	J L266
+
+L269:
+	SETERR
+
+L264:
+	.LINE 537
+	.LINE 538
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L245
+.OCCCOMMENT Call reset
+	.LINE 539
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L271
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 3
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 3
+	DUP
+	LDNL 0
+	STL 2
+	LDNL 1
+	STL 4
+.OCCCOMMENT }}}
+
+L271:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	J L263
+
+L265:
+	.LINE 541
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 543
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 4    -- #00000004
+	STL 1
+
+L272:
+	.LINE 544
+	.LINE 545
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 546
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 547
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L273 L272
+	.LINE 540
+	J L263
+
+L266:
+	.LINE 550
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 552
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 4    -- #00000004
+	STL 1
+
+L274:
+	.LINE 553
+	.LINE 554
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 555
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 556
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L275 L274
+	.LINE 549
+	J L263
+
+L267:
+	.LINE 559
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 561
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 4    -- #00000004
+	STL 1
+
+L276:
+	.LINE 562
+	.LINE 563
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 564
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 565
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L277 L276
+	.LINE 558
+	J L263
+
+L268:
+	.LINE 568
+	LDL 18
+	LDL 17
+	LDC 12    -- #0000000c
+	IN
+	.LINE 570
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDC 4    -- #00000004
+	STL 1
+
+L278:
+	.LINE 571
+	.LINE 572
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 573
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 574
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 18
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L279 L278
+	.LINE 567
+	J L263
+
+L263:
+	.LINE 535
+	J L256
+
+L259:
+	.LINE 577
+	LDLP 1
+	LDL 15
+	LDC 4    -- #00000004
+	IN
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+	.LINE 578
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	CJ L281
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+
+L281:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L280
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 11
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 11
+	DUP
+	LDNL 0
+	STL 10
+	LDNL 1
+	STL 12
+.OCCCOMMENT }}}
+
+L280:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	LDLP 11
+	LDL 16
+	MT_OUT
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	CJ L282
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 11
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 10
+	NULL
+	STL 11
+	LDC 0    -- #00000000
+	STL 12
+.OCCCOMMENT }}}
+
+L282:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 576
+	J L256
+
+L256:
+	J L254
+
+L255:
+	.LINE 531
+	.LINE 511
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L283
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+
+L283:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L284
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+
+L284:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	AJW 14
+	RET
+.GLOBALEND squarepoints.generator
+	.ALIGN 3
+
+L286:
+.DATABYTES 8
+	00 00 80 3f 00 00 00 00 
+.DATABYTES 8
+	00 00 80 bf 00 00 00 00 
+.DATABYTES 8
+	00 00 00 40 00 00 00 00 
+
+L287:
+.LINE 595
+.PROC reset
+	AJW -6
+	.LOADLABADDR L286
+.OCCCOMMENT constant table
+	STL 2
+.OCCCOMMENT INT constptr
+	.LINE 597
+	LDC 0    -- #00000000
+	STL 1
+	.LINE 598
+	.LINE 599
+.OCCCOMMENT {{{  gendynmobilearraycreate
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+.OCCCOMMENT }}}
+	CJ L289
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	DUP
+	NULL
+	REV
+	STNL 6
+	DUP
+	NULL
+	REV
+	STNL 7
+	LDC 0    -- #00000000
+	REV
+	STNL 8
+.OCCCOMMENT }}}
+
+L289:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+	.SLLIMM 4
+	LDC 259    -- #00000103
+	MT_ALLOC
+.OCCCOMMENT storemobile_iorexp {{{
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	STNL 7
+.OCCCOMMENT }}}
+	LDL 7
+.OCCCOMMENT PTR staticlink
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDNL 7
+	LDNL 0
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	STNL 6
+.OCCCOMMENT }}}
+.OCCCOMMENT store mobile ptr
+.OCCCOMMENT post any mobile sub-initialisation
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (1)
+	DUP
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+	STNL 1
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	STNL 8
+.OCCCOMMENT }}}
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 601
+	LDL 2
+.OCCCOMMENT PTR constptr
+	LDNLP 2
+	FPLDNLSN
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 18
+	ADC -1
+	STL 0
+	LDLP 0
+	FPRZ
+	FPI32TOR32
+	FPDIV
+	LDLP 9
+	FPCHKERR
+	FPSTNLSN
+	.LINE 602
+	LDL 2
+.OCCCOMMENT PTR constptr
+	LDNLP 2
+	FPLDNLSN
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 19
+	ADC -1
+	STL 0
+	LDLP 0
+	FPRZ
+	FPI32TOR32
+	FPDIV
+	LDLP 8
+	FPCHKERR
+	FPSTNLSN
+	.LINE 604
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 4
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 18
+	STL 5
+	LDL 5
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L291
+
+L290:
+	.LINE 606
+	.LINE 607
+	LDLP 4
+	FPRZ
+	FPI32TOR32
+	LDLP 9
+	FPLDNLMULSN
+	LDL 2
+.OCCCOMMENT PTR constptr
+	LDNLP 1
+	FPLDNLADDSN
+	LDLP 3
+	FPCHKERR
+	FPSTNLSN
+	.LINE 608
+	LDL 1
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	STL 0
+	LDL 3
+	LDL 0
+	Unsupported 595
+	LDC 0    -- #00000000
+	LDL 0
+	ADC 4
+	Unsupported 595
+	LDL 2
+.OCCCOMMENT PTR constptr
+	LDNL 1
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	.LINE 609
+	LDL 1
+	ADC 1
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	STL 0
+	LDL 3
+	LDL 0
+	Unsupported 595
+	LDC 0    -- #00000000
+	LDL 0
+	ADC 4
+	Unsupported 595
+	LDL 2
+.OCCCOMMENT PTR constptr
+	LDNL 0
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	.LINE 610
+	LDL 1
+	ADC 2
+	STL 1
+	.LINE 605
+	.LEND 4 L291 L290
+	.LINE 612
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 4
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 19
+	STL 5
+	LDL 5
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L293
+
+L292:
+	.LINE 614
+	.LINE 615
+	LDLP 4
+	FPRZ
+	FPI32TOR32
+	LDLP 8
+	FPLDNLMULSN
+	LDL 2
+.OCCCOMMENT PTR constptr
+	LDNLP 1
+	FPLDNLADDSN
+	LDLP 3
+	FPCHKERR
+	FPSTNLSN
+	.LINE 616
+	LDL 1
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	STL 0
+	LDL 2
+.OCCCOMMENT PTR constptr
+	LDNL 1
+	LDL 0
+	Unsupported 595
+	LDC 0    -- #00000000
+	LDL 0
+	ADC 4
+	Unsupported 595
+	LDL 3
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	.LINE 617
+	LDL 1
+	ADC 1
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 7
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	STL 0
+	LDL 2
+.OCCCOMMENT PTR constptr
+	LDNL 0
+	LDL 0
+	Unsupported 595
+	LDC 0    -- #00000000
+	LDL 0
+	ADC 4
+	Unsupported 595
+	LDL 3
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	.LINE 618
+	LDL 1
+	ADC 2
+	STL 1
+	.LINE 613
+	.LEND 4 L293 L292
+	.LINE 596
+	.LINE 597
+	AJW 6
+	RET
+
+L295:
+.GLOBAL gridpoints.generator
+.SETWS 30
+.SETVS 2
+.SETMS 0
+.LINE 591
+.PROC gridpoints.generator
+	AJW -16
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+	.LINE 622
+	.LINE 624
+	LDL 18
+	DUP
+	ADD
+	LDL 19
+	DUP
+	ADD
+	ADD
+	STL 9
+	.LINE 625
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L287
+.OCCCOMMENT Call reset
+	.LINE 626
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L296
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 3
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 3
+	DUP
+	LDNL 0
+	STL 2
+	LDNL 1
+	STL 4
+.OCCCOMMENT }}}
+
+L296:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	.LINE 630
+	LDC 0    -- #00000000
+	STL 10
+.OCCCOMMENT INIT
+	LDC 1    -- #00000001
+	STL 10
+	.LINE 631
+
+L297:
+	LDL 10
+	CJ L298
+	.LINE 632
+	.LINE 633
+.OCCCOMMENT BEGIN PRE-ENABLING
+	.LINE 634
+	LDL 21
+	LDC 1    -- #00000001
+	.LOADLABADDR L301
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 676
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L302
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+.OCCCOMMENT END PRE-ENABLING
+	ALT
+	.LINE 634
+	LDL 21
+	LDC 1    -- #00000001
+	.LOADLABADDR L303
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 676
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L304
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTWT
+	J L305
+
+L305:
+
+L304:
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABDIFF L302 L300
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 634
+
+L303:
+	LDL 21
+	LDC 1    -- #00000001
+	.LOADLABDIFF L301 L300
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTEND
+
+L300:
+
+L301:
+	LDC 0    -- #00000000
+	STL 5
+.OCCCOMMENT INIT
+	LDLP 5
+	LDL 21
+	LDC 1    -- #00000001
+	IN
+	LDL 5
+	LDC 2    -- #00000002
+	GT
+	CJ L313
+	LDC 3    -- #00000003
+	LDL 5
+	DIFF
+	CJ L310
+	LDL 5
+	EQC 4
+	CJ L312
+	J L311
+
+L313:
+	LDL 5
+	CJ L307
+	LDC 1    -- #00000001
+	LDL 5
+	DIFF
+	CJ L308
+	LDL 5
+	EQC 2
+	CJ L312
+	J L309
+
+L312:
+	SETERR
+
+L307:
+	.LINE 636
+	.LINE 637
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L287
+.OCCCOMMENT Call reset
+	.LINE 638
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L314
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 3
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 3
+	DUP
+	LDNL 0
+	STL 2
+	LDNL 1
+	STL 4
+.OCCCOMMENT }}}
+
+L314:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	J L306
+
+L308:
+	.LINE 640
+	LDL 22
+	LDL 21
+	LDC 12    -- #0000000c
+	IN
+	.LINE 642
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L316
+
+L315:
+	.LINE 643
+	.LINE 644
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 22
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 645
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 22
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 646
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 22
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L316 L315
+	.LINE 639
+	J L306
+
+L309:
+	.LINE 649
+	LDL 22
+	LDL 21
+	LDC 12    -- #0000000c
+	IN
+	.LINE 651
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L318
+
+L317:
+	.LINE 652
+	.LINE 653
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 6
+	FPLDNLSNI
+	LDL 22
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 654
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 22
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 655
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 22
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L318 L317
+	.LINE 648
+	J L306
+
+L310:
+	.LINE 658
+	LDL 22
+	LDL 21
+	LDC 12    -- #0000000c
+	IN
+	.LINE 660
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L320
+
+L319:
+	.LINE 661
+	.LINE 662
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 22
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 663
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 22
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 664
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 22
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L320 L319
+	.LINE 657
+	J L306
+
+L311:
+	.LINE 667
+	LDL 22
+	LDL 21
+	LDC 12    -- #0000000c
+	IN
+	.LINE 669
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L322
+
+L321:
+	.LINE 670
+	.LINE 671
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 6
+	FPLDNLSNI
+	LDL 22
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 672
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 22
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 673
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 22
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L322 L321
+	.LINE 666
+	J L306
+
+L306:
+	.LINE 634
+	J L299
+
+L302:
+	.LINE 676
+	LDLP 1
+	LDL 17
+	LDC 4    -- #00000004
+	IN
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 12
+	NULL
+	STL 13
+	LDC 0    -- #00000000
+	STL 14
+.OCCCOMMENT }}}
+	.LINE 677
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 13
+.OCCCOMMENT }}}
+	CJ L324
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 13
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 12
+	NULL
+	STL 13
+	LDC 0    -- #00000000
+	STL 14
+.OCCCOMMENT }}}
+
+L324:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L323
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 13
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 13
+	DUP
+	LDNL 0
+	STL 12
+	LDNL 1
+	STL 14
+.OCCCOMMENT }}}
+
+L323:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	LDLP 13
+	LDL 20
+	MT_OUT
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 12
+	NULL
+	STL 13
+	LDC 0    -- #00000000
+	STL 14
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 13
+.OCCCOMMENT }}}
+	CJ L325
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 13
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 12
+	NULL
+	STL 13
+	LDC 0    -- #00000000
+	STL 14
+.OCCCOMMENT }}}
+
+L325:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 675
+	J L299
+
+L299:
+	J L297
+
+L298:
+	.LINE 630
+	.LINE 592
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L326
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+
+L326:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L327
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+
+L327:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 593
+	AJW 16
+	RET
+.GLOBALEND gridpoints.generator
+
+L329:
+	.LINE 693
+.PROC reset
+	AJW -2
+	.LINE 694
+	.LINE 695
+.OCCCOMMENT {{{  gendynmobilearraycreate
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+.OCCCOMMENT }}}
+	CJ L330
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	DUP
+	NULL
+	REV
+	STNL 6
+	DUP
+	NULL
+	REV
+	STNL 7
+	LDC 0    -- #00000000
+	REV
+	STNL 8
+.OCCCOMMENT }}}
+
+L330:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+	.SLLIMM 4
+	LDC 259    -- #00000103
+	MT_ALLOC
+.OCCCOMMENT storemobile_iorexp {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 7
+.OCCCOMMENT }}}
+	LDL 3
+.OCCCOMMENT PTR staticlink
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDNL 7
+	LDNL 0
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 6
+.OCCCOMMENT }}}
+.OCCCOMMENT store mobile ptr
+.OCCCOMMENT post any mobile sub-initialisation
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (1)
+	DUP
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 7
+	STNL 1
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	STNL 8
+.OCCCOMMENT }}}
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 697
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 4
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+	STL 5
+	LDL 5
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L332
+
+L331:
+	.LINE 698
+	LDL 4
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 2
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 6
+	WSUB
+	STL 0
+	LDC 0    -- #00000000
+	LDL 0
+	Unsupported 595
+	LDC 0    -- #00000000
+	LDL 0
+	ADC 4
+	Unsupported 595
+	LDC 0    -- #00000000
+	LDL 0
+	LDNLP 1
+	Unsupported 595
+	LDL 3
+.OCCCOMMENT PTR staticlink
+	LDNL 18
+	LDL 0
+	ADC 12
+	Unsupported 595
+	.LEND 4 L332 L331
+	AJW 2
+	RET
+
+L334:
+.GLOBAL spherepoint.generator
+.SETWS 26
+.SETVS 2
+.SETMS 0
+.LINE 689
+.PROC spherepoint.generator
+	AJW -16
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+	.LINE 702
+	.LINE 704
+	LDC 1    -- #00000001
+	STL 9
+	.LINE 705
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L329
+.OCCCOMMENT Call reset
+	.LINE 706
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L335
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 3
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 3
+	DUP
+	LDNL 0
+	STL 2
+	LDNL 1
+	STL 4
+.OCCCOMMENT }}}
+
+L335:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	.LINE 710
+	LDC 0    -- #00000000
+	STL 10
+.OCCCOMMENT INIT
+	LDC 1    -- #00000001
+	STL 10
+	.LINE 711
+
+L336:
+	LDL 10
+	CJ L337
+	.LINE 712
+	.LINE 713
+.OCCCOMMENT BEGIN PRE-ENABLING
+	.LINE 714
+	LDL 20
+	LDC 1    -- #00000001
+	.LOADLABADDR L340
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 756
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L341
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+.OCCCOMMENT END PRE-ENABLING
+	ALT
+	.LINE 714
+	LDL 20
+	LDC 1    -- #00000001
+	.LOADLABADDR L342
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 756
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABADDR L343
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTWT
+	J L344
+
+L344:
+
+L343:
+	LDL 17
+	LDC 1    -- #00000001
+	.LOADLABDIFF L341 L339
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 714
+
+L342:
+	LDL 20
+	LDC 1    -- #00000001
+	.LOADLABDIFF L340 L339
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTEND
+
+L339:
+
+L340:
+	LDC 0    -- #00000000
+	STL 5
+.OCCCOMMENT INIT
+	LDLP 5
+	LDL 20
+	LDC 1    -- #00000001
+	IN
+	LDL 5
+	LDC 2    -- #00000002
+	GT
+	CJ L352
+	LDC 3    -- #00000003
+	LDL 5
+	DIFF
+	CJ L349
+	LDL 5
+	EQC 4
+	CJ L351
+	J L350
+
+L352:
+	LDL 5
+	CJ L346
+	LDC 1    -- #00000001
+	LDL 5
+	DIFF
+	CJ L347
+	LDL 5
+	EQC 2
+	CJ L351
+	J L348
+
+L351:
+	SETERR
+
+L346:
+	.LINE 716
+	.LINE 717
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L329
+.OCCCOMMENT Call reset
+	.LINE 718
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L353
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 3
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 3
+	DUP
+	LDNL 0
+	STL 2
+	LDNL 1
+	STL 4
+.OCCCOMMENT }}}
+
+L353:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	J L345
+
+L347:
+	.LINE 720
+	LDL 21
+	LDL 20
+	LDC 12    -- #0000000c
+	IN
+	.LINE 722
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L355
+
+L354:
+	.LINE 723
+	.LINE 724
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 21
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 725
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 21
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 726
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 21
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L355 L354
+	.LINE 719
+	J L345
+
+L348:
+	.LINE 729
+	LDL 21
+	LDL 20
+	LDC 12    -- #0000000c
+	IN
+	.LINE 731
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L357
+
+L356:
+	.LINE 732
+	.LINE 733
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 6
+	FPLDNLSNI
+	LDL 21
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 734
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 21
+	ADC 4
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 735
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 21
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L357 L356
+	.LINE 728
+	J L345
+
+L349:
+	.LINE 738
+	LDL 21
+	LDL 20
+	LDC 12    -- #0000000c
+	IN
+	.LINE 740
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L359
+
+L358:
+	.LINE 741
+	.LINE 742
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	FPLDNLSNI
+	LDL 21
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 743
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 21
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 744
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 2
+	FPLDNLSNI
+	LDL 21
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L359 L358
+	.LINE 737
+	J L345
+
+L350:
+	.LINE 747
+	LDL 21
+	LDL 20
+	LDC 12    -- #0000000c
+	IN
+	.LINE 749
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L361
+
+L360:
+	.LINE 750
+	.LINE 751
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 6
+	FPLDNLSNI
+	LDL 21
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 752
+	LDC 4    -- #00000004
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 21
+	ADC 4
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 753
+	LDC 8    -- #00000008
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 8
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	SUM
+	LDL 6
+	FPLDNLSNI
+	LDL 21
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 4
+.OCCCOMMENT }}}
+	CSUB0
+	.SLLIMM 4
+	LDL 2
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L361 L360
+	.LINE 746
+	J L345
+
+L345:
+	.LINE 714
+	J L338
+
+L341:
+	.LINE 756
+	LDLP 1
+	LDL 17
+	LDC 4    -- #00000004
+	IN
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 12
+	NULL
+	STL 13
+	LDC 0    -- #00000000
+	STL 14
+.OCCCOMMENT }}}
+	.LINE 757
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 13
+.OCCCOMMENT }}}
+	CJ L363
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 13
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 12
+	NULL
+	STL 13
+	LDC 0    -- #00000000
+	STL 14
+.OCCCOMMENT }}}
+
+L363:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L362
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 13
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 13
+	DUP
+	LDNL 0
+	STL 12
+	LDNL 1
+	STL 14
+.OCCCOMMENT }}}
+
+L362:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	LDLP 13
+	LDL 19
+	MT_OUT
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 12
+	NULL
+	STL 13
+	LDC 0    -- #00000000
+	STL 14
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 13
+.OCCCOMMENT }}}
+	CJ L364
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 13
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 12
+	NULL
+	STL 13
+	LDC 0    -- #00000000
+	STL 14
+.OCCCOMMENT }}}
+
+L364:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 755
+	J L338
+
+L338:
+	J L336
+
+L337:
+	.LINE 710
+	.LINE 690
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	CJ L365
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 3
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 2
+	NULL
+	STL 3
+	LDC 0    -- #00000000
+	STL 4
+.OCCCOMMENT }}}
+
+L365:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	CJ L366
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 7
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 6
+	NULL
+	STL 7
+	LDC 0    -- #00000000
+	STL 8
+.OCCCOMMENT }}}
+
+L366:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 691
+	AJW 16
+	RET
+.GLOBALEND spherepoint.generator
+	.ALIGN 3
+
+L368:
+.DATABYTES 8
+	00 00 80 bf 00 00 00 00 
+.DATABYTES 8
+	00 00 00 40 00 00 00 00 
+
+L369:
+.LINE 774
+.PROC reset
+	AJW -8
+	.LOADLABADDR L368
+.OCCCOMMENT constant table
+	STL 6
+.OCCCOMMENT INT constptr
+	.LINE 776
+	.LINE 777
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 24
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	STNL 19
+	.LINE 778
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 25
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	STNL 12
+	.LINE 780
+.OCCCOMMENT {{{  gendynmobilearraycreate
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+.OCCCOMMENT }}}
+	CJ L371
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	DUP
+	NULL
+	REV
+	STNL 8
+	DUP
+	NULL
+	REV
+	STNL 9
+	LDC 0    -- #00000000
+	REV
+	STNL 10
+.OCCCOMMENT }}}
+
+L371:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 19
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 12
+	PROD
+	.SLLIMM 4
+	LDC 291    -- #00000123
+	MT_ALLOC
+.OCCCOMMENT storemobile_iorexp {{{
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	STNL 9
+.OCCCOMMENT }}}
+	LDL 9
+.OCCCOMMENT PTR staticlink
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDNL 9
+	LDNL 0
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	STNL 8
+.OCCCOMMENT }}}
+.OCCCOMMENT store mobile ptr
+.OCCCOMMENT post any mobile sub-initialisation
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 19
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (1)
+	DUP
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+	STNL 1
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	STNL 10
+.OCCCOMMENT }}}
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 12
+	LDC 0    -- #00000000
+	SUM
+.OCCCOMMENT {{{  storemobilesize (2)
+	DUP
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 9
+	STNL 2
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	STNL 11
+.OCCCOMMENT }}}
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 781
+	LDL 6
+.OCCCOMMENT PTR constptr
+	LDNLP 1
+	FPLDNLSN
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 19
+	ADC -1
+	STL 0
+	LDLP 0
+	FPI32TOR32
+	FPDIV
+	LDLP 11
+	FPCHKERR
+	FPSTNLSN
+	.LINE 782
+	LDL 6
+.OCCCOMMENT PTR constptr
+	LDNLP 1
+	FPLDNLSN
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 12
+	ADC -1
+	STL 0
+	LDLP 0
+	FPI32TOR32
+	FPDIV
+	LDLP 10
+	FPCHKERR
+	FPSTNLSN
+	.LINE 784
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 4
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 19
+	STL 5
+	LDL 5
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L373
+
+L372:
+	.LINE 786
+	.LINE 787
+	LDLP 4
+	FPI32TOR32
+	LDLP 11
+	FPLDNLMULSN
+	LDL 6
+.OCCCOMMENT PTR constptr
+	FPLDNLADDSN
+	LDLP 7
+	FPCHKERR
+	FPSTNLSN
+	.LINE 788
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 12
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L375
+
+L374:
+	.LINE 790
+	.LINE 791
+	LDLP 0
+	FPI32TOR32
+	LDLP 10
+	FPLDNLMULSN
+	LDL 6
+.OCCCOMMENT PTR constptr
+	FPLDNLADDSN
+	LDLP 3
+	FPCHKERR
+	FPSTNLSN
+	.LINE 793
+	LDL 4
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 10
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 11
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 11
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 2
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 8
+	WSUB
+	STL 2
+	LDL 3
+	LDL 2
+	Unsupported 595
+	LDL 4
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 24
+	CSUB0
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 25
+	PROD
+	LDL 0
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 25
+	CSUB0
+	ADD
+	.SLLIMM 2
+	LDL 9
+.OCCCOMMENT PTR staticlink
+	LDNL 23
+	BSUB
+	Unsupported 594
+	LDL 2
+	ADC 4
+	Unsupported 595
+	LDL 7
+	LDL 2
+	LDNLP 1
+	Unsupported 595
+	.LINE 789
+	.LEND 0 L375 L374
+	.LINE 785
+	.LEND 4 L373 L372
+	.LINE 775
+	AJW 8
+	RET
+
+L377:
+.GLOBAL heightfieldpoint.generator
+.SETWS 36
+.SETVS 2
+.SETMS 0
+.LINE 770
+.PROC heightfieldpoint.generator
+	AJW -20
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 4
+	NULL
+	STL 5
+	LDC 0    -- #00000000
+	STL 6
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 8
+	NULL
+	STL 9
+	LDC 0    -- #00000000
+	STL 10
+.OCCCOMMENT }}}
+	.LINE 797
+	.LINE 799
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L369
+.OCCCOMMENT Call reset
+	.LINE 800
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 9
+.OCCCOMMENT }}}
+	CJ L378
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 9
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 5
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 5
+	DUP
+	LDNL 0
+	STL 4
+	DUP
+	LDNL 1
+	STL 6
+	LDNL 2
+	STL 7
+.OCCCOMMENT }}}
+
+L378:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	.LINE 804
+	LDC 0    -- #00000000
+	STL 18
+.OCCCOMMENT INIT
+	LDC 1    -- #00000001
+	STL 18
+	.LINE 805
+
+L379:
+	LDL 18
+	CJ L380
+	.LINE 806
+	.LINE 807
+.OCCCOMMENT BEGIN PRE-ENABLING
+	.LINE 808
+	LDL 27
+	LDC 1    -- #00000001
+	.LOADLABADDR L383
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 856
+	LDL 22
+	LDC 1    -- #00000001
+	.LOADLABADDR L384
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 870
+	LDL 21
+	LDC 1    -- #00000001
+	.LOADLABADDR L385
+.OCCCOMMENT PROCESS PTR
+.OCCCOMMENT .MAGIC PREENABLE
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+.OCCCOMMENT END PRE-ENABLING
+	ALT
+	.LINE 808
+	LDL 27
+	LDC 1    -- #00000001
+	.LOADLABADDR L386
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 856
+	LDL 22
+	LDC 1    -- #00000001
+	.LOADLABADDR L387
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 870
+	LDL 21
+	LDC 1    -- #00000001
+	.LOADLABADDR L388
+.OCCCOMMENT DISABLING PTR
+	ENBC3
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTWT
+	J L389
+
+L389:
+
+L388:
+	LDL 21
+	LDC 1    -- #00000001
+	.LOADLABDIFF L385 L382
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 856
+
+L387:
+	LDL 22
+	LDC 1    -- #00000001
+	.LOADLABDIFF L384 L382
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	.LINE 808
+
+L386:
+	LDL 27
+	LDC 1    -- #00000001
+	.LOADLABDIFF L383 L382
+	NDISC
+	.TSDEPTH 0
+.OCCCOMMENT throw the result away (stackdepth = 0)
+	ALTEND
+
+L382:
+
+L383:
+	LDC 0    -- #00000000
+	STL 13
+.OCCCOMMENT INIT
+	LDLP 13
+	LDL 27
+	LDC 1    -- #00000001
+	IN
+	LDL 13
+	LDC 2    -- #00000002
+	GT
+	CJ L397
+	LDC 3    -- #00000003
+	LDL 13
+	DIFF
+	CJ L394
+	LDL 13
+	EQC 4
+	CJ L396
+	J L395
+
+L397:
+	LDL 13
+	CJ L391
+	LDC 1    -- #00000001
+	LDL 13
+	DIFF
+	CJ L392
+	LDL 13
+	EQC 2
+	CJ L396
+	J L393
+
+L396:
+	SETERR
+
+L391:
+	.LINE 811
+	.LINE 812
+.OCCCOMMENT tinstance():
+	LDLP 0
+.OCCCOMMENT PTR staticlink
+	CALL L369
+.OCCCOMMENT Call reset
+	.LINE 813
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 9
+.OCCCOMMENT }}}
+	CJ L398
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 9
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 5
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 5
+	DUP
+	LDNL 0
+	STL 4
+	DUP
+	LDNL 1
+	STL 6
+	LDNL 2
+	STL 7
+.OCCCOMMENT }}}
+
+L398:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	J L390
+
+L392:
+	.LINE 817
+	LDL 28
+	LDL 27
+	LDC 12    -- #0000000c
+	IN
+	.LINE 818
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 2
+	LDL 19
+	STL 3
+	LDL 3
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L400
+
+L399:
+	.LINE 819
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 12
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L402
+
+L401:
+	.LINE 820
+	.LINE 821
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	FPLDNLSNI
+	LDL 28
+	FPLDNLMULSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 822
+	LDC 4    -- #00000004
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+	.TSDEPTH 4
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	SUM
+	LDL 4
+	FPLDNLSNI
+	.TSDEPTH -1
+	LDL 28
+	ADC 4
+	FPLDNLMULSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 823
+	LDC 8    -- #00000008
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+	.TSDEPTH 4
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	SUM
+	LDL 4
+	FPLDNLSNI
+	.TSDEPTH -1
+	LDL 28
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L402 L401
+	.LEND 2 L400 L399
+	.LINE 816
+	J L390
+
+L393:
+	.LINE 827
+	LDL 28
+	LDL 27
+	LDC 12    -- #0000000c
+	IN
+	.LINE 828
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 2
+	LDL 19
+	STL 3
+	LDL 3
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L404
+
+L403:
+	.LINE 829
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 12
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L406
+
+L405:
+	.LINE 830
+	.LINE 831
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 10
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 8
+	FPLDNLSNI
+	LDL 28
+	FPLDNLMULSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 832
+	LDC 4    -- #00000004
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 10
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+	.TSDEPTH 4
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	SUM
+	LDL 8
+	FPLDNLSNI
+	.TSDEPTH -1
+	LDL 28
+	ADC 4
+	FPLDNLMULSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 833
+	LDC 8    -- #00000008
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 10
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+	.TSDEPTH 4
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	SUM
+	LDL 8
+	FPLDNLSNI
+	.TSDEPTH -1
+	LDL 28
+	LDNLP 1
+	FPLDNLMULSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L406 L405
+	.LEND 2 L404 L403
+	.LINE 826
+	J L390
+
+L394:
+	.LINE 837
+	LDL 28
+	LDL 27
+	LDC 12    -- #0000000c
+	IN
+	.LINE 838
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 2
+	LDL 19
+	STL 3
+	LDL 3
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L408
+
+L407:
+	.LINE 839
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 12
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L410
+
+L409:
+	.LINE 840
+	.LINE 841
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	FPLDNLSNI
+	LDL 28
+	FPLDNLADDSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 842
+	LDC 4    -- #00000004
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+	.TSDEPTH 4
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	SUM
+	LDL 4
+	FPLDNLSNI
+	.TSDEPTH -1
+	LDL 28
+	ADC 4
+	FPLDNLADDSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 843
+	LDC 8    -- #00000008
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+	.TSDEPTH 4
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	SUM
+	LDL 4
+	FPLDNLSNI
+	.TSDEPTH -1
+	LDL 28
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L410 L409
+	.LEND 2 L408 L407
+	.LINE 836
+	J L390
+
+L395:
+	.LINE 847
+	LDL 28
+	LDL 27
+	LDC 12    -- #0000000c
+	IN
+	.LINE 848
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 2
+	LDL 19
+	STL 3
+	LDL 3
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L412
+
+L411:
+	.LINE 849
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+	LDL 12
+	STL 1
+	LDL 1
+	MINT
+	CSUB0
+.OCCCOMMENT error if negative
+	CJ L414
+
+L413:
+	.LINE 850
+	.LINE 851
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 10
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 8
+	FPLDNLSNI
+	LDL 28
+	FPLDNLADDSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	FPCHKERR
+	FPSTNLSN
+	.LINE 852
+	LDC 4    -- #00000004
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 10
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+	.TSDEPTH 4
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	SUM
+	LDL 8
+	FPLDNLSNI
+	.TSDEPTH -1
+	LDL 28
+	ADC 4
+	FPLDNLADDSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	ADC 4
+	FPCHKERR
+	FPSTNLSN
+	.LINE 853
+	LDC 8    -- #00000008
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 10
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+	.TSDEPTH 4
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	SUM
+	LDL 8
+	FPLDNLSNI
+	.TSDEPTH -1
+	LDL 28
+	LDNLP 1
+	FPLDNLADDSN
+	LDL 2
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	LDNLP 1
+	FPCHKERR
+	FPSTNLSN
+	.LEND 0 L414 L413
+	.LEND 2 L412 L411
+	.LINE 846
+	J L390
+
+L390:
+	.LINE 808
+	J L381
+
+L384:
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 14
+	NULL
+	STL 15
+	LDC 0    -- #00000000
+	STL 16
+.OCCCOMMENT }}}
+	.LINE 856
+	LDLP 15
+	LDL 22
+	MT_IN
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 15
+	DUP
+	CJ L416
+	DUP
+	LDNL 0
+	STL 14
+	LDNL 1
+	STL 16
+	J L415
+
+L416:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	LDC 0    -- #00000000
+	STL 16
+
+L415:
+.OCCCOMMENT }}}
+	.LINE 858
+.OCCCOMMENT trepl: start.
+	LDC 0    -- #00000000
+	STL 0
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 16
+.OCCCOMMENT }}}
+	STL 1
+	LDL 1
+	CJ L418
+
+L417:
+	.LINE 859
+	.LINE 860
+	LDC 0    -- #00000000
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	Unsupported 594
+	GT
+	.BOOLINVERT
+	CJ L419
+	LDL 12
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	Unsupported 594
+	GT
+	CJ L419
+	.LINE 862
+	LDC 0    -- #00000000
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	ADC 4
+	Unsupported 594
+	GT
+	.BOOLINVERT
+	CJ L419
+	LDL 19
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	ADC 4
+	Unsupported 594
+	GT
+	CJ L419
+	.LINE 864
+	.LINE 865
+	.LINE 866
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	ADC 4
+	Unsupported 594
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 10
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	Unsupported 594
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 11
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 8
+	BSUB
+	ADC 4
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	LDNLP 1
+	Unsupported 594
+	REV
+	Unsupported 595
+	.LINE 867
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	ADC 4
+	Unsupported 594
+.OCCCOMMENT loaddynmobilesize (1) (declaration)  {{{
+	LDL 6
+.OCCCOMMENT }}}
+	CSUB0
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	PROD
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	Unsupported 594
+.OCCCOMMENT loaddynmobilesize (2) (declaration)  {{{
+	LDL 7
+.OCCCOMMENT }}}
+	CSUB0
+	ADD
+	.SLLIMM 4
+	LDL 4
+	BSUB
+	ADC 4
+	LDL 0
+	.SLLIMM 4
+	LDL 14
+	BSUB
+	LDNLP 1
+	Unsupported 594
+	REV
+	Unsupported 595
+	J L419
+
+L419:
+	.LEND 0 L418 L417
+	.LINE 855
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 15
+.OCCCOMMENT }}}
+	CJ L420
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 15
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 14
+	NULL
+	STL 15
+	LDC 0    -- #00000000
+	STL 16
+.OCCCOMMENT }}}
+
+L420:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	J L381
+
+L385:
+	.LINE 870
+	LDLP 1
+	LDL 21
+	LDC 4    -- #00000004
+	IN
+.OCCCOMMENT dynamic MOBILE scope in
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 14
+	NULL
+	STL 15
+	LDC 0    -- #00000000
+	STL 16
+.OCCCOMMENT }}}
+	.LINE 872
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 15
+.OCCCOMMENT }}}
+	CJ L422
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 15
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 14
+	NULL
+	STL 15
+	LDC 0    -- #00000000
+	STL 16
+.OCCCOMMENT }}}
+
+L422:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 5
+.OCCCOMMENT }}}
+	CJ L421
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 5
+.OCCCOMMENT }}}
+	MT_CLONE
+.OCCCOMMENT storemobile_iorexp {{{
+	STL 15
+.OCCCOMMENT }}}
+.OCCCOMMENT {{{  genmobilearrayunpack
+	LDL 15
+	DUP
+	LDNL 0
+	STL 14
+	DUP
+	LDNL 1
+	STL 16
+	LDNL 2
+	STL 17
+.OCCCOMMENT }}}
+
+L421:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+	LDLP 15
+	LDL 26
+	MT_OUT
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 14
+	NULL
+	STL 15
+	LDC 0    -- #00000000
+	STL 16
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 15
+.OCCCOMMENT }}}
+	CJ L423
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 15
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 14
+	NULL
+	STL 15
+	LDC 0    -- #00000000
+	STL 16
+.OCCCOMMENT }}}
+
+L423:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 869
+	J L381
+
+L381:
+	J L379
+
+L380:
+	.LINE 804
+	.LINE 771
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 5
+.OCCCOMMENT }}}
+	CJ L424
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 5
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 4
+	NULL
+	STL 5
+	LDC 0    -- #00000000
+	STL 6
+.OCCCOMMENT }}}
+
+L424:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+.OCCCOMMENT dynamic MOBILE array scope out
+.OCCCOMMENT {{{  gencondfreedynmobile
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 9
+.OCCCOMMENT }}}
+	CJ L425
+.OCCCOMMENT {{{  loadmobile_real (declaration)
+	LDL 9
+.OCCCOMMENT }}}
+	MT_RELEASE
+.OCCCOMMENT genmobileundefine {{{
+	NULL
+	STL 8
+	NULL
+	STL 9
+	LDC 0    -- #00000000
+	STL 10
+.OCCCOMMENT }}}
+
+L425:
+.OCCCOMMENT tstack empty (stackdepth = 0)
+.OCCCOMMENT }}}
+	.LINE 772
+	AJW 20
+	RET
+.GLOBALEND heightfieldpoint.generator
+	.ALIGN 3
+	.END
+.TCOFF 5 "ADJUST.POINT" 5 [\x01\xff\xfc\xf5\xed]
+.TCOFF 30 "SYMBOL" 34 [\x84 {snglmath.lib}cosfl.occ:ABF01B2F]
+.TCOFF 31 "SPECIFIC.SYMBOL" 6 [\x04\x03COS\x03]
+.TCOFF 7 "LOAD.PREFIX" 7 [\x06\x0d\x07\x03\x04\x02\x00]
+.TCOFF 5 "ADJUST.POINT" 3 [\x01\xff\x05]
+.TCOFF 30 "SYMBOL" 34 [\x84 {snglmath.lib}sinfl.occ:C8127D6F]
+.TCOFF 31 "SPECIFIC.SYMBOL" 6 [\x04\x03SIN\x05]
+.TCOFF 7 "LOAD.PREFIX" 7 [\x06\x0d\x07\x03\x06\x02\x00]
+.TCOFF 5 "ADJUST.POINT" 4 [\x01\xfc\xf0\xed]
+.TCOFF 31 "SPECIFIC.SYMBOL" 29 [\xfc\x02\x01\x18flatpolypoints.generator\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 30 ["\x1bflatpolypoints.generator'ws\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 30 ["\x1bflatpolypoints.generator'vs\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 30 ["\x1bflatpolypoints.generator'ms\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 6 [\x07\x06\x03\x01\x01\x00]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x08\x01&]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x09\x01\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x0a\x01\x00]
+.TCOFF 26 "DESCRIPTOR" 199 [\x07\x03\xc4&\x02\x00PROC flatpolypoints.generator(CHAN OF INT trigger?,VAL INT npoints,\x0aVAL REAL32 rad,CHAN OF MOBILE []G3D.POINT3@#B3C158A0 out!,\x0aCHAN OF G3D.GEN.CONTROL@#779CE8A5 ctrl?)\x0aSEQ\x0atrigger?\x0aout!\x0actrl?\x0a:]
+.TCOFF 31 "SPECIFIC.SYMBOL" 24 [\xfc\x02\x01\x13cogpoints.generator\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 25 ["\x16cogpoints.generator'ws\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 25 ["\x16cogpoints.generator'vs\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 25 ["\x16cogpoints.generator'ms\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 6 [\x0b\x06\x03\x01\x01\x00]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x0c\x01,]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x0d\x01\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x0e\x01\x00]
+.TCOFF 26 "DESCRIPTOR" 247 [\x0b\x03\xf4,\x02\x00PROC cogpoints.generator(CHAN OF INT trigger?,VAL INT nteeth,\x0aVAL REAL32 i.rad,VAL REAL32 o.rad,VAL REAL32 i.ang,VAL REAL32 o.ang,\x0aCHAN OF MOBILE []G3D.POINT3@#B3C158A0 out!,\x0aCHAN OF G3D.GEN.CONTROL@#779CE8A5 ctrl?)\x0aSEQ\x0atrigger?\x0aout!\x0actrl?\x0a:]
+.TCOFF 31 "SPECIFIC.SYMBOL" 25 [\xfc\x02\x01\x14cubepoints.generator\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 26 ["\x17cubepoints.generator'ws\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 26 ["\x17cubepoints.generator'vs\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 26 ["\x17cubepoints.generator'ms\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 6 [\x0f\x06\x03\x01\x01\x00]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x10\x01\x18]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x11\x01\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x12\x01\x00]
+.TCOFF 26 "DESCRIPTOR" 164 [\x0f\x03\xa1\x18\x02\x00PROC cubepoints.generator(CHAN OF INT trigger?,\x0aCHAN OF MOBILE []G3D.POINT3@#B3C158A0 out!,\x0aCHAN OF G3D.GEN.CONTROL@#779CE8A5 ctrl?)\x0aSEQ\x0atrigger?\x0aout!\x0actrl?\x0a:]
+.TCOFF 31 "SPECIFIC.SYMBOL" 24 [\xfc\x02\x01\x13fbypoints.generator\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 25 ["\x16fbypoints.generator'ws\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 25 ["\x16fbypoints.generator'vs\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 25 ["\x16fbypoints.generator'ms\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 6 [\x13\x06\x03\x01\x01\x00]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x14\x01\x1e]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x15\x01\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x16\x01\x00]
+.TCOFF 26 "DESCRIPTOR" 163 [\x13\x03\xa0\x1e\x02\x00PROC fbypoints.generator(CHAN OF INT trigger?,\x0aCHAN OF MOBILE []G3D.POINT3@#B3C158A0 out!,\x0aCHAN OF G3D.GEN.CONTROL@#779CE8A5 ctrl?)\x0aSEQ\x0atrigger?\x0aout!\x0actrl?\x0a:]
+.TCOFF 31 "SPECIFIC.SYMBOL" 27 [\xfc\x02\x01\x16squarepoints.generator\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 28 ["\x19squarepoints.generator'ws\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 28 ["\x19squarepoints.generator'vs\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 28 ["\x19squarepoints.generator'ms\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 6 [\x17\x06\x03\x01\x01\x00]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x18\x01\x18]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x19\x01\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x1a\x01\x00]
+.TCOFF 26 "DESCRIPTOR" 166 [\x17\x03\xa3\x18\x02\x00PROC squarepoints.generator(CHAN OF INT trigger?,\x0aCHAN OF MOBILE []G3D.POINT3@#B3C158A0 out!,\x0aCHAN OF G3D.GEN.CONTROL@#779CE8A5 ctrl?)\x0aSEQ\x0atrigger?\x0aout!\x0actrl?\x0a:]
+.TCOFF 31 "SPECIFIC.SYMBOL" 25 [\xfc\x02\x01\x14gridpoints.generator\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 26 ["\x17gridpoints.generator'ws\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 26 ["\x17gridpoints.generator'vs\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 26 ["\x17gridpoints.generator'ms\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 6 [\x1b\x06\x03\x01\x01\x00]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x1c\x01\x1e]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x1d\x01\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [\x1e\x01\x00]
+.TCOFF 26 "DESCRIPTOR" 186 [\x1b\x03\xb7\x1e\x02\x00PROC gridpoints.generator(CHAN OF INT trigger?,VAL INT nx,VAL INT nz,\x0aCHAN OF MOBILE []G3D.POINT3@#B3C158A0 out!,\x0aCHAN OF G3D.GEN.CONTROL@#779CE8A5 ctrl?)\x0aSEQ\x0atrigger?\x0aout!\x0actrl?\x0a:]
+.TCOFF 31 "SPECIFIC.SYMBOL" 26 [\xfc\x02\x01\x15spherepoint.generator\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 27 ["\x18spherepoint.generator'ws\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 27 ["\x18spherepoint.generator'vs\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 27 ["\x18spherepoint.generator'ms\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 6 [\x1f\x06\x03\x01\x01\x00]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [ \x01\x1a]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [!\x01\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 3 ["\x01\x00]
+.TCOFF 26 "DESCRIPTOR" 181 [\x1f\x03\xb2\x1a\x02\x00PROC spherepoint.generator(CHAN OF INT trigger?,VAL REAL32 rad,\x0aCHAN OF MOBILE []G3D.POINT3S@#F0562821 out!,\x0aCHAN OF G3D.GEN.CONTROL@#779CE8A5 ctrl?)\x0aSEQ\x0atrigger?\x0aout!\x0actrl?\x0a:]
+.TCOFF 31 "SPECIFIC.SYMBOL" 31 [\xfc\x02\x01\x1aheightfieldpoint.generator\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 32 ["\x1dheightfieldpoint.generator'ws\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 32 ["\x1dheightfieldpoint.generator'vs\x02]
+.TCOFF 31 "SPECIFIC.SYMBOL" 32 ["\x1dheightfieldpoint.generator'ms\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 6 [#\x06\x03\x01\x01\x00]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [$\x01$]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [%\x01\x02]
+.TCOFF 15 "DEFINE.SYMBOL" 3 [&\x01\x00]
+.TCOFF 26 "DESCRIPTOR" 250 [#\x03\xf7$\x02\x00PROC heightfieldpoint.generator(CHAN OF INT trigger?,\x0aCHAN OF MOBILE []G3D.POINT2.3R@#B3C158A0 adjust?,VAL [][]REAL32 imap,\x0aCHAN OF MOBILE [][]G3D.POINT3@#B3C158A0 out!,\x0aCHAN OF G3D.GEN.CONTROL@#779CE8A5 ctrl?)\x0aSEQ\x0atrigger?\x0aadjust?\x0aout!\x0actrl?\x0a:]
