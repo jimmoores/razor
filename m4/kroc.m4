@@ -108,6 +108,11 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
       else
         # Native 64-bit compilation - need -fPIC for shared objects on x64
         KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DTARGET_64BIT -fPIC"
+        # Phase 4D unifies sp with Wptr: the dynamic linker's lazy PLT
+        # resolver uses sp as a real stack, and firing it while sp=Wptr
+        # scribbles over the workspace (and adjacent channel words).
+        # Force eager binding so PLT entries are resolved at load time.
+        KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -Wl,-z,now"
       fi
       ;;
     aarch64)
@@ -121,6 +126,9 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
         # Native 64-bit compilation for aarch64
         KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DTARGET_64BIT"
       fi
+      # Phase 4D unifies sp with Wptr (see x86_64 branch above for
+      # why -Wl,-z,now is required).
+      KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -Wl,-z,now"
       ;;
   esac
 

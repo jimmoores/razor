@@ -1485,7 +1485,7 @@ else
 			cmd="$cc $ccopts $objs $oclibpath $cincludepath $ocllibs $ocrts $ocrtslibs $extraccopts -static -o $efile"
 		fi
 	else
-		cmd="$cc $ccopts $objs $oclibpath $cincludepath $ocllibs $ocrts $ocrtslibs $extraccopts -o $efile"
+		cmd="$cc $ccopts $objs $oclibpath $cincludepath $ocllibs $ocrts $ocrtslibs $extraccopts $ARCH_LDFLAGS -o $efile"
 	fi
 fi
 if [ $verbose ]; then
