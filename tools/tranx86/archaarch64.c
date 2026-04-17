@@ -1054,7 +1054,7 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 		/* sched -> x2, Wptr -> x3 */
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, REG_X2));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X3));
-#if TRANX86_KCALL_SHIFT_BYTES > 0
+/* Phase 4B-IV: always-active bracket on aarch64 (x28 != sp) */
 		/* Phase 4B-IV: kernel-call bracket around the blocking-call
 		 * dispatch.  The kernel's K_CALL_HEADER bumps its captured
 		 * return_address by CCSP_KCALL_RETURN_BUMP_BYTES on the
@@ -1067,19 +1067,17 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 		 * it explicitly. */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket sub")));
 		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
-			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_CONST, (intptr_t)72,
 			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-sub end")));
-#endif
 		add_to_ins_chain (compose_ins (INS_CALL, 5, 0, ARG_NAMEDLABEL, entrypoint_name,
 			ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2, ARG_REG, REG_X3));
-#if TRANX86_KCALL_SHIFT_BYTES > 0
+/* Phase 4B-IV: always-active bracket on aarch64 (x28 != sp) */
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket add")));
 		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
-			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+			ARG_CONST, (intptr_t)72,
 			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-add end")));
-#endif
 
 		/* Consume transputer stack entries used by this call */
 		tstack_undefine (ts->stack);
@@ -2096,7 +2094,7 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	/*}}}*/
 #endif /* CCSP_DIRECT_CALL */
 
-#if TRANX86_KCALL_SHIFT_BYTES > 0
+/* Phase 4B-IV: always-active bracket on aarch64 (x28 != sp) */
 	/* Phase 4B-IV: shift Wptr (x28) down for the duration of the
 	 * call window, AFTER the Wptr arg has been copied to x2.  The
 	 * kernel receives user-mode Wptr in its C parameter; x28 itself
@@ -2113,22 +2111,20 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	 * it. */
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket sub")));
 	add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
-		ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+		ARG_CONST, (intptr_t)72,
 		ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-sub end")));
-#endif
 	add_to_ins_chain (call_ins);
 
-#if TRANX86_KCALL_SHIFT_BYTES > 0
+/* Phase 4B-IV: always-active bracket on aarch64 (x28 != sp) */
 	/* Restore user-mode Wptr.  The kernel's bumped resume_iptr
 	 * points past this `add` on wake-up -- see K_CALL_HEADER in
 	 * aarch64/sched_asm_inserts.h. */
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket add")));
 	add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
-		ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
+		ARG_CONST, (intptr_t)72,
 		ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-add end")));
-#endif
 
 	if (regs_out > 0 && ts->stack) {
 		int oregs[3];

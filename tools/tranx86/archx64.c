@@ -4323,7 +4323,14 @@ static int x64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 				if (options.rmoxmode == RM_NONE) {
 					/* Use .quad for 64-bit: these are 'word' (8 bytes) in C */
 					fprintf (stream, ".globl %s_wsbytes\n", pfx);
-					fprintf (stream, "%s_wsbytes: .quad %d\n", pfx, tmp->u.wsvs.ws_bytes);
+					{
+						/* Phase 4D: round ws_bytes up to 16-byte multiple
+						 * so that initial Wptr (= ws + _wsbytes + SEP)
+						 * is 16-byte aligned (Wptr = sp). */
+						int wsb = tmp->u.wsvs.ws_bytes;
+						wsb = (wsb + 15) & ~15;
+						fprintf (stream, "%s_wsbytes: .quad %d\n", pfx, wsb);
+					}
 					fprintf (stream, ".globl %s_wsadjust\n", pfx);
 					fprintf (stream, "%s_wsadjust: .quad %d\n", pfx, tmp->u.wsvs.ws_adjust);
 					fprintf (stream, ".globl %s_vsbytes\n", pfx);

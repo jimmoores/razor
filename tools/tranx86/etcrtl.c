@@ -3570,7 +3570,21 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 			ts->stack->must_set_cmp_flags = 0;
 			break;
 		case I_AJW:
-			add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, (intptr_t) operand << WSH, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+			{
+				intptr_t byte_adj = (intptr_t) operand << WSH;
+				/* Phase 4D: on aarch64 (and x64) where Wptr = sp, the
+				 * hardware requires sp to stay 16-byte aligned.
+				 * Round the byte adjustment away from zero to the
+				 * next multiple of 16 if it isn't already. */
+				/* aarch64 excluded: Wptr = x28 (not sp), no alignment constraint */
+				if (options.machine_class == CLASS_X64 && (byte_adj & 0xF)) {
+					if (byte_adj < 0)
+						byte_adj = (byte_adj - 15) & ~(intptr_t)15;
+					else
+						byte_adj = (byte_adj + 15) & ~(intptr_t)15;
+				}
+				add_to_ins_chain (compose_ins (INS_ADD, 2, 1, ARG_CONST, byte_adj, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+			}
 			constmap_clearall ();
 			break;
 		case I_J:

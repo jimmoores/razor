@@ -134,18 +134,23 @@
  *	encoded as `49 8b 67 30` = 4 bytes.  This is unconditional
  *	regardless of CCSP_KCALL_SHIFT_WORDS.
  *
- *	For other architectures, the bump is still gated on KSHIFT:
- *	  - AArch64: `add x28, x28, #72` is a fixed 4-byte instruction.
+ *	Phase 4D (AArch64): the post-call sequence is two 4-byte A64
+ *	instructions: `ldr x9, [x25, #48]` + `mov sp, x9` = 8 bytes.
+ *	This is unconditional regardless of CCSP_KCALL_SHIFT_WORDS.
+ *
+ *	For i386 the bump is still gated on KSHIFT:
  *	  - i386:   `addl $36, %ebp` = 3 bytes.
  */
 #if defined(__x86_64__)
    /* Phase 4D: unconditional bump -- the save/switch/restore bracket
     * always emits a 4-byte restore after the callq. */
 #  define CCSP_KCALL_RETURN_BUMP_BYTES	4
+#elif defined(__aarch64__)
+   /* Phase 4B-IV: unconditional bump -- the sub/bl/add bracket always
+    * emits a 4-byte `add x28, x28, #72` after the bl. */
+#  define CCSP_KCALL_RETURN_BUMP_BYTES	4
 #elif CCSP_KCALL_SHIFT_WORDS > 0
-#  if defined(__aarch64__)
-#    define CCSP_KCALL_RETURN_BUMP_BYTES	4
-#  elif defined(__i386__)
+#  if defined(__i386__)
 #    define CCSP_KCALL_RETURN_BUMP_BYTES	3
 #  else
 #    error "CCSP_KCALL_SHIFT_WORDS > 0 requires per-arch CCSP_KCALL_RETURN_BUMP_BYTES"
