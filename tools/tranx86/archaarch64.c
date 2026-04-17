@@ -186,7 +186,7 @@ static int aarch64_fp_from_i64 = 0;  /* set by INS_FILD64, value is in d0 not s0
 #define REG_SP (-10)   /* Stack pointer - negative to keep out of register allocation */
 
 /* Special register mappings for occam runtime (use existing definitions from tstack.h) */
-#define AARCH64_REG_WPTR 28  /* Workspace pointer */
+#define AARCH64_REG_WPTR 31  /* Workspace pointer = sp (Phase 4D) */
 #define AARCH64_REG_FPTR 27  /* Front pointer */
 #define AARCH64_REG_BPTR 26  /* Back pointer */
 #define AARCH64_REG_SCHED 25 /* Scheduler pointer */
@@ -1054,30 +1054,16 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 		/* sched -> x2, Wptr -> x3 */
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, REG_X2));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, REG_X3));
-/* Phase 4B-IV: always-active bracket on aarch64 (x28 != sp) */
-		/* Phase 4B-IV: kernel-call bracket around the blocking-call
-		 * dispatch.  The kernel's K_CALL_HEADER bumps its captured
-		 * return_address by CCSP_KCALL_RETURN_BUMP_BYTES on the
-		 * assumption that the post-`bl` instruction is the bracket's
-		 * `add Wptr, KSHIFT_BYTES`; without that bracket, the bump
-		 * lands one instruction past the bl, misaligning the resume
-		 * point.  x64's compose_x64_bcall already goes through
-		 * compose_x64_kcall which has the bracket built in; here
-		 * we're emitting a direct INS_CALL so we need to bracket
-		 * it explicitly. */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket sub")));
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
-			ARG_CONST, (intptr_t)72,
-			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-sub end")));
+		/* Phase 4D: save user sp, switch to kernel stack, call, restore. */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx9, sp")));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tstr\tx9, [x25, #48]")));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25]")));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 		add_to_ins_chain (compose_ins (INS_CALL, 5, 0, ARG_NAMEDLABEL, entrypoint_name,
 			ARG_REG, REG_X0, ARG_REG, REG_X1, ARG_REG, REG_X2, ARG_REG, REG_X3));
-/* Phase 4B-IV: always-active bracket on aarch64 (x28 != sp) */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket add")));
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
-			ARG_CONST, (intptr_t)72,
-			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bcall bracket-add end")));
+		/* Phase 4D: restore user sp from sched->saved_user_sp */
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25, #48]")));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 
 		/* Consume transputer stack entries used by this call */
 		tstack_undefine (ts->stack);
@@ -1126,6 +1112,11 @@ static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name,
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REG, REG_X0));
 
 	/* Build symbol name: extref_prefix + name+1 (skip 'C', keep '.') */
+	/* Phase 4D: save user sp, switch to kernel stack for C call, restore after */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx9, sp")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tstr\tx9, [x25, #48]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 	if (options.extref_prefix) {
 		char sbuf[256];
 
@@ -1134,6 +1125,9 @@ static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name,
 	} else {
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (name + 1)));
 	}
+	/* Phase 4D: restore user sp from sched->saved_user_sp */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25, #48]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 
 	/* Restore Wptr adjustment: i386 does Wptr += 4<<WSH (=16 on 32-bit, 32 on 64-bit) */
 	if (!options.nocc_codegen) {
@@ -1187,7 +1181,7 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(-1), ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-7 << WSH)));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-6 << WSH)));
 
-	/* Pass Wptr+1 word in x0 using LEA (address computation, doesn't modify x28).
+	/* Pass Wptr+1 word in x0 using LEA (address computation, doesn't modify sp/Wptr).
 	 * The +1 word matches the i386 CIF convention where ProcGetParam(wptr, 0)
 	 * reads wptr[1] = (original_Wptr+1)[1] = original_Wptr[2] = first param. */
 	add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(1 << WSH), ARG_REG, REG_X0));
@@ -1211,6 +1205,11 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 		snprintf (func_sbuf, sizeof(func_sbuf), "%s", sbuf);
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, string_dup (func_sbuf), ARG_REG, REG_X1));
 	}
+	/* Phase 4D: save user sp, switch to kernel stack for CIF call */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx9, sp")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tstr\tx9, [x25, #48]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 	/* Call the wrapper: ccsp_cif_process_call(wptr, func_addr) */
 		{
 		char cif_call_buf[64];
@@ -1218,6 +1217,9 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 			  options.extref_prefix ? options.extref_prefix : "");
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (cif_call_buf)));
 	}
+	/* Phase 4D: restore user sp from sched->saved_user_sp */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25, #48]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 
 	/* Restore state after CIF call. */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
@@ -1884,7 +1886,7 @@ static arch_t aarch64_arch = {
 	.compose_nreturn = compose_nreturn_aarch64,
 	.compose_funcresults = compose_funcresults_aarch64,
 	.regcolour_special_to_real = aarch64_regcolour_special_to_real,
-	.regcolour_rmax = 25,	/* x0-x24 are available; x25-x28 reserved for runtime, x29-x31 reserved */
+	.regcolour_rmax = 29,	/* x0-x28 available; x25-x27 reserved runtime, x29 FP, x30 LR, x31=sp=Wptr */
 	.regcolour_nodemax = 256,
 	.regcolour_get_regs = aarch64_regcolour_get_regs,
 	.regcolour_fp_regs = regcolour_fp_regs_aarch64,
@@ -1975,7 +1977,7 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 		}
 
 		/* Phase 2: move sched and Wptr into their final positions.
-		 * REG_SCHED=x25 and REG_WPTR=x28 are reserved (regcolour_rmax=25
+		 * REG_SCHED=x25 and REG_WPTR=sp are reserved (regcolour_rmax=29
 		 * excludes them) so they can't have been clobbered by Phase 1. */
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, sched_pos));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, wptr_pos));
@@ -2094,37 +2096,27 @@ static void compose_aarch64_kcall (tstate *ts, const int call, const int regs_in
 	/*}}}*/
 #endif /* CCSP_DIRECT_CALL */
 
-/* Phase 4B-IV: always-active bracket on aarch64 (x28 != sp) */
-	/* Phase 4B-IV: shift Wptr (x28) down for the duration of the
-	 * call window, AFTER the Wptr arg has been copied to x2.  The
-	 * kernel receives user-mode Wptr in its C parameter; x28 itself
-	 * is shifted only for signal safety (descriptor above SP once
-	 * Phase 4D unifies Wptr with SP).
+/* Phase 4D: save user sp, switch to kernel stack, call, restore.
+	 * Wptr is now sp.  Before the C kernel call we must:
+	 *   1. Save user sp to sched->saved_user_sp (offset 48) via x9
+	 *   2. Switch sp to kernel stack: sched->stack (offset 0) via x9
+	 * After the call:
+	 *   3. Restore user sp from sched->saved_user_sp via x9
 	 *
-	 * The INS_ANNO annotations bracket the sub/add pair so the
-	 * ADD-combining optimiser in optimise.c ("pack up ADDs and
-	 * SUBs") does not merge them with adjacent AJW adds/subs.
-	 * Such a merge is semantically correct for straight-line
-	 * code but breaks the deschedule/resume path, which relies on
-	 * the bracket's `add` being a standalone 4-byte instruction
-	 * so that K_CALL_HEADER's return_address bump lands just past
-	 * it. */
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket sub")));
-	add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
-		ARG_CONST, (intptr_t)72,
-		ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-sub end")));
+	 * The restore sequence is two 4-byte instructions (ldr x9 + mov sp,x9 = 8 bytes),
+	 * matching CCSP_KCALL_RETURN_BUMP_BYTES=8.  K_CALL_HEADER bumps the stored
+	 * resume iptr past these instructions so deschedule/wake-up skips the restore. */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx9, sp")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tstr\tx9, [x25, #48]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 	add_to_ins_chain (call_ins);
 
-/* Phase 4B-IV: always-active bracket on aarch64 (x28 != sp) */
-	/* Restore user-mode Wptr.  The kernel's bumped resume_iptr
-	 * points past this `add` on wake-up -- see K_CALL_HEADER in
-	 * aarch64/sched_asm_inserts.h. */
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket add")));
-	add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
-		ARG_CONST, (intptr_t)72,
-		ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-add end")));
+	/* Phase 4D: restore user sp from sched->saved_user_sp.
+	 * This is the post-call sequence that K_CALL_HEADER's
+	 * return_address bump skips on wake-up from deschedule. */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25, #48]")));
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 
 	if (regs_out > 0 && ts->stack) {
 		int oregs[3];
@@ -2961,21 +2953,33 @@ static void aarch64_fp_emit_store_to_areg (tstate *ts, int addr_reg, int slot, i
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 }
 
-/* Helper: emit store to workspace-relative address */
+/* Helper: emit store to workspace-relative address.
+ * Phase 4D: Wptr = sp.  Use stur for negative offsets. */
 static void aarch64_fp_emit_store_to_wptr (tstate *ts, int offset, int slot, int prec)
 {
 	char buf[128];
-	snprintf (buf, sizeof(buf), "\tstr\t%s, [x28, #%d]",
-		aarch64_fp_regname (slot, prec), offset);
+	if (offset < 0) {
+		snprintf (buf, sizeof(buf), "\tstur\t%s, [sp, #%d]",
+			aarch64_fp_regname (slot, prec), offset);
+	} else {
+		snprintf (buf, sizeof(buf), "\tstr\t%s, [sp, #%d]",
+			aarch64_fp_regname (slot, prec), offset);
+	}
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 }
 
-/* Helper: emit load from workspace-relative address */
+/* Helper: emit load from workspace-relative address.
+ * Phase 4D: Wptr = sp.  Use ldur for negative offsets. */
 static void aarch64_fp_emit_load_from_wptr (tstate *ts, int offset, int slot, int prec)
 {
 	char buf[128];
-	snprintf (buf, sizeof(buf), "\tldr\t%s, [x28, #%d]",
-		aarch64_fp_regname (slot, prec), offset);
+	if (offset < 0) {
+		snprintf (buf, sizeof(buf), "\tldur\t%s, [sp, #%d]",
+			aarch64_fp_regname (slot, prec), offset);
+	} else {
+		snprintf (buf, sizeof(buf), "\tldr\t%s, [sp, #%d]",
+			aarch64_fp_regname (slot, prec), offset);
+	}
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 }
 
@@ -3128,11 +3132,11 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 				char buf[128];
 				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
 				if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
-					snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
+					snprintf (buf, sizeof(buf), "\tldr\td0, [sp, #%d]", offset);
 				} else {
 					snprintf (buf, sizeof(buf), "\tmov\tx17, #%d", offset);
 					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
-					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, x28, x17")));
+					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, sp, x17")));
 					snprintf (buf, sizeof(buf), "\tldr\td0, [x17]");
 				}
 				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
@@ -3164,11 +3168,11 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 				char buf[128];
 				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
 				if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
-					snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
+					snprintf (buf, sizeof(buf), "\tldr\td0, [sp, #%d]", offset);
 				} else {
 					snprintf (buf, sizeof(buf), "\tmov\tx17, #%d", offset);
 					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
-					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, x28, x17")));
+					add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, sp, x17")));
 					snprintf (buf, sizeof(buf), "\tldr\td0, [x17]");
 				}
 				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
@@ -3431,13 +3435,13 @@ static void compose_aarch64_fpop (tstate *ts, int secondary_opcode)
 			char buf[128];
 			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
 			if (offset >= 0 && offset <= 32760 && (offset % 8) == 0) {
-				snprintf (buf, sizeof(buf), "\tldr\td0, [x28, #%d]", offset);
+				snprintf (buf, sizeof(buf), "\tldr\td0, [sp, #%d]", offset);
 				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
 			} else {
 				/* Large offset: use x17 scratch */
 				snprintf (buf, sizeof(buf), "\tmov\tx17, #%d", offset);
 				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (buf)));
-				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, x28, x17")));
+				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tadd\tx17, sp, x17")));
 				add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\td0, [x17]")));
 			}
 		} else {
@@ -3766,7 +3770,7 @@ static int aarch64_regcolour_special_to_real (int reg)
 	/* Map special registers to real aarch64 registers */
 	switch (reg) {
 	case REG_WPTR:
-		return AARCH64_REG_WPTR;  /* x28 */
+		return AARCH64_REG_WPTR;  /* sp (Phase 4D) */
 	case REG_FPTR:
 		return AARCH64_REG_FPTR;  /* x27 */
 	case REG_BPTR:
@@ -3782,15 +3786,16 @@ static int aarch64_regcolour_special_to_real (int reg)
 	default:
 		/* For negative register numbers, map to safe range */
 		if (reg < 0 && reg > -1000) {
-			return (-reg) % 25; /* Use x0-x24 for negative regs */
+			return (-reg) % 29; /* Use x0-x28 for negative regs */
 		}
-		/* For valid positive registers within available range */
-		if (reg >= 0 && reg <= 24) {
+		/* For valid positive registers within available range.
+		 * Phase 4D: x28 is now allocatable (Wptr moved to sp). */
+		if (reg >= 0 && reg <= 28) {
 			return reg;
 		}
 		/* For registers outside available range, map to safe range */
-		if (reg > 24) {
-			return reg % 25; /* Use x0-x24 */
+		if (reg > 28) {
+			return reg % 29; /* Use x0-x28 */
 		}
 		/* Default safe fallback */
 		return 0;
@@ -3801,9 +3806,9 @@ static int aarch64_regcolour_special_to_real (int reg)
 /*{{{  static int aarch64_regcolour_get_regs (int *regs)*/
 static int aarch64_regcolour_get_regs (int *regs)
 {
-	/* CRITICAL FIX: Provide fewer registers to reduce allocation pressure */
-	/* Skip x29 (FP), x30 (LR), x31 (SP), and runtime registers x25-x28 */
-	int available_regs[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24};
+	/* Phase 4D: x28 freed by mapping REG_WPTR to sp.
+	 * Skip x29 (FP), x30 (LR), x31 (SP=Wptr), runtime x25-x27 */
+	int available_regs[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 28};
 	int count = sizeof(available_regs) / sizeof(available_regs[0]);
 	int i;
 	
@@ -3947,7 +3952,13 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 				if (options.rmoxmode == RM_NONE) {
 					fprintf (stream, ".data\n");
 					fprintf (stream, ".globl %s_wsbytes\n", pfx);
-					fprintf (stream, "%s_wsbytes: .quad %d\n", pfx, tmp->u.wsvs.ws_bytes);
+					{
+						/* Phase 4D: round ws_bytes up to 16-byte multiple
+						 * so that initial Wptr (= ws + _wsbytes + SEP)
+						 * is 16-byte aligned (Wptr = sp). */
+						int wsb = (tmp->u.wsvs.ws_bytes + 15) & ~15;
+						fprintf (stream, "%s_wsbytes: .quad %d\n", pfx, wsb);
+					}
 					fprintf (stream, ".globl %s_wsadjust\n", pfx);
 					fprintf (stream, "%s_wsadjust: .quad %d\n", pfx, tmp->u.wsvs.ws_adjust);
 					fprintf (stream, ".globl %s_vsbytes\n", pfx);
@@ -4165,26 +4176,41 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 							fprintf(stream, "\tadr\tx16, %ldf\n", label_num);
 							aarch64_emit_mem_op(stream, "str", "x16", aarch64_get_register_name(ins->out_args[0]->regconst), (long)ins->out_args[0]->disp);
 						}
-					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {						fprintf (stream, "\tldr\t%s, [%s]\n",
+					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && !(ins->in_args[0]->flags & ARG_DISP)) {
+						/* Phase 4D: ldr sp, [base] is INVALID (reg 31 as Rt = xzr).
+						 * Route through x16 scratch + mov sp, x16 instead. */
+						if (ins->out_args[0]->regconst == AARCH64_REG_WPTR || ins->out_args[0]->regconst == REG_WPTR) {
+							fprintf (stream, "\tldr\tx16, [%s]\n",
+								aarch64_get_register_name (ins->in_args[0]->regconst));
+							fprintf (stream, "\tmov\tsp, x16\n");
+						} else {
+							fprintf (stream, "\tldr\t%s, [%s]\n",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst));
+						}
 					} else if ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_REGIND && (ins->in_args[0]->flags & ARG_DISP)) {
-						aarch64_emit_mem_op(stream, "ldr", 
+						/* Phase 4D: ldr sp, [base, #disp] is INVALID. */
+						if (ins->out_args[0]->regconst == AARCH64_REG_WPTR || ins->out_args[0]->regconst == REG_WPTR) {
+							aarch64_emit_mem_op(stream, "ldr", "x16",
+								aarch64_get_register_name (ins->in_args[0]->regconst),
+								(long)ins->in_args[0]->disp);
+							fprintf (stream, "\tmov\tsp, x16\n");
+						} else {
+							aarch64_emit_mem_op(stream, "ldr",
 								aarch64_get_register_name (ins->out_args[0]->regconst),
 								aarch64_get_register_name (ins->in_args[0]->regconst),
 								(long)ins->in_args[0]->disp);
+						}
 					} else {
-						/* CRITICAL FIX: Prevent stack corruption */
+						{
 						int src_reg = ins->in_args[0]->regconst;
 						int dst_reg = ins->out_args[0]->regconst;
-							
-						/* Never move anything to stack pointer */
-						if (dst_reg == REG_SP || dst_reg == 31) {
-							fprintf (stream, "\t// BLOCKED: mov to stack pointer\n");
-						} else {
-							fprintf (stream, "\tmov\t%s, %s\n",
-									aarch64_get_register_name (dst_reg),
-									aarch64_get_register_name (src_reg));
+
+						/* Phase 4D: sp IS Wptr, so mov-to-sp is valid
+						 * and required for workspace pointer manipulation. */
+						fprintf (stream, "\tmov\t%s, %s\n",
+								aarch64_get_register_name (dst_reg),
+								aarch64_get_register_name (src_reg));
 						}
 					}
 					break;
@@ -4731,11 +4757,11 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 					}
 					break;
 				case INS_RET:
-					/* Occam processes return by jumping to the address stored in new_Wptr[Iptr].
-					 * Since compose_aarch64_return already added 32 to x28, new_Wptr is x28 - 32.
-					 * etcrtl.c fallback stores the return address at new_Wptr[0], so we read from x28 - 32.
-					 */
-					fprintf (stream, "\tldr\tx9, [x28, #-32]\n");
+					/* Phase 4D: Wptr = sp.  Occam processes return by jumping
+					 * to the address stored in new_Wptr[Iptr].  Since
+					 * compose_aarch64_return already added 32 to sp,
+					 * new_Wptr is sp - 32.  Use ldur for negative offset. */
+					fprintf (stream, "\tldur\tx9, [sp, #-32]\n");
 					fprintf (stream, "\tbr\tx9\n");
 					/* Set flag to skip any subsequent instructions until next label */
 					/* skip_dead_code = 1; disabled */
@@ -5803,7 +5829,7 @@ static char *aarch64_get_register_name (int reg)
 		return "x29";
 	case REG_WPTR:
 	case AARCH64_REG_WPTR:
-		return "x28";
+		return "sp";  /* Phase 4D: Wptr = sp */
 	case REG_FPTR:
 	case AARCH64_REG_FPTR:
 		return "x27";
@@ -5816,20 +5842,21 @@ static char *aarch64_get_register_name (int reg)
 	case REG_UNDEFINED:
 		return "x0"; /* Safe fallback for undefined registers */
 	default:
-		/* Handle general purpose registers */
-		if (reg >= 0 && reg < 31) {
+		/* Handle general purpose registers.
+		 * Phase 4D: register 31 is sp (handled by AARCH64_REG_WPTR case above). */
+		if (reg >= 0 && reg <= 30) {
 			snprintf (regname, sizeof(regname), "x%d", reg);
 			return regname;
 		}
 		/* Handle negative register numbers (map to positive range) */
 		if (reg < 0 && reg > -1000) {
-			int mapped_reg = (-reg) % 25; /* Use x0-x24 for negative regs */
+			int mapped_reg = (-reg) % 29; /* Use x0-x28 for negative regs */
 			snprintf (regname, sizeof(regname), "x%d", mapped_reg);
 			return regname;
 		}
 		/* Handle very large register numbers by mapping to valid range */
 		if (reg > 31) {
-			int mapped_reg = reg % 25; /* Use x0-x24 for large regs */
+			int mapped_reg = reg % 29; /* Use x0-x28 for large regs */
 			snprintf (regname, sizeof(regname), "x%d", mapped_reg);
 			return regname;
 		}

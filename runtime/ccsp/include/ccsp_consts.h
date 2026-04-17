@@ -146,9 +146,9 @@
     * always emits a 4-byte restore after the callq. */
 #  define CCSP_KCALL_RETURN_BUMP_BYTES	4
 #elif defined(__aarch64__)
-   /* Phase 4B-IV: unconditional bump -- the sub/bl/add bracket always
-    * emits a 4-byte `add x28, x28, #72` after the bl. */
-#  define CCSP_KCALL_RETURN_BUMP_BYTES	4
+   /* Phase 4D: unconditional bump -- the post-bl sequence is two
+    * 4-byte instructions: `ldr x9, [x25, #48]` + `mov sp, x9` = 8 bytes. */
+#  define CCSP_KCALL_RETURN_BUMP_BYTES	8
 #elif CCSP_KCALL_SHIFT_WORDS > 0
 #  if defined(__i386__)
 #    define CCSP_KCALL_RETURN_BUMP_BYTES	3

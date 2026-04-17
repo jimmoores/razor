@@ -24,7 +24,8 @@ _ccsp_cif_occam_call:
 .global ccsp_cif_occam_call
 ccsp_cif_occam_call:
 #endif
-    // Save callee-saved registers (occam clobbers all of x19-x28)
+    // Phase 4D: Wptr = sp.  Save callee-saved regs on C stack,
+    // then switch sp to the occam workspace for the call.
     stp x29, x30, [sp, #-16]!
     stp x19, x20, [sp, #-16]!
     stp x21, x22, [sp, #-16]!
@@ -32,38 +33,39 @@ ccsp_cif_occam_call:
     stp x25, x26, [sp, #-16]!
     stp x27, x28, [sp, #-16]!
 
-    mov x28, x2              // x28 = ws (Wptr runtime reg)
+    // x2 = ws (workspace), x4 = top (word count)
     lsl x4, x4, #3           // x4 = top * 8
-    add x9, x28, x4          // x9 = ws + top*8 (save_area)
+    add x9, x2, x4           // x9 = ws + top*8 (save_area)
 
     mov x10, sp
-    str x10, [x9]            // save_area[0] = SP
+    str x10, [x9]            // save_area[0] = C SP
 
     // Stash save_area address at ws[-10]
-    stur x9, [x28, #-80]
+    stur x9, [x2, #-80]
 
-    // Set up the occam return label
+    // Set up the occam return label at ws[0] and ws[-1]
     adr x10, .Locc_call_return
-    str x10, [x28]           // ws[0] = return label
-    stur x10, [x28, #-8]     // ws[-1] = return label
+    str x10, [x2]            // ws[0] = return label
+    stur x10, [x2, #-8]      // ws[-1] = return label
 
-    // Switch SP to private stack
-    sub x10, x28, #256
-    and x10, x10, #-16
-    mov sp, x10
+    // Phase 4D: switch sp to workspace (Wptr = sp)
+    mov sp, x2               // sp = ws = Wptr
 
     // Set sched runtime register and jump to occam
     mov x25, x0              // x25 = sched
     br x3                    // jump to occam func
 
 .Locc_call_return:
-    // Occam returned via I_RET; x28 = ws + 32 due to I_RET frame pop.
-    sub x28, x28, #32
+    // Occam returned via I_RET; sp = ws + 32 due to I_RET frame pop.
+    // Phase 4D: sp IS Wptr, so sp is already ws + 32.
+    // Use x28 as scratch to compute ws = sp - 32.
+    mov x28, sp
+    sub x28, x28, #32        // x28 = ws
 
-    // Reload save_area address from ws[-10] and restore SP
+    // Reload save_area address from ws[-10] and restore C SP
     ldur x9, [x28, #-80]
     ldr x10, [x9]
-    mov sp, x10
+    mov sp, x10               // sp = C stack
 
     // Pop callee-saved regs
     ldp x27, x28, [sp], #16
@@ -76,9 +78,9 @@ ccsp_cif_occam_call:
 
 // void ccsp_cif_jump(word *wptr, void *addr) __attribute__((noreturn))
 //
-// Phase 2: CIF -> occam transition primitive.  Used by ProcEnd to
+// Phase 4D: CIF -> occam transition primitive.  Used by ProcEnd to
 // leave a "called from occam" CIF process by jumping back to the
-// parent's escape pointer.  Sets x28 = wptr (Wptr runtime register)
+// parent's escape pointer.  Sets sp = wptr (Phase 4D: Wptr = sp)
 // and tail-jumps to addr.
 //
 // Arguments (AAPCS):
@@ -91,7 +93,7 @@ _ccsp_cif_jump:
 .global ccsp_cif_jump
 ccsp_cif_jump:
 #endif
-    mov x28, x0          // x28 = Wptr
+    mov sp, x0           // sp = Wptr (Phase 4D)
     br x1                // tail-jump
 
 // word ccsp_cif_external_call(void *func, void *stack)
@@ -136,8 +138,8 @@ ccsp_cif_external_call:
 // ccsp_cif_light_proc_stub_label
 //
 // CIF process trampoline labels.  Same idea as x64 versions: when the
-// scheduler dispatches a CIF process, control lands here with x28 =
-// process Wptr, x25 = sched.  The process workspace top (wptr[0])
+// scheduler dispatches a CIF process, control lands here with sp =
+// process Wptr (Phase 4D), x25 = sched.  The process workspace top (wptr[0])
 // holds [func, ws_arg].  We:
 //   1. Switch sp to wptr[0] (private stack)
 //   2. Save sched into wptr[SchedPtr] (= -56)
@@ -161,13 +163,15 @@ _ccsp_cif_proc_stub_label:
 .global ccsp_cif_proc_stub_label
 ccsp_cif_proc_stub_label:
 #endif
+    // Phase 4D: Wptr = sp.  Use x28 as scratch for the Wptr value.
+    mov x28, sp                  // x28 = Wptr (save sp for workspace access)
     ldr x9, [x28, #0]            // x9 = wptr[0] (private stack top)
-    str x25, [x28, #-56]         // wptr[SchedPtr] = sched
-    mov sp, x9                   // sp = private stack
+    stur x25, [x28, #-56]        // wptr[SchedPtr] = sched
+    mov sp, x9                   // sp = private stack (C call)
     ldr x30, [sp], #16           // x30 = func; sp += 16
     ldur x0, [sp, #-8]           // x0 = ws (was at sp+8 before increment)
     blr x30                      // call func(ws)
-    ldr x25, [x28, #-56]         // restore sched
+    ldur x25, [x28, #-56]        // restore sched
     ldr x9, [x25, #0]            // x9 = sched->stack
     mov sp, x9                   // sp = kernel stack
     sub x0, x28, #192            // p0 = wptr - CIF_PROCESS_WORDS*8
@@ -182,13 +186,15 @@ _ccsp_cif_light_proc_stub_label:
 .global ccsp_cif_light_proc_stub_label
 ccsp_cif_light_proc_stub_label:
 #endif
+    // Phase 4D: Wptr = sp.  Use x28 as scratch.
+    mov x28, sp                  // x28 = Wptr (save sp)
     ldr x9, [x28, #0]            // x9 = wptr[0] (private stack top)
-    str x25, [x28, #-56]         // wptr[SchedPtr] = sched
-    mov sp, x9                   // sp = private stack
+    stur x25, [x28, #-56]        // wptr[SchedPtr] = sched
+    mov sp, x9                   // sp = private stack (C call)
     ldr x30, [sp], #16           // x30 = func; sp += 16
     ldur x0, [sp, #-8]           // x0 = ws
     blr x30                      // call func(ws)
-    ldr x25, [x28, #-56]         // restore sched
+    ldur x25, [x28, #-56]        // restore sched
     ldr x9, [x25, #0]            // x9 = sched->stack
     mov sp, x9                   // sp = kernel stack
     ldur x0, [x28, #-64]         // p0 = *(wptr + BarrierPtr*8)
@@ -205,8 +211,8 @@ ccsp_cif_light_proc_stub_label:
 // x28) and jump to its saved Iptr at wptr[-1] (= byte -8 from x28).
 //
 // This is NOT a callable function -- it has no prologue and is only
-// ever entered via Iptr-jump from the scheduler, with x28 already
-// set to the resuming process's Wptr by ccsp_dispatch_process.
+// ever entered via Iptr-jump from the scheduler, with sp already
+// set to the resuming process's Wptr by ccsp_dispatch_process (Phase 4D).
 #if defined(__APPLE__)
 .global _ccsp_cif_endp_resume_label
 _ccsp_cif_endp_resume_label:
@@ -214,8 +220,10 @@ _ccsp_cif_endp_resume_label:
 .global ccsp_cif_endp_resume_label
 ccsp_cif_endp_resume_label:
 #endif
-    ldr x28, [x28, #-32]   // x28 = parent Wptr
-    ldr x9, [x28, #-8]     // x9 = parent Wptr[Iptr]
+    // Phase 4D: Wptr = sp.  Use x28 as scratch.
+    ldur x28, [sp, #-32]   // x28 = parent Wptr (from ws[Pointer])
+    ldur x9, [x28, #-8]    // x9 = parent Wptr[Iptr]
+    mov sp, x28            // sp = parent Wptr
     br x9                  // jump
 
 // void ccsp_kernel_enter(void *init, void *stack, word *Wptr, word *Fptr) __attribute__((noreturn))
@@ -265,11 +273,9 @@ _ccsp_dispatch_process:
 .global ccsp_dispatch_process
 ccsp_dispatch_process:
 #endif
-    mov x28, x1            // x28 = Wptr (runtime convention)
     mov x25, x0            // x25 = sched (runtime convention)
-    ldr x9, [x25]          // x9 = sched->stack
-    mov sp, x9             // sp = kernel stack
-    ldr x9, [x28, #-8]     // x9 = Wptr[Iptr]
+    mov sp, x1             // sp = Wptr (Phase 4D: Wptr = sp)
+    ldur x9, [sp, #-8]    // x9 = Wptr[Iptr]
     br x9                  // jump
 
 // word ccsp_cif_call_asm(void *wptr, void *sched, void *param0, void *func)
@@ -399,7 +405,7 @@ ccsp_cif_call_asm_resched:
     blr x3
 
     // After return from kernel (possibly after context switch):
-    // K_ZERO_OUT_JRET restores x28=Wptr (= wptr from entry), x25=sched.
+    // K_ZERO_OUT_JRET restores sp=Wptr (Phase 4D), x25=sched.
     // If the process was migrated to a different scheduler during the
     // rescheduling call, x25 now points to the NEW scheduler.
     // Update wptr[SchedPtr] so the CIF C code picks up the correct
@@ -449,8 +455,13 @@ ccsp_cif_process_call:
 #endif
     // x0 = wptr (Wptr+1, passed by compose_cif_call)
     // x1 = func address
-    // x28 = Wptr (from occam, callee-saved)
+    // Phase 4D: sp = kernel stack (from Phase 4D bracket in compose_cif_call)
     // x30 = LR (return address to compose_cif_call code)
+
+    // Phase 4D: save wptr (x0) in x28 (callee-saved, survives blr x1).
+    // In Phase 4D, x28 is a general-purpose register (Wptr = sp), so
+    // we're free to use it as scratch/save here.
+    mov x28, x0
 
     // Strip PAC bits from LR before saving - see explanation in
     // ccsp_cif_call_asm_resched above.  libc-compiled callers may
@@ -484,8 +495,9 @@ ccsp_cif_process_call:
     blr x1
 
     // CIF function returned.  Restore SP and LR from workspace.
-    // x28 is callee-saved and should still be Wptr (from occam).
-    add x9, x28, #8             // x9 = Wptr + 8 = wptr
+    // x28 was set to wptr at entry and is callee-saved through blr x1.
+    // Phase 4D: x28 holds wptr (not Wptr), wptr = Wptr + 8.
+    mov x9, x28                 // x9 = wptr
     ldur x30, [x9, #-184]       // restore LR from wptr[-23]
     // Load the CURRENT scheduler's stack via wptr[SchedPtr].
     // wptr[SchedPtr] (byte -56) is always updated by

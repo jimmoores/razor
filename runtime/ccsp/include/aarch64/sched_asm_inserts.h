@@ -19,12 +19,25 @@
  */
 
 /*
- * This file attempts to isolate as many as possible of the platform 
+ * This file attempts to isolate as many as possible of the platform
  * specific features of this package as possible.  The macros have been
  * designed so that it should be easy to port this kernel to a more
  * register based machine fairly easily (eg Alpha, ARM etc).  Note that
  * there are numerous functions in this file labelled such that are no
  * longer used.
+ *
+ * Phase 4D register convention (AArch64):
+ *   sp  = Wptr (workspace pointer, unified with hardware stack pointer)
+ *   x25 = sched (scheduler pointer)
+ *   x26 = Bptr (back pointer)
+ *   x27 = Fptr (front pointer)
+ *   x28 = freed for general register allocation
+ *   x29 = FP (frame pointer, reserved)
+ *   x30 = LR (link register, reserved)
+ *
+ * Kernel calls save user sp to sched->saved_user_sp (offset 48),
+ * switch sp to kernel stack (sched->stack, offset 0), call the kernel
+ * function, then restore sp from sched->saved_user_sp.
  */
 
 #ifndef AARCH64_SCHED_ASM_INSERTS_H

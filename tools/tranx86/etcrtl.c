@@ -3572,12 +3572,11 @@ static void do_code_primary (tstate *ts, int prim, int operand, arch_t *arch)
 		case I_AJW:
 			{
 				intptr_t byte_adj = (intptr_t) operand << WSH;
-				/* Phase 4D: on aarch64 (and x64) where Wptr = sp, the
+				/* Phase 4D: on aarch64 and x64 where Wptr = sp, the
 				 * hardware requires sp to stay 16-byte aligned.
 				 * Round the byte adjustment away from zero to the
 				 * next multiple of 16 if it isn't already. */
-				/* aarch64 excluded: Wptr = x28 (not sp), no alignment constraint */
-				if (options.machine_class == CLASS_X64 && (byte_adj & 0xF)) {
+				if ((options.machine_class == CLASS_X64 || options.machine_class == CLASS_AARCH64) && (byte_adj & 0xF)) {
 					if (byte_adj < 0)
 						byte_adj = (byte_adj - 15) & ~(intptr_t)15;
 					else
