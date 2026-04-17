@@ -229,11 +229,16 @@ struct _sched_t {
 	word		stack;
 	/** call params		- must be at the right offset **/
 	word		cparam[5];
-	/** Phase 4D: saved user-mode sp during kernel calls.
+#if !defined(CCSP_HAS_CALLTABLE)
+	/** Phase 4D: saved user-mode sp during kernel calls (64-bit only).
 	 *  When Wptr is unified with sp, the kcall bracket saves
 	 *  the user sp here before switching to sched->stack for
-	 *  the C call, then restores afterwards. */
+	 *  the C call, then restores afterwards.
+	 *  Only present on 64-bit where CCSP_HAS_CALLTABLE is not
+	 *  defined, to avoid shifting the calltable/mdparam layout
+	 *  on 32-bit builds. */
 	word		*saved_user_sp;
+#endif
 #ifdef CCSP_HAS_CALLTABLE
 	/** calltable		- must be at the right offset **/
 	void		*calltable[K_MAX_SUPPORTED];

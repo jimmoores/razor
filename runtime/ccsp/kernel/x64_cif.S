@@ -3,10 +3,11 @@
  *	Based on aarch64_cif.S
  *
  *	Register convention (matching tranx86 archx64.c):
- *	  r14 = Wptr (Workspace Pointer)
+ *	  rsp = Wptr (Workspace Pointer) -- Phase 4D: unified with SP
  *	  r15 = Sched (Scheduler Pointer)
  *	  r13 = Fptr (Front Pointer)
  *	  r12 = Bptr (Back Pointer)
+ *	  r14 = allocatable (freed by Phase 4D)
  *
  *	Kernel call convention (System V AMD64 ABI):
  *	  param0 -> rdi, sched -> rsi, Wptr -> rdx
@@ -19,16 +20,15 @@
 /*
  * void ccsp_cif_occam_call(void *sched, void *stack, word *ws, void *func, word top)
  *
- * Phase 2: CIF -> occam call helper used by the OccamCall macro in
- * ccsp_cif.h.  Sets up an occam call frame on the workspace `ws`,
- * jumps to `func` (occam-compiled code), and resumes when occam
+ * Phase 2 / Phase 4D: CIF -> occam call helper used by the OccamCall
+ * macro in ccsp_cif.h.  Sets up an occam call frame on the workspace
+ * `ws`, jumps to `func` (occam-compiled code), and resumes when occam
  * returns via I_RET back to the saved Iptr.
  *
- * The trick: occam expects ws[-1] (Iptr) and ws[0] (IptrSucc) to
- * point at where it should "return to".  We point them at an
- * internal label inside this function so the occam I_RET lands
- * inside our function body, where we restore SP and do a normal C
- * function epilogue.
+ * Phase 4D: occam code now uses rsp as Wptr.  We switch rsp to ws
+ * before jumping to occam.  On return from occam, rsp has been
+ * advanced by 32 bytes (4 words) by I_RET; we undo that, then
+ * recover our saved C stack pointer from the save area.
  *
  * Arguments (System V x64 ABI):
  *   rdi = sched (unused -- present for API symmetry)
@@ -36,20 +36,13 @@
  *   rdx = ws    (workspace pointer)
  *   rcx = func  (occam function to jump to)
  *   r8  = top   (number of args + 1; ws[top..top+1] is the save area)
- *
- * The save-area address (ws + top*8) is stashed at ws[-10] (byte -80
- * from ws) before the SP switch so it can be recovered after occam
- * returns.  ws[-10] is normally the rbp save slot for the
- * ccsp_cif_call_asm_resched callee-save area, but OccamCall always
- * allocates a fresh workspace that is not used by asm_resched, so
- * the slot is safe to commandeer here.
  */
 .global ccsp_cif_occam_call
 .type ccsp_cif_occam_call, @function
 ccsp_cif_occam_call:
 	/* Save callee-saved registers + 1 dummy push for 16-byte alignment.
-	 * Function entry has rsp ≡ 8 (mod 16); after 7 pushes (56 bytes)
-	 * rsp ≡ 0 (mod 16) which is what occam expects. */
+	 * Function entry has rsp == 8 (mod 16); after 7 pushes (56 bytes)
+	 * rsp == 0 (mod 16) which is what occam expects. */
 	pushq	%rbx
 	pushq	%rbp
 	pushq	%r12
@@ -58,34 +51,33 @@ ccsp_cif_occam_call:
 	pushq	%r15
 	pushq	%rax			/* alignment padding */
 
-	movq	%rdx, %r14		/* r14 = ws (Wptr runtime reg) */
+	/* Compute save_area = ws + top*8 */
 	shlq	$3, %r8			/* r8 = top * 8 */
-	addq	%r14, %r8		/* r8 = ws + top*8 (save_area) */
+	addq	%rdx, %r8		/* r8 = ws + top*8 (save_area) */
 
-	movq	%rsp, (%r8)		/* save_area[0] = current SP */
-	movq	%r8, -80(%r14)		/* ws[-10] = save_area address */
+	movq	%rsp, (%r8)		/* save_area[0] = current C SP */
+	movq	%r8, -80(%rdx)		/* ws[-10] = save_area address */
 
 	/* Set up the occam return label so I_RET lands inside us */
 	leaq	.Loccam_call_return(%rip), %r9
-	movq	%r9, (%r14)		/* ws[0] = return label (IptrSucc) */
-	movq	%r9, -8(%r14)		/* ws[-1] = return label (Iptr) */
+	movq	%r9, (%rdx)		/* ws[0] = return label (IptrSucc) */
+	movq	%r9, -8(%rdx)		/* ws[-1] = return label (Iptr) */
 
-	/* Switch SP to a private stack below the workspace */
-	leaq	-256(%r14), %rsp
-	andq	$-16, %rsp
+	/* Phase 4D: switch rsp to ws (Wptr = rsp in occam code) */
+	movq	%rdx, %rsp		/* rsp = ws (Wptr) */
 
 	/* Set sched runtime register and jump to occam */
 	movq	%rdi, %r15		/* r15 = sched */
 	jmpq	*%rcx			/* jump to occam func */
 
 .Loccam_call_return:
-	/* Occam returned via I_RET, which leaves r14 at ws + 32 because
-	 * compose_x64_return always pops 32 bytes (4 words) for the
-	 * I_CALL frame that OccamCall doesn't push.  Undo that. */
-	subq	$32, %r14
+	/* Occam returned via I_RET, which advanced rsp by 32 bytes
+	 * (4 words) for the I_CALL frame that OccamCall didn't push.
+	 * Undo that to get back to ws. */
+	subq	$32, %rsp
 
-	/* Reload the save_area address from ws[-10] and restore SP */
-	movq	-80(%r14), %r8
+	/* Reload the save_area address from ws[-10] and restore C SP */
+	movq	-80(%rsp), %r8
 	movq	(%r8), %rsp
 
 	/* Pop callee-saved regs (matching the prologue's order) */
@@ -102,12 +94,10 @@ ccsp_cif_occam_call:
 /*
  * void ccsp_cif_jump(word *wptr, void *addr) __attribute__((noreturn))
  *
- * Phase 2: CIF -> occam transition primitive.  Used by ProcEnd to
- * leave a "called from occam" CIF process by jumping back to the
- * parent's escape pointer.  Sets r14 = wptr (Wptr runtime register)
- * and tail-jumps to addr -- the target is occam-compiled code that
- * expects only the runtime register convention, no stack alignment
- * contract beyond what the caller's stack already provides.
+ * Phase 2 / Phase 4D: CIF -> occam transition primitive.  Used by ProcEnd
+ * to leave a "called from occam" CIF process by jumping back to the
+ * parent's escape pointer.  Sets rsp = wptr (Phase 4D: Wptr = rsp)
+ * and tail-jumps to addr.
  *
  * Arguments (System V x64 ABI):
  *   rdi = wptr
@@ -116,7 +106,7 @@ ccsp_cif_occam_call:
 .global ccsp_cif_jump
 .type ccsp_cif_jump, @function
 ccsp_cif_jump:
-	movq	%rdi, %r14		/* r14 = Wptr */
+	movq	%rdi, %rsp		/* Phase 4D: rsp = Wptr */
 	jmpq	*%rsi			/* tail-jump to occam code */
 .size ccsp_cif_jump, . - ccsp_cif_jump
 
@@ -201,9 +191,17 @@ ccsp_cif_external_call:
 .equ X64_BARRIER_PTR_BYTES, -64		/* BarrierPtr * 8 = -8*8 */
 .equ X64_SCHED_PTR_BYTES, -56		/* SchedPtr * 8 = -7*8 */
 
+/*
+ * Phase 4D note: dispatch sets rsp = Wptr (not r14).  These stubs
+ * are entered with rsp = wptr.  We save wptr in a scratch register
+ * (r14 is now allocatable and not guaranteed), then use the private
+ * stack for the CIF C function call.
+ */
 .global ccsp_cif_proc_stub_label
 .type ccsp_cif_proc_stub_label, @function
 ccsp_cif_proc_stub_label:
+	/* rsp = wptr on entry (set by dispatch).  Save it in r14 (scratch). */
+	movq	%rsp, %r14		/* r14 = wptr (temporary) */
 	movq	(%r14), %rsp		/* rsp = wptr[0] (private stack top) */
 	movq	%r15, X64_SCHED_PTR_BYTES(%r14)	/* wptr[SchedPtr] = sched */
 	popq	%rax			/* rax = func address */
@@ -222,6 +220,8 @@ ccsp_cif_proc_stub_label:
 .global ccsp_cif_light_proc_stub_label
 .type ccsp_cif_light_proc_stub_label, @function
 ccsp_cif_light_proc_stub_label:
+	/* rsp = wptr on entry (set by dispatch).  Save it in r14 (temporary). */
+	movq	%rsp, %r14		/* r14 = wptr (temporary) */
 	movq	(%r14), %rsp		/* rsp = wptr[0] (private stack top) */
 	movq	%r15, X64_SCHED_PTR_BYTES(%r14)	/* wptr[SchedPtr] = sched */
 	popq	%rax			/* rax = func address */
@@ -253,8 +253,11 @@ ccsp_cif_light_proc_stub_label:
 .global ccsp_cif_endp_resume_label
 .type ccsp_cif_endp_resume_label, @function
 ccsp_cif_endp_resume_label:
-	movq	-32(%r14), %r14		/* r14 = parent Wptr */
-	jmpq	*-8(%r14)		/* jump to parent Wptr[Iptr] */
+	/* Phase 4D: rsp = Wptr on entry (set by dispatch).
+	 * Load parent Wptr from wptr[-4] (byte -32) into rsp,
+	 * then jump to parent's Iptr at wptr[-1] (byte -8). */
+	movq	-32(%rsp), %rsp		/* rsp = parent Wptr */
+	jmpq	*-8(%rsp)		/* jump to parent Wptr[Iptr] */
 .size ccsp_cif_endp_resume_label, . - ccsp_cif_endp_resume_label
 
 /*
@@ -309,10 +312,11 @@ ccsp_kernel_enter:
 .global ccsp_dispatch_process
 .type ccsp_dispatch_process, @function
 ccsp_dispatch_process:
-	movq	%rsi, %r14		/* r14 = Wptr (runtime convention) */
+	/* Phase 4D: Wptr = rsp.  Set rsp = Wptr (user mode),
+	 * r15 = sched, and jump to Wptr[Iptr]. */
 	movq	%rdi, %r15		/* r15 = sched (runtime convention) */
-	movq	(%r15), %rsp		/* rsp = sched->stack */
-	jmpq	*-8(%r14)		/* jump to Wptr[Iptr] */
+	movq	%rsi, %rsp		/* rsp = Wptr (Phase 4D: Wptr IS rsp) */
+	jmpq	*-8(%rsp)		/* jump to Wptr[Iptr] */
 .size ccsp_dispatch_process, . - ccsp_dispatch_process
 
 /*
@@ -354,11 +358,9 @@ ccsp_dispatch_process:
 .type ccsp_cif_x64_kcall_resched, @function
 ccsp_cif_x64_kcall_resched:
 	/* Save callee-saved regs to workspace at negative offsets from wptr (rdi).
-	 * r14 (= Wptr from occam code) differs from rdi (= wptr = Wptr+8).
-	 * After the kernel call, r14 could be either Wptr (non-rescheduling,
-	 * preserved by kernel) or wptr (rescheduling, K_ZERO_OUT_JRET sets
-	 * r14 = rdx = wptr).  To handle both cases, we save wptr at a fixed
-	 * offset and use it to find the restore base. */
+	 * Phase 4D: r14 is now allocatable (not Wptr).  We use it as a
+	 * scratch register to hold wptr during the kernel call, since
+	 * GCC preserves r14 (callee-saved) for non-rescheduling returns. */
 	movq	%rbp, -96(%rdi)		/* wptr[-12] */
 	movq	%rbx, -88(%rdi)		/* wptr[-11] */
 	movq	%r12, -104(%rdi)	/* wptr[-13] */
@@ -373,16 +375,10 @@ ccsp_cif_x64_kcall_resched:
 	/* Switch to kernel stack */
 	movq	(%rsi), %rsp		/* rsp = sched->stack */
 
-	/* Set r14 = wptr (from rdi) so saves and restores use the same
-	 * base.  The kernel preserves r14 (callee-saved) for non-
-	 * rescheduling returns.  For rescheduling returns (K_ZERO_OUT_JRET),
-	 * the kernel sets r14 = Wptr = wptr (from rdx, which we set below).
-	 * Either way, r14 = wptr after the kernel call.
-	 *
-	 * The caller (CIF function) saved r14 before calling kcall_resched
-	 * (push in prologue or callee-saved convention).  Setting r14 here
-	 * is invisible to the caller since r14 is saved/restored by
-	 * kcall_resched itself (at rdi[-15] offset). */
+	/* Set r14 = wptr for post-call addressing.
+	 * Non-rescheduling: GCC preserves r14 (callee-saved).
+	 * Rescheduling: dispatch sets rsp = Wptr; the BUMP shim below
+	 * recovers r14 = wptr from rsp. */
 	movq	%rdi, %r14		/* r14 = wptr */
 
 	/* Set up kernel call args: param0=rdi, sched=rsi, Wptr=rdx */
@@ -393,23 +389,30 @@ ccsp_cif_x64_kcall_resched:
 
 	/* Pre-load r15 = sched so the post-call store of r15 to
 	 * wptr[SchedPtr] is correct in BOTH paths:
-	 *   (a) Kernel reschedules via K_ZERO_OUT_JRET: r15 is overwritten
-	 *       with the (possibly migrated) current sched.
-	 *   (b) Kernel returns normally (e.g. kernel_Y_mt_lock when the
-	 *       lock is free): r15 is preserved across the call as a
-	 *       callee-saved register, so it still holds sched.
-	 * Without this, the caller's r15 (which GCC may use to cache an
-	 * unrelated value such as a hoisted function pointer) would leak
-	 * into wptr[SchedPtr] in path (b), corrupting the workspace. */
+	 *   (a) Kernel reschedules via ccsp_dispatch_process: r15 is set
+	 *       by dispatch to the (possibly migrated) current sched.
+	 *   (b) Kernel returns normally: r15 is preserved across the call
+	 *       as a callee-saved register. */
 	movq	%rsi, %r15		/* r15 = sched */
 
 	/* Call kernel function */
 	callq	*%rcx
-	/* After K_ZERO_OUT_JRET: r14=wptr, r15=current sched.
-	 * If the process was migrated to a different scheduler during
-	 * the rescheduling call, r15 now points to the NEW scheduler.
-	 * Update wptr[SchedPtr] so the CIF C code picks up the correct
-	 * scheduler for subsequent kernel calls. */
+
+	/* Phase 4D: BUMP-compatible post-call sequence.
+	 * K_CALL_HEADER stores return_address + CCSP_KCALL_RETURN_BUMP_BYTES
+	 * (= 4) as the resume Iptr.  The next 4 bytes are for the
+	 * non-reschedule path only; BUMP skips them for reschedule.
+	 *
+	 * Non-reschedule: r14 = wptr (preserved), rsp = kernel stack.
+	 *   The jmp skips the movq shim and falls through to restore.
+	 * Reschedule: dispatch sets rsp = Wptr = wptr, r14 = unknown.
+	 *   BUMP lands at the movq which sets r14 = rsp = wptr. */
+	jmp	.Lresched_common	/* 2 bytes: eb XX */
+	.byte	0x90, 0x90		/* 2 bytes: nop padding to fill 4-byte slot */
+	/* --- BUMP=4 resume point for reschedule --- */
+	movq	%rsp, %r14		/* reschedule: r14 = wptr (rsp = Wptr) */
+.Lresched_common:
+	/* Both paths: r14 = wptr, r15 = current sched */
 	movq	%r15, -56(%r14)		/* wptr[SchedPtr] = current sched */
 	movq	-80(%r14), %rsp		/* restore SP from wptr[-10] */
 	movq	-96(%r14), %rbp
@@ -441,8 +444,9 @@ ccsp_cif_x64_kcall:
 .size ccsp_cif_x64_kcall, . - ccsp_cif_x64_kcall
 
 ccsp_cif_process_call:
-	/* Save ALL callee-saved registers to the workspace.
-	 * The occam runtime uses r12 (Bptr), r13 (Fptr), r14 (Wptr),
+	/* Phase 4D: entered from kernel stack (caller did save/switch).
+	 * Save ALL callee-saved registers to the workspace.
+	 * The occam runtime uses r12 (Bptr), r13 (Fptr),
 	 * r15 (sched), and rbp for its own purposes.  The C function
 	 * expects these to be preserved per the System V ABI. */
 	movq	%rbx, -192(%rdi)	/* wptr[-24] */
@@ -454,7 +458,7 @@ ccsp_cif_process_call:
 	popq	%rbx
 	movq	%rbx, -184(%rdi)
 
-	/* Save current rsp (= sched->stack) to wptr[-5] (byte -40) */
+	/* Save current rsp (= kernel stack after pop) to wptr[-5] (byte -40) */
 	movq	%rsp, -40(%rdi)
 
 	/* Save wptr in rbx (callee-saved, survives the call) */

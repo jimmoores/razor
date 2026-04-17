@@ -46,6 +46,12 @@ typedef struct _ccsp_sched_t {
 	unsigned int    stack;
 #endif
 	word		cparam[5];
+#if defined(TARGET_CPU_AARCH64) || defined(TARGET_CPU_X64) || defined(__x86_64__) || defined(__aarch64__)
+	/* Phase 4D: saved user-mode sp during kernel calls (x64).
+	 * Must be at the same offset as sched_t.saved_user_sp (48).
+	 * Only present on 64-bit to avoid shifting i386 struct layout. */
+	word		*saved_user_sp;
+#endif
 #ifdef CCSP_HAS_CALLTABLE
 	void		*calltable[K_MAX_SUPPORTED];
 #endif

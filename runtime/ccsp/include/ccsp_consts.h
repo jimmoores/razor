@@ -118,32 +118,32 @@
  *	tools/tranx86/proc_desc.h.
  */
 #ifndef CCSP_KCALL_SHIFT_WORDS
-#define CCSP_KCALL_SHIFT_WORDS	9
+#define CCSP_KCALL_SHIFT_WORDS	0
 #endif
 #define CCSP_KCALL_SHIFT_BYTES	(CCSP_KCALL_SHIFT_WORDS * (int)sizeof(word))
 
 /*
- *	Size in bytes of the `add Wptr, KSHIFT_BYTES` instruction that
- *	tranx86 emits immediately after every kernel call (the "add"
- *	half of the Phase 4B-IV sub/call/add bracket).  When a process
- *	is descheduled inside a kernel call, K_CALL_HEADER needs to
- *	bump the stored resume iptr past this instruction, so that on
- *	wake-up the dispatch path's own `add` restores user mode
- *	without running the caller's `add` a second time.
+ *	Size in bytes of the post-call instruction that tranx86 emits
+ *	immediately after every kernel call.  When a process is
+ *	descheduled inside a kernel call, K_CALL_HEADER needs to bump
+ *	the stored resume iptr past this instruction, so that on
+ *	wake-up the dispatch path skips the caller's post-call restore.
  *
- *	At CCSP_KCALL_SHIFT_WORDS == 0 the sub/add bracket is elided
- *	and this constant is 0 (no bump).
+ *	Phase 4D (x86-64): the post-call instruction is
+ *	`mov 48(%r15), %rsp` (restore user sp from sched->saved_user_sp),
+ *	encoded as `49 8b 67 30` = 4 bytes.  This is unconditional
+ *	regardless of CCSP_KCALL_SHIFT_WORDS.
  *
- *	When activated:
- *	  - x86-64: `addq $72, %r14` with REX.W + imm8 = 4 bytes.
+ *	For other architectures, the bump is still gated on KSHIFT:
  *	  - AArch64: `add x28, x28, #72` is a fixed 4-byte instruction.
  *	  - i386:   `addl $36, %ebp` = 3 bytes.
- *	All three assume KSHIFT_BYTES fits in an imm8 (<=127), i.e.
- *	KSHIFT_WORDS * sizeof(word) <= 127.  At KSHIFT_WORDS==9 this
- *	gives 72 (64-bit) or 36 (32-bit), both well within range.
  */
-#if CCSP_KCALL_SHIFT_WORDS > 0
-#  if defined(__x86_64__) || defined(__aarch64__)
+#if defined(__x86_64__)
+   /* Phase 4D: unconditional bump -- the save/switch/restore bracket
+    * always emits a 4-byte restore after the callq. */
+#  define CCSP_KCALL_RETURN_BUMP_BYTES	4
+#elif CCSP_KCALL_SHIFT_WORDS > 0
+#  if defined(__aarch64__)
 #    define CCSP_KCALL_RETURN_BUMP_BYTES	4
 #  elif defined(__i386__)
 #    define CCSP_KCALL_RETURN_BUMP_BYTES	3

@@ -96,7 +96,7 @@
 #define REG_R15 15
 
 /* Special register mappings for occam runtime */
-#define X64_REG_WPTR  14	/* r14 = Workspace Pointer */
+#define X64_REG_WPTR  REG_RSP	/* Phase 4D: Wptr unified with rsp (4) */
 #define X64_REG_FPTR  13	/* r13 = Front Pointer (run queue head) */
 #define X64_REG_BPTR  12	/* r12 = Back Pointer (run queue tail) */
 #define X64_REG_SCHED 15	/* r15 = Scheduler Pointer */
@@ -106,7 +106,7 @@
 #define X64_REG_FUNCRES1 REG_RSI	/* 6 */
 #define X64_REG_FUNCRES2 REG_RDI	/* 7 */
 
-#define RMAX_X64 10
+#define RMAX_X64 11
 #define NODEMAX_X64 256
 
 /* SSE2 FP stack simulation: we track a virtual FP stack on xmm registers,
@@ -468,36 +468,29 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 			sprintf (sbuf, "CCSP [%s]", entry->entrypoint);
 			add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sbuf)));
 		}
-		/* Move sched (r15) to rsi, Wptr (r14) to rdx before call.
-		 * Phase 4B-IV: the Wptr arg to rdx must be captured BEFORE
-		 * r14 gets shifted, so the kernel receives user-mode Wptr
-		 * in its C parameter while r14 itself is shifted during the
-		 * call window for signal safety. */
+		/* Phase 4D kcall bracket: save/switch/call/restore.
+		 *
+		 * REG_WPTR is now rsp.  Before the C kernel call we must:
+		 *   1. Move sched (r15) to rsi, user-mode sp to rdx
+		 *   2. Save user sp to sched->saved_user_sp (offset 48)
+		 *   3. Switch sp to kernel stack: sched->stack (offset 0)
+		 *
+		 * After the call:
+		 *   4. Restore user sp from sched->saved_user_sp
+		 *
+		 * The `mov 48(%r15), %rsp` restore instruction is 4 bytes
+		 * (49 8b 67 30), matching CCSP_KCALL_RETURN_BUMP_BYTES=4.
+		 * K_CALL_HEADER bumps the stored resume iptr past this
+		 * instruction so deschedule/wake-up skips the restore. */
 		call_ins = compose_x64_kjump (ts, INS_CALL, 0, entry);
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REG, xregs[1]));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR, ARG_REG, xregs[2]));
-#if TRANX86_KCALL_SHIFT_BYTES > 0
-		/* Shift r14 down by KSHIFT_BYTES for the duration of the
-		 * call window.  The descriptor (at r14[-1..-9] in user mode)
-		 * ends up at shifted_r14[+0..+64], above the shifted SP once
-		 * Phase 4D unifies Wptr with SP.  The rdx argument above
-		 * still holds the user-mode address, so the kernel's
-		 * `word *Wptr` parameter is user-mode.
-		 *
-		 * The INS_ANNO annotations bracket the sub so the ADD/SUB
-		 * combining optimiser in optimise.c ("pack up ADDs and
-		 * SUBs") does not merge it with any adjacent AJW sub.
-		 * Folding is semantically correct for straight-line code
-		 * but breaks the deschedule/resume path, which relies on
-		 * the bracket's instruction staying a standalone 4-byte
-		 * `add` so that K_CALL_HEADER's return_address bump lands
-		 * just past it. */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket sub")));
-		add_to_ins_chain (compose_ins (INS_SUB, 2, 1,
-			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
-			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-sub end")));
-#endif
+		/* Save user sp to sched->saved_user_sp (offset 48) */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR,
+			ARG_REGIND | ARG_DISP, REG_SCHED, 48));
+		/* Switch sp to kernel stack: sp = sched->stack (offset 0) */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, REG_SCHED,
+			ARG_REG, REG_WPTR));
 		/* Multi-output kernel calls (regs_out > 1) take an extra
 		 * `word *extra_out` argument in rcx pointing at the storage
 		 * for the 2nd and 3rd outputs.  We point it at sched->cparam[0]
@@ -513,16 +506,12 @@ static void compose_x64_kcall (tstate *ts, int call, int regs_in, int regs_out)
 		if (call_ins) {
 			set_implied_inputs (call_ins, r_in > r_out ? r_in : r_out, cregs);
 		}
-#if TRANX86_KCALL_SHIFT_BYTES > 0
-		/* Restore user-mode Wptr.  The `add` is what the kernel's
-		 * bumped resume_iptr points past on wake-up; see K_CALL_HEADER
-		 * in x64/sched_asm_inserts.h. */
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket add")));
-		add_to_ins_chain (compose_ins (INS_ADD, 2, 1,
-			ARG_CONST, (intptr_t)TRANX86_KCALL_SHIFT_BYTES,
-			ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
-		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("// phase4b bracket-add end")));
-#endif
+		/* Restore user sp from sched->saved_user_sp (offset 48).
+		 * This is the post-call instruction that K_CALL_HEADER's
+		 * return_address bump skips on wake-up from deschedule. */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+			ARG_REGIND | ARG_DISP, REG_SCHED, 48,
+			ARG_REG, REG_WPTR));
 	}
 	ts->stack_drift = 0;
 
@@ -1069,11 +1058,13 @@ static void compose_x64_inline_in_2 (tstate *ts, int width)
 	} else {
 		/* Use rep movsb for general case.
 		 * rep movsb: RSI=src, RDI=dst, RCX=count.
-		 * On x64, RSI/RDI are not FPTR/BPTR, so save/restore RSI/RDI. */
+		 * Phase 4D: cannot use push/pop to save RSI/RDI since rsp IS
+		 * the workspace pointer.  Use temp regs instead. */
 		int tmp_reg2 = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RSI));
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RDI));
-		ts->stack_drift += 2;
+		int save_rsi = tstack_newreg (ts->stack);
+		int save_rdi = tstack_newreg (ts->stack);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_RSI, ARG_REG, save_rsi));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_RDI, ARG_REG, save_rdi));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, tmp_reg, W_POINTER, ARG_REG, REG_RSI));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, dest_reg, ARG_REG, REG_RDI));
 		if (known_size) {
@@ -1085,9 +1076,8 @@ static void compose_x64_inline_in_2 (tstate *ts, int width)
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, tmp_reg2, ARG_REG, REG_RCX));
 		add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, tmp_reg2, ARG_REG | ARG_IMP, REG_RSI, ARG_REG | ARG_IMP, REG_RDI));
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg2));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RDI));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RSI));
-		ts->stack_drift -= 2;
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, save_rdi, ARG_REG, REG_RDI));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, save_rsi, ARG_REG, REG_RSI));
 	}
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 1));
 }
@@ -1254,11 +1244,12 @@ static void compose_x64_inline_out_2 (tstate *ts, int width)
 	} else {
 		/* Use rep movsb for general case.
 		 * rep movsb: RSI=src, RDI=dst, RCX=count.
-		 * On x64, RSI/RDI are not FPTR/BPTR, so save/restore RSI/RDI. */
+		 * Phase 4D: cannot use push/pop since rsp IS workspace. */
 		int count_r = tstack_newreg (ts->stack);
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RSI));
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RDI));
-		ts->stack_drift += 2;
+		int save_rsi = tstack_newreg (ts->stack);
+		int save_rdi = tstack_newreg (ts->stack);
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_RSI, ARG_REG, save_rsi));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_RDI, ARG_REG, save_rdi));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, src_reg, ARG_REG, REG_RSI));
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, tmp_reg, W_POINTER, ARG_REG, REG_RDI));
 		if (known_size) {
@@ -1269,9 +1260,8 @@ static void compose_x64_inline_out_2 (tstate *ts, int width)
 		add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, count_r, ARG_REG, REG_RCX));
 		add_to_ins_chain (compose_ins (INS_REPMOVEB, 2, 1, ARG_REG | ARG_IMP, count_r, ARG_REG | ARG_IMP, REG_RSI, ARG_REG | ARG_IMP, REG_RDI));
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, count_r));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RDI));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RSI));
-		ts->stack_drift -= 2;
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, save_rdi, ARG_REG, REG_RDI));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, save_rsi, ARG_REG, REG_RSI));
 	}
 
 	/* Enqueue blocked process and clear channel */
@@ -1673,12 +1663,13 @@ static void compose_x64_move (tstate *ts)
 		}
 	} else {
 		/* General block move using rep movsb */
+		int save_rsi_reg = tstack_newreg (ts->stack);
+		int save_rdi_reg = tstack_newreg (ts->stack);
 		add_to_ins_chain (compose_ins (INS_OR, 2, 2, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG, ts->stack->old_a_reg, ARG_REG | ARG_IMP, REG_CC));
 		add_to_ins_chain (compose_ins (INS_CJUMP, 2, 0, ARG_COND, CC_Z, ARG_FLABEL, 0));
-		/* Save RSI and RDI - the registers used by rep movsb */
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RSI));
-		add_to_ins_chain (compose_ins (INS_PUSH, 1, 0, ARG_REG, REG_RDI));
-		ts->stack_drift += 2;
+		/* Phase 4D: save RSI/RDI to temp regs instead of push/pop */
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_RSI, ARG_REG, save_rsi_reg));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_RDI, ARG_REG, save_rdi_reg));
 		compose_x64_move_loadptrs (ts);
 		tmp_reg = tstack_newreg (ts->stack);
 		tmp_reg2 = tstack_newreg (ts->stack);
@@ -1715,9 +1706,8 @@ static void compose_x64_move (tstate *ts)
 		}
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg2));
 		add_to_ins_chain (compose_ins (INS_UNCONSTRAIN_REG, 1, 0, ARG_REG, tmp_reg));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RDI));
-		add_to_ins_chain (compose_ins (INS_POP, 0, 1, ARG_REG, REG_RSI));
-		ts->stack_drift -= 2;
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, save_rdi_reg, ARG_REG, REG_RDI));
+		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, save_rsi_reg, ARG_REG, REG_RSI));
 		add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 	}
 	return;
@@ -1825,6 +1815,12 @@ static void compose_external_ccall_x64 (tstate *ts, int inlined, char *name, ins
 	add_to_ins_chain (*pst_first);
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REG, REG_RDI));
 
+	/* Phase 4D: save user sp, switch to kernel stack for C call */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR,
+		ARG_REGIND | ARG_DISP, REG_SCHED, 48));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, REG_SCHED,
+		ARG_REG, REG_WPTR));
+
 	/* Build symbol name: extref_prefix + name+1 (skip 'C', keep '.') */
 	if (options.extref_prefix) {
 		char sbuf[256];
@@ -1833,6 +1829,11 @@ static void compose_external_ccall_x64 (tstate *ts, int inlined, char *name, ins
 	} else {
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (name + 1)));
 	}
+
+	/* Phase 4D: restore user sp from sched->saved_user_sp */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+		ARG_REGIND | ARG_DISP, REG_SCHED, 48,
+		ARG_REG, REG_WPTR));
 
 	/* Restore Wptr adjustment */
 	if (!options.nocc_codegen) {
@@ -1900,12 +1901,25 @@ static void compose_x64_cif_call (tstate *ts, int inlined, char *name, ins_chain
 	/* Load function address into rsi (second arg) */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, string_dup (sbuf), ARG_REG, REG_RSI));
 
+	/* Phase 4D: save user sp, switch to kernel stack for the call.
+	 * ccsp_cif_process_call does its own internal stack switch to a
+	 * private stack, but we need the kernel stack for the callq push. */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR,
+		ARG_REGIND | ARG_DISP, REG_SCHED, 48));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, REG_SCHED,
+		ARG_REG, REG_WPTR));
+
 	{
 		char cif_call_buf[64];
 		snprintf (cif_call_buf, sizeof(cif_call_buf), "@%sccsp_cif_process_call",
 			options.extref_prefix ? options.extref_prefix : "");
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (cif_call_buf)));
 	}
+
+	/* Phase 4D: restore user sp from sched->saved_user_sp */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+		ARG_REGIND | ARG_DISP, REG_SCHED, 48,
+		ARG_REG, REG_WPTR));
 
 	/* Restore state after CIF call */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
@@ -2693,7 +2707,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		x64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
-			x64_fp_emit_anno (ts, "\tmovsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
+			x64_fp_emit_anno (ts, "\tmovsd\t%d(%%rsp), %s", offset, x64_xmm_name(0));
 		} else {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 			x64_fp_emit_anno (ts, "\tmovsd\t(%%r11), %s", x64_xmm_name(0));
@@ -2741,7 +2755,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		if (x64_fp_stack_depth >= 1) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
-				x64_fp_emit_anno (ts, "\tmovsd\t%s, %d(%%r14)", x64_xmm_name(0), offset);
+				x64_fp_emit_anno (ts, "\tmovsd\t%s, %d(%%rsp)", x64_xmm_name(0), offset);
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 				x64_fp_emit_anno (ts, "\tmovsd\t%s, (%%r11)", x64_xmm_name(0));
@@ -2801,7 +2815,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		x64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
-			x64_fp_emit_anno (ts, "\tcvtsi2sdl\t%d(%%r14), %s", offset, x64_xmm_name(0));
+			x64_fp_emit_anno (ts, "\tcvtsi2sdl\t%d(%%rsp), %s", offset, x64_xmm_name(0));
 		} else {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 			x64_fp_emit_anno (ts, "\tcvtsi2sdl\t(%%r11), %s", x64_xmm_name(0));
@@ -2821,7 +2835,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		if (x64_fp_stack_depth >= 1) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
-				x64_fp_emit_anno (ts, "\taddsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
+				x64_fp_emit_anno (ts, "\taddsd\t%d(%%rsp), %s", offset, x64_xmm_name(0));
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 				x64_fp_emit_anno (ts, "\taddsd\t(%%r11), %s", x64_xmm_name(0));
@@ -2837,7 +2851,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			 * AT&T: addsd src, dst => dst = dst + src */
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
-				x64_fp_emit_anno (ts, "\tcvtss2sd\t%d(%%r14), %s", offset, x64_xmm_name(X64_XMM_SCRATCH));
+				x64_fp_emit_anno (ts, "\tcvtss2sd\t%d(%%rsp), %s", offset, x64_xmm_name(X64_XMM_SCRATCH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 				x64_fp_emit_anno (ts, "\tcvtss2sd\t(%%r11), %s", x64_xmm_name(X64_XMM_SCRATCH));
@@ -2853,7 +2867,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		if (x64_fp_stack_depth >= 1) {
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
-				x64_fp_emit_anno (ts, "\tmulsd\t%d(%%r14), %s", offset, x64_xmm_name(0));
+				x64_fp_emit_anno (ts, "\tmulsd\t%d(%%rsp), %s", offset, x64_xmm_name(0));
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 				x64_fp_emit_anno (ts, "\tmulsd\t(%%r11), %s", x64_xmm_name(0));
@@ -2869,7 +2883,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 			 * AT&T: mulsd src, dst => dst = dst * src */
 			if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 				int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
-				x64_fp_emit_anno (ts, "\tcvtss2sd\t%d(%%r14), %s", offset, x64_xmm_name(X64_XMM_SCRATCH));
+				x64_fp_emit_anno (ts, "\tcvtss2sd\t%d(%%rsp), %s", offset, x64_xmm_name(X64_XMM_SCRATCH));
 			} else {
 				add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 				x64_fp_emit_anno (ts, "\tcvtss2sd\t(%%r11), %s", x64_xmm_name(X64_XMM_SCRATCH));
@@ -2939,7 +2953,7 @@ static void compose_x64_fpop (tstate *ts, int sec)
 		x64_fp_emit_push (ts);
 		if (constmap_typeof (ts->stack->old_a_reg) == VALUE_LOCALPTR) {
 			int offset = constmap_regconst (ts->stack->old_a_reg) << WSH;
-			x64_fp_emit_anno (ts, "\tcvtsi2sdq\t%d(%%r14), %s", offset, x64_xmm_name(0));
+			x64_fp_emit_anno (ts, "\tcvtsi2sdq\t%d(%%rsp), %s", offset, x64_xmm_name(0));
 		} else {
 			add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, ts->stack->old_a_reg, ARG_REG, REG_R11));
 			x64_fp_emit_anno (ts, "\tcvtsi2sdq\t(%%r11), %s", x64_xmm_name(0));
@@ -2976,15 +2990,15 @@ static void compose_fp_set_fround_x64 (tstate *ts, int mode)
 
 	/* Use stmxcsr/ldmxcsr to change rounding mode.
 	 * Store MXCSR to stack slot [r14 - 16], modify bits 13-14, reload. */
-	x64_fp_emit_anno (ts, "\tstmxcsr\t-16(%%r14)");
+	x64_fp_emit_anno (ts, "\tstmxcsr\t-16(%%rsp)");
 	if (mxcsr_mode == 0) {
 		/* Clear bits 13-14 */
-		x64_fp_emit_anno (ts, "\tandl\t$0xFFFF9FFF, -16(%%r14)");
+		x64_fp_emit_anno (ts, "\tandl\t$0xFFFF9FFF, -16(%%rsp)");
 	} else {
-		x64_fp_emit_anno (ts, "\tandl\t$0xFFFF9FFF, -16(%%r14)");
-		x64_fp_emit_anno (ts, "\torl\t$0x%X, -16(%%r14)", mxcsr_mode << 13);
+		x64_fp_emit_anno (ts, "\tandl\t$0xFFFF9FFF, -16(%%rsp)");
+		x64_fp_emit_anno (ts, "\torl\t$0x%X, -16(%%rsp)", mxcsr_mode << 13);
 	}
-	x64_fp_emit_anno (ts, "\tldmxcsr\t-16(%%r14)");
+	x64_fp_emit_anno (ts, "\tldmxcsr\t-16(%%rsp)");
 }
 
 static void compose_fp_init_x64 (tstate *ts)
@@ -3293,18 +3307,19 @@ static void x64_stub_rmox_entry_prolog (tstate *ts, rmoxmode_e mode)
 static int x64_regcolour_special_to_real (int reg)
 {
 	switch (reg) {
-	case REG_WPTR:  return X64_REG_WPTR;	/* r14 */
+	case REG_WPTR:  return X64_REG_WPTR;	/* Phase 4D: rsp (4) */
 	case REG_FPTR:  return X64_REG_FPTR;	/* r13 */
 	case REG_BPTR:  return X64_REG_BPTR;	/* r12 */
 	case REG_SCHED: return X64_REG_SCHED;	/* r15 */
-	case REG_SPTR:  return REG_RSP;		/* rsp (4) */
+	case REG_SPTR:  return REG_RSP;		/* rsp (4) -- same as WPTR now */
 	}
 	return reg;
 }
 
 static int x64_regcolour_get_regs (int *regs)
 {
-	/* 10 allocatable registers: rax,rcx,rdx,rbx,rsi,rdi,r8,r9,r10,r11 */
+	/* 11 allocatable registers: rax,rcx,rdx,rbx,rsi,rdi,r8,r9,r10,r11,r14
+	 * Phase 4D: r14 freed by mapping REG_WPTR to rsp */
 	regs[0] = REG_RAX;
 	regs[1] = REG_RCX;
 	regs[2] = REG_RDX;
@@ -3315,7 +3330,8 @@ static int x64_regcolour_get_regs (int *regs)
 	regs[7] = REG_R9;
 	regs[8] = REG_R10;
 	regs[9] = REG_R11;
-	return 10;
+	regs[10] = REG_R14;
+	return 11;
 }
 
 static int x64_regcolour_fp_regs (int *regs)
@@ -3860,7 +3876,7 @@ static int x64_disassemble_code (ins_chain *ins, FILE *outstream, int regtrace)
 			fprintf (outstream, "\tleaq\t");
 			x64_drop_arg (tmp->in_args[0], outstream);
 			fprintf (outstream, "(%%rip), %%rax\n");
-			fprintf (outstream, "\tmovq\t%%rax, %d(%%r14)\n", W_IPTR);
+			fprintf (outstream, "\tmovq\t%%rax, %d(%%rsp)\n", W_IPTR);
 			/* Call kernel scheduler directly (Phase 1B for x64).
 			 * The kernel function uses the standard System V ABI:
 			 * rdi=param0, rsi=sched, rdx=Wptr — same convention as

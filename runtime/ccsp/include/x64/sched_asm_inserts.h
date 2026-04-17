@@ -27,11 +27,11 @@
  * longer used.
  *
  * x64 register convention (matching tranx86 archx64.c):
- *   WPTR  = r14  (workspace pointer, callee-saved)
+ *   WPTR  = rsp  (workspace pointer, Phase 4D: unified with SP)
  *   FPTR  = r13  (front pointer / run queue head, callee-saved)
  *   BPTR  = r12  (back pointer / run queue tail, callee-saved)
  *   SCHED = r15  (scheduler pointer, callee-saved)
- *   SP    = rsp  (hardware stack pointer)
+ *   r14   = allocatable (freed by Phase 4D)
  *   FP    = rbp  (frame pointer, reserved for C ABI)
  *
  * Kernel call convention (System V AMD64 ABI):
