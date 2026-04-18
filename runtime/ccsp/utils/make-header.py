@@ -322,7 +322,13 @@ def output_calltable(symbol_list, symbols, fn):
 			f.write('\t\t"mov x2, x10\\n\\t"         /* x2 = cparam[1] */\n')
 			f.write('\t\t"mov x3, x11\\n\\t"         /* x3 = cparam[2] */\n')
 			f.write('\t\t"mov x4, x12\\n\\t"         /* x4 = cparam[3] */\n')
+		# Mach-O prepends '_' to all C symbols; ELF does not.  Branch
+		# target must match the linker's view of the symbol name.
+		f.write('#ifdef __APPLE__\n')
+		f.write('\t\t"b _kernel_%s\\n\\t"\n' % name)
+		f.write('#else\n')
 		f.write('\t\t"b kernel_%s\\n\\t"\n' % name)
+		f.write('#endif\n')
 		f.write("\t);\n")
 		f.write("}\n")
 
