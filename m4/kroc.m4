@@ -157,6 +157,11 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
   # libraries from there.
   KROC_CCSP_CINCPATH="$KROC_CCSP_CINCPATH -I$KROC_BUILD_ROOT/runtime/ccsp/include -I$KROC_SRC_ROOT/runtime/ccsp/include -I$KROC_BUILD_ROOT/modules/cif/libsrc -I$KROC_SRC_ROOT/modules/cif/libsrc -I$KROC_BUILD_ROOT/modules/ocuda/libsrc"
   KROC_CCSP_LIBPATH="$KROC_CCSP_LIBPATH -L$KROC_BUILD_ROOT/runtime/ccsp -L$KROC_BUILD_ROOT/runtime/libkrocif"
+  # Embed rpath so in-tree-linked binaries (e.g. cift15, which is built
+  # directly via $(CC) rather than through the kroc driver) find the
+  # in-tree libccsp/libkrocif at runtime instead of any stale system
+  # install at /usr/local/lib.  Apple ld also accepts -rpath.
+  KROC_CCSP_LIBPATH="$KROC_CCSP_LIBPATH -Wl,-rpath,$KROC_BUILD_ROOT/runtime/ccsp -Wl,-rpath,$KROC_BUILD_ROOT/runtime/libkrocif"
 
   AC_CHECK_FUNC(dlsym, have_libc_dlsym=yes, have_libc_dlsym=no)
   AC_CHECK_LIB(dl, dlsym, have_libdl=yes, have_libdl=no)
