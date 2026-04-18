@@ -1901,11 +1901,23 @@ static void compose_x64_cif_call (tstate *ts, int inlined, char *name, ins_chain
 	/* Load function address into rsi (second arg) */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, string_dup (sbuf), ARG_REG, REG_RSI));
 
-	/* Phase 4D: save user sp, switch to kernel stack for the call.
-	 * ccsp_cif_process_call does its own internal stack switch to a
-	 * private stack, but we need the kernel stack for the callq push. */
+	/* Phase 4D: save caller's rbx to REG_WPTR[-5] (byte -40), stash our
+	 * Wptr in rbx, switch to kernel stack, call.  We cannot use the
+	 * shared sched->saved_user_sp slot for this call: ccsp_cif_process_call
+	 * is a plain C function (no K_CALL_HEADER iptr-bump), and if the CIF
+	 * function itself reschedules during a kcall, other processes' kcall
+	 * brackets clobber sched->saved_user_sp with their own sp values,
+	 * so the restore on return would load garbage.  Instead we rely on
+	 * ccsp_cif_process_call saving and restoring incoming rbx via its
+	 * wptr[-24] slot -- so the wptr value we place in rbx survives the
+	 * whole call chain (CIF function's nested asm_resched-based kcalls
+	 * also save/restore rbx as a SysV callee-saved register).  On
+	 * return, rbx holds our Wptr; we restore sp = rbx and recover
+	 * caller's rbx from REG_WPTR[-5]. */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_RBX,
+		ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-5 << WSH)));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_WPTR,
-		ARG_REGIND | ARG_DISP, REG_SCHED, 48));
+		ARG_REG, REG_RBX));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND, REG_SCHED,
 		ARG_REG, REG_WPTR));
 
@@ -1916,10 +1928,14 @@ static void compose_x64_cif_call (tstate *ts, int inlined, char *name, ins_chain
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (cif_call_buf)));
 	}
 
-	/* Phase 4D: restore user sp from sched->saved_user_sp */
-	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
-		ARG_REGIND | ARG_DISP, REG_SCHED, 48,
+	/* Phase 4D: restore user sp from rbx (= saved Wptr, preserved across
+	 * ccsp_cif_process_call via its wptr[-24] save/restore), then
+	 * recover caller's rbx from REG_WPTR[-5]. */
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_RBX,
 		ARG_REG, REG_WPTR));
+	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1,
+		ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-5 << WSH),
+		ARG_REG, REG_RBX));
 
 	/* Restore state after CIF call */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
