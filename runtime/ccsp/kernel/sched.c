@@ -4426,7 +4426,7 @@ K_CALL_DEFINE_3_1 (X_mt_resize)
 					);
 				}
 
-				mt_release_simple (sched->allocator, ptr, type);
+				mt_release_simple (sched, ptr, type);
 				ptr = ((word *) new) + MT_ARRAY_PTR_OFFSET;
 			} else if (ma->size > new_size) {
 				if (MT_TYPE(inner_type) != MT_NUM) {
@@ -4435,7 +4435,7 @@ K_CALL_DEFINE_3_1 (X_mt_resize)
 					while (count--) {
 						word *p = *data;
 						if (p != NULL) {
-							mt_release (sched->allocator, p);
+							mt_release (sched, p);
 							*data = NULL;
 						}
 						data++;
