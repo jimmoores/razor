@@ -447,10 +447,17 @@ static void user_tim_handler (int sig)
 
 		ccsp_wake_thread (s, SYNC_TIME_BIT);
 	}
-	
-	#if defined(SIGNAL_TYPE_SYSV)
-		signal (SIGALRM, user_tim_handler);
-	#endif /* SIGNAL_TYPE */
+
+	/* Phase 4D: the SVR4-era re-registration via signal() is BOTH
+	 * unnecessary AND actively harmful when sp = Wptr.  `install_signal_handler`
+	 * already uses sigaction() with no SA_RESETHAND, so the handler stays
+	 * installed.  Calling signal() here triggers libc's __bsd_signal →
+	 * __libc_sigaction which allocates ~140 bytes of locals on the current
+	 * rsp; if SA_ONSTACK isn't honored for whatever reason (e.g. kernel
+	 * sigaltstack accounting drift, or thread-switched-onto-this-signal),
+	 * those locals land in the occam workspace and corrupt random slots.
+	 * Observed empirically via rr reverse-debug: the bounce demo's OCCADE
+	 * CB and ball-process workspace slots got overwritten from this path. */
 }
 /*}}}*/
 /*{{{  unsigned int ccsp_rtime (void)*/
