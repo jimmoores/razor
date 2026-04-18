@@ -135,8 +135,11 @@ static char *convert_occam_symbol(char *fixed_name) {
 	}
 
 	/* Replace dots with underscores */
-	for (char *p = tmp; *p; ++p) {
-		if (*p == '.') *p = '_';
+	{
+		char *p;
+		for (p = tmp; *p; ++p) {
+			if (*p == '.') *p = '_';
+		}
 	}
 
 	// /* Collapse repeated underscores in the payload (e.g., "do__stuff" -> "do_stuff") */
