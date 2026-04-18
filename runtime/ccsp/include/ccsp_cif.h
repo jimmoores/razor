@@ -792,6 +792,17 @@ static inline void LightProcBarrierWait (Workspace wptr, LightProcBarrier *bar)
 /*{{{  Workspace LightProcInit (Workspace wptr, word *base, word args, word stack) */
 static inline Workspace LightProcInit (Workspace wptr, word *base, word args, word stack)
 {
+	/* Round base up to a 16-byte boundary.  C declares the underlying
+	 * storage (typically `word stack_pN[WORKSPACE_SIZE(...)]` on the
+	 * function's frame) with alignof(word) = 8, but on aarch64 EL0 SP
+	 * accesses require 16-byte alignment.  Phase 4D unifies sp with
+	 * Wptr, so the workspace pointer must itself be 16-aligned for any
+	 * sp-relative accesses (in CIF resume code or in occam-derived
+	 * inserts) to succeed.  CIF_PROCESS_WORDS=24 (192 bytes) is itself
+	 * 16-aligned, so once base is, the resulting ws is too.  The
+	 * trailing slack already in WORKSPACE_SIZE (CIF_STACK_ALIGN-1=3
+	 * words) absorbs the up-to-1-word loss from this rounding. */
+	base = (word *)(((word)base + (2 * sizeof(word) - 1)) & ~(2 * sizeof(word) - 1));
 	Workspace ws = base + CIF_PROCESS_WORDS;
 	word words = WORKSPACE_SIZE (args, stack);
 
