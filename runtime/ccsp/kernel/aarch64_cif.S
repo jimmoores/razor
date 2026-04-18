@@ -177,7 +177,11 @@ ccsp_cif_proc_stub_label:
     sub x0, x28, #192            // p0 = wptr - CIF_PROCESS_WORDS*8
     mov x1, x25                  // x1 = sched
     mov x2, x28                  // x2 = Wptr
+#if defined(__APPLE__)
+    b _kernel_Y_proc_end         // tail-call (Mach-O symbol prefix)
+#else
     b kernel_Y_proc_end          // tail-call
+#endif
 
 #if defined(__APPLE__)
 .global _ccsp_cif_light_proc_stub_label
@@ -200,7 +204,11 @@ ccsp_cif_light_proc_stub_label:
     ldur x0, [x28, #-64]         // p0 = *(wptr + BarrierPtr*8)
     mov x1, x25                  // x1 = sched
     mov x2, x28                  // x2 = Wptr
+#if defined(__APPLE__)
+    b _kernel_Y_endp             // tail-call (Mach-O symbol prefix)
+#else
     b kernel_Y_endp              // tail-call
+#endif
 
 // ccsp_cif_endp_resume_label  (Phase 2)
 //
