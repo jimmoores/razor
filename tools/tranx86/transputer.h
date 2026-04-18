@@ -31,6 +31,11 @@
 #define BitsPerWord	(BytesPerWord * 8)
 #define ByteSelectMask	((1 << WSH) - 1)
 #define WShift		2		/* x4 -- INT is always 32-bit (4 bytes) */
+
+/* CIF_WPTR_BIAS_WORDS: words by which the CIF wptr argument leads REG_WPTR.
+ * tranx86 emits LEA Wptr+(CIF_WPTR_BIAS_WORDS<<WSH) for CIF/bcall/ccall.
+ * Must match the definition in runtime/ccsp/include/ccsp_consts.h. */
+#define CIF_WPTR_BIAS_WORDS	1
 #define DWShift		3		/* x8 */
 
 

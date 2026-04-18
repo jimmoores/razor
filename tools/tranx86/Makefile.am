@@ -16,7 +16,8 @@ AUTOMAKE_OPTIONS=foreign
 ACLOCAL_AMFLAGS = -I ../../m4
 
 EXTRA_DIST = \
-	example.tdef
+	example.tdef \
+	abi-version
 
 bin_PROGRAMS = tranx86
 

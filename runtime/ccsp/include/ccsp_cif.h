@@ -637,7 +637,7 @@ static inline Workspace ProcAlloc (Workspace wptr, word args, word stack)
 /*}}}*/
 /*{{{  void ProcParam (Workspace wptr, Workspace ws, word n, type param) */
 #define ProcParam(wptr, ws, n, param) \
-	do { (ws)[(n) + 1] = (word) (param); } while (0)
+	do { (ws)[(n) + CIF_WPTR_BIAS_WORDS] = (word) (param); } while (0)
 /*}}}*/
 /*{{{  void ProcMTCopy (Workspace wptr, Workspace ws, word n, void *ptr) */
 
@@ -652,7 +652,7 @@ static inline Workspace ProcAlloc (Workspace wptr, word args, word stack)
 static inline void ProcMTCopy (Workspace wptr, Workspace ws, word n, void *ptr)
 {
 	ws -= CIF_PROCESS_WORDS;
-	n += CIF_PROCESS_WORDS + 1;
+	n += CIF_PROCESS_WORDS + CIF_WPTR_BIAS_WORDS;
 	ccsp_cif_X_proc_mt_copy (wptr, n, ws, ptr);
 }
 /*}}}*/
@@ -669,13 +669,13 @@ static inline void ProcMTCopy (Workspace wptr, Workspace ws, word n, void *ptr)
 static inline void ProcMTMove (Workspace wptr, Workspace ws, word n, void *pptr)
 {
 	ws -= CIF_PROCESS_WORDS;
-	n += CIF_PROCESS_WORDS + 1;
+	n += CIF_PROCESS_WORDS + CIF_WPTR_BIAS_WORDS;
 	ccsp_cif_X_proc_mt_move (wptr, n, ws, pptr);
 }
 /*}}}*/
 /*{{{  type ProcGetParam (Workspace wptr, word n, type) */
 #define ProcGetParam(wptr, n, type) \
-	((type) ((wptr)[(n) + 1]))
+	((type) ((wptr)[(n) + CIF_WPTR_BIAS_WORDS]))
 /*}}}*/
 /*{{{  void ProcStart (Workspace wptr, Workspace ws, Process func) */
 static inline void ProcStart (Workspace wptr, Workspace ws, Process func)

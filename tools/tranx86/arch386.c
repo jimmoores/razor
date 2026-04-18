@@ -3158,7 +3158,7 @@ static void compose_bcall_i386 (tstate *ts, int i, int kernel_call, int inlined,
 
 	arg_reg = tstack_newreg (ts->stack);
 	tmp_reg = tstack_newreg (ts->stack);
-	add_to_ins_chain (st_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, 4, ARG_REG, tmp_reg));
+	add_to_ins_chain (st_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, tmp_reg));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[0])));
 
 	add_to_ins_chain (compose_ins (INS_CONSTRAIN_REG, 2, 0, ARG_REG, arg_reg, ARG_REG, xregs[0]));
@@ -3203,7 +3203,7 @@ static void compose_cif_call_i386 (tstate *ts, int inlined, char *name, ins_chai
 
 	tmp_reg = tstack_newreg (ts->stack);
 	
-	*pst_first = compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, 4, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
+	*pst_first = compose_ins (INS_ADD, 2, 1, ARG_CONST | ARG_ISCONST, (CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	add_to_ins_chain (*pst_first);
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_FLABEL | ARG_ISCONST, 0, ARG_REGIND | ARG_DISP, REG_WPTR, -36));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, -1, ARG_REGIND | ARG_DISP, REG_WPTR, -32));
@@ -3221,7 +3221,7 @@ static void compose_cif_call_i386 (tstate *ts, int inlined, char *name, ins_chai
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, -28, ARG_REG, REG_SCHED));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, stack), ARG_REG, REG_ESP));
-	add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, 4, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
+	add_to_ins_chain (compose_ins (INS_SUB, 2, 1, ARG_CONST | ARG_ISCONST, (CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, REG_WPTR, ARG_REG, REG_WPTR));
 	*pst_last = compose_ins (INS_ADD, 2, 1, ARG_CONST, 16, ARG_REG, REG_WPTR, ARG_REG, REG_WPTR);
 	add_to_ins_chain (*pst_last);
 }

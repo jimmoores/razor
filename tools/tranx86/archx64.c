@@ -1809,9 +1809,9 @@ static void compose_external_ccall_x64 (tstate *ts, int inlined, char *name, ins
 {
 	int tmp_reg;
 
-	/* Pass Wptr + 1 word as first arg (rdi) */
+	/* Pass Wptr + CIF_WPTR_BIAS_WORDS as first arg (rdi) */
 	tmp_reg = tstack_newreg (ts->stack);
-	*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, tmp_reg);
+	*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, tmp_reg);
 	add_to_ins_chain (*pst_first);
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REG, REG_RDI));
 
@@ -1853,8 +1853,8 @@ static void compose_x64_bcall (tstate *ts, int inlined, int kernel_call, int unu
 
 	arg_reg = tstack_newreg (ts->stack);
 
-	/* Set up workspace pointer parameter */
-	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, arg_reg));
+	/* Set up workspace pointer parameter: Wptr + CIF_WPTR_BIAS_WORDS */
+	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, arg_reg));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, arg_reg, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[0])));
 
 	if (kernel_call != K_KERNEL_RUN) {
@@ -1892,8 +1892,8 @@ static void compose_x64_cif_call (tstate *ts, int inlined, char *name, ins_chain
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(-1), ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-7 << WSH)));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-6 << WSH)));
 
-	/* Pass Wptr+1 word in rdi */
-	add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(1 << WSH), ARG_REG, REG_RDI));
+	/* Pass Wptr+CIF_WPTR_BIAS_WORDS in rdi */
+	add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, REG_RDI));
 
 	/* Build CIF function name and call via ccsp_cif_process_call */
 	sprintf (sbuf, "@%s%s", options.extref_prefix ? options.extref_prefix : "", name + 4);

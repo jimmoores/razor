@@ -136,5 +136,13 @@
 #define CIF_PROCESS_WORDS	8 /* words */
 #endif
 
+/* CIF_WPTR_BIAS_WORDS: the number of words by which the wptr value passed to
+ * a CIF C function leads REG_WPTR (the raw workspace pointer register).
+ * ProcGetParam(wptr, n) reads wptr[n + CIF_WPTR_BIAS_WORDS], and tranx86
+ * emits LEA Wptr+(CIF_WPTR_BIAS_WORDS<<WSH) to compute the argument.
+ * Currently 1 on all architectures; a future port could change this here
+ * and in tools/tranx86/transputer.h. */
+#define CIF_WPTR_BIAS_WORDS	1
+
 #endif /* __CCSP_CONSTS_H */
 

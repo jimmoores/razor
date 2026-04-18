@@ -495,10 +495,21 @@ class KRoCToolchain(Toolchain):
 			lib_opts.append(patterns["rtlink"] % "krocif")
 		lib_opts.append(patterns["rtlink"] % "ccsp")
 
+		# If the tranx86 ABI version stamp is newer than a cached .o,
+		# delete the .o to force retranslation with the current tranx86.
+		abi_stamp_mtime = None
+		if in_tree is not None:
+			abi_stamp_path = os.path.join(in_tree, "tools/tranx86/abi-version")
+			if os.path.exists(abi_stamp_path):
+				abi_stamp_mtime = os.path.getmtime(abi_stamp_path)
+
 		objs = []
 		for o in occam_objs:
 			root = split_ext(o)[0]
 			obj = root + ".o"
+			if abi_stamp_mtime is not None and os.path.exists(obj):
+				if os.path.getmtime(obj) < abi_stamp_mtime:
+					os.unlink(obj)
 			run(self.kroc_cmd() + ["-c", o, "-o", obj])
 			objs.append(obj)
 		objs += native_objs

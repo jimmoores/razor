@@ -1007,8 +1007,8 @@ static void compose_bcall_aarch64 (tstate *ts, int inlined, int kernel_call, int
 
 	arg_reg = tstack_newreg (ts->stack);
 
-	/* Set up workspace pointer parameter: Wptr + 1 word points to the param block */
-	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, arg_reg));
+	/* Set up workspace pointer parameter: Wptr + CIF_WPTR_BIAS_WORDS points to the param block */
+	add_to_ins_chain (*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, arg_reg));
 	/* Store param block pointer to cparam[0] for legacy callers and to
 	 * ensure the register allocator keeps arg_reg alive. */
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, arg_reg, ARG_REGIND | ARG_DISP, REG_SCHED, offsetof(ccsp_sched_t, cparam[0])));
@@ -1105,9 +1105,9 @@ static void compose_external_ccall_aarch64 (tstate *ts, int inlined, char *name,
 {
 	int tmp_reg;
 
-	/* AArch64 ABI: first argument in x0.  Pass Wptr + 1 word (pointer to params). */
+	/* AArch64 ABI: first argument in x0.  Pass Wptr + CIF_WPTR_BIAS_WORDS (pointer to params). */
 	tmp_reg = tstack_newreg (ts->stack);
-	*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (1 << WSH), ARG_REG, tmp_reg);
+	*pst_first = compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, tmp_reg);
 	add_to_ins_chain (*pst_first);
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, tmp_reg, ARG_REG, REG_X0));
 
@@ -1181,10 +1181,9 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_CONST | ARG_ISCONST, (intptr_t)(-1), ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-7 << WSH)));
 	add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_REG, REG_SCHED, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(-6 << WSH)));
 
-	/* Pass Wptr+1 word in x0 using LEA (address computation, doesn't modify sp/Wptr).
-	 * The +1 word matches the i386 CIF convention where ProcGetParam(wptr, 0)
-	 * reads wptr[1] = (original_Wptr+1)[1] = original_Wptr[2] = first param. */
-	add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(1 << WSH), ARG_REG, REG_X0));
+	/* Pass Wptr+CIF_WPTR_BIAS_WORDS in x0 using LEA (address computation, doesn't modify sp/Wptr).
+	 * ProcGetParam(wptr, 0) reads wptr[CIF_WPTR_BIAS_WORDS] = first param. */
+	add_to_ins_chain (compose_ins (INS_LEA, 1, 1, ARG_REGIND | ARG_DISP, REG_WPTR, (intptr_t)(CIF_WPTR_BIAS_WORDS << WSH), ARG_REG, REG_X0));
 
 	/* Call the CIF function through ccsp_cif_process_call, which switches
 	 * SP to a private workspace-based stack before calling the function.
@@ -1228,8 +1227,12 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 			  options.extref_prefix ? options.extref_prefix : "");
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (cif_call_buf)));
 	}
-	/* Phase 4D: restore user sp from x28 (= wptr_at_entry = REG_WPTR+8). */
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tsub\tsp, x28, #8")));
+	/* Phase 4D: restore user sp from x28 (= wptr_at_entry = REG_WPTR+CIF_WPTR_BIAS_WORDS). */
+	{
+		char sub_sp_buf[32];
+		snprintf (sub_sp_buf, sizeof (sub_sp_buf), "\tsub\tsp, x28, #%d", (int)(CIF_WPTR_BIAS_WORDS << WSH));
+		add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup (sub_sp_buf)));
+	}
 
 	/* Restore state after CIF call. */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
