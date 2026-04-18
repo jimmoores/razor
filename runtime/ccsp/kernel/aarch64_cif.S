@@ -275,7 +275,17 @@ ccsp_dispatch_process:
 #endif
     mov x25, x0            // x25 = sched (runtime convention)
     mov sp, x1             // sp = Wptr (Phase 4D: Wptr = sp)
-    ldur x9, [sp, #-8]    // x9 = Wptr[Iptr]
+    // Use x1 (not sp) for the iptr load: CIF processes hand the kernel
+    // a Wptr that is +1 word from the underlying 16-aligned base, i.e.
+    // 8-aligned.  Loads/stores using SP as base on aarch64 EL0 trigger
+    // SIGBUS unless SP is 16-aligned (SCTLR_EL1.SA0=1, the Linux
+    // default).  Loads via a general register have no such restriction,
+    // so reading the iptr through x1 is safe regardless of alignment.
+    // For occam processes, sp here is 16-aligned and any subsequent
+    // sp-relative access in the resume code remains safe; for CIF
+    // processes the resume code (ccsp_cif_call_asm_resched) restores
+    // sp from a saved value before any sp-relative access.
+    ldur x9, [x1, #-8]     // x9 = Wptr[Iptr]
     br x9                  // jump
 
 // word ccsp_cif_call_asm(void *wptr, void *sched, void *param0, void *func)
