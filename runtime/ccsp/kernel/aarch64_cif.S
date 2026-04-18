@@ -414,8 +414,31 @@ ccsp_cif_call_asm_resched:
     // Call KRoC function (now on the proper kernel stack)
     blr x3
 
-    // After return from kernel (possibly after context switch):
-    // K_ZERO_OUT_JRET restores sp=Wptr (Phase 4D), x25=sched.
+    // Return-from-kernel handling.  There are two ways control can
+    // arrive here, and they need slightly different bookkeeping:
+    //
+    //   (a) Natural return: blr returned normally with x28 still
+    //       holding wptr (preserved by AAPCS through the C kernel
+    //       call).  We just continue.
+    //
+    //   (b) Dispatched resume after reschedule: K_ZERO_OUT_JRET
+    //       called ccsp_dispatch_process which did mov sp, wptr and
+    //       branched to PROC_DESC->iptr.  iptr is captured by
+    //       K_CALL_HEADER as LR + CCSP_KCALL_RETURN_BUMP_BYTES (= +8
+    //       on aarch64), so the dispatch path lands two instructions
+    //       past the natural-return point.  In this path x28 may
+    //       hold anything (the previously-running process left
+    //       something there), but sp == wptr (from dispatch's mov).
+    //       We recover x28 from sp.
+    //
+    // To keep the natural path from clobbering its own x28, we put a
+    // branch at the natural-return point that jumps over the
+    // dispatch-only x28-recovery instruction.  CCSP_KCALL_RETURN_BUMP_BYTES
+    // accounts for the two instructions between LR and the resume entry.
+    b 1f                  // (a) natural: skip dispatch-only x28 recovery
+    nop                   //     padding so iptr lands on the next insn
+    mov x28, sp           // (b) dispatch entry: x28 = wptr (recovered from sp)
+1:
     // If the process was migrated to a different scheduler during the
     // rescheduling call, x25 now points to the NEW scheduler.
     // Update wptr[SchedPtr] so the CIF C code picks up the correct
