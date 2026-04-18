@@ -151,12 +151,19 @@ static WARM unsigned int pick_random_bit (unsigned int mask) {
 /*{{{  static INLINE void serialise (void)*/
 /* serialises the instruction stream - the strongest form of barrier */
 static INLINE void serialise (void) {
+	/* cpuid clobbers ebx, but ebx is reserved for the GOT pointer
+	 * under -fPIC on i386.  GCC rejects clobbering ebx in that case
+	 * ("PIC register clobbered by 'ebx' in 'asm'") on older toolchains
+	 * and forbids it in newer ones.  Save/restore ebx around the cpuid
+	 * so we don't claim to clobber it. */
 	__asm__ __volatile__ ("		\n"
+		"	pushl %%ebx	\n"
 		"	movl $0, %%eax	\n"
 		"	cpuid		\n"
+		"	popl %%ebx	\n"
 		: /* no outputs */
 		: /* no inputs */
-		: "cc", "memory", "eax", "ebx", "ecx", "edx"
+		: "cc", "memory", "eax", "ecx", "edx"
 	);
 }
 /*}}}*/

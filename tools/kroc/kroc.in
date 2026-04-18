@@ -203,8 +203,14 @@ case "$target_os" in
 				# references, so the resulting executable cannot be a PIE.
 				# Modern toolchains (e.g. Debian 12 / gcc 13) default to PIE,
 				# which would otherwise produce a "creating DT_TEXTREL in a
-				# PIE" warning at link time.
-				extraccopts=${EXTRACCOPTS:--Xlinker -E -no-pie}
+				# PIE" warning at link time.  GCC 4.x (debian8) doesn't
+				# recognise -no-pie and didn't default to PIE either, so
+				# probe before adding the flag.
+				if "${CC:-gcc}" -no-pie -E -x c /dev/null >/dev/null 2>&1; then
+					extraccopts=${EXTRACCOPTS:--Xlinker -E -no-pie}
+				else
+					extraccopts=${EXTRACCOPTS:--Xlinker -E}
+				fi
 				;;
 			*)
 				extraccopts=${EXTRACCOPTS:--Xlinker -E}
