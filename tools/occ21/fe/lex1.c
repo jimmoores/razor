@@ -2902,13 +2902,14 @@ PRIVATE void preproc_builtin (void)
 		preproc_add_define (tw, 21, PP_VAL_INT, (void *)(is_64bit ? 4 : (long)bytesperword));
 		tw = lookupword ("TARGET.BITS.PER.WORD", 20);
 		preproc_add_define (tw, 20, PP_VAL_INT, (void *)(is_64bit ? 32 : (long)(bytesperword * 8)));
-		if (is_64bit) {
-			/* Actual machine word size constants for 64-bit targets */
-			tw = lookupword ("TARGET.WORD.BYTES", 18);
-			preproc_add_define (tw, 18, PP_VAL_INT, (void *)8);
-			tw = lookupword ("TARGET.WORD.BITS", 16);
-			preproc_add_define (tw, 16, PP_VAL_INT, (void *)64);
-		}
+		/* Actual machine word size constants: 8/64 on 64-bit targets,
+		 * bytesperword/bits on 32-bit targets. Always define so that
+		 * conditionals like #IF (TARGET.WORD.BITS = 64) are well-formed
+		 * on every target. */
+		tw = lookupword ("TARGET.WORD.BYTES", 18);
+		preproc_add_define (tw, 18, PP_VAL_INT, (void *)(is_64bit ? 8 : (long)bytesperword));
+		tw = lookupword ("TARGET.WORD.BITS", 16);
+		preproc_add_define (tw, 16, PP_VAL_INT, (void *)(is_64bit ? 64 : (long)(bytesperword * 8)));
 	}
 	if (bytesperword == 8) {
 		/* Define architecture-specific preprocessor symbols for 64-bit targets */
