@@ -852,9 +852,15 @@ else
   cincludepath="@KROC_CCSP_CINCPATH@"
   # Prevent the linker from finding stale installed libraries in /usr/local/lib
   # or other system paths when building in-tree. -rpath-link fixes build-time
-  # resolution; -rpath embeds the paths into the executable so it can find
-  # the shared libraries at runtime without LD_LIBRARY_PATH or make install.
-  oclibpath="$oclibpath -Wl,-rpath-link,$intree/runtime/ccsp -Wl,-rpath-link,$intree/runtime/libkrocif"
+  # resolution (GNU ld only — Apple ld doesn't need it because dyld
+  # resolves indirect dependencies via embedded LC_RPATH); -rpath embeds the
+  # paths into the executable so it can find the shared libraries at runtime
+  # without LD_LIBRARY_PATH or make install.
+  case "$target_os" in
+    linux*|cygwin*)
+      oclibpath="$oclibpath -Wl,-rpath-link,$intree/runtime/ccsp -Wl,-rpath-link,$intree/runtime/libkrocif"
+      ;;
+  esac
   oclibpath="$oclibpath -Wl,-rpath,$intree/runtime/ccsp -Wl,-rpath,$intree/runtime/libkrocif"
 fi
 

@@ -112,7 +112,9 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
         # resolver uses sp as a real stack, and firing it while sp=Wptr
         # scribbles over the workspace (and adjacent channel words).
         # Force eager binding so PLT entries are resolved at load time.
-        KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -Wl,-z,now"
+        # Only meaningful on GNU ld (Linux); Apple ld doesn't have -z
+        # and uses bind-at-load by default for non-lazy stubs anyway.
+        case "$target_os" in linux*) KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -Wl,-z,now" ;; esac
       fi
       ;;
     aarch64)
@@ -127,8 +129,8 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
         KROC_CCSP_CFLAGS="$KROC_CCSP_CFLAGS -DTARGET_64BIT"
       fi
       # Phase 4D unifies sp with Wptr (see x86_64 branch above for
-      # why -Wl,-z,now is required).
-      KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -Wl,-z,now"
+      # why -Wl,-z,now is required).  GNU-ld-only.
+      case "$target_os" in linux*) KROC_CCSP_LDFLAGS="$KROC_CCSP_LDFLAGS -Wl,-z,now" ;; esac
       ;;
   esac
 
