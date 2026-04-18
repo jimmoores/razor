@@ -1205,9 +1205,20 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 		snprintf (func_sbuf, sizeof(func_sbuf), "%s", sbuf);
 		add_to_ins_chain (compose_ins (INS_MOVE, 1, 1, ARG_NAMEDLABEL | ARG_ISCONST, string_dup (func_sbuf), ARG_REG, REG_X1));
 	}
-	/* Phase 4D: save user sp, switch to kernel stack for CIF call */
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tx9, sp")));
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tstr\tx9, [x25, #48]")));
+	/* Phase 4D: switch sp to kernel stack for CIF call.
+	 * NOTE: unlike kcall brackets, we do NOT save sp into
+	 * sched->saved_user_sp here.  The call target (ccsp_cif_process_call)
+	 * is a plain C function, not a kernel call with K_CALL_HEADER, so
+	 * there is no iptr-bump mechanism to skip the restore on resume.
+	 * If we used the shared sched->saved_user_sp slot, other processes
+	 * that run on this scheduler during the CIF window (via the CIF
+	 * function's own rescheduling kcalls) would overwrite the slot and
+	 * we'd restore to garbage on return.  Instead we rely on x28 being
+	 * preserved by ccsp_cif_process_call (which sets x28 = wptr_at_entry
+	 * = REG_WPTR + 8 and leaves it untouched across the blr to the
+	 * CIF function, thanks to AAPCS callee-save discipline in the CIF
+	 * function and its asm_resched wrapper).  On return, sp = REG_WPTR
+	 * = x28 - 8. */
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25]")));
 	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
 	/* Call the wrapper: ccsp_cif_process_call(wptr, func_addr) */
@@ -1217,9 +1228,8 @@ static void compose_cif_call_aarch64 (tstate *ts, int inlined, char *name, ins_c
 			  options.extref_prefix ? options.extref_prefix : "");
 		add_to_ins_chain (compose_ins (INS_CALL, 1, 0, ARG_NAMEDLABEL, string_dup (cif_call_buf)));
 	}
-	/* Phase 4D: restore user sp from sched->saved_user_sp */
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tldr\tx9, [x25, #48]")));
-	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tmov\tsp, x9")));
+	/* Phase 4D: restore user sp from x28 (= wptr_at_entry = REG_WPTR+8). */
+	add_to_ins_chain (compose_ins (INS_ANNO, 1, 0, ARG_TEXT, string_dup ("\tsub\tsp, x28, #8")));
 
 	/* Restore state after CIF call. */
 	add_to_ins_chain (compose_ins (INS_SETFLABEL, 1, 0, ARG_FLABEL, 0));
