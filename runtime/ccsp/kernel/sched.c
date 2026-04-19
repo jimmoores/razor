@@ -187,9 +187,16 @@ void 			**_ccsp_calltable		CACHELINE_ALIGN = NULL;
  * Populated once by ccsp_kernel_init from the kernel_CIF_*_stub
  * functions; replaces sched->calltable[K_CIF_*_STUB] lookups in
  * ccsp_cif.h. */
-void			*_ccsp_cif_proc_stub		= NULL;
-void			*_ccsp_cif_light_proc_stub	= NULL;
-void			*_ccsp_cif_endp_resume_stub	= NULL;
+/* Private storage for CIF trampoline addresses.  Exposed via getter
+ * functions (ccsp_get_cif_*_stub) rather than exported variables to
+ * avoid R_386_COPY relocations on old linkers (binutils < 2.26). */
+static void			*_ccsp_cif_proc_stub_val		= NULL;
+static void			*_ccsp_cif_light_proc_stub_val		= NULL;
+static void			*_ccsp_cif_endp_resume_stub_val		= NULL;
+
+void *ccsp_get_cif_proc_stub (void)        { return _ccsp_cif_proc_stub_val; }
+void *ccsp_get_cif_light_proc_stub (void)  { return _ccsp_cif_light_proc_stub_val; }
+void *ccsp_get_cif_endp_resume_stub (void) { return _ccsp_cif_endp_resume_stub_val; }
 
 /*}}}*/
 
@@ -1972,9 +1979,9 @@ void ccsp_kernel_init (void)
 
 	/* Cache the CIF trampoline code addresses for ccsp_cif.h.  These
 	 * are returned by kernel_CIF_*_stub() functions in this file. */
-	_ccsp_cif_proc_stub		= kernel_CIF_proc_stub ();
-	_ccsp_cif_light_proc_stub	= kernel_CIF_light_proc_stub ();
-	_ccsp_cif_endp_resume_stub	= kernel_CIF_endp_resume_stub ();
+	_ccsp_cif_proc_stub_val		= kernel_CIF_proc_stub ();
+	_ccsp_cif_light_proc_stub_val	= kernel_CIF_light_proc_stub ();
+	_ccsp_cif_endp_resume_stub_val	= kernel_CIF_endp_resume_stub ();
 
 	init_local_schedulers ();
 

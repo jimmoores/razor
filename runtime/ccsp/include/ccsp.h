@@ -103,10 +103,21 @@ extern void			**_ccsp_calltable;
  * These are code-label addresses returned by the kernel_CIF_*_stub
  * functions (kernel/sched.c) and are used by ccsp_cif.h to dispatch
  * CIF process start/end without going through the per-scheduler
- * calltable[] indirection. */
-extern void			*_ccsp_cif_proc_stub;
-extern void			*_ccsp_cif_light_proc_stub;
-extern void			*_ccsp_cif_endp_resume_stub;
+ * calltable[] indirection.
+ *
+ * Exposed as getter functions rather than exported global variables to
+ * avoid R_386_COPY relocations on old linkers (binutils < 2.26).  When
+ * linked into an executable, an old linker creates a copy of the
+ * variable in the binary's BSS; ccsp_kernel_init() then writes to the
+ * library's copy while the inline code in ccsp_cif.h reads from the
+ * binary's copy (still NULL).  Getter functions are never subject to
+ * COPY relocations. */
+extern void *ccsp_get_cif_proc_stub (void);
+extern void *ccsp_get_cif_light_proc_stub (void);
+extern void *ccsp_get_cif_endp_resume_stub (void);
+#define _ccsp_cif_proc_stub        (ccsp_get_cif_proc_stub ())
+#define _ccsp_cif_light_proc_stub  (ccsp_get_cif_light_proc_stub ())
+#define _ccsp_cif_endp_resume_stub (ccsp_get_cif_endp_resume_stub ())
 
 #endif	/* !__CCSP_H */
 
