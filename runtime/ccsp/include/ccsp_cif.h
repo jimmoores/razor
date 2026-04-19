@@ -48,7 +48,7 @@ typedef struct _light_proc_bar_t LightProcBarrier;
 
 /*{{{ Workspace and Stack Constants */
 #define WORKSPACE_SIZE(args, stack) \
-	((args) + (stack) + CIF_PROCESS_WORDS + 2 + CIF_STACK_LINKAGE + (CIF_STACK_ALIGN - 1))
+	((args) + (stack) + CIF_PROCESS_WORDS + 2 + CIF_STACK_LINKAGE + CIF_STACK_ALIGN)
 /*}}}*/
 
 /*{{{ LightProcBarrier */
