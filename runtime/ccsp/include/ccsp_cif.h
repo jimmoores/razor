@@ -683,7 +683,7 @@ static inline void ProcStart (Workspace wptr, Workspace ws, Process func)
 	ccsp_sched_t *sched = (ccsp_sched_t *) PROC_DESC(wptr)->sched_ptr;
 	Workspace top = ws + PROC_DESC(ws)->stack_ptr;
 	
-	top -= 1; 			/* one parameter (ws) */
+	top -= 2; 			/* one parameter (ws) + one guard word */
 	top = (Workspace) (((word) top) & (~((sizeof(word) * CIF_STACK_ALIGN) - 1)));
 	top -= CIF_STACK_LINKAGE;	/* return pointer */
 
@@ -746,7 +746,7 @@ static inline void ProcStartInitial (Workspace ws, Process func)
 {
 	Workspace top = ws + PROC_DESC(ws)->stack_ptr;
 	
-	top -= 1; 			/* one parameter (ws) */
+	top -= 2; 			/* one parameter (ws) + one guard word */
 	top = (Workspace) (((word) top) & (~((sizeof(word) * CIF_STACK_ALIGN) - 1)));
 	top -= CIF_STACK_LINKAGE;	/* return pointer */
 
@@ -800,8 +800,9 @@ static inline Workspace LightProcInit (Workspace wptr, word *base, word args, wo
 	 * sp-relative accesses (in CIF resume code or in occam-derived
 	 * inserts) to succeed.  CIF_PROCESS_WORDS=24 (192 bytes) is itself
 	 * 16-aligned, so once base is, the resulting ws is too.  The
-	 * trailing slack already in WORKSPACE_SIZE (CIF_STACK_ALIGN-1=3
-	 * words) absorbs the up-to-1-word loss from this rounding. */
+	 * trailing slack in WORKSPACE_SIZE (CIF_STACK_ALIGN=4 words) absorbs
+	 * the up-to-1-word loss from this rounding plus the guard word in
+	 * LightProcStart (top -= 2). */
 	base = (word *)(((word)base + (2 * sizeof(word) - 1)) & ~(2 * sizeof(word) - 1));
 	Workspace ws = base + CIF_PROCESS_WORDS;
 	word words = WORKSPACE_SIZE (args, stack);
@@ -817,7 +818,7 @@ static inline void LightProcStart (Workspace wptr, LightProcBarrier *bar, Worksp
 	ccsp_sched_t *sched = (ccsp_sched_t *) PROC_DESC(wptr)->sched_ptr;
 	Workspace top = ws + PROC_DESC(ws)->stack_ptr;
 	
-	top -= 1; 			/* one parameter (ws) */
+	top -= 2; 			/* one parameter (ws) + one guard word */
 	top = (Workspace) (((word) top) & (~((sizeof(word) * CIF_STACK_ALIGN) - 1)));
 	top -= CIF_STACK_LINKAGE;	/* return pointer */
 
