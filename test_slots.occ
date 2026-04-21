@@ -1,7 +1,0 @@
-PROC main (CHAN BYTE kyb?, scr!, err!)
-  INT32 i32:
-  INT64 i64:
-  SEQ
-    i32 := 1
-    i64 := 2
-:

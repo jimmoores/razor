@@ -1,6 +1,0 @@
-PROC main (CHAN BYTE kyb?, scr!, err!)
-  INT i:
-  SEQ
-    i := 1
-    -- check size via out.int if possible, or just look at assembly
-:
