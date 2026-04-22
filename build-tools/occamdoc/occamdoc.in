@@ -1062,7 +1062,7 @@ def main(args):
 			return 0
 		elif o == "--in-tree":
 			global DATADIR
-			DATADIR = a + "/tools/occamdoc"
+			DATADIR = a + "/build-tools/occamdoc"
 		elif o == "--stdout":
 			output_dir = None
 
