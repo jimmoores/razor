@@ -30,17 +30,17 @@ if ARGUMENTS.get('VERBOSE') != '1':
 Export('env')
 
 # Build mkoccdeps
-SConscript('tools/mkoccdeps/SConscript')
-SConscript('tools/ilibr/SConscript')
+SConscript('build-tools/mkoccdeps/SConscript')
+SConscript('bin/ilibr/SConscript')
 
-SConscript('tools/schemescanner/SConscript')
-SConscript('tools/tinyswig/SConscript')
-SConscript('tools/skroc/SConscript')
-SConscript('tools/slinker/SConscript')
-SConscript('tools/occ21/SConscript')
-SConscript('tools/kroc/SConscript')
+SConscript('build-tools/schemescanner/SConscript')
+SConscript('build-tools/tinyswig/SConscript')
+SConscript('contrib/skroc/SConscript')
+SConscript('build-tools/slinker/SConscript')
+SConscript('compiler/occ21/SConscript')
+SConscript('bin/SConscript')
 
-SConscript('runtime/libtvm/SConscript')
+SConscript('tvm/libtvm/SConscript')
 
 # Ensure that things that build with occbuild have triggered the building of all
 # the required tools, there might be a better palce and better way to do this
@@ -66,5 +66,5 @@ SConscript('modules/course/SConscript')
 SConscript('tvm/posix/SConscript')
 
 # A bit tedious, and not needed right now.
-# SConscript('tools/occamdoc/SConscript')
+# SConscript('build-tools/occamdoc/SConscript')
 

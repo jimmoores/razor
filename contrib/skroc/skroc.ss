@@ -175,11 +175,11 @@ Copyright (C) 2004-2008 Matthew C. Jadud, Christian L. Jacobsen
   (define skroc-revision (pregexp-replace* " ?\\$" "$Revision$" ""))
   (define skroc-c-year "2006")
 
-  (define occ21 (lambda () (find-tool "occ21" "tools/occ21")))
-  (define slinker (lambda () (find-tool "slinker" "tools/slinker")))
-  (define fixme-library-slinker (lambda () (find-tool "library2" "tools/slinker")))
-  (define ilibr (lambda () (find-tool "ilibr" "tools/ilibr")))
-  (define tranx86 (lambda () (find-tool "tranx86" "tools/tranx86")))
+  (define occ21 (lambda () (find-tool "occ21" "compiler/occ21")))
+  (define slinker (lambda () (find-tool "slinker" "build-tools/slinker")))
+  (define fixme-library-slinker (lambda () (find-tool "library2" "build-tools/slinker")))
+  (define ilibr (lambda () (find-tool "ilibr" "bin/ilibr")))
+  (define tranx86 (lambda () (find-tool "tranx86" "translator/tranx86")))
   
   (define isearch-separator 
     (case (system-type)

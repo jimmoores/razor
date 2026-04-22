@@ -44,7 +44,7 @@ AC_DEFUN([TVM_PROG_SKROC],
 AC_REQUIRE([OCCAM_IN_TREE])
 AC_ARG_VAR(SKROC, [Path to kroc])
 if test "x$KROC_BUILD_ROOT" != "x"; then
-  SKROC="$KROC_BUILD_ROOT/tools/skroc/skroc --in-tree $KROC_BUILD_ROOT"
+  SKROC="$KROC_BUILD_ROOT/contrib/skroc/skroc --in-tree $KROC_BUILD_ROOT"
 else
   AC_CHECK_PROG(SKROC, skroc, skroc, no)
   if test $SKROC = no; then

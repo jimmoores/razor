@@ -20,17 +20,17 @@ config.log
 defaults.scm
 
 # Built targets
-tools/mkoccdeps/mkoccdeps
+build-tools/mkoccdeps/mkoccdeps
 bin/ilibr/ilibr
-tools/schemescanner/schemescanner
-tools/skroc/skroc
-tools/slinker/make-driver
-tools/tinyswig/tinyswig
-tools/slinker/library2.ss
-tools/slinker/slinker.ss
+build-tools/schemescanner/schemescanner
+contrib/skroc/skroc
+build-tools/slinker/make-driver
+build-tools/tinyswig/tinyswig
+build-tools/slinker/library2.ss
+build-tools/slinker/slinker.ss
 compiler/occ21/occ21
 translator/tranx86/tranx86
-tools/occamdoc/occamdoc
+build-tools/occamdoc/occamdoc
 bin/kroc
 bin/kroc-setup.sh
 bin/kroc-setup.csh

@@ -1118,8 +1118,8 @@ def main(args):
 		programs["kroc"] = [in_tree + "/bin/kroc", "--in-tree", in_tree] + programs["kroc"][1:]
 		programs["ilibr"] = [in_tree + "/bin/ilibr/ilibr"] + programs["ilibr"][1:]
 		programs["occ21"] = [in_tree + "/compiler/occ21/occ21"] + programs["occ21"][1:]
-		programs["plinker.pl"] = [in_tree + "/tools/plinker/plinker.pl"] + programs["plinker.pl"][1:]
-		programs["tce-dump.pl"] = [in_tree + "/tools/plinker/tce-dump.pl"] + programs["tce-dump.pl"][1:]
+		programs["plinker.pl"] = [in_tree + "/build-tools/plinker/plinker.pl"] + programs["plinker.pl"][1:]
+		programs["tce-dump.pl"] = [in_tree + "/build-tools/plinker/tce-dump.pl"] + programs["tce-dump.pl"][1:]
 		programs["tvm"] = [in_tree + "/tvm/posix/tvm"] + programs["tvm"][1:]
 	#}}}
 

@@ -18,11 +18,11 @@ fi
 
 OCCAM_CONFIG_SUBDIRS(bin/ilibr)
 OCCAM_CONFIG_SUBDIRS(bin)
-OCCAM_CONFIG_SUBDIRS(tools/mkoccdeps)
+OCCAM_CONFIG_SUBDIRS(build-tools/mkoccdeps)
 if test $OCCBUILD_TOOLCHAIN != tock; then
   OCCAM_CONFIG_SUBDIRS(compiler/occ21)
 fi
-OCCAM_CONFIG_SUBDIRS(tools/occamdoc)
+OCCAM_CONFIG_SUBDIRS(build-tools/occamdoc)
 
 if test $OCCBUILD_TOOLCHAIN = kroc -o $OCCBUILD_TOOLCHAIN = tock; then
   OCCAM_CONFIG_TARGET_SUBDIRS(runtime/ccsp)
@@ -35,11 +35,11 @@ if test $OCCBUILD_TOOLCHAIN = kroc; then
 fi
 
 if test $OCCBUILD_TOOLCHAIN = tvm; then
-  OCCAM_CONFIG_SUBDIRS(tools/plinker)
-  OCCAM_CONFIG_SUBDIRS(tools/tenctool)
-  OCCAM_CONFIG_SUBDIRS(tools/skroc)
-  OCCAM_CONFIG_SUBDIRS(tools/slinker)
-  OCCAM_CONFIG_SUBDIRS(tools/tinyswig)
+  OCCAM_CONFIG_SUBDIRS(build-tools/plinker)
+  OCCAM_CONFIG_SUBDIRS(build-tools/tenctool)
+  OCCAM_CONFIG_SUBDIRS(contrib/skroc)
+  OCCAM_CONFIG_SUBDIRS(build-tools/slinker)
+  OCCAM_CONFIG_SUBDIRS(build-tools/tinyswig)
 
   OCCAM_CONFIG_TARGET_SUBDIRS(runtime/libtvm)
 

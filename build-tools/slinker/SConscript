@@ -5,8 +5,8 @@ local = env.Clone()
 driver  = local.Mzc('make-driver', 'make-driver.ss')
 
 slinker_builder = Builder(action = \
-     'tools/slinker/make-driver --driver-script $TARGET.base')
-#    'tools/slinker/make-driver --driver-script ${_remove_ext(TARGET)}',
+     'build-tools/slinker/make-driver --driver-script $TARGET.base')
+#    'build-tools/slinker/make-driver --driver-script ${_remove_ext(TARGET)}',
 #    _remove_ext = lambda x: os.path.splitext(x.path)[0])
 #local = local.Clone(BUILDERS = {'slinker_builder' : slinker_builder })
 local['BUILDERS']['slinker_builder'] = slinker_builder
