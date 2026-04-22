@@ -23,9 +23,20 @@
 #ifndef __CCSP_CONSTS_H
 #define __CCSP_CONSTS_H
 
-/* Constants used in transputer instructions */
+/* Constants used in transputer instructions.
+ *
+ * MostNeg is MOSTNEG INT (most-negative 32-bit signed) used as the
+ * workspace-init sentinel and in occam arithmetic.  On 64-bit builds
+ * occ21/tranx86 still treat INT as 32-bit, so the 64-bit representation
+ * must be the sign-extended INT32_MIN (0xFFFFFFFF80000000), NOT the
+ * raw 64-bit bit-pattern 0x8000000000000000 -- which is INT64_MIN and
+ * makes any arithmetic the generated code performs on a freshly
+ * initialised workspace slot overflow the jo check and trap into
+ * BNSeterr.  This mirrors the earlier I_MINT sign-extension fix in
+ * tranx86/etcrtl.c (see ai/bugs/fix.md).
+ */
 #if defined(TARGET_64BIT) || defined(__x86_64__) || defined(__aarch64__)
-#define MostNeg 		((word)0x8000000000000000ULL)
+#define MostNeg 		((word)(int64_t)(int32_t)0x80000000)
 #else
 #define MostNeg 		((word)0x80000000)
 #endif
