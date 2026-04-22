@@ -1,0 +1,118 @@
+-- CG test 98 -- MOSTNEG INT sign-extension in the workspace sentinel
+--
+-- Regression test for a bug where `MostNeg` in
+-- runtime/ccsp/include/ccsp_consts.h was defined on 64-bit targets as
+-- the raw 64-bit pattern 0x8000000000000000 (= INT64_MIN) instead of
+-- the sign-extended INT32_MIN 0xFFFFFFFF80000000.
+--
+-- _occ_enter (runtime/libkrocif/rts/occam_entry.c) pre-fills every
+-- workspace slot with `MostNeg` as a use-before-init sentinel.  If the
+-- sentinel is the raw 64-bit bit pattern, any 64-bit arithmetic that
+-- tranx86 emits against a slot still holding the sentinel overflows the
+-- `jo` overflow check and traps into BNSeterr -- presenting as the
+-- mysterious "application error, stopped." with no location info at
+-- startup of any program that reads an uninitialised workspace slot
+-- (e.g. course.REAL32TOSTRING inside any REAL-formatting library call).
+--
+-- This test exercises three reads that would mismatch (or crash) under
+-- the broken definition but are well-defined with a sign-extended
+-- MOSTNEG INT:
+--   A. The MOSTNEG INT literal itself.
+--   B. A round-trip through a local INT slot (catches bad store-truncate).
+--   C. A read of an uninitialised array element -- the sentinel surfaces.
+--   D. Arithmetic across the sentinel that fits in INT32 after sign
+--      extension but overflows INT64 if the high bit alone is set.
+
+PROC cgtest98 (CHAN OF BYTE keyb, scr, err)
+
+  #INCLUDE "cgmain.occ"
+  #INCLUDE "cgreal.occ"
+
+  SEQ
+    init ("CG test 98", "MOSTNEG INT sign-extension / workspace sentinel")
+
+    --{{{  A. MOSTNEG INT literal
+    title ("MOSTNEG INT literal")
+    SEQ
+      check.INT (MOSTNEG INT,  #80000000, "R98-001")
+      check.INT ((MOSTNEG INT) + 1, (#80000000 + 1), "R98-002")
+    --}}}
+
+    --{{{  B. Round-trip MOSTNEG INT through a local variable
+    title ("MOSTNEG INT round-trip through INT slot")
+    INT m :
+    SEQ
+      m := MOSTNEG INT
+      check.INT (m,        MOSTNEG INT,        "R98-010")
+      check.INT (m + 1,    (MOSTNEG INT) + 1,  "R98-011")
+      check.INT (m + 8,    (MOSTNEG INT) + 8,  "R98-012")
+      -- Two identity-functions to block constant-folding: ensure the
+      -- value really does pass through a real load from workspace.
+      check.INT (id.INT(m), MOSTNEG INT, "R98-013")
+    --}}}
+
+    --{{{  C. Uninitialised 8-byte workspace slot reads the sentinel.
+    --       _occ_enter fills every workspace word with MostNeg.  On a
+    --       64-bit build each workspace word is 8 bytes, so an INT64
+    --       array gives one sentinel per element -- reading back the
+    --       full 64-bit value distinguishes a correctly sign-extended
+    --       INT32_MIN (= 0xFFFFFFFF80000000 = -2147483648 as signed
+    --       INT64) from the raw INT64_MIN bit-pattern
+    --       (= 0x8000000000000000 = -9223372036854775808).
+    --
+    --       (On 32-bit targets INT is itself 4 bytes; the cast below
+    --       leaves the test trivially true there because INT64(MOSTNEG
+    --       INT) exactly equals the stored word.)
+    title ("workspace sentinel via uninitialised INT64 array slot")
+    [16]INT64 ws64 :
+    INT64 y :
+    SEQ
+      y := id.INT64(ws64[15])
+      check.INT64 (y, INT64 (MOSTNEG INT), "R98-020")
+
+      y := id.INT64(ws64[7])
+      check.INT64 (y, INT64 (MOSTNEG INT), "R98-021")
+
+      y := id.INT64(ws64[0])
+      check.INT64 (y, INT64 (MOSTNEG INT), "R98-022")
+    --}}}
+
+    --{{{  D. Arithmetic whose overflow classification differs between
+    --       INT32 (no overflow) and INT64 (no overflow for either
+    --       representation) -- confirms the codegen treats INTs as
+    --       sign-extended values throughout.
+    title ("INT arithmetic across MOSTNEG")
+    INT a, b, r :
+    SEQ
+      a := 8
+      b := MOSTNEG INT
+      -- 8 + MOSTNEG INT = -2147483640 : fits in INT32; tranx86 must
+      -- load b as a sign-extended 64-bit operand for the jo-check to
+      -- correctly not fire here.
+      r := a + b
+      check.INT (r, (8 + (MOSTNEG INT)), "R98-030")
+
+      -- MOSTNEG INT + (MOSTPOS INT) = -1 in two's complement.
+      r := (MOSTNEG INT) + (MOSTPOS INT)
+      check.INT (r, -1, "R98-031")
+
+      -- Subtract a small value from MOSTNEG INT + 1.  Result = MOSTNEG
+      -- INT exactly; tests that the reloaded value is sign-extended.
+      b := (MOSTNEG INT) + 1
+      r := b - 1
+      check.INT (r, MOSTNEG INT, "R98-032")
+    --}}}
+
+    finish ()
+
+    -- The shared cgtest harness (finish) only prints "^^^ Failed"; it
+    -- does not exit non-zero, so automake's exit-status driver records
+    -- a PASS even when checks fail.  For this regression test we want
+    -- the failure to propagate through `make check`, so STOP if any
+    -- assertion above mismatched.
+    IF
+      error.count > 0
+        STOP
+      TRUE
+        SKIP
+:
