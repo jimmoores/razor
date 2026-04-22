@@ -24,8 +24,8 @@ AC_REQUIRE([AC_CANONICAL_TARGET])
 AC_REQUIRE([OCCAM_IN_TREE])
 AC_REQUIRE([KROC_RMOX_BUILD])
 
-# If you add new variables here, make sure you update tools/kroc/Makefile.am
-# and tools/kroc/kroc.in too.
+# If you add new variables here, make sure you update bin/Makefile.am
+# and bin/kroc.in too.
 
 KROC_CCSP_CFLAGS=""
 KROC_CCSP_CINCPATH=""
@@ -278,7 +278,7 @@ AC_DEFUN([KROC_PROG_KROC],
 AC_REQUIRE([OCCAM_IN_TREE])
 AC_ARG_VAR(KROC, [Path to kroc])
 if test "x$KROC_BUILD_ROOT" != "x"; then
-  KROC="$KROC_BUILD_ROOT/tools/kroc/kroc --in-tree $KROC_BUILD_ROOT"
+  KROC="$KROC_BUILD_ROOT/bin/kroc --in-tree $KROC_BUILD_ROOT"
 else
   AC_CHECK_PROG(KROC, kroc, kroc, no)
   if test $KROC = no; then

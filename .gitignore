@@ -21,7 +21,7 @@ defaults.scm
 
 # Built targets
 tools/mkoccdeps/mkoccdeps
-tools/ilibr/ilibr
+bin/ilibr/ilibr
 tools/schemescanner/schemescanner
 tools/skroc/skroc
 tools/slinker/make-driver
@@ -31,10 +31,10 @@ tools/slinker/slinker.ss
 tools/occ21/occ21
 tools/tranx86/tranx86
 tools/occamdoc/occamdoc
-tools/kroc/kroc
-tools/kroc/kroc-setup.sh
-tools/kroc/kroc-setup.csh
-tools/kroc/occbuild
+bin/kroc
+bin/kroc-setup.sh
+bin/kroc-setup.csh
+bin/occbuild
 tests/cgtests/cgtest??
 tests/hereticc/hereticc
 tests/occbench/benchmarks/fft2

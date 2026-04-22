@@ -16,8 +16,8 @@ if test "x$OCCBUILD_API_VERSION" != x3; then
   AC_MSG_ERROR([this configure script has been built with an out-of-date version of `occbuild.m4'; try clearing your `ACLOCAL' environment variable.])
 fi
 
-OCCAM_CONFIG_SUBDIRS(tools/ilibr)
-OCCAM_CONFIG_SUBDIRS(tools/kroc)
+OCCAM_CONFIG_SUBDIRS(bin/ilibr)
+OCCAM_CONFIG_SUBDIRS(bin)
 OCCAM_CONFIG_SUBDIRS(tools/mkoccdeps)
 if test $OCCBUILD_TOOLCHAIN != tock; then
   OCCAM_CONFIG_SUBDIRS(tools/occ21)

@@ -59,7 +59,7 @@ AC_REQUIRE([OCCAM_HOST_OS])
 
 AC_ARG_VAR(OCCBUILD, [Path to occbuild])
 if test "x$KROC_BUILD_ROOT" != "x"; then
-  OCCBUILD="$KROC_BUILD_ROOT/tools/kroc/occbuild --in-tree $KROC_BUILD_ROOT"
+  OCCBUILD="$KROC_BUILD_ROOT/bin/occbuild --in-tree $KROC_BUILD_ROOT"
 else
   AC_CHECK_PROG(OCCBUILD, occbuild, occbuild, no)
   if test $OCCBUILD = no; then
