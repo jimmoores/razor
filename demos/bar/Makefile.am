@@ -26,7 +26,7 @@ SUFFIXES = .occ
 
 # Depend on toolchain so targets rebuild when compiler/runtime changes
 TOOLCHAIN_DEPS = \
-	$(KROC_BUILD_ROOT)/tools/occ21/occ21 \
+	$(KROC_BUILD_ROOT)/compiler/occ21/occ21 \
 	$(KROC_BUILD_ROOT)/tools/tranx86/tranx86 \
 	$(KROC_BUILD_ROOT)/runtime/ccsp/libccsp.a
 

@@ -20,7 +20,7 @@ OCCAM_CONFIG_SUBDIRS(bin/ilibr)
 OCCAM_CONFIG_SUBDIRS(bin)
 OCCAM_CONFIG_SUBDIRS(tools/mkoccdeps)
 if test $OCCBUILD_TOOLCHAIN != tock; then
-  OCCAM_CONFIG_SUBDIRS(tools/occ21)
+  OCCAM_CONFIG_SUBDIRS(compiler/occ21)
 fi
 OCCAM_CONFIG_SUBDIRS(tools/occamdoc)
 
