@@ -21,7 +21,7 @@ if ! [ -d build/jedit ] ; then
 fi
 
 cd $ROOT
-cd ../../tools/occplug
+cd ../../ide/occplug
 
 ant -Djedit.install.dir=$ROOT/build/jedit/jedit-program/ \
     -Dinstall.dir=$ROOT/build/occPlug -Dbuild.dir=$ROOT/build/occPlug-build

@@ -524,7 +524,7 @@ def build_occplug():
 	config.rebase('TEMP', '@TEMP_ROOT@/occPlug')
 	remove_dir(config.get('TEMP'))
 
-	src_ext = '/tools/occplug' 
+	src_ext = '/ide/occplug' 
 	dist_ext = '/distribution/deb-pkg'
 
 	#srcpath = concat([config.get('TEMP'), '/src', src_ext])

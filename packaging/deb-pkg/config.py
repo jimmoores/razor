@@ -72,7 +72,7 @@ BASE = {'VERSION'              : '102',
 				'FINAL_DEST_FIRMWARE'  : '@FINAL_DEST_SHARE@/firmwares',
 				'FINAL_DEST_CONF'      : '@FINAL_DEST_SHARE@/conf',
 				# OCCPLUG
-				'SOURCE_OCCPLUG'       : '@SVN@/tools/occplug',
+				'SOURCE_OCCPLUG'       : '@SVN@/ide/occplug',
 				'DEST_OCCPLUG_ROOT'    : '@TEMP@/@OCCPLUG_PACKAGE_NAME@',
 				'DEST_OCCPLUG_JARS'    : '@DEST_OCCPLUG_ROOT@/usr/share/jedit/jars',
 				'DEST_OCCPLUG_MODES'   : '@DEST_OCCPLUG_ROOT@/usr/share/jedit/modes',
