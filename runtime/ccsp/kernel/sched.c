@@ -2357,11 +2357,7 @@ static void kernel_common_error (word *Wptr, sched_t *sched, word return_address
 		if (ccsp_ignore_errors) {
 			kernel_scheduler (sched);
 		} else {
-#if defined(RMOX_BUILD)
 			BMESSAGE ("application error, stopped. (%s)\n", name ?: "(unknown)");
-#else
-			BMESSAGE ("application error, stopped.\n");
-#endif
 			ccsp_kernel_exit (1, return_address);
 		}
 	}
