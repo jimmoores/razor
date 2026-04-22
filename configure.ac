@@ -59,7 +59,7 @@ OCCAM_CONFIG_TARGET_SUBDIRS(modules/cif/libsrc)
 
 if test "x$KROC_RMOX" = "x"; then
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/dynproc/libsrc)
-  OCCAM_CONFIG_TARGET_SUBDIRS(modules/course/libsrc)
+  OCCAM_CONFIG_TARGET_SUBDIRS(examples/course/libsrc)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/pony/libsrc)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/udc/libsrc)
 fi
@@ -87,9 +87,9 @@ if test "x$KROC_RMOX" = "x"; then
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/button/examples)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/cdx/examples)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/cif/examples)
-  # OCCAM_CONFIG_TARGET_SUBDIRS(modules/course/answers)
-  OCCAM_CONFIG_TARGET_SUBDIRS(modules/course/examples)
-  OCCAM_CONFIG_TARGET_SUBDIRS(modules/course/exercises)
+  # OCCAM_CONFIG_TARGET_SUBDIRS(examples/course/answers)
+  OCCAM_CONFIG_TARGET_SUBDIRS(examples/course/examples)
+  OCCAM_CONFIG_TARGET_SUBDIRS(examples/course/exercises)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/dynproc/examples)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/graphics3d/examples)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/moa/examples)
@@ -109,11 +109,11 @@ if test "x$KROC_RMOX" = "x"; then
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/useful/examples)
   OCCAM_CONFIG_TARGET_SUBDIRS(modules/video/examples)
 
-  OCCAM_CONFIG_TARGET_SUBDIRS(demos/bar)
-  OCCAM_CONFIG_TARGET_SUBDIRS(demos/game)
-  OCCAM_CONFIG_TARGET_SUBDIRS(demos/robots)
-  OCCAM_CONFIG_TARGET_SUBDIRS(demos/shootout)
-  OCCAM_CONFIG_TARGET_SUBDIRS(demos/ttygames)
+  OCCAM_CONFIG_TARGET_SUBDIRS(examples/demos/bar)
+  OCCAM_CONFIG_TARGET_SUBDIRS(examples/demos/game)
+  OCCAM_CONFIG_TARGET_SUBDIRS(examples/demos/robots)
+  OCCAM_CONFIG_TARGET_SUBDIRS(examples/demos/shootout)
+  OCCAM_CONFIG_TARGET_SUBDIRS(examples/demos/ttygames)
 
   OCCAM_CONFIG_TARGET_SUBDIRS(tests/cgtests)
   OCCAM_CONFIG_TARGET_SUBDIRS(tests/hereticc)

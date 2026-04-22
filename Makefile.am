@@ -9,12 +9,12 @@ EXTRA_DIST = \
 	BUGS \
 	CHANGELOG \
 	README \
-	demos/README \
+	examples/demos/README \
 	modules/button/README \
 	modules/cif/README \
-	modules/course/README \
-	modules/course/etc/README \
-	modules/course/etc/reading.list \
+	examples/course/README \
+	examples/course/etc/README \
+	examples/course/etc/reading.list \
 	modules/dynproc/README \
 	modules/fmtoutlib/README \
 	modules/moa/README \

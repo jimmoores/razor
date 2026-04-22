@@ -61,7 +61,7 @@ env['OCCBUILD_TOOLCHAIN'] = 'tvm'
 
 
 SConscript('modules/inmoslibs/libsrc/SConscript')
-SConscript('modules/course/SConscript')
+SConscript('examples/course/SConscript')
 
 SConscript('tvm/posix/SConscript')
 
