@@ -4,8 +4,10 @@
 OCCAMDOC = @OCCAMDOC@
 
 docsrc = \
-	$(KROC_SRC_ROOT)/modules/*/libsrc \
-	$(KROC_BUILD_ROOT)/modules/*/libsrc
+	$(KROC_SRC_ROOT)/stdlib/*/libsrc \
+	$(KROC_SRC_ROOT)/contrib/*/libsrc \
+	$(KROC_BUILD_ROOT)/stdlib/*/libsrc \
+	$(KROC_BUILD_ROOT)/contrib/*/libsrc
 
 if OCCAMDOC_ENABLED
 all-local: output.stamp

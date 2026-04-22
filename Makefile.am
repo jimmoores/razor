@@ -10,20 +10,20 @@ EXTRA_DIST = \
 	CHANGELOG \
 	README \
 	examples/demos/README \
-	modules/button/README \
-	modules/cif/README \
+	contrib/button/README \
+	stdlib/cif/README \
 	examples/course/README \
 	examples/course/etc/README \
 	examples/course/etc/reading.list \
-	modules/dynproc/README \
-	modules/fmtoutlib/README \
-	modules/moa/README \
-	modules/nocclibs/README \
-	modules/occGL/README \
-	modules/occSDL/README \
-	modules/pony/README \
-	modules/sdlraster/README \
-	modules/udc/README
+	stdlib/dynproc/README \
+	stdlib/fmtoutlib/README \
+	contrib/moa/README \
+	stdlib/nocclibs/README \
+	contrib/occGL/README \
+	contrib/occSDL/README \
+	contrib/pony/README \
+	contrib/sdlraster/README \
+	contrib/udc/README
 
 aclocaldir = $(prefix)/share/aclocal
 dist_aclocal_DATA = \

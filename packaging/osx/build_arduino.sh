@@ -57,7 +57,7 @@ else
 fi
 make
 make install
-cd $BUILD/kroc-tvm-avr/modules/inmoslibs/libsrc
+cd $BUILD/kroc-tvm-avr/stdlib/inmoslibs/libsrc
 make
 make install
 

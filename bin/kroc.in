@@ -837,7 +837,7 @@ fi
 if [ "$intree" = "" ]; then
   ocspath="$kroc_krocdir/@KROC_TARGET_PREFIX@vtlib:$kroc_krocdir/@KROC_TARGET_PREFIX@vtinclude"
 else
-  ocspath="$intree/modules/inmoslibs/libsrc/forall"
+  ocspath="$intree/stdlib/inmoslibs/libsrc/forall"
 fi
 if [ "X$OCSEARCH" != "X" ]; then
   ocspath="$OCSEARCH:$ocspath"
@@ -848,7 +848,7 @@ if [ "$intree" = "" ]; then
   oclibpath="-L$kroc_archlibdir"
   cincludepath="-I$kroc_archincdir"
 else
-  oclibpath="@KROC_CCSP_LIBPATH@ -L$intree/modules/inmoslibs/libsrc/forall"
+  oclibpath="@KROC_CCSP_LIBPATH@ -L$intree/stdlib/inmoslibs/libsrc/forall"
   cincludepath="@KROC_CCSP_CINCPATH@"
   # Prevent the linker from finding stale installed libraries in /usr/local/lib
   # or other system paths when building in-tree. -rpath-link fixes build-time

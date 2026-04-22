@@ -60,7 +60,7 @@ env.Depends(env['SKROC'], env['TVM_CONFIG_H'])
 env['OCCBUILD_TOOLCHAIN'] = 'tvm'
 
 
-SConscript('modules/inmoslibs/libsrc/SConscript')
+SConscript('stdlib/inmoslibs/libsrc/SConscript')
 SConscript('examples/course/SConscript')
 
 SConscript('tvm/posix/SConscript')
