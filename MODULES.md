@@ -1,7 +1,10 @@
 # KRoC Modules Reference
 
-This document describes each module in the `modules/` directory, its purpose,
-build status, dependencies, and how to enable optional modules.
+This document describes each module under `stdlib/` (core libraries that
+ship with every install) and `contrib/` (optional, platform-specific
+modules), its purpose, build status, dependencies, and how to enable
+optional modules. Teaching material (the `course` library) now lives
+under `examples/course/`.
 
 ## Build Summary
 

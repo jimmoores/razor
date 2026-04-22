@@ -145,8 +145,8 @@ The following `make` targets are available after running `configure`:
 | Target | Description |
 |--------|-------------|
 | `make` | Build the entire KRoC system (compiler, translator, runtime, and all enabled modules). Displays a summary of enabled/disabled modules on completion. |
-| `make -C tools/occ21` | Build only the occ21 occam compiler |
-| `make -C tools/tranx86` | Build only the tranx86 native-code translator |
+| `make -C compiler/occ21` | Build only the occ21 occam compiler |
+| `make -C translator/tranx86` | Build only the tranx86 native-code translator |
 | `make -C runtime/ccsp` | Build only the CCSP runtime system |
 
 ### Testing
@@ -197,41 +197,75 @@ and run `occbuild --program hello.occ` to compile it; this should give you a bin
 
 ## Directories
 
-  demos/
+  bin/
 
-    Some standalone demo programs written in occam-pi.
+    User-facing entry points (the `kroc` driver, `occbuild`, `ilibr`,
+    and related setup scripts).
 
-  doc/
+  compiler/
 
-    Various items of documentation. The "essentially-kroc.txt" file is a
-    good place to start.
+    The occam compiler (`occ21`).
 
-  install/
+  translator/
 
-    This is the default installation directory for KRoC.
-
-  modules/
-
-    Reusable modules that can be used in occam-pi programs. Each module
-    contains a "libsrc" directory with the module's source code, and an
-    "examples" directory with demonstration and test programs.
-
-    The "modules/course" directory will probably be of particular
-    interest, since it contains the examples and exercises used to teach
-    occam-pi at the University of Kent.
+    The native-code translator (`tranx86`).
 
   runtime/
 
-    Low-level runtime support code for the occam-pi environment.
+    Low-level runtime support code (CCSP kernel, libkrocif,
+    POSIX wrappers).
+
+  tvm/
+
+    The Transterpreter virtual machine (a distinct runtime for
+    microcontrollers), including `libtvm` and platform wrappers.
+
+  stdlib/
+
+    Core language libraries that ship with every KRoC installation -
+    part of the language's ABI. Each module has `libsrc/` (source) and
+    typically `examples/`.
+
+  contrib/
+
+    Optional, platform-specific modules (SDL, OpenGL, CUDA, robotics,
+    terminal UI, networked processes, etc.). May not build on all
+    platforms or may require external libraries.
+
+  build-tools/
+
+    Internal tools used to build KRoC itself or to build occam programs
+    (`occamdoc`, `mkoccdeps`, `plinker`, `slinker`, `tinyswig`,
+    `tenctool`, `schemescanner`) - not needed to use KRoC once installed.
+
+  platform/
+
+    OS/hardware-specific loader and updater tools (LEGO Mindstorms,
+    Windows stub/updater, macOS updater).
+
+  ide/
+
+    Editor integrations (the jEdit plugin `occplug`).
+
+  examples/
+
+    Teaching material (`course/`) and standalone demo programs (`demos/`).
 
   tests/
 
-    Functional test programs for occam-pi systems.
+    Functional test programs for occam-pi systems - `cgtests/`,
+    `corner-cases/`, `trivial/`, `benchmarks/` (cross-language
+    comparisons), plus `hereticc/` and `occbench/`.
 
-  tools/
+  docs/
 
-    Tools for compiling, debugging, packaging and documenting occam-pi
-    programs.
+    Various items of documentation - `essentially-kroc.txt` is a good
+    place to start; `docs/reference/` holds archived Inmos / upstream
+    PDFs.
+
+  packaging/
+
+    Distribution packaging scripts (Debian, RPM, macOS, Windows).
 
   licenses/
 
