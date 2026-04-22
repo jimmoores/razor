@@ -24,7 +24,7 @@ if ! [ -d build/winsparkle ] ; then
 fi
 
 cd $ROOT  
-cd ../../tools/winupdater
+cd ../../platform/winupdater
 
 ant -Djedit.install.dir=$ROOT/build/jedit/jedit-program/ \
     -Dinstall.dir=$ROOT/build/winupdater \
