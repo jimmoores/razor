@@ -186,7 +186,7 @@ AC_DEFUN([OCCAM_WORD_SIZE],
 [dnl
 AC_MSG_CHECKING([target word size])
 # If you add a new CPU to this list, please also update the CPU configuration
-# section in runtime/libtvm/configure.ac.
+# section in tvm/libtvm/configure.ac.
 case "$host_cpu" in
   avr*|h8300|msp430)
     word_size=2

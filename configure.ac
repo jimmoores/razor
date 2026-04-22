@@ -41,7 +41,7 @@ if test $OCCBUILD_TOOLCHAIN = tvm; then
   OCCAM_CONFIG_SUBDIRS(build-tools/slinker)
   OCCAM_CONFIG_SUBDIRS(build-tools/tinyswig)
 
-  OCCAM_CONFIG_TARGET_SUBDIRS(runtime/libtvm)
+  OCCAM_CONFIG_TARGET_SUBDIRS(tvm/libtvm)
 
   AC_ARG_WITH([wrapper],
               AS_HELP_STRING([--with-wrapper=...],[Transterpreter wrapper to use (posix, none)]),

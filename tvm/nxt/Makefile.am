@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I ../../m4
 
 CPPFLAGS = \
 	-Ilibtvm \
-	-I../../runtime/libtvm \
+	-I../libtvm \
 	@CPPFLAGS@
 LDFLAGS = -Llibtvm @LDFLAGS@
 LIBS = -ltvm -lnxos @LIBGCC@ @LIBS@
@@ -40,7 +40,7 @@ $(tvm_nxt_SOURCES): libtvm/libtvm.a
 libtvm/libtvm.a: config.status
 	rm -fr libtvm
 	mkdir libtvm
-	cd libtvm && ../../../runtime/libtvm/configure \
+	cd libtvm && ../../libtvm/configure \
 		--host=arm-elf \
 		--with-memory-allocator=tlsf \
 		--enable-custom-memory-ops \

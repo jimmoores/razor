@@ -3,8 +3,8 @@ ACLOCAL_AMFLAGS = -I ../../m4
 
 CPPFLAGS = \
 	-Ilibtvm \
-	-I../../runtime/libtvm \
-	-I$(top_srcdir)/../../runtime/libtvm \
+	-I../libtvm \
+	-I$(top_srcdir)/../libtvm \
 	-DF_CPU=$(F_CPU) \
 	-D$(MCU) \
 	-DBYTECODE_ADDR=$(BYTECODE_ADDR) \
@@ -42,7 +42,7 @@ $(firmware_SOURCES): libtvm/libtvm.a
 libtvm/libtvm.a: config.status
 	rm -fr libtvm
 	mkdir libtvm
-	cd libtvm && ../$(top_srcdir)/../../runtime/libtvm/configure \
+	cd libtvm && ../$(top_srcdir)/../libtvm/configure \
 		--host=avr \
 		--with-memory-allocator=none \
 		CFLAGS="@CFLAGS@"

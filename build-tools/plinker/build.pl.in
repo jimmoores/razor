@@ -47,13 +47,13 @@ sub write_file ($$) {
 sub compile_store {
 	my $store = {};
 	Transputer::Instructions::compile (
-		$store, "$SRCDIR/../occ21/include/instruct.h"
+		$store, "$SRCDIR/../../compiler/occ21/include/instruct.h"
 	);
 	Transputer::TCOFF::compile (
-		$store, "$SRCDIR/../occ21/include/tcoff.h"
+		$store, "$SRCDIR/../../compiler/occ21/include/tcoff.h"
 	);
 	Transterpreter::Instructions::compile (
-		$store, "$SRCDIR/../../runtime/libtvm/"
+		$store, "$SRCDIR/../../tvm/libtvm/"
 	);
 	return Data::Dumper->new ([$store], ['STORE'])->Dump;
 }
