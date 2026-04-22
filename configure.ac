@@ -120,7 +120,7 @@ if test "x$KROC_RMOX" = "x"; then
   OCCAM_CONFIG_TARGET_SUBDIRS(tests/occbench)
 fi
 
-OCCAM_CONFIG_SUBDIRS(doc)
+OCCAM_CONFIG_SUBDIRS(docs)
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
