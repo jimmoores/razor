@@ -820,7 +820,7 @@ if [ "$intree" = "" ]; then
 	rtsmain=${RTSMAIN:-"$kroc_archlibdir/rtsmain.o"}
 else
 	occ21="$intree/compiler/occ21/occ21"
-	octran="$intree/tools/tranx86/tranx86"
+	octran="$intree/translator/tranx86/tranx86"
 	rtsmain="$intree/runtime/libkrocif/rts/rtsmain.o"
 fi
 

@@ -29,7 +29,7 @@ if test $OCCBUILD_TOOLCHAIN = kroc -o $OCCBUILD_TOOLCHAIN = tock; then
 fi
 
 if test $OCCBUILD_TOOLCHAIN = kroc; then
-  OCCAM_CONFIG_SUBDIRS(tools/tranx86)
+  OCCAM_CONFIG_SUBDIRS(translator/tranx86)
 
   OCCAM_CONFIG_TARGET_SUBDIRS(runtime/libkrocif)
 fi

@@ -29,7 +29,7 @@ tools/tinyswig/tinyswig
 tools/slinker/library2.ss
 tools/slinker/slinker.ss
 compiler/occ21/occ21
-tools/tranx86/tranx86
+translator/tranx86/tranx86
 tools/occamdoc/occamdoc
 bin/kroc
 bin/kroc-setup.sh

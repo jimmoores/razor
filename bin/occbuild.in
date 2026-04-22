@@ -499,7 +499,7 @@ class KRoCToolchain(Toolchain):
 		# delete the .o to force retranslation with the current tranx86.
 		abi_stamp_mtime = None
 		if in_tree is not None:
-			abi_stamp_path = os.path.join(in_tree, "tools/tranx86/abi-version")
+			abi_stamp_path = os.path.join(in_tree, "translator/tranx86/abi-version")
 			if os.path.exists(abi_stamp_path):
 				abi_stamp_mtime = os.path.getmtime(abi_stamp_path)
 
