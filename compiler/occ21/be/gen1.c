@@ -255,7 +255,7 @@ PRIVATE void tguy_or_asm (treenode * tptr, const BOOL guy_not_asm)
 					case S_CONSTEXP:
 						{
 							INT32 val = LoValOf (ThisItem (operand));
-							BYTE buf[4];
+							BYTE buf[8];
 							int i;
 							int len = (instruction & INST_MASK) == I_BYTE ? 1 : bytesperword;
 							int swap = len == bytesperword ? targetintsize : S_BYTE;
