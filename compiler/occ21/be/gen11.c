@@ -427,7 +427,25 @@ PRIVATE void tbyteoffset (const INT32 offset)
 /*}}}*/
 /*{{{  load/store/loadptr       names*/
 /*{{{  PRIVATE void movepointer (const int dirn, const int inonlocal, const INT32 word, const int type, BOOL * const need_signextend, const BOOL devaccess)*/
-PRIVATE void movepointer (const int dirn, const int inonlocal, const INT32 word, const int type, BOOL * const need_signextend, const BOOL devaccess)
+/* movepointer assumes a pointer has already been loaded, and does a
+ * load/store off it.  It requires 'word' to be a word offset, if we're
+ * using word sized data.
+ *
+ * On 64-bit targets, S_INT is semantically 32-bit (bytesinscalar == 4)
+ * but a "workspace slot" is still one 64-bit word wide.  Storing an
+ * INT through a pointer must therefore write the full 8-byte slot
+ * (sign-extended) so that subsequent 64-bit loads of the same slot
+ * (I_LDL driving a FOR / WHILE counter, or a 64-bit cmp-with-0) see a
+ * clean value rather than the stale upper half left by the _occ_enter
+ * MostNeg sentinel or a prior occupant.  Packed [N]INT / [N]INT32 /
+ * [N]REAL32 array elements must stay on the 4-byte I_SW, or a
+ * full-width store would trample the neighbour element: callers
+ * accessing array elements pass `packed_elem = TRUE`; all other
+ * callers (pointer-deref of a RESULT INT parameter, `*p := v`, etc.)
+ * pass `packed_elem = FALSE` so INT / UINT stores promote to
+ * I_XSWORD + I_STNL.
+ */
+PRIVATE void movepointer (const int dirn, const int inonlocal, const INT32 word, const int type, BOOL * const need_signextend, const BOOL devaccess, const BOOL packed_elem)
 /*
   This assumes a pointer has already been loaded, and does a load/store off it
   It requires 'word' to be a word offset, if we're using word sized data.
@@ -497,13 +515,31 @@ PRIVATE void movepointer (const int dirn, const int inonlocal, const INT32 word,
 		   (type == S_INT || type == S_UINT || type == S_INT32 || type == S_UINT32 || type == S_REAL32)) {
 		/*{{{  load/store a 32-bit value on 64-bit target */
 		/* On 64-bit targets, INT is 32-bit but the native word is 64-bit.
-		 * Use I_LW/I_SW to generate 32-bit loads/stores instead of
-		 * I_LDNL/I_STNL which would load/store 64 bits. */
+		 * For packed array elements we must stay on the 4-byte
+		 * I_LW/I_SW path or adjacent elements get trampled.  For
+		 * non-array stores of S_INT/S_UINT -- which target a whole
+		 * word-aligned workspace slot -- promote the store to a
+		 * sign-extended word-sized I_STNL so the slot's upper 4
+		 * bytes don't retain stale bits (see comment at top of
+		 * this function for the full rationale). */
 		if (word != 0) {
 			tbyteoffset(word * 4);
 		}
 		if (dirn != MOVEDIRN_LOADPTR) {
-			gensecondary ((dirn == MOVEDIRN_STORE) ? I_SW : I_LW);
+			if ((dirn == MOVEDIRN_STORE) && !packed_elem &&
+			    (type == S_INT || type == S_UINT)) {
+				/* Stack holds [value@Breg, pointer@Areg].  I_XSWORD
+				 * operates on Areg, so REV swaps pointer↔value,
+				 * XSWORD sign-extends the value (now in Areg), REV
+				 * swaps back, and STNL stores the sign-extended
+				 * 8-byte value through the pointer. */
+				gensecondary (I_REV);
+				gensecondary (I_XSWORD);
+				gensecondary (I_REV);
+				genprimary (I_STNL, 0);
+			} else {
+				gensecondary ((dirn == MOVEDIRN_STORE) ? I_SW : I_LW);
+			}
 		}
 		/*}}}*/
 	} else
@@ -3128,7 +3164,11 @@ fprintf (stderr, "gen11: movearrayitem: after loadarraypointer(), offset = %d\n"
 			}
 
 			if (dirn != MOVEDIRN_LOADPTR) {
-				movepointer (dirn, inonlocal, offset, type, NULL, is_devaccess (nptr));
+				/* movearrayitem: this is an `arr[i]` access, the pointer
+				 * points to a packed array element.  Flag packed_elem so
+				 * S_INT / S_UINT stores stay on the 4-byte I_SW path and
+				 * don't clobber the neighbour element. */
+				movepointer (dirn, inonlocal, offset, type, NULL, is_devaccess (nptr), TRUE);
 			}
 			/*}}} */
 		}
@@ -3231,7 +3271,7 @@ fprintf (stderr, "gen11: moveelement (N_.. ispointer): word = %d, dirn = %d, reg
 printtreenl (stderr, 4, tptr);
 #endif
 				movename (tptr, 0, I_LDL, I_LDNL);
-				movepointer (dirn, inonlocal, word, type, &need_signextend, is_devaccess (tptr));
+				movepointer (dirn, inonlocal, word, type, &need_signextend, is_devaccess (tptr), (rtag != N_RESULTPARAM));
 			} else {
 #if 0
 fprintf (stderr, "gen11: moveelement (N_.. !ispointer): word = %d, dirn = %d, regs = %d, ilocal = %d, inonlocal = %d, tptr = ", word, dirn, regs, ilocal, inonlocal);
@@ -3331,7 +3371,7 @@ printtreenl (stderr, 4, tptr);
 		/*genprimary(I_LDL, HOffsetOf(tptr)); */
 		movename (tptr, 0, I_LDL, I_LDNL);
 		/*gencomment0("formalresult"); */
-		movepointer (dirn, inonlocal, word, TagOf (HExpOf (tptr)), &need_signextend, FALSE);
+		movepointer (dirn, inonlocal, word, TagOf (HExpOf (tptr)), &need_signextend, FALSE, FALSE);
 		break;
 #endif
 		/*}}} */
@@ -4386,7 +4426,7 @@ PUBLIC void moveopd (int destmode, treenode * dest, int sourcemode, treenode * s
 			storeinname (dest, 0);
 			texpopd (sourcemode, source, MANY_REGS);
 			loadname (dest, 0);
-			movepointer (MOVEDIRN_STORE, I_STNL, offset, targetintsize, NULL, dest_devaccess);
+			movepointer (MOVEDIRN_STORE, I_STNL, offset, targetintsize, NULL, dest_devaccess, TRUE);
 			/*}}} */
 		} else if (regsforaddropd (destmode, dest) < MAXREGS) {
 			/*{{{  source; st dest */
@@ -4399,7 +4439,7 @@ PUBLIC void moveopd (int destmode, treenode * dest, int sourcemode, treenode * s
 			BIT32 offset = loadelementpointeroffset (dest, MAXREGS);
 			texpopd (sourcemode, source, MANY_REGS);
 			gensecondary (I_REV);
-			movepointer (MOVEDIRN_STORE, I_STNL, offset, targetintsize, NULL, dest_devaccess);
+			movepointer (MOVEDIRN_STORE, I_STNL, offset, targetintsize, NULL, dest_devaccess, TRUE);
 			/*}}} */
 		}
 		/*}}} */
@@ -4454,9 +4494,9 @@ printtreenl (stderr, 4, sourcetype);
 			tload2regs (destmode, dest, sourcemode, source, FALSE, FALSE);
 
 			/* no need to sign extend, cos we're just about to store it */
-			movepointer (MOVEDIRN_LOAD, I_LDNL, 0, size_tag, NULL, source_devaccess);
+			movepointer (MOVEDIRN_LOAD, I_LDNL, 0, size_tag, NULL, source_devaccess, TRUE);
 			gensecondary (I_REV);
-			movepointer (MOVEDIRN_STORE, I_STNL, 0, size_tag, NULL, dest_devaccess);
+			movepointer (MOVEDIRN_STORE, I_STNL, 0, size_tag, NULL, dest_devaccess, TRUE);
 			/*}}} */
 		} else {
 			/*{{{  use a move instruction */
@@ -4789,7 +4829,7 @@ fprintf (stderr, "  gen11: tsimpleassign: preeval (destmode, dest) TRUE\n");
 			storeinname (dest, 0);
 			texpopd_main (sourcemode, source, MANY_REGS, FALSE);
 			loadnamepointer (dest, 0);
-			movepointer (MOVEDIRN_STORE, I_STNL, offset, type, NULL, dest_devaccess);
+			movepointer (MOVEDIRN_STORE, I_STNL, offset, type, NULL, dest_devaccess, TRUE);
 			/*}}} */
 		} else if (directstore (destmode, dest, be_lexlevel)) {
 			/*{{{  simplest case: generate source, store in dest */
@@ -4819,7 +4859,7 @@ fprintf (stderr, "  gen11: tsimpleassign: preeval (sourcemode, source) TRUE\n");
 			offset = loadopdpointeroffset (destmode, dest);
 			loadname (source, 0);
 			gensecondary (I_REV);
-			movepointer (MOVEDIRN_STORE, I_STNL, offset, type, NULL, dest_devaccess);
+			movepointer (MOVEDIRN_STORE, I_STNL, offset, type, NULL, dest_devaccess, TRUE);
 			/*}}} */
 		} else if (regsforopd (destmode, dest) < r) {
 			/*{{{  source; ldptr dest; stnl */
@@ -4829,7 +4869,7 @@ fprintf (stderr, "  gen11: tsimpleassign: regsforopd (destmode, dest) TRUE\n");
 #endif
 			texpopd_main (sourcemode, source, regs, FALSE);
 			offset = loadelementpointeroffset (dest, r - 1);
-			movepointer (MOVEDIRN_STORE, I_STNL, offset, type, NULL, dest_devaccess);
+			movepointer (MOVEDIRN_STORE, I_STNL, offset, type, NULL, dest_devaccess, TRUE);
 			/*}}} */
 		} else {
 			/*{{{  ldptr dest; source; rev; stnl */
@@ -4839,7 +4879,7 @@ fprintf (stderr, "  gen11: tsimpleassign: ELSE!\n");
 #endif
 			texpopd_main (sourcemode, source, r - 1, FALSE);
 			gensecondary (I_REV);
-			movepointer (MOVEDIRN_STORE, I_STNL, offset, type, NULL, dest_devaccess);
+			movepointer (MOVEDIRN_STORE, I_STNL, offset, type, NULL, dest_devaccess, TRUE);
 			/*}}} */
 		}
 		/*}}} */
@@ -4878,7 +4918,7 @@ fprintf (stderr, "  gen11: tsimpleassign: array source is in IOSPACE\n");
 			} else {
 				tload2regs (sourcemode, source, destmode, dest, FALSE, FALSE);
 			}
-			movepointer (MOVEDIRN_STORE, I_STNL, 0, type, NULL, dest_devaccess);
+			movepointer (MOVEDIRN_STORE, I_STNL, 0, type, NULL, dest_devaccess, TRUE);
 			break;
 			/*}}} */
 			/*{{{  INT16/UINT16 on 32-bit machine */
@@ -4887,7 +4927,7 @@ fprintf (stderr, "  gen11: tsimpleassign: array source is in IOSPACE\n");
 			if (use_shortintops) {	/* T9000 shorts 17/7/91 *//* equivalent code to BYTE etc */
 				destmode = ptrmodeof (destmode);
 				tload2regs (sourcemode, source, destmode, dest, FALSE, FALSE);
-				movepointer (MOVEDIRN_STORE, I_STNL, 0, type, NULL, dest_devaccess);
+				movepointer (MOVEDIRN_STORE, I_STNL, 0, type, NULL, dest_devaccess, TRUE);
 			} else {
 				if (preeval (sourcemode, source)) {
 					if (NModeOf (source) == NM_POINTER) {

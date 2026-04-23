@@ -58,15 +58,6 @@ tests = \
 TESTS_ENVIRONMENT = $(OCCBUILD) --run
 TESTS = $(tests)
 
-# cgtest99 targets a known-unfixed codegen bug: tranx86 I_SW emits a
-# 32-bit store which leaves stale upper bits in an 8-byte workspace
-# slot, visible to any subsequent 64-bit load (e.g. a FOR/WHILE
-# counter).  The test is expected to fail until the bug is addressed in
-# either tranx86 (context-aware I_SW) or occ21 (emit a distinct ETC op
-# for INT-through-workspace-pointer stores).  If it starts passing,
-# automake reports XPASS and we should remove the entry below.
-XFAIL_TESTS = cgtest99
-
 cglib_lib_objs = cglib.tce
 
 libs = cglib.lib
