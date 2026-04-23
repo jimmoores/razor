@@ -33,7 +33,7 @@ EXTRA_DIST = \
 	cgtest85.occ cgtest86.occ cgtest87.occ cgtest88.occ cgtest89.occ \
 	cgtest90.occ cgtest91.occ cgtest92.occ \
 	cgtest68.occ cgtest69.occ cgtest93.occ \
-	cgtest94.occ cgtest96.occ cgtest97.occ cgtest98.occ \
+	cgtest94.occ cgtest96.occ cgtest97.occ cgtest98.occ cgtest99.occ \
 	config.inc \
 	run-tests
 
@@ -53,10 +53,19 @@ tests = \
 	cgtest80 cgtest81 cgtest82 cgtest83 cgtest84 \
 	cgtest85 cgtest86 cgtest87 cgtest88 cgtest89 \
 	cgtest90 cgtest91 cgtest92 cgtest93 \
-	cgtest94 cgtest96 cgtest97 cgtest98
+	cgtest94 cgtest96 cgtest97 cgtest98 cgtest99
 
 TESTS_ENVIRONMENT = $(OCCBUILD) --run
 TESTS = $(tests)
+
+# cgtest99 targets a known-unfixed codegen bug: tranx86 I_SW emits a
+# 32-bit store which leaves stale upper bits in an 8-byte workspace
+# slot, visible to any subsequent 64-bit load (e.g. a FOR/WHILE
+# counter).  The test is expected to fail until the bug is addressed in
+# either tranx86 (context-aware I_SW) or occ21 (emit a distinct ETC op
+# for INT-through-workspace-pointer stores).  If it starts passing,
+# automake reports XPASS and we should remove the entry below.
+XFAIL_TESTS = cgtest99
 
 cglib_lib_objs = cglib.tce
 
@@ -462,3 +471,7 @@ cgtest97: cgtest97.occ cglib.lib
 $(srcdir)/cgtest98.occ: $(srcdir)/cgmain.occ
 cgtest98: cgtest98.occ cglib.lib
 	$(OCCBUILD) --program $(srcdir)/cgtest98.occ cglib.o
+
+$(srcdir)/cgtest99.occ: $(srcdir)/cgmain.occ
+cgtest99: cgtest99.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest99.occ cglib.o

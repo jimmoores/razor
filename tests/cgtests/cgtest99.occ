@@ -1,0 +1,147 @@
+-- CG test 99 -- I_SW 32-bit store preserves upper-4-byte garbage in 8-byte slots
+--
+-- Regression test for a codegen bug in translator/tranx86/etcrtl.c I_SW:
+-- on 64-bit targets the generated `movl %eax, (%rcx)` / `str wN, [xN]`
+-- writes only the low 4 bytes of an 8-byte workspace slot, leaving the
+-- upper 4 bytes unchanged.  For a freshly-allocated slot those upper
+-- bytes are the MostNeg sentinel that _occ_enter wrote
+-- (0xFFFFFFFF80000000), so after a 32-bit store the slot contains
+-- 0xFFFFFFFF<low32>.
+--
+-- Any subsequent 64-bit load of the same slot (I_LDL driving a FOR or
+-- WHILE counter, or a 64-bit cmp-with-0) reads that raw pattern and
+-- interprets it as a huge signed-negative / unsigned value, so the loop
+-- runs billions of iterations before the array-bounds check trips into
+-- BasicRangeError -- the symptom that produced "KRoC: range error at
+-- address 0x..." inside course.REAL32TOSTRING on g3dcube startup.
+--
+-- The failing combination is specifically:
+--   RESULT INT parameter assignment inside a PROC
+--      -> load-pointer (VALUE_LOCAL) + I_SW (32-bit) in callee
+--   followed by caller using that slot as a FOR/WHILE count
+--      -> I_LDL (64-bit) without an explicit mask of the low 32 bits.
+--
+-- This test simulates exactly that: a tiny nested `setter` PROC that
+-- assigns a small positive count to a RESULT INT parameter, then the
+-- caller uses the count to drive a FOR-loop over a small fixed array.
+-- With the bug present, the loop runs past the end of the array and
+-- the runtime aborts; with the bug fixed, it runs exactly N times.
+--
+-- Note: the bug surfaces on x86-64, where tranx86 emits the 64-bit
+-- load of the counter without any low-32-bit mask.  On aarch64 the
+-- corresponding path masks with `and xN, xN, #0xffffffff` so the stale
+-- upper bits are discarded on read -- the test passes there even
+-- without a fix.  Either way, the test is a correct regression check:
+-- if the semantics of I_SW / I_LDL for INT on 64-bit ever drift so
+-- that the upper-bits leak becomes visible to the FOR counter, this
+-- test will fail.
+
+PROC cgtest99 (CHAN OF BYTE keyb, scr, err)
+
+  #INCLUDE "cgmain.occ"
+
+  --{{{  setter: RESULT INT parameter assignment (triggers I_SW on 64-bit)
+  PROC setter (VAL INT v, RESULT INT p)
+    -- The VAL parameter prevents occ21 from constant-propagating the
+    -- literal into the store, so `p := v` really does go through a
+    -- register, giving us the vulnerable I_SW store pattern.
+    p := v
+  :
+  --}}}
+
+  SEQ
+    init ("CG test 99", "I_SW 32-bit-store upper-bits preservation")
+
+    --{{{  A. Baseline: value stored and read back through INT comparison
+    --     This part always passes (INT comparison masks to low 32 bits),
+    --     even under the broken codegen.  Acts as a sanity check that
+    --     the setter really does store the expected value.
+    title ("INT-level round-trip")
+    INT n :
+    SEQ
+      setter (id.INT (2), n)
+      check.INT (n, 2, "SW99-001")
+
+      setter (id.INT (0), n)
+      check.INT (n, 0, "SW99-002")
+
+      setter (id.INT (-1), n)
+      check.INT (n, -1, "SW99-003")
+
+      setter (id.INT ((MOSTPOS INT) / 2), n)
+      check.INT (n, (MOSTPOS INT) / 2, "SW99-004")
+    --}}}
+
+    --{{{  B. FOR-counter round-trip: the actual bug trigger.
+    --       The count is stored through a RESULT INT parameter and then
+    --       read back in a FOR-loop context.  If stale upper bits leak
+    --       past the store, the 64-bit loop comparison thinks the count
+    --       is huge and iterates far past the array bound.
+    title ("FOR-counter over RESULT-stored count")
+    INT count :
+    INT sum :
+    SEQ
+      setter (id.INT (3), count)
+
+      -- Tight bound: an [8]INT array with a count of 3 leaves plenty of
+      -- slack for the bounds check to fire if the loop overruns.  The
+      -- runtime traps into BasicRangeError / STOP before we ever get
+      -- to check.INT below, so the test-suite records a FAIL either by
+      -- the trailing STOP or by the program aborting.
+      [8]INT arr :
+      SEQ
+        sum := 0
+        SEQ i = 0 FOR count
+          SEQ
+            arr[i] := i + 10
+            sum := sum + arr[i]
+
+        -- 0+10 + 1+10 + 2+10 = 33
+        check.INT (sum, 33, "SW99-010")
+
+      -- Do the same with a zero count to exercise the wrap-around path:
+      -- loop body must not execute at all.  With the bug a count of 0
+      -- becomes 0xFFFFFFFF00000000 -- as unsigned 64-bit it is non-zero
+      -- and the "WHILE count > 0" style lowering iterates forever /
+      -- past bounds.
+      setter (id.INT (0), count)
+      [4]INT arr2 :
+      SEQ
+        sum := 99
+        SEQ i = 0 FOR count
+          sum := i      -- must not execute
+        check.INT (sum, 99, "SW99-011")
+    --}}}
+
+    --{{{  C. The same count fed through a WHILE guard: exercises the
+    --       64-bit cmp-with-0 path that g3dcube tripped on when
+    --       course.REAL32TOSTRING's inner copy loop was driven by the
+    --       stale Places count.
+    title ("WHILE N > 0 over RESULT-stored count")
+    INT count, sum, i :
+    SEQ
+      setter (id.INT (5), count)
+      sum := 0
+      i := 0
+      WHILE count > 0
+        SEQ
+          sum := sum + i
+          i := i + 1
+          count := count - 1
+
+      -- 0+1+2+3+4 = 10
+      check.INT (sum, 10, "SW99-020")
+      check.INT (i, 5, "SW99-021")
+    --}}}
+
+    finish ()
+
+    -- Propagate any assertion failure out to the shell so the automake
+    -- harness records FAIL (cgmain's finish() prints "^^^ Failed" but
+    -- does not exit non-zero on its own).
+    IF
+      error.count > 0
+        STOP
+      TRUE
+        SKIP
+:
