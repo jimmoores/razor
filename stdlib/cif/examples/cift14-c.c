@@ -56,17 +56,17 @@ void proc_receive (Workspace wptr)
 		switch (AltEnd (wptr)) {
 		case 0:
 			ChanInInt (wptr, in1, &n);
-			ExternalCallN (fprintf, 3, stderr, "Got number from channel 1: %d\n", n);
+			ExternalCallV (fprintf, 2, 3, stderr, "Got number from channel 1: %d\n", n);
 			break;
 		case 1:
 			ChanInInt (wptr, in2, &n);
-			ExternalCallN (fprintf, 3, stderr, "Got number from channel 2: %d\n", n);
+			ExternalCallV (fprintf, 2, 3, stderr, "Got number from channel 2: %d\n", n);
 			break;
 		case 2:
-			ExternalCallN (fprintf, 2, stderr, "Timer fired\n");
+			ExternalCallV (fprintf, 2, 2, stderr, "Timer fired\n");
 			break;
 		case 3:
-			ExternalCallN (fprintf, 2, stderr, "Skip fired\n");
+			ExternalCallV (fprintf, 2, 2, stderr, "Skip fired\n");
 			TimerDelay (wptr, 100000);
 			break;
 		default:

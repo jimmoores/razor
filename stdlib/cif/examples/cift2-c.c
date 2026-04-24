@@ -48,7 +48,7 @@ void third_process (Workspace wptr)
 		int i;
 
 		ChanInInt (wptr, in, &i);
-		ExternalCallN (sprintf, 3, txtbuf, "0x%08x\n", i);
+		ExternalCallV (sprintf, 2, 3, txtbuf, "0x%08x\n", i);
 
 		for (i = 0; txtbuf[i] != '\0'; i++) {
 			ChanOutChar (wptr, byteout, txtbuf[i]);

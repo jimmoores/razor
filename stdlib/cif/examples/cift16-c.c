@@ -21,7 +21,7 @@ void rower (Workspace wptr)
 		if (synced)
 			MTSync (wptr, out);
 
-		ExternalCallN (printf, 3, "Rower %d: %s!\n",
+		ExternalCallV (printf, 1, 3, "Rower %d: %s!\n",
 		               id, (i % 2 == 0) ? "Heave" : "Ho");
 
 		TimerDelay (wptr, random () % 1000000);

@@ -36,7 +36,7 @@ void proc_p2 (Workspace wptr)
 	do {
 		int i;
 
-		ExternalCallN (printf, 1, "at top of loop\n");
+		ExternalCallV (printf, 1, 1, "at top of loop\n");
 		i = ProcAlt (wptr, in, key_in, NULL);
 		switch (i) {
 		case 0:
@@ -49,7 +49,7 @@ void proc_p2 (Workspace wptr)
 			SetErrW (wptr);
 			break;
 		}
-		ExternalCallN (sprintf, 5, str, "%d:%d:%d\n", i, v, c);
+		ExternalCallV (sprintf, 2, 5, str, "%d:%d:%d\n", i, v, c);
 		out_string (wptr, str, out);
 		Reschedule (wptr);
 		if (i == 1) {
@@ -58,7 +58,7 @@ void proc_p2 (Workspace wptr)
 				SetErrW (wptr);
 				break;
 			case 'p':
-				ExternalCallN (sprintf, 3, str, "pri=%d\n", GetPriority (wptr));
+				ExternalCallV (sprintf, 2, 3, str, "pri=%d\n", GetPriority (wptr));
 				out_string (wptr, str, out);
 				break;
 			case '+':

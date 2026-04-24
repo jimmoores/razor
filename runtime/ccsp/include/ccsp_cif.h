@@ -363,6 +363,92 @@ static word ExternalCallN (void *func, word argc, ...)
 #endif
 }
 /*}}}*/
+/*{{{  word ExternalCallV (void *func, word num_fixed, word argc, ...) */
+/*
+ * Call an external C function that uses variadic arguments (printf,
+ * sprintf, fprintf, ...).  `num_fixed` is the number of fixed parameters
+ * the target declares; remaining args are variadic.  On AArch64 (both
+ * Apple and AAPCS), variadic arguments have a different calling
+ * convention from non-variadic: they are placed on the stack rather
+ * than in registers.  Casting a variadic function to a plain
+ * non-variadic fnN_t (as ExternalCallN does) therefore corrupts
+ * variadic calls on AArch64.  ExternalCallV uses a proper variadic
+ * function-pointer typedef so the compiler emits the correct ABI.
+ */
+#if defined(__GNUC__)
+__attribute__ ((unused))
+#endif
+static word ExternalCallV (void *func, word num_fixed, word argc, ...)
+{
+	va_list ap;
+	word result = 0;
+	word args[8] = {0};
+	word i;
+
+	va_start (ap, argc);
+	for (i = 0; i < argc && i < 8; ++i) {
+		args[i] = va_arg (ap, word);
+	}
+	va_end (ap);
+
+	/* Variadic function-pointer typedefs with N fixed args. */
+	typedef word (*fv1_t)(word, ...);
+	typedef word (*fv2_t)(word, word, ...);
+	typedef word (*fv3_t)(word, word, word, ...);
+	typedef word (*fv4_t)(word, word, word, word, ...);
+#if defined(__x86_64__)
+#define _ZERO_AL_V __asm__ __volatile__ ("xorl %%eax, %%eax" ::: "rax");
+#else
+#define _ZERO_AL_V
+#endif
+	switch (num_fixed) {
+	case 1:
+		switch (argc) {
+		case 1: _ZERO_AL_V result = ((fv1_t)func)(args[0]); break;
+		case 2: _ZERO_AL_V result = ((fv1_t)func)(args[0], args[1]); break;
+		case 3: _ZERO_AL_V result = ((fv1_t)func)(args[0], args[1], args[2]); break;
+		case 4: _ZERO_AL_V result = ((fv1_t)func)(args[0], args[1], args[2], args[3]); break;
+		case 5: _ZERO_AL_V result = ((fv1_t)func)(args[0], args[1], args[2], args[3], args[4]); break;
+		case 6: _ZERO_AL_V result = ((fv1_t)func)(args[0], args[1], args[2], args[3], args[4], args[5]); break;
+		case 7: _ZERO_AL_V result = ((fv1_t)func)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
+		case 8: _ZERO_AL_V result = ((fv1_t)func)(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
+		}
+		break;
+	case 2:
+		switch (argc) {
+		case 2: _ZERO_AL_V result = ((fv2_t)func)(args[0], args[1]); break;
+		case 3: _ZERO_AL_V result = ((fv2_t)func)(args[0], args[1], args[2]); break;
+		case 4: _ZERO_AL_V result = ((fv2_t)func)(args[0], args[1], args[2], args[3]); break;
+		case 5: _ZERO_AL_V result = ((fv2_t)func)(args[0], args[1], args[2], args[3], args[4]); break;
+		case 6: _ZERO_AL_V result = ((fv2_t)func)(args[0], args[1], args[2], args[3], args[4], args[5]); break;
+		case 7: _ZERO_AL_V result = ((fv2_t)func)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
+		case 8: _ZERO_AL_V result = ((fv2_t)func)(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
+		}
+		break;
+	case 3:
+		switch (argc) {
+		case 3: _ZERO_AL_V result = ((fv3_t)func)(args[0], args[1], args[2]); break;
+		case 4: _ZERO_AL_V result = ((fv3_t)func)(args[0], args[1], args[2], args[3]); break;
+		case 5: _ZERO_AL_V result = ((fv3_t)func)(args[0], args[1], args[2], args[3], args[4]); break;
+		case 6: _ZERO_AL_V result = ((fv3_t)func)(args[0], args[1], args[2], args[3], args[4], args[5]); break;
+		case 7: _ZERO_AL_V result = ((fv3_t)func)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
+		case 8: _ZERO_AL_V result = ((fv3_t)func)(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
+		}
+		break;
+	case 4:
+		switch (argc) {
+		case 4: _ZERO_AL_V result = ((fv4_t)func)(args[0], args[1], args[2], args[3]); break;
+		case 5: _ZERO_AL_V result = ((fv4_t)func)(args[0], args[1], args[2], args[3], args[4]); break;
+		case 6: _ZERO_AL_V result = ((fv4_t)func)(args[0], args[1], args[2], args[3], args[4], args[5]); break;
+		case 7: _ZERO_AL_V result = ((fv4_t)func)(args[0], args[1], args[2], args[3], args[4], args[5], args[6]); break;
+		case 8: _ZERO_AL_V result = ((fv4_t)func)(args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7]); break;
+		}
+		break;
+	}
+#undef _ZERO_AL_V
+	return result;
+}
+/*}}}*/
 #if !defined(RMOX_BUILD) && defined(BLOCKING_SYSCALLS)
 /*{{{  word KillableBlockingCallN (Workspace wptr, void *func, word argc, ...)*/
 #if defined(__GNUC__)
