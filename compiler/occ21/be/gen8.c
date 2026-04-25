@@ -2362,7 +2362,23 @@ printtreenl (stderr, 4, *(paramtable[i].pparamexp));
 	/*{{{  evaluate non-register parameters containing function calls to param slots */
 	for (pass = 0; pass < 4; pass++) {
 		if (pass == 2) {
-			for (i = 0; i < nparams; i++) {
+			/* For FORK, iterate in reverse so the call's hidden
+			 * dimension parameters (which appear after their associated
+			 * array operand in paramtable) are processed first.  This
+			 * populates the hps_opd[]/hps_ptr stack used in
+			 * trecparamexpopd's open-array VAL clone path; without it
+			 * the clone runs with zero dimensions and emits an
+			 * ill-sized I_MT_DCLONE so the forked PROC sees a NULL or
+			 * truncated copy of the source array. */
+			int istart, idelta;
+			if (ptype & PROC_FORKED) {
+				istart = nparams - 1;
+				idelta = -1;
+			} else {
+				istart = 0;
+				idelta = 1;
+			}
+			for (i = istart; (i >= 0) && (i < nparams); i += idelta) {
 				paraminfo_t *const paraminfoptr = &(paramtable[i]);
 				int slot;
 
@@ -2373,7 +2389,7 @@ printtreenl (stderr, 4, *(paramtable[i].pparamexp));
 				if ((ptype == PROC_NONE) && (i < REG_PARAMS)) {
 					continue;
 				}
-				
+
 				if ((!paraminfoptr->pevaluated || (paraminfoptr->pmode == P_TEMP))) {
 					treenode *exp = *(paraminfoptr->pparamexp);
 
@@ -2392,9 +2408,9 @@ printtreenl (stderr, 4, *(paramtable[i].pparamexp));
 						);
 					} else {
 						tparamexpopd (
-							paraminfoptr->pmode, 
+							paraminfoptr->pmode,
 							exp,
-							paraminfoptr->pclone, 
+							paraminfoptr->pclone,
 							slot
 						);
 					}
