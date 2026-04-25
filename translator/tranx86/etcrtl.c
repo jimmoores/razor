@@ -4769,7 +4769,20 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*}}}*/
 		/*{{{  I_ADD -- addition*/
 	case I_ADD:
+		/* On 64-bit targets INT is 32-bit but the host registers are
+		 * 64-bit; using full-width adds/subs (INS_ADD) reports overflow
+		 * relative to the 64-bit signed range, so 32-bit overflow
+		 * (e.g. MOSTPOS + 1) goes undetected and silently wraps -- the
+		 * wrap then surfaces downstream as a CSUB0 / FOR-replicator
+		 * range-check trap.  Use the 32-bit INS_ADD32 / INS_SUB32
+		 * variants so the V flag reflects 32-bit overflow.  On 32-bit
+		 * targets word == INT so the standard INS_ADD / INS_SUB is
+		 * correct. */
+#if (BytesPerWord > 4)
+		generate_constmapped_21instr (ts, EtcSecondary (I_ADD), INS_ADD32, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 1);
+#else
 		generate_constmapped_21instr (ts, EtcSecondary (I_ADD), INS_ADD, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 1);
+#endif
 		ts->stack->must_set_cmp_flags = 0;
 		generate_overflow_code (ts, PMOP_ADD, arch);
 		emit_int_truncate (ts, ts->stack->a_reg);
@@ -4777,7 +4790,11 @@ fprintf (stderr, "MAGIC IOSPACE! (store-byte) %d --> [%d]\n", ts->stack->old_b_r
 		/*}}}*/
 		/*{{{  I_SUB -- subtraction*/
 	case I_SUB:
+#if (BytesPerWord > 4)
+		generate_constmapped_21instr (ts, EtcSecondary (I_SUB), INS_SUB32, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 1);
+#else
 		generate_constmapped_21instr (ts, EtcSecondary (I_SUB), INS_SUB, ts->stack->old_a_reg, ts->stack->old_b_reg, ts->stack->a_reg, 1);
+#endif
 		ts->stack->must_set_cmp_flags = 0;
 		generate_overflow_code (ts, PMOP_SUB, arch);
 		emit_int_truncate (ts, ts->stack->a_reg);

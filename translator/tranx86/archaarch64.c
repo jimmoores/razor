@@ -4500,6 +4500,54 @@ static int aarch64_code_to_asm_stream (rtl_chain *rtl_code, FILE *stream)
 						}
 					}
 					break;
+				case INS_ADD32:
+				case INS_SUB32:
+					/* 32-bit add/subtract for INT (32-bit on 64-bit
+					 * target).  Emits adds/subs wN form so the V flag
+					 * reflects 32-bit signed overflow rather than the
+					 * 64-bit overflow that adds/subs xN reports.
+					 * Mirrors the x64 INS_ADD32/INS_SUB32 path. */
+					if (!ins->out_args[0] || !ins->in_args[0] || !ins->in_args[1]) {
+						fprintf (stream, "\t// INVALID ADD32/SUB32: missing arguments\n");
+						break;
+					}
+					{
+						const char *op = (ins->type == INS_ADD32) ? "add" : "sub";
+						int set_flags = aarch64_sets_flags (ins);
+						int in0_is_const = ((ins->in_args[0]->flags & ARG_MODEMASK) == ARG_CONST);
+						int in1_is_const = ((ins->in_args[1]->flags & ARG_MODEMASK) == ARG_CONST);
+						const char *out_x = aarch64_get_register_name (ins->out_args[0]->regconst);
+						const char *in0_x = aarch64_get_register_name (ins->in_args[0]->regconst);
+						const char *in1_x = aarch64_get_register_name (ins->in_args[1]->regconst);
+						char out_w[8], in0_w[8], in1_w[8];
+						/* Convert "x<N>" -> "w<N>" so we get the 32-bit
+						 * view; preserve "sp" / other special names as-is. */
+						if (out_x[0] == 'x') { out_w[0] = 'w'; strncpy (out_w + 1, out_x + 1, sizeof(out_w) - 1); out_w[sizeof(out_w) - 1] = '\0'; } else { strncpy (out_w, out_x, sizeof(out_w)); out_w[sizeof(out_w) - 1] = '\0'; }
+						if (in0_x[0] == 'x') { in0_w[0] = 'w'; strncpy (in0_w + 1, in0_x + 1, sizeof(in0_w) - 1); in0_w[sizeof(in0_w) - 1] = '\0'; } else { strncpy (in0_w, in0_x, sizeof(in0_w)); in0_w[sizeof(in0_w) - 1] = '\0'; }
+						if (in1_x[0] == 'x') { in1_w[0] = 'w'; strncpy (in1_w + 1, in1_x + 1, sizeof(in1_w) - 1); in1_w[sizeof(in1_w) - 1] = '\0'; } else { strncpy (in1_w, in1_x, sizeof(in1_w)); in1_w[sizeof(in1_w) - 1] = '\0'; }
+
+						/* For SUB32, the convention is dst = in1 - in0 (matching INS_SUB). */
+						if (ins->type == INS_SUB32) {
+							if (in0_is_const) {
+								aarch64_emit_arithmetic_with_immediate (stream, op, out_w, in1_w, (long)ins->in_args[0]->regconst, "w16", set_flags);
+							} else if (in1_is_const) {
+								aarch64_emit_large_immediate (stream, (long)ins->in_args[1]->regconst, "x16");
+								fprintf (stream, "\t%s%s\t%s, w16, %s\n", op, set_flags ? "s" : "", out_w, in0_w);
+							} else {
+								fprintf (stream, "\t%s%s\t%s, %s, %s\n", op, set_flags ? "s" : "", out_w, in1_w, in0_w);
+							}
+						} else {
+							/* INS_ADD32: dst = in1 + in0, commutative */
+							if (in0_is_const) {
+								aarch64_emit_arithmetic_with_immediate (stream, op, out_w, in1_w, (long)ins->in_args[0]->regconst, "w16", set_flags);
+							} else if (in1_is_const) {
+								aarch64_emit_arithmetic_with_immediate (stream, op, out_w, in0_w, (long)ins->in_args[1]->regconst, "w16", set_flags);
+							} else {
+								fprintf (stream, "\t%s%s\t%s, %s, %s\n", op, set_flags ? "s" : "", out_w, in1_w, in0_w);
+							}
+						}
+					}
+					break;
 				case INS_INC:
 				case INS_DEC:
 					if (!ins->out_args[0] || !ins->in_args[0]) {
