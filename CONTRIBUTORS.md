@@ -1,12 +1,64 @@
 # Contributors
 
-This file lists everyone who has authored at least one commit in the
-git history of this repository, sorted by commit count.  Date ranges
-are the years of their first and last commits.
+This file consolidates attribution from the per-subsystem `AUTHORS`
+files and the git changelog.  The two sections are complementary:
+the AUTHORS files capture pre-git copyright ownership and role-based
+authorship of the original toolchain; the git history captures who
+has touched the tree since the SVN → git import.
 
-For role-based attribution and pre-git copyright detail (INMOS / SGS-Thomson
-heritage of occ21, individual subsystem owners, etc.) see
-[`docs/AUTHORS`](docs/AUTHORS) and [`compiler/occ21/AUTHORS`](compiler/occ21/AUTHORS).
+## Subsystem heritage (pre-git)
+
+Drawn from [`docs/AUTHORS`](docs/AUTHORS) and
+[`compiler/occ21/AUTHORS`](compiler/occ21/AUTHORS).
+
+### `compiler/occ21` (occam compiler and libraries)
+
+Original copyright: **INMOS Ltd.** and **SGS-Thomson
+Microelectronics Ltd.** (1995–1997).
+
+Subsequent modifications:
+
+- **Michael Poole** &mdash; bug fixes, KRoC output, native DEC Alpha
+  output, language enhancements.
+- **Jim Moores** &mdash; user-defined operators, `INITIAL`
+  declarations.
+- **Dave Beckett** &mdash; portability and configuration; author of
+  the GNU autotools build system across the tree
+  (github: [dajobe](https://github.com/dajobe)).
+- **Fred Barnes** &mdash; `MOBILE` data types, `STEP` in replicators,
+  and many other language and back-end extensions.
+- **David Wood** &mdash; further occ21 modifications (1998–2000,
+  per `docs/AUTHORS`).
+- **Carl Ritson** &mdash; co-maintained occ21 modifications with
+  Fred Barnes (2006–2007).
+
+### `runtime/ccsp` (CCSP runtime kernel)
+
+- **Jim Moores** &mdash; original author (1999, University of Kent).
+- **Fred Barnes** &mdash; modifications 1999–2006, then with
+  **Carl Ritson** 2006–2007.
+
+### `translator/tranx86` (ETC → IA32 / MIPS / SPARC / PPC translator)
+
+- **Fred Barnes** &mdash; original author (2000–2006, University of
+  Kent).
+- **Carl Ritson** &mdash; co-maintained modifications with Fred
+  Barnes (2006–2007).
+
+### KRoC libraries, utilities, demonstrators
+
+Copyright 2003–2007 **Fred Barnes**, **Carl Ritson**,
+**Adam Sampson**, **Peter Welch**, **David Wood**, University of
+Kent, and others.
+
+The pre-git tree was maintained by Fred Barnes
+&lt;F.R.M.Barnes@kent.ac.uk&gt;.
+
+## Git changelog
+
+Every author who has landed at least one commit since the git history
+begins, sorted by commit count.  Date range is the years of their
+first and last commits.
 
 | Commits | Period    | Name                |
 | -------:| :-------- | :------------------ |
@@ -33,14 +85,16 @@ heritage of occ21, individual subsystem owners, etc.) see
 
 Notes:
 
-- "Carl Ritson" appears in commit metadata as `C.G. Ritson <cgr@kent.ac.uk>`.
-- "Christian Jacobsen" is rendered "Christian Jacbosen" in the original
-  commit author lines (typo preserved on the commits, name corrected here).
-- The handles `drew` and `djs` are how the original SVN-imported commits
-  identify their authors; their full names are not recorded in the
+- "Carl Ritson" appears in commit metadata as
+  `C.G. Ritson <cgr@kent.ac.uk>`.
+- "Christian Jacobsen" is rendered "Christian Jacbosen" on the
+  original commits (typo preserved on the commits, name corrected
+  here).
+- The handles `drew` and `djs` are how the SVN-imported commits
+  identify those authors; their full names are not recorded in the
   changelog.
 
-To regenerate this list:
+To regenerate the git table:
 
 ```sh
 git shortlog -sne --all
