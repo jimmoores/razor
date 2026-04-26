@@ -4,10 +4,10 @@ Razor is a fork of the the Kent Retargetable occam Compiler (KRoC), an occam/occ
 
 Improvements over KRoC include:
 * Real 64-bit compiler supporting aarch64 and x64 architectures on both macOS and Linux
-* Modernised legacy code in the occ21 compiler
-* A new directory layout that is easier to navigate
-* Build system fixes
-* Additional compiler code generation tests
+* Modernised legacy code in the occ21 compiler (no more K&R!)
+* A new directory layout that is easier to navigate and more consistent with other projects
+* Build system fixes and migration of Python 2.x to 3.x
+* Additional compiler code generation tests (cgtests) to prevent regressions
 * Docs to prompt AI coding tools for additional feature development
 
 ## Prerequisites
