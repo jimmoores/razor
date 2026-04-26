@@ -1,0 +1,124 @@
+-- CG test 100 -- FORK clone size for VAL open-array parameters
+--
+-- Regression test for a codegen bug in compiler/occ21/be/gen8.c
+-- trecparamexpopd's PROC_FORKED + P_PTR + do_copy_val branch.
+--
+-- When a PROC is FORKed with a `VAL [][]T m` (open-dimensional array)
+-- parameter, occ21 must clone the array data into the forked process's
+-- workspace -- the spawner returns immediately after the FORK and its
+-- workspace is reclaimed, so a bare pointer would dangle.  The clone
+-- size is computed by walking the formal type's S_ARRAY chain and, for
+-- each open dimension, popping the runtime size off a per-call
+-- hidden-parameter stack (hps_opd[]/hps_ptr).
+--
+-- Pass 2 of tinstance's parameter-evaluation loop iterates the call's
+-- parameter table.  The hidden-dim params are placed AFTER each open
+-- array in the table, so a forward iteration reaches the array operand
+-- with hps_ptr still 0.  The size-walk loop then runs zero iterations,
+-- the fallback emits loadconstant(bytesin(formaltype)), which is -1 for
+-- an open formal, and kernel_X_mt_dclone is called with a 64-bit -1
+-- byte count.  mt_alloc_data either fails or returns a tiny clone whose
+-- contents are indeterminate -- the FORKed PROC then dereferences a
+-- NULL or near-NULL pointer (random segfault) or reads garbage REAL32
+-- values from arbitrary memory.
+--
+-- The fix iterates pass 2 in REVERSE for PROC_FORKED so the trailing
+-- hidden-dim params are processed first and their operands captured on
+-- the hps stack BEFORE the array operand reaches the clone path.
+--
+-- Symptom in the wild: heightfield.network.spawn FORKs heightfield.network
+-- with VAL [][]REAL32 imap; for g3dheight's all-zero map the leaked
+-- garbage REAL32 values turn into +/-Inf in the perspective divide,
+-- fcvtzs saturates to MOSTNEG INT, and poly.scanlines.int's do.fix
+-- subsequently trips BasicRangeError on a corrupted FOR-replicator
+-- count.  Failure is racy (depends on what was at the dangling pointer
+-- in the spawner's reclaimed workspace), so this test runs the FORK
+-- pattern many times and checks every read.
+
+PROC cgtest100 (CHAN OF BYTE keyb, scr, err)
+
+  #INCLUDE "cgmain.occ"
+
+  --{{{  inner: reads every cell of a VAL [][]REAL32 and reports sum
+  PROC inner (VAL [][]REAL32 m, SHARED CHAN INT result!)
+    INITIAL REAL32 sum IS 0.0:
+    SEQ
+      SEQ j = 0 FOR SIZE m
+        SEQ k = 0 FOR SIZE m[0]
+          sum := sum + m[j][k]
+      -- For an all-zero map sum stays at 0.0; (INT ROUND 0.0) = 0.
+      -- Pre-fix the cells contain garbage REAL32, the sum is
+      -- non-zero/Inf/NaN, and INT ROUND saturates to MOSTPOS or MOSTNEG.
+      CLAIM result!
+        result ! (INT ROUND sum)
+  :
+  --}}}
+
+  --{{{  spawner: FORKs inner then returns immediately
+  -- The spawner's quick return is the key: its workspace gets reclaimed
+  -- so any leaked-pointer path (rather than proper clone) breaks.
+  PROC spawner (VAL [][]REAL32 m, SHARED CHAN INT result!)
+    FORKING
+      FORK inner (m, result!)
+  :
+  --}}}
+
+  SEQ
+    init ("CG test 100", "FORK clone of VAL open-array parameter")
+
+    --{{{  A. all-zero 10x10 map; inner sum must be 0
+    title ("FORK with VAL [][]REAL32, all zeros")
+    VAL [][]REAL32 zero.map IS
+        [[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+         [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]]:
+    -- Run many times; pre-fix this is racy so a single trial often
+    -- passes by luck.
+    SEQ trial = 0 FOR 50
+      SHARED! CHAN INT result :
+      INT got :
+      SEQ
+        PAR
+          spawner (zero.map, result!)
+          result ? got
+        check.INT (got, 0, "FK100-001")
+    --}}}
+
+    --{{{  B. small non-zero map; inner sum must equal sum of literals
+    title ("FORK with VAL [][]REAL32, integer-valued cells")
+    -- 3x4 map with cells whose REAL32 values are exact integers and
+    -- sum to 78.  If the clone is the wrong size or points at random
+    -- memory, the integer-rounded sum will not be 78.
+    VAL [][]REAL32 int.map IS
+        [[ 1.0,  2.0,  3.0,  4.0],
+         [ 5.0,  6.0,  7.0,  8.0],
+         [ 9.0, 10.0, 11.0, 12.0]]:
+    -- 1+2+...+12 = 78
+    SEQ trial = 0 FOR 50
+      SHARED! CHAN INT result :
+      INT got :
+      SEQ
+        PAR
+          spawner (int.map, result!)
+          result ? got
+        check.INT (got, 78, "FK100-002")
+    --}}}
+
+    finish ()
+
+    -- Propagate any assertion failure to the shell so automake
+    -- records FAIL (cgmain's finish() prints "^^^ Failed" but does
+    -- not exit non-zero on its own).
+    IF
+      error.count > 0
+        STOP
+      TRUE
+        SKIP
+:

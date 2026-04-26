@@ -34,6 +34,7 @@ EXTRA_DIST = \
 	cgtest90.occ cgtest91.occ cgtest92.occ \
 	cgtest68.occ cgtest69.occ cgtest93.occ \
 	cgtest94.occ cgtest96.occ cgtest97.occ cgtest98.occ cgtest99.occ \
+	cgtest100.occ \
 	config.inc \
 	run-tests
 
@@ -53,7 +54,8 @@ tests = \
 	cgtest80 cgtest81 cgtest82 cgtest83 cgtest84 \
 	cgtest85 cgtest86 cgtest87 cgtest88 cgtest89 \
 	cgtest90 cgtest91 cgtest92 cgtest93 \
-	cgtest94 cgtest96 cgtest97 cgtest98 cgtest99
+	cgtest94 cgtest96 cgtest97 cgtest98 cgtest99 \
+	cgtest100
 
 TESTS_ENVIRONMENT = $(OCCBUILD) --run
 TESTS = $(tests)
@@ -466,3 +468,7 @@ cgtest98: cgtest98.occ cglib.lib
 $(srcdir)/cgtest99.occ: $(srcdir)/cgmain.occ
 cgtest99: cgtest99.occ cglib.lib
 	$(OCCBUILD) --program $(srcdir)/cgtest99.occ cglib.o
+
+$(srcdir)/cgtest100.occ: $(srcdir)/cgmain.occ
+cgtest100: cgtest100.occ cglib.lib
+	$(OCCBUILD) --program $(srcdir)/cgtest100.occ cglib.o
