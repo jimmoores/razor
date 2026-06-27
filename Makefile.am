@@ -1,4 +1,4 @@
-# Top-level Makefile.am for the KRoC tree.
+# Top-level Makefile.am for the Razor tree.
 
 ACLOCAL_AMFLAGS = -I m4
 
@@ -54,10 +54,10 @@ display-message:
 	num_enabled="`echo $$modules_enabled | wc -w`"; \
 	num_disabled="`echo $$modules_disabled | wc -w`"; \
 	num_total="`echo $$modules_enabled $$modules_disabled | wc -w`"; \
-	printf "\nKRoC has now been built.\n\n"; \
+	printf "\nRazor has now been built.\n\n"; \
 	printf "Modules enabled ($$num_enabled/$$num_total):\n $$modules_enabled\n\n"; \
 	printf "Modules disabled ($$num_disabled/$$num_total):\n $$modules_disabled\n\n"; \
-	printf "Please report problems with KRoC to <$(PACKAGE_BUGREPORT)>.\n\n"
+	printf "Please report problems with Razor to <$(PACKAGE_BUGREPORT)>.\n\n"
 
 DISTCLEANFILES = in-tree-modules
 

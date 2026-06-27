@@ -12,7 +12,7 @@
 .\" perl program fixilist.pl which cleaned up the output.
 .\"
 .\" Modified slightly by Fred Barnes, 2004-2005  <frmb@kent.ac.uk>
-.TH LIBHOSTIO-INMOS 3 "February 1993" "kroc 1.4.0" KRoC
+.TH LIBHOSTIO-INMOS 3 "February 1993" "razor 1.6.1" Razor
 .SH NAME
 so.ask, so.buffer, so.close, so.commandline, so.core, so.date.to.ascii, so.eof,
 so.exit, so.ferror, so.flush,
@@ -32,13 +32,13 @@ so.write.hex.int, so.write.hex.int32, so.write.hex.int64,
 so.write.int, so.write.int32, so.write.int64, so.write.nl,
 so.write.real32, so.write.real64, so.write.string, so.write.string.nl,
 sp.receive.packet, sp.send.packet
-\- KRoC INMOS occam toolset host file server library
+\- Razor INMOS occam toolset host file server library
 .SH SYNOPSIS
 .B #INCLUDE \fB"hostio.inc\fB"\fR
 .br
 .B #USE \fB"hostio.lib\fB"\fR
 .br
-.B kroc -lhostio
+.B razor -lhostio
 .PP
 .BI "PROC so.ask (CHAN OF SP " fs ", " ts ", VAL []BYTE " prompt ", VAL []BYTE " replies ", VAL BOOL " display.possible.replies ", VAL BOOL " echo.reply ", INT " reply.number ")"
 .br
@@ -354,7 +354,7 @@ sequence.
 For descriptions of the \fBsp.\fR procedures, see section H.3 of the INMOS manual.
 .PP
 .SH "SEE ALSO"
-kroc(1)
+razor(1)
 .br
 INMOS  occam 2 toolset user manual - part 2 (occam libraries and
 appendices) INMOS document number 72 TDS 276 02.
@@ -365,5 +365,4 @@ at Canterbury.  This manual page is maintained by Fred Barnes  <frmb@kent.ac.uk>
 The library contents are Copyright (C) 1991 INMOS Limited.
 .SH NOTES
 The hostio library is deprecated in favour of the new POSIX flavoured libraries
-provided with KRoC.
-
+provided with Razor.

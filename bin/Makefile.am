@@ -6,37 +6,37 @@ AUTOMAKE_OPTIONS = foreign no-dependencies
 ACLOCAL_AMFLAGS = -I ../m4
 
 EXTRA_DIST = \
-	kroc-setup.sh.in \
-	kroc-setup.csh.in \
-	kroc.in \
+	razor-setup.sh.in \
+	razor-setup.csh.in \
+	razor.in \
 	occbuild.in
 
 if OCCBUILD_KROC
-kroc_generated_scripts = \
-	kroc
+razor_generated_scripts = \
+	razor
 
-kroc_scripts = \
+razor_scripts = \
 	kmakef
 
-kroc_mans = \
+razor_mans = \
 	kmakef.1 \
-	kroc.1
+	razor.1
 endif
 
 generated_scripts = \
-	$(kroc_generated_scripts) \
-	kroc-setup.csh \
-	kroc-setup.sh \
+	$(razor_generated_scripts) \
+	razor-setup.csh \
+	razor-setup.sh \
 	occbuild
 
 bin_SCRIPTS = \
 	$(generated_scripts)
 
 dist_bin_SCRIPTS = \
-	$(kroc_scripts)
+	$(razor_scripts)
 
 dist_man1_MANS = \
-	$(kroc_mans)
+	$(razor_mans)
 
 xsltdir = $(KROC_KROCDIR)/xslt
 dist_xslt_DATA = \
@@ -99,7 +99,7 @@ $(generated_scripts): Makefile
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-kroc-setup.csh: $(srcdir)/kroc-setup.csh.in
-kroc-setup.sh: $(srcdir)/kroc-setup.sh.in
-kroc: $(srcdir)/kroc.in
+razor-setup.csh: $(srcdir)/razor-setup.csh.in
+razor-setup.sh: $(srcdir)/razor-setup.sh.in
+razor: $(srcdir)/razor.in
 occbuild: $(srcdir)/occbuild.in

@@ -1,16 +1,16 @@
 .\" occ21 command man page, last updated 30/12/2005 by Fred Barnes
-.TH OCC21 "1" "December 2005" "kroc 1.4.0" KRoC
+.TH OCC21 "1" "December 2005" "razor 1.6.1" Razor
 .SH NAME
-occ21 \- KRoC occam compiler
+occ21 \- Razor occam compiler
 .SH SYNOPSIS
 .B occ21
 [\fIOPTION\fR]... \fIFILE\fR
 .SH DESCRIPTION
 .PP
 Compiles the named occam source FILE, generating extended transputer byte-code (ETC) output.
-Users need not run this command directly -- the \fIkroc\fR command will invoke the compiler
+Users need not run this command directly -- the \fIrazor\fR command will invoke the compiler
 with the right options.  Compiler options can be added through the use of the \fI--oc-opts\fR flag
-to \fIkroc\fR.
+to \fIrazor\fR.
 
 .SH OPTIONS
 .PP
@@ -329,7 +329,7 @@ mark output as an occam harness (unsupported).
 change default pathname to \fIpath\fR.
 .TP
 \fB\-zk\fR
-code generation for KRoC.
+code generation for Razor.
 .TP
 \fB\-zlc\fR \fIlib\fR
 change compiler library to \fIlib\fR.
@@ -504,10 +504,10 @@ use ALT for PRI PAR (unsupported).
 
 .PP
 .SH AUTHOR
-See the file AUTHORS in the distribution for the list of contributors to KRoC.  This
+See the file AUTHORS in the distribution for the list of contributors to Razor.  This
 manual page is maintained by Fred Barnes <frmb@kent.ac.uk>
 .SH "SEE ALSO"
-kroc(1)
+razor(1)
 .SH "REPORTING BUGS"
 Please report bugs to <ofa-bugs@kent.ac.uk>
 .SH COPYRIGHT
@@ -546,4 +546,3 @@ Transputers in use is dwindling; Transputers have not been
 manufactured since 1997;  and the compiler has been modified to
 the extent where code-generation for a real transputer is probably
 not practical.
-

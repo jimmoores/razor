@@ -2783,7 +2783,7 @@ PRIVATE void mapnestedblocks (treenode * tptr)
 						datasize = (datasize + 1) & (~1);	/* round up to even number */
 					}
 					if (isfunction) {
-						/* FIXME: is this really needed ? (added by me for kroc -P handling) */
+						/* FIXME: is this really needed ? (added by me for razor -P handling) */
 						datasize += DS_MIN;
 					}
 					if (need_mapping (n)) {

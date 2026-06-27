@@ -133,10 +133,10 @@
 --  with debug and STOP-mode flags set:
 --  
 --  [@text
---    kroc q3.occ                   (normal mode)
---    kroc -d q3.occ                (debug mode)
---    kroc -S q3.occ                (STOP mode)
---    kroc -d -S q3.occ             (debug and STOP mode)
+--    razor q3.occ                   (normal mode)
+--    razor -d q3.occ                (debug mode)
+--    razor -S q3.occ                (STOP mode)
+--    razor -d -S q3.occ             (debug and STOP mode)
 --  ]
 
 

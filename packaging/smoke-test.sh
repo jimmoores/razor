@@ -1,5 +1,5 @@
 #!/bin/sh
-# Post-install smoke test for Razor/KRoC packages.
+# Post-install smoke test for Razor packages.
 
 set -eu
 
@@ -35,17 +35,17 @@ check_tool()
 
 find_cif_examples()
 {
-	if test "${KROC_CIF_EXAMPLES_DIR:-}" != ""; then
-		printf '%s\n' "$KROC_CIF_EXAMPLES_DIR"
+	if test "${RAZOR_CIF_EXAMPLES_DIR:-}" != ""; then
+		printf '%s\n' "$RAZOR_CIF_EXAMPLES_DIR"
 		return
 	fi
 
-	prefix=${KROC_PREFIX:-/usr}
+	prefix=${RAZOR_PREFIX:-/usr}
 	for dir in \
-		"$prefix/lib/kroc/examples/cif" \
-		"$prefix/lib/kroc/"*examples/cif \
-		"/usr/local/lib/kroc/examples/cif" \
-		"/usr/local/lib/kroc/"*examples/cif
+		"$prefix/lib/razor/examples/cif" \
+		"$prefix/lib/razor/"*examples/cif \
+		"/usr/local/lib/razor/examples/cif" \
+		"/usr/local/lib/razor/"*examples/cif
 	do
 		if test -x "$dir/cift1"; then
 			printf '%s\n' "$dir"
@@ -60,7 +60,7 @@ run_commstime()
 {
 	prog=$1
 
-	timeout_prog=${KROC_TIMEOUT:-}
+	timeout_prog=${RAZOR_TIMEOUT:-}
 	if test "$timeout_prog" = ""; then
 		if command -v timeout >/dev/null 2>&1; then
 			timeout_prog=timeout
@@ -95,34 +95,34 @@ run_commstime()
 	wait "$pid" 2>/dev/null || true
 }
 
-check_cmd kroc
+check_cmd razor
 check_cmd occbuild
 check_cmd occ21
 check_cmd tranx86
 
-check_tool "kroc" kroc --version
+check_tool "razor" razor --version
 check_tool "occbuild" occbuild --help
 check_tool "occ21" occ21 -i
 check_tool "tranx86" tranx86 --version
 
 tmpbase=${TMPDIR:-/tmp}
-workdir=$(mktemp -d "$tmpbase/kroc-smoke.XXXXXX")
+workdir=$(mktemp -d "$tmpbase/razor-smoke.XXXXXX")
 trap 'rm -rf "$workdir"' EXIT HUP INT TERM
 
 cd "$workdir"
 cat >hello.occ <<'EOF'
 #INCLUDE "course.module"
 PROC hello (CHAN BYTE out!)
-  out.string ("KRoC smoke test*n", 0, out!)
+  out.string ("Razor smoke test*n", 0, out!)
 :
 EOF
 
 run occbuild --program hello.occ
 run ./hello >hello.out
-grep 'KRoC smoke test' hello.out >/dev/null 2>&1 || die "hello program did not print expected output"
+grep 'Razor smoke test' hello.out >/dev/null 2>&1 || die "hello program did not print expected output"
 
-if test "${KROC_RUN_CIF:-1}" != "0"; then
-	cif_dir=$(find_cif_examples) || die "CIF examples not found; set KROC_CIF_EXAMPLES_DIR or KROC_RUN_CIF=0"
+if test "${RAZOR_RUN_CIF:-1}" != "0"; then
+	cif_dir=$(find_cif_examples) || die "CIF examples not found; set RAZOR_CIF_EXAMPLES_DIR or RAZOR_RUN_CIF=0"
 	test -x "$cif_dir/cift1" || die "missing $cif_dir/cift1"
 	test -x "$cif_dir/cift15" || die "missing $cif_dir/cift15"
 	test -x "$cif_dir/cif-commstime" || die "missing $cif_dir/cif-commstime"

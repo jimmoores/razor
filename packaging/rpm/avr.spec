@@ -48,8 +48,8 @@ rm -rf $RPM_BUILD_ROOT
 %exclude %{_datadir}/aclocal/*
 %exclude %{_includedir}/*
 %exclude %{_libdir}/*
-%exclude %{_bindir}/kroc-setup.sh
-%exclude %{_bindir}/kroc-setup.csh
+%exclude %{_bindir}/razor-setup.sh
+%exclude %{_bindir}/razor-setup.csh
 
 %changelog
 * Wed Jul 26 2009 Matthew Jadud <matt@concurrency.cc> 1.5.0-1.fc11 

@@ -249,7 +249,7 @@ def subst_and_copy(file, source_dir, dest_dir):
 				
 				if re.search("@KROC-SETUP@", line):
 					#if config.get('TOOLCHAIN') in ['kroc', 'tvm']:
-					#	line = re.sub("@KROC-SETUP@", "kroc-setup.sh", line)
+					#	line = re.sub("@KROC-SETUP@", "razor-setup.sh", line)
 					#else:
 					# Actually... can we change the name of this file?
 						line = re.sub("@KROC-SETUP@", 
@@ -462,7 +462,7 @@ def remove_unwanted_build_products():
 		remove_files(concat([config.get('DEST'), '/usr/bin/cdxview']))
 		remove_files(concat([config.get('DEST'), '/usr/bin/netbard']))
 		
-		DUPBIN = ['kroc-setup.sh', 'ilibr', 'occamdoc', 'occbuild', 'kroc-setup.csh', 'occ21', 'mkoccdeps']
+		DUPBIN = ['razor-setup.sh', 'ilibr', 'occamdoc', 'occbuild', 'razor-setup.csh', 'occ21', 'mkoccdeps']
 		for DUP in DUPBIN:
 			remove_files(concat([config.get('DEST'), '/usr/bin/%s'	% DUP]))
 

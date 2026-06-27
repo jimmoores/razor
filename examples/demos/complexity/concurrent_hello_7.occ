@@ -24,7 +24,7 @@
 --  syncroniseation from writers and write down a channel to servers, now servers themselves enroll on the termination barrier and transmit
 --  the signal to terminate to themselves.    
 --
---  This program should be compiled with "kroc -d -di concurrent_hello_7.occ"
+--  This program should be compiled with "razor -d -di concurrent_hello_7.occ"
 --  and then run with ./concurrent_hello_7
 -- ==================================================================================
 
@@ -396,6 +396,5 @@ PROC outer(CHAN BYTE in?, SHARED CHAN BYTE out!, CHAN BYTE err!)
   --}}}
 :
 --}}}
-
 
 

@@ -66,7 +66,7 @@ autoreconf -v -f -i
 #mkdir kroc-ccsp
 #cd kroc-ccsp
 #
-#../../../../configure --with-toolchain=kroc --prefix=$INSTALL
+#../../../../configure --with-toolchain=razor --prefix=$INSTALL
 #make
 #make install
 

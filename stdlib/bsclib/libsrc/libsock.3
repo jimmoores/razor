@@ -1,5 +1,5 @@
-.\" KRoC socket library overview page.  Last updated December 2005 Fred Barnes  <frmb@kent.ac.uk>
-.TH LIBSOCK "3" "December 2005" "kroc 1.4.0" KRoC
+.\" Razor socket library overview page.  Last updated December 2005 Fred Barnes  <frmb@kent.ac.uk>
+.TH LIBSOCK "3" "December 2005" "razor 1.6.1" Razor
 .SH NAME
 socket.accept, socket.bind, socket.close, socket.connect, socket.create,
 socket.error, socket.fullread, socket.fullwrite, socket.fullwrite.addr,
@@ -11,7 +11,7 @@ socket.host.of.addr, socket.ip.of.addr, socket.naddrs.of.host,
 socket.create.connect.tcp, socket.create.listen.tcp, socket.create.listen.udp,
 socket.create.tcp, socket.create.udp,
 socket.altable.accept, socket.altable.fullread, socket.altable.fullwrite,
-socket.altable.read, socket.altable.write \- KRoC socket library
+socket.altable.read, socket.altable.write \- Razor socket library
 .SH SYNOPSIS
 .B #INCLUDE \fB"sock.module\fB"\fR
 .PP
@@ -95,7 +95,7 @@ socket.altable.read, socket.altable.write \- KRoC socket library
 .br
 .BI "PROC socket.altable.write (CHAN OF BOOL " kill ", CHAN OF INT " response ", SOCKET " sock ", VAL []BYTE " buffer ", INT " result ")"
 .SH DESCRIPTION
-The occam socket library uses the blocking system call functionality within KRoC
+The occam socket library uses the blocking system call functionality within Razor
 to allow socket operations to be performed asynchronously.  A rich set of occam
 PROCs provide most of the socket functionality, as is available from the C world.
 .PP
@@ -138,8 +138,6 @@ structure in the C code, in addition, occam does not provide unsigned 16-bit or 
 This manual page is maintained by Fred Barnes <frmb@kent.ac.uk>
 
 .SH "SEE ALSO"
-.BR kroc (1)
+.BR razor (1)
 .br
-doc/bsclib.ps, doc/bsclib/index.html  in the KRoC distribution
-
-
+doc/bsclib.ps, doc/bsclib/index.html  in the Razor distribution

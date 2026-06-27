@@ -1,7 +1,7 @@
 #!/usr/bin/perl -- # -*- perl -*-
 
 #
-#	occam for all (ofa) project KRoC (Kent Retargetable occam Compiler)
+#	Razor makefile generator
 #	Makefile generator
 #	Copyright (C) 1998  D.J. Beckett
 #
@@ -80,12 +80,12 @@ sub get_rule ($$$$$) {
     my(@objs)=grep(/\.o$/, @dep_files);
     $objs=" @objs" if @objs;
 
-    return "\$(KROC)$incstr$libstr $dir$prefix.occ$objs -o $prefix$llibstr";
+    return "\$(RAZOR)$incstr$libstr $dir$prefix.occ$objs -o $prefix$llibstr";
   } elsif ($suffix eq 'o') {
     # Separately compiled file depends on source file 
     my $to='';
     $to=" -o $file" if $dir ne '';
-    return "\$(KROC)$incstr$libstr -c $dir$prefix.occ$to";
+    return "\$(RAZOR)$incstr$libstr -c $dir$prefix.occ$to";
   } elsif ($suffix eq 'occ' || $suffix eq 'inc') {
     # nothing to do
     return '';
@@ -531,7 +531,7 @@ sub build_kmakefile ($$$$$$$$) {
     print OUT "# Makefile built by $::prog_name for $login on $date\n";
     print OUT "# with '$::prog_name $cmdline'\n";
     print OUT "#\n";
-    print OUT "KROC=kroc\n";
+    print OUT "RAZOR=razor\n";
     print OUT "ILIBR=ilibr\n";
     print OUT "AR=ar\n";
     print OUT "RANLIB=ranlib\n";
@@ -568,21 +568,21 @@ sub main {
   my(@args)=@_;
 
   my(@search_path)=split(/:/, $ENV{'PATH'});
-  die "$::prog_name: Could not find 'kroc' program in search path\n"
-    unless path_search('kroc', \@search_path, 0);
+  die "$::prog_name: Could not find 'razor' program in search path\n"
+    unless path_search('razor', \@search_path, 0);
 
   my $path;
-  chop($path=`kroc --incpath`);
+  chop($path=`razor --incpath`);
   my(@inc_search)=(split(/:/,$path));
   # Remove current directory, always first
   shift(@inc_search);
 
-  chop($path=`kroc --libpath`);
+  chop($path=`razor --libpath`);
   my(@lib_search)=(split(/:/,$path));
   # Remove current directory, always first
   shift(@lib_search);
 
-  chop($path=`kroc --cclibpath`);
+  chop($path=`razor --cclibpath`);
   my(@cclib_search)=grep(s/^-L//, split(/ /,$path));
   # Remove current directory, always first
   shift(@cclib_search);
@@ -625,7 +625,7 @@ sub main {
   $usage=1 unless @newargs;
   
   warn <<"EOT" and exit 1 if $usage;
-KROC Makefile Generator version $::version
+Razor Makefile Generator version $::version
 Usage: $::prog_name [options] [executables or libraries]
 Options:
   -ooutput         Output makefile to this file (Default is executable.kmf)
@@ -705,7 +705,7 @@ EOT
 
 =head1 NAME
 
-kmakef - OFA KROC makefile builder
+kmakef - Razor makefile builder
 
 =head1 SYNOPSIS
 
@@ -714,9 +714,9 @@ kmakef - OFA KROC makefile builder
 =head1 DESCRIPTION
 
 I<kmakef> is a makefile-builder program for the occam For All (oFA)
-project's KRoC compilation system.  It scans given source files or
+Razor compilation system.  It scans given source files or
 libraries and creates a prototype makefile which can be used to build
-the system, understanding I<KRoC>'s dependencies.
+the system, understanding I<Razor>'s dependencies.
 
 If a library is being constructed e.g. I<foo>C<.lib>, a library
 intermediate file is required to list the modules inside it.  This is
@@ -773,7 +773,7 @@ which results in F<hello.kmf> containing:
   # Makefile built by kmakef for ... on ...
   # with 'kmakef hello.occ'
   #
-  KROC=kroc
+  RAZOR=razor
   ILIBR=ilibr
   AR=ar
   RANLIB=ranlib
@@ -786,12 +786,12 @@ which results in F<hello.kmf> containing:
 	-$(DEL) hello *.tce *.o *.lib *.so *.s *.t *~
 
   hello: hello.occ
-	$(KROC) hello.occ -o hello
+	$(RAZOR) hello.occ -o hello
 
 
 =head1 SEE ALSO
 
-See also L<kroc>.
+See also L<razor>.
 
 =head1 AUTHOR
 

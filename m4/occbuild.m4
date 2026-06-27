@@ -18,13 +18,13 @@
 #	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
 dnl
-dnl Determine whether we're building a package in the KRoC tree.
+dnl Determine whether we're building a package in the Razor tree.
 dnl Set KROC_BUILD_ROOT to the top of the build tree and KROC_SRC_ROOT to the
 dnl top of the source tree if we are, and both to the empty string if we
 dnl aren't.
 AC_DEFUN([OCCAM_IN_TREE],
 [dnl
-AC_MSG_CHECKING([whether we're building as part of KRoC])
+AC_MSG_CHECKING([whether we're building as part of Razor])
 if test "x$KROC_BUILD_ROOT" != "x" -a "x$KROC_SRC_ROOT" != "x"; then
   AC_MSG_RESULT([yes])
 else
@@ -43,8 +43,11 @@ AC_DEFUN([OCCAM_TOOLCHAIN],
 OCCBUILD_TOOLCHAIN=kroc
 AC_ARG_WITH([toolchain],
             AS_HELP_STRING([--with-toolchain=ENV],
-                           [select occam toolchain to use (kroc, tvm, tock; default kroc)]),
+                           [select occam toolchain to use (razor, tvm, tock; default razor)]),
             [OCCBUILD_TOOLCHAIN="$withval"])
+if test "x$OCCBUILD_TOOLCHAIN" = "xrazor"; then
+  OCCBUILD_TOOLCHAIN=kroc
+fi
 AM_CONDITIONAL(OCCBUILD_KROC, test "x$OCCBUILD_TOOLCHAIN" = "xkroc")
 AM_CONDITIONAL(OCCBUILD_TVM, test "x$OCCBUILD_TOOLCHAIN" = "xtvm")
 AM_CONDITIONAL(OCCBUILD_TOCK, test "x$OCCBUILD_TOOLCHAIN" = "xtock")
@@ -283,7 +286,7 @@ in
 	*xyz)
 		;;
 	*)
-		AC_MSG_ERROR([program name transformations for KRoC may only be simple prefixes])
+		AC_MSG_ERROR([program name transformations for Razor may only be simple prefixes])
 		;;
 esac
 

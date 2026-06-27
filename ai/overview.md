@@ -1,4 +1,4 @@
-The kroc project is a compiler, runtime and toolset for the occam programming language.  The initial version this fork is
+The Razor project is a compiler, runtime and toolset for the occam programming language.  The initial version this fork is
 based on, it supports a number of 32-bit targets including x86, SPARC, MIPS and PowerPC.  The occ21 compiler had some 
 basic support for 64-bit targets, to support an Alpha version, but the accompanying runtime sytem for Alpha was not 
 open source so was not included.
@@ -38,8 +38,8 @@ correctly implements this calling convention.  Note that references to the 'Work
 equivalent to a stack pointer on a modern CPU.  Space above the stack, with negative offsets, are used tp stpre
 state about the currently running process/thread - the equivalent of thread local storage and/or a thread descriptor
 
-## The kroc interface library
-The kroc interface library can be found under `runtime/libkrocif`.  It provides the main entry point for the runtime,
+## The Razor interface library
+The Razor interface library can be found under `runtime/libkrocif`.  It provides the main entry point for the runtime,
 implements processes that read and write from stdout, stderr and stdin file streams.  It also provides an OS process
 that handles signals and the like and can cleanly exit the process when appropriate.
 
@@ -47,10 +47,10 @@ that handles signals and the like and can cleanly exit the process when appropri
 The support library can be found under `runtime/support`.  It provides C function wrappers to interface occam 
 programs to system POSIX calls.
 
-## The kroc script
-The kroc script is a complex shell script found in `modules/kroc` that is used to run the the full compile-link 
+## The razor script
+The razor script is a complex shell script found in `bin/razor.in` that is used to run the the full compile-link 
 lifecycle, invoking the occ21 compiler, the tranx86 translater and linking the CCSP runtime as appropriate.  It is
-intended to be the user's primary interface with the kroc system.
+intended to be the user's primary interface with the Razor system.
 
 ## The CCSP C interface library/headers
 The CCSP C library headers under `modules/cif` are a standard C interface to the functions provided by the CCSP 

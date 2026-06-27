@@ -25,7 +25,7 @@ AC_REQUIRE([OCCAM_IN_TREE])
 AC_REQUIRE([KROC_RMOX_BUILD])
 
 # If you add new variables here, make sure you update bin/Makefile.am
-# and bin/kroc.in too.
+# and bin/razor.in too.
 
 KROC_CCSP_CFLAGS=""
 KROC_CCSP_CINCPATH=""
@@ -45,7 +45,7 @@ KROC_CCSP_ENABLE_SSE2=""
 KROC_CCSP_ENABLE_CPUTIMERS=""
 
 if test "x$KROC_BUILD_ROOT" != "x"; then
-  # We're configuring inside the KRoC source tree; we need to figure out the
+  # We're configuring inside the Razor source tree; we need to figure out the
   # flags based on the target and configure options.
 
   AC_ARG_ENABLE([pthreads],
@@ -158,7 +158,7 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
   KROC_CCSP_CINCPATH="$KROC_CCSP_CINCPATH -I$KROC_BUILD_ROOT/runtime/ccsp/include -I$KROC_SRC_ROOT/runtime/ccsp/include -I$KROC_BUILD_ROOT/stdlib/cif/libsrc -I$KROC_SRC_ROOT/stdlib/cif/libsrc -I$KROC_BUILD_ROOT/contrib/ocuda/libsrc"
   KROC_CCSP_LIBPATH="$KROC_CCSP_LIBPATH -L$KROC_BUILD_ROOT/runtime/ccsp -L$KROC_BUILD_ROOT/runtime/libkrocif"
   # Embed rpath so in-tree-linked binaries (e.g. cift15, which is built
-  # directly via $(CC) rather than through the kroc driver) find the
+  # directly via $(CC) rather than through the razor driver) find the
   # in-tree libccsp/libkrocif at runtime instead of any stale system
   # install at /usr/local/lib.  Apple ld also accepts -rpath.
   KROC_CCSP_LIBPATH="$KROC_CCSP_LIBPATH -Wl,-rpath,$KROC_BUILD_ROOT/runtime/ccsp -Wl,-rpath,$KROC_BUILD_ROOT/runtime/libkrocif"
@@ -248,7 +248,7 @@ if test "x$KROC_BUILD_ROOT" != "x"; then
   AC_MSG_RESULT($KROC_CCSP_ENABLE_DYNPROC)
 
 else
-  # We're not in the KRoC source tree, so we can just call kroc to get the
+  # We're not in the Razor source tree, so we can just call razor to get the
   # arguments.
   AC_REQUIRE([KROC_PROG_KROC])
   eval `$KROC --autovars`
@@ -272,18 +272,21 @@ AC_SUBST(KROC_CCSP_ENABLE_SSE2)
 
 ])dnl
 dnl
-dnl Find the "kroc" script, and define KROC.
+dnl Find the "razor" script, and define KROC for the existing build macros.
 AC_DEFUN([KROC_PROG_KROC],
 [dnl
 AC_REQUIRE([OCCAM_IN_TREE])
-AC_ARG_VAR(KROC, [Path to kroc])
+AC_ARG_VAR(RAZOR, [Path to razor])
 if test "x$KROC_BUILD_ROOT" != "x"; then
-  KROC="$KROC_BUILD_ROOT/bin/kroc --in-tree $KROC_BUILD_ROOT"
+  KROC="$KROC_BUILD_ROOT/bin/razor --in-tree $KROC_BUILD_ROOT"
 else
-  AC_CHECK_PROG(KROC, kroc, kroc, no)
-  if test $KROC = no; then
-    AC_MSG_ERROR([kroc not found; set \$KROC or \$PATH appropriately])
+  if test "x$RAZOR" = "x"; then
+    AC_CHECK_PROG(RAZOR, razor, razor, no)
   fi
+  if test $RAZOR = no; then
+    AC_MSG_ERROR([razor not found; set \$RAZOR or \$PATH appropriately])
+  fi
+  KROC="$RAZOR"
 fi
 ])dnl
 dnl
@@ -295,7 +298,7 @@ AC_REQUIRE([OCCAM_IN_TREE])
 KROC_RMOX=""
 
 if test "x$KROC_BUILD_ROOT" != "x"; then
-  # We're configuring inside the KRoC source tree; we need to figure out the
+  # We're configuring inside the Razor source tree; we need to figure out the
   # flags based on the target and configure options.
 
   AC_ARG_WITH([rmox],

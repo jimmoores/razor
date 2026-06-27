@@ -1,8 +1,8 @@
 Blocking System Calls Example Programs
 ======================================
 
-To compile these examples, first make sure that you sourced the KRoC
-setup file (try typing `kroc' with no arguments).  The run configure
+To compile these examples, first make sure that you sourced the Razor
+setup file (try typing `razor' with no arguments).  The run configure
 and make thus:
     ./configure
     make
@@ -51,4 +51,3 @@ pingdemo.occ
 
 README
 	The file you are reading now
-

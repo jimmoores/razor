@@ -7,10 +7,10 @@ MAKE_HEADER = $(top_srcdir)/utils/make-header.py
 
 SUBDIRS = arch i386 aarch64 x64
 
-krocincludedir = $(includedir)/kroc
+razorincludedir = $(includedir)/razor
 
 # Provided public headers.
-krocinclude_HEADERS = \
+razorinclude_HEADERS = \
 	ccsp.h \
 	ccsp_cif.h \
 	ccsp_config.h \
@@ -45,13 +45,13 @@ noinst_HEADERS = \
 	sched_types.h
 
 # Generated public headers.
-nodist_krocinclude_HEADERS = \
+nodist_razorinclude_HEADERS = \
 	ccsp_cif_stubs.h \
 	kitable.h
 
 # Generated private headers.
 gen_headers = \
-	$(nodist_krocinclude_HEADERS) \
+	$(nodist_razorinclude_HEADERS) \
 	calltable.h
 
 all-local: $(gen_headers)

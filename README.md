@@ -79,7 +79,7 @@ A typical invocation will look like:
 
 It's often convenient to use an installation directory somewhere inside your home directory (e.g. `$HOME/razor`) because then you can build and install Razor as your regular user without needing to fiddle with permissions.
 
-Alternatively, you can install Razor directly into a system prefix such as `/usr/local` (the default if you don't specify `--prefix`), which generally means you won't need to source `kroc-setup.sh` to set up your environment (assuming you have `/usr/local/lib` listed in `/etc/ld.so.conf`).
+Alternatively, you can install Razor directly into a system prefix such as `/usr/local` (the default if you don't specify `--prefix`), which generally means you won't need to source `razor-setup.sh` to set up your environment (assuming you have `/usr/local/lib` listed in `/etc/ld.so.conf`).
 
 ### Build script options
 
@@ -123,7 +123,7 @@ The `configure` script accepts the standard GNU autotools options plus these Raz
 | Option | Description |
 |--------|-------------|
 | `--prefix=DIR` | Installation prefix (default: `/usr/local`) |
-| `--with-toolchain=ENV` | Select occam toolchain: native (`kroc`, default), `tvm`, or `tock` |
+| `--with-toolchain=ENV` | Select occam toolchain: native (default), `tvm`, or `tock` |
 | `--with-wrapper=WRAPPER` | Transterpreter wrapper to use: `posix` (default) or `none` (TVM toolchain only) |
 | `--enable-pony` | Enable pony networking support |
 
@@ -169,9 +169,9 @@ The following `make` targets are available after running `configure`:
 
 Before using Razor, remember to source the relevant setup file:
 
-* `. PREFIX/bin/kroc-setup.sh` for Bourne-style shells such as bash
+* `. PREFIX/bin/razor-setup.sh` for Bourne-style shells such as bash
 
-* `source PREFIX/bin/kroc-setup.csh` for C-style shells such as csh/tcsh
+* `source PREFIX/bin/razor-setup.csh` for C-style shells such as csh/tcsh
 
 It may be convenient to include this command in your shell's startup file (e.g. `~/.bash_profile`, `~/.cshrc`, or `/etc/profile`).
 
@@ -193,7 +193,7 @@ and run `occbuild --program hello.occ` to compile it; this should give you a bin
 
   bin/
 
-    User-facing entry points (the native driver `kroc`, `occbuild`, `ilibr`,
+    User-facing entry points (the native driver `razor`, `occbuild`, `ilibr`,
     and related setup scripts).
 
   compiler/
@@ -253,7 +253,7 @@ and run `occbuild --program hello.occ` to compile it; this should give you a bin
 
   docs/
 
-    Various items of documentation - `essentially-kroc.txt` is a good
+    Various items of documentation - `essentially-razor.txt` is a good
     place to start; `docs/reference/` holds archived Inmos / upstream
     PDFs.
 

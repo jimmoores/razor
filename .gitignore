@@ -31,9 +31,9 @@ build-tools/slinker/slinker.ss
 compiler/occ21/occ21
 translator/tranx86/tranx86
 build-tools/occamdoc/occamdoc
-bin/kroc
-bin/kroc-setup.sh
-bin/kroc-setup.csh
+bin/razor
+bin/razor-setup.sh
+bin/razor-setup.csh
 bin/occbuild
 tests/cgtests/cgtest??
 tests/hereticc/hereticc

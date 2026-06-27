@@ -1,4 +1,4 @@
-KRoC invocation script
+Razor invocation script
 ======================
 
 This folder is for the script that actually orchestrates the various phases of compiling and linking an occam program.
@@ -7,4 +7,4 @@ This folder is for the script that actually orchestrates the various phases of c
 @../../ai/build.md
 
 # Outputting readable ETC code
-Rather than using tcoff tools, you can get a text readable version of the ETC code by passing arguments to tranx86 via the kroc script (or invoking directly).
+Rather than using tcoff tools, you can get a text readable version of the ETC code by passing arguments to tranx86 via the razor script (or invoking directly).

@@ -25,8 +25,7 @@ fi
 # should be in bash when we get here
 
 #
-#	occam for all (ofa) project KRoC (Kent Retargetable occam Compiler)
-#	KRoC driver script
+#	Razor occam compiler driver script
 #	Copyright (C) 1997  D.J. Beckett
 #	Modifications copyright (C) 2000-2004  Fred Barnes <frmb@kent.ac.uk>
 #
@@ -45,10 +44,8 @@ fi
 #	Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #
 
-# If this file has the name "kroc.in" then it is a template for the kroc
-# driver program; to generate the actual kroc script, use:
-#     ./build --force-configure configure-kroc make-kroc [install-kroc]
-# in the KRoC source tree
+# If this file has the name "razor.in" then it is a template for the razor
+# driver program.
 #
 
 #{{{  set $SED and $progname
@@ -64,8 +61,8 @@ LD=@LD@
 ARCH_LDFLAGS="@KROC_CCSP_LDFLAGS@"
 ARCH_ASFLAGS="@KROC_CCSP_ASFLAGS@"
 
-# Only the 'kroc' program need be in the users path
-#PATH=$KROC/bin:$PATH
+# Only the 'razor' program need be in the users path
+#PATH=$RAZOR/bin:$PATH
 
 package_version="@VERSION@"
 
@@ -275,12 +272,12 @@ showld=
 showas=
 showldflags=
 showasflags=
-showkrocpath=
+showrazorpath=
 showautovars=
 delete_temp=yes
 enable_udc=
 skip_link=
-debugkroc=0
+debugrazor=0
 dumpxml=
 usenocc=
 nocc="@NOCCHOME@/nocc"
@@ -318,7 +315,7 @@ do
 
 
 	case "$option" in
-		#{{{  --in-tree*  build using tools in KRoC source tree
+		#{{{  --in-tree*  build using tools in Razor source tree
 	--in-tree*)
 		intree="$optarg"
 		;;
@@ -768,9 +765,9 @@ do
 		linkstatic=1
 		;;
 		#}}}
-		#{{{  --krocdir  show directory where KRoC data files are kept
-	--krocdir)
-		showkrocpath=1
+		#{{{  --razordir  show directory where Razor data files are kept
+	--razordir)
+		showrazorpath=1
 		;;
 		#}}}
 		#{{{  --autovars  show variables autoconf needs
@@ -783,9 +780,9 @@ do
 		showall=1
 		;;
 		#}}}
-		#{{{  --debugkroc  KRoC debugging enable (not for users)
-	--debugkroc)
-		debugkroc=1
+		#{{{  --debugrazor  Razor debugging enable (not for users)
+	--debugrazor)
+		debugrazor=1
 		;;
 		#}}}
 		#{{{  --*, -*  unrecognised options
@@ -805,19 +802,19 @@ done
 
 #}}}
 #{{{  directory configuration
-kroc_archbindir="@KROC_ARCHBINDIR@"
-kroc_archlibdir="@KROC_ARCHLIBDIR@"
-kroc_archincdir="@KROC_ARCHINCDIR@"
-kroc_mandir="@KROC_MANDIR@"
-kroc_krocdir="@KROC_KROCDIR@"
+razor_archbindir="@KROC_ARCHBINDIR@"
+razor_archlibdir="@KROC_ARCHLIBDIR@"
+razor_archincdir="@KROC_ARCHINCDIR@"
+razor_mandir="@KROC_MANDIR@"
+razor_datadir="@KROC_KROCDIR@"
 #}}}
 #{{{  path-dependant options
 
 if [ "$intree" = "" ]; then
 	# Pull paths from env in preference of hardcoded path
-	occ21=${OCC21:-"$kroc_archbindir/occ21"}
-	octran=${OCTRAN:-"$kroc_archbindir/tranx86"}
-	rtsmain=${RTSMAIN:-"$kroc_archlibdir/rtsmain.o"}
+	occ21=${OCC21:-"$razor_archbindir/occ21"}
+	octran=${OCTRAN:-"$razor_archbindir/tranx86"}
+	rtsmain=${RTSMAIN:-"$razor_archlibdir/rtsmain.o"}
 else
 	occ21="$intree/compiler/occ21/occ21"
 	octran="$intree/translator/tranx86/tranx86"
@@ -835,7 +832,7 @@ fi
 #}}}
 #{{{  build colon-separated search path for libraries
 if [ "$intree" = "" ]; then
-  ocspath="$kroc_krocdir/@KROC_TARGET_PREFIX@vtlib:$kroc_krocdir/@KROC_TARGET_PREFIX@vtinclude"
+  ocspath="$razor_datadir/@KROC_TARGET_PREFIX@vtlib:$razor_datadir/@KROC_TARGET_PREFIX@vtinclude"
 else
   ocspath="$intree/stdlib/inmoslibs/libsrc/forall"
 fi
@@ -845,8 +842,8 @@ fi
 
 ocsearch=
 if [ "$intree" = "" ]; then
-  oclibpath="-L$kroc_archlibdir"
-  cincludepath="-I$kroc_archincdir"
+  oclibpath="-L$razor_archlibdir"
+  cincludepath="-I$razor_archincdir"
 else
   oclibpath="@KROC_CCSP_LIBPATH@ -L$intree/stdlib/inmoslibs/libsrc/forall"
   cincludepath="@KROC_CCSP_CINCPATH@"
@@ -1006,8 +1003,8 @@ if [ $showasflags ]; then
 	printf '%s\n' "$ARCH_ASFLAGS"
 	exit 0
 fi
-if [ $showkrocpath ]; then
-	printf '%s\n' "$kroc_krocdir"
+if [ $showrazorpath ]; then
+	printf '%s\n' "$razor_datadir"
 	exit 0
 fi
 if [ $showautovars ]; then
@@ -1044,13 +1041,13 @@ fi
 if [ "X${fatal}" != "X" -o "X$srcs" = "X" -o "X$showversion" != "X" ]; then
 
 	exec 1>&2
-	printf 'KRoC version %s targeting %s (driver V%s)\n' "$package_version" "$target_canonical" "$dversion"
+	printf 'Razor version %s targeting %s (driver V%s)\n' "$package_version" "$target_canonical" "$dversion"
 
 	if [ $verbose ]; then
 		showversion=yes
 	fi
 	if [ $showversion ]; then
-		cat $kroc_krocdir/doc/txt/AUTHORS
+		cat $razor_datadir/doc/txt/AUTHORS
 		exit 0
 	fi
 
@@ -1111,7 +1108,7 @@ Exclusive options:
   --ccincpath            Print path to occam include files in CC -I.. form
   --ld                   Print path to dynamic linker (for generating shared libraries)
   --ldflags              Print linker flags to be used when building shared libraries
-  --krocdir              Print path to kroc data files
+  --razordir             Print path to Razor data files
   --autovars             Print variables for autoconf
 Additional options:
   -dm                    Enable dynamic memory debugging
@@ -1258,7 +1255,7 @@ for src in $srcs; do
 		exit 1
 	fi
 
-	if [ $debugkroc -eq 1 ]; then
+	if [ $debugrazor -eq 1 ]; then
 		printf '    origsrc = %s\n' "$origsrc"
 		printf '    src = %s\n' "$src"
 		printf '    dir = %s\n' "$dir"
@@ -1521,4 +1518,3 @@ if [ $delete_temp ]; then
 fi
 
 exit 0
-

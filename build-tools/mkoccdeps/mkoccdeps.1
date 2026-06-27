@@ -1,5 +1,5 @@
 .\" mkoccdeps command man page, last updated 30/12/2005 by Fred Barnes
-.TH MKOCCDEPS "1" "December 2005" "kroc 1.4.0" KRoC
+.TH MKOCCDEPS "1" "December 2005" "razor 1.6.1" Razor
 .SH NAME
 mkoccdeps \- generates occam program dependency information
 .SH SYNOPSIS
@@ -55,7 +55,7 @@ in conjunction with a Makefile rule of the form:
 .PP
 	main:    $(ALLOBJS) main.occ
 .br
-	         kroc main.occ $(ALLOBJS) $(LIBS)
+	         razor main.occ $(ALLOBJS) $(LIBS)
 .PP
 .SH DEFICIENCIES
 .PP
@@ -64,9 +64,9 @@ The program is blind to any conditional compilation (using the pre-processor)
 .SH AUTHOR
 This manual page is maintained by Fred Barnes <frmb@kent.ac.uk>
 .SH "SEE ALSO"
-kroc(1)
+razor(1)
 .SH "REPORTING BUGS"
-Please report bugs to <kroc-bugs@kent.ac.uk>
+Please report bugs in the project issue tracker.
 .SH COPYRIGHT
 Copyright \(co 2004-2005 Fred Barnes <frmb@kent.ac.uk>
 .PP
@@ -86,4 +86,3 @@ You should have received a copy of the GNU General Public
 License along with this program; if not, write to the Free
 Software Foundation, Inc., 675 Mass Ave, Cambridge, MA
 02139, USA.
-

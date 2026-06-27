@@ -4,7 +4,7 @@
 
 AUTOMAKE_OPTIONS = foreign no-dependencies
 
-scdocdir = $(datadir)/kroc/doc/sc
+scdocdir = $(datadir)/razor/doc/sc
 dist_scdoc_DATA = \
 	blackboard.inc \
 	control_info.inc \

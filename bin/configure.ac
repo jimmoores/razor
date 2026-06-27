@@ -1,4 +1,4 @@
-AC_INIT([kroc],[1.6.1-pre0],[kroc-bugs@kent.ac.uk])
+AC_INIT([razor],[1.6.1-pre0],[https://github.com/jimmoores/razor/issues])
 
 AC_CANONICAL_TARGET
 
@@ -28,7 +28,7 @@ AC_SUBST(KROC_TARGET_OS)
 KROC_TARGET_CPU=$target_cpu
 AC_SUBST(KROC_TARGET_CPU)
 
-dnl check for the dynamic linker (just so we can report it in KRoC really)
+dnl check for the dynamic linker (just so we can report it in Razor really)
 AC_CHECK_TOOL(LD,ld)
 
 AC_ARG_ENABLE([user-install], AS_HELP_STRING([--enable-user-install], [install configuration file(s) as dotfiles]), [enable_user_install=$enableval], [enable_user_install=no])
@@ -110,14 +110,14 @@ fi
 
 AC_SUBST(NOCCHOME)
 
-dnl new settings for kroc
+dnl new settings for Razor
 KROC_ARCHBINDIR="$bindir"
 KROC_ARCHLIBDIR="$libdir"
-KROC_ARCHINCDIR="$includedir/kroc"
+KROC_ARCHINCDIR="$includedir/razor"
 KROC_MANDIR="$mandir"
-KROC_KROCDIR="$datadir/kroc"
-KROC_CONFIGDIR="$sysconfdir/kroc"
-KROC_EXAMPLESDIR="$libdir/kroc/${KROC_TARGET_PREFIX}examples"
+KROC_KROCDIR="$datadir/razor"
+KROC_CONFIGDIR="$sysconfdir/razor"
+KROC_EXAMPLESDIR="$libdir/razor/${KROC_TARGET_PREFIX}examples"
 TVM_ARCHINCDIR="$includedir/tvm"
 TVM_BINDIR="$bindir"
 TVM_LIBDIR="$libdir/${KROC_TARGET_PREFIX}tvm"

@@ -30,7 +30,7 @@ bin_SCRIPTS = \
 	occamdoc
 endif
 
-occamdocdir = $(datadir)/kroc/occamdoc
+occamdocdir = $(datadir)/razor/occamdoc
 dist_occamdoc_DATA = \
 	frames.html \
 	occamdoc.css \

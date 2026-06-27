@@ -104,6 +104,19 @@ def safe_sorted(l):
 	l.sort()
 	return l
 
+def display_toolchain(name):
+	if name == "kroc":
+		return "razor"
+	return name
+
+def display_toolchains():
+	names = []
+	for name in safe_sorted(toolchains.keys()):
+		display = display_toolchain(name)
+		if display not in names:
+			names.append(display)
+	return names
+
 def tidy_spaces(string):
 	"""Remove leading and trailing whitespace, and collapse all interior
 	whitespace into single spaces."""
@@ -436,7 +449,7 @@ class Toolchain:
 
 	def search_path(self):
 		"""Return a list of directories that should be included in
-		search_path when compiling outside the KRoC tree."""
+		search_path when compiling outside the Razor tree."""
 		pass
 
 	def update_patterns(self, patterns):
@@ -444,17 +457,17 @@ class Toolchain:
 		prefixes to something other than the default."""
 		pass
 #}}}
-#{{{  class KRoCToolchain
-class KRoCToolchain(Toolchain):
-	def kroc_cmd(self):
-		cmd = programs["kroc"][:]
+#{{{  class RazorToolchain
+class RazorToolchain(Toolchain):
+	def razor_cmd(self):
+		cmd = programs["razor"][:]
 		cmd += ["--oc-opts", " ".join(occ21_opts + ["-DEF", "OCCBUILD.KROC"])]
 		if static_link:
 			cmd += ["--cc-opts", "-static"]
 		return cmd
 
 	def object(self, source):
-		run(self.kroc_cmd() + ["-c", source])
+		run(self.razor_cmd() + ["-c", source])
 
 	def library(self, occam_objs, native_objs, base):
 		def custom(f):
@@ -475,7 +488,7 @@ class KRoCToolchain(Toolchain):
 			need_mods.append("forall")
 
 		# Look for all the other modules we need.
-		full_path = search_path + capture(programs["kroc"] + ["--incpath"]).strip().split(":")
+		full_path = search_path + capture(programs["razor"] + ["--incpath"]).strip().split(":")
 		lib_opts = []
 		for need in need_mods:
 			fn = find_in_path("%s.module" % need, full_path)
@@ -510,7 +523,7 @@ class KRoCToolchain(Toolchain):
 			if abi_stamp_mtime is not None and os.path.exists(obj):
 				if os.path.getmtime(obj) < abi_stamp_mtime:
 					os.unlink(obj)
-			run(self.kroc_cmd() + ["-c", o, "-o", obj])
+			run(self.razor_cmd() + ["-c", o, "-o", obj])
 			objs.append(obj)
 		objs += native_objs
 
@@ -518,8 +531,8 @@ class KRoCToolchain(Toolchain):
 			make_static(patterns["a"] % base, objs)
 
 			if build_shared:
-				kroc_ldflags = split_options(capture(programs["kroc"] + ["--ldflags"]))
-				cclibpath = split_options(capture(programs["kroc"] + ["--cclibpath"]))
+				kroc_ldflags = split_options(capture(programs["razor"] + ["--ldflags"]))
+				cclibpath = split_options(capture(programs["razor"] + ["--cclibpath"]))
 				make_shared(patterns["so"] % base, objs, kroc_ldflags + cclibpath + lib_opts)
 
 		if occam_objs == []:
@@ -528,7 +541,7 @@ class KRoCToolchain(Toolchain):
 			run(programs["ilibr"] + ["-o", base + ".lib"] + occam_objs)
 
 	def program(self, occam_objs, native_objs, source, output):
-		run(self.kroc_cmd() + ["-o", output, source] + [split_ext(o)[0] + ".o" for o in occam_objs] + native_objs)
+		run(self.razor_cmd() + ["-o", output, source] + [split_ext(o)[0] + ".o" for o in occam_objs] + native_objs)
 
 	def run(self, program, args):
 		if not "/" in program:
@@ -539,10 +552,10 @@ class KRoCToolchain(Toolchain):
 	def install(self, file):
 		bindir = get_install_dir("@KROC_ARCHBINDIR@", "/bin")
 		libdir = get_install_dir("@KROC_ARCHLIBDIR@", "/lib")
-		includedir = get_install_dir("@KROC_ARCHINCDIR@", "/include/kroc")
-		krocdir = get_install_dir("@KROC_KROCDIR@", "/share/kroc")
-		vtlibdir = krocdir + "/" + target_prefix + "vtlib"
-		vtincludedir = krocdir + "/" + target_prefix + "vtinclude"
+		includedir = get_install_dir("@KROC_ARCHINCDIR@", "/include/razor")
+		razordir = get_install_dir("@KROC_KROCDIR@", "/share/razor")
+		vtlibdir = razordir + "/" + target_prefix + "vtlib"
+		vtincludedir = razordir + "/" + target_prefix + "vtinclude"
 
 		(base, ext) = split_ext(file)
 		if ext == "lib":
@@ -560,7 +573,7 @@ class KRoCToolchain(Toolchain):
 			install(file, bindir, True)
 
 	def install_examples(self, package, file):
-		examplesdir = "%s/%s" % (get_install_dir("@KROC_EXAMPLESDIR@", "/lib/kroc/" + target_prefix + "examples"), package)
+		examplesdir = "%s/%s" % (get_install_dir("@KROC_EXAMPLESDIR@", "/lib/razor/" + target_prefix + "examples"), package)
 
 		(base, ext) = split_ext(file)
 		if ext == "":
@@ -583,15 +596,15 @@ class KRoCToolchain(Toolchain):
 
 	def cflags(self):
 		cflags = "-DOCCBUILD_KROC"
-		cflags += " " + capture(programs["kroc"] + ["--cflags"])
-		cflags += " " + capture(programs["kroc"] + ["--ccincpath"])
+		cflags += " " + capture(programs["razor"] + ["--cflags"])
+		cflags += " " + capture(programs["razor"] + ["--ccincpath"])
 		print (tidy_spaces(cflags))
 	
 	def search_path(self):
-		krocdir = get_install_dir("@KROC_KROCDIR@", "/share/kroc")
+		razordir = get_install_dir("@KROC_KROCDIR@", "/share/razor")
 		return [
-			krocdir + "/" + target_prefix + "vtlib",
-			krocdir + "/" + target_prefix + "vtinclude",
+			razordir + "/" + target_prefix + "vtlib",
+			razordir + "/" + target_prefix + "vtinclude",
 			]
 	
 	def update_patterns(self, patterns):
@@ -937,7 +950,8 @@ class TockToolchain:
 #}}}
 #{{{  toolchains
 toolchains = {
-	"kroc": KRoCToolchain,
+	"kroc": RazorToolchain,
+	"razor": RazorToolchain,
 	"tock": TockToolchain,
 	"tvm": TVMToolchain,
 	}
@@ -976,7 +990,7 @@ Usage:
 Options for all modes:
   -v, --verbose       Print progress reports to stderr
   --help              Show usage
-  --toolchain CHAIN   Use toolchain CHAIN (""" + "/".join(safe_sorted(toolchains.keys())) + """, default @OCCBUILD_TOOLCHAIN@)
+  --toolchain CHAIN   Use toolchain CHAIN (""" + "/".join(display_toolchains()) + """, default """ + display_toolchain("@OCCBUILD_TOOLCHAIN@") + """)
   --search DIR        Add DIR to search path for include files and libraries
 
 For each program prog of """ + ", ".join(safe_sorted(programs.keys())) + """:
@@ -1019,7 +1033,7 @@ def main(args):
 	tool("cc", "@TARGET_CC@")
 	tool("ar", "@TARGET_AR@")
 	tool("ranlib", "@TARGET_RANLIB@")
-	for prog in ("kroc", "ilibr", "occ21", "plinker.pl", "tce-dump.pl", "tock", "tvm"):
+	for prog in ("razor", "ilibr", "occ21", "plinker.pl", "tce-dump.pl", "tock", "tvm"):
 		tool(prog, target_prefix + prog)
 	for prog in ("install",):
 		tool(prog, prog)
@@ -1115,7 +1129,7 @@ def main(args):
 	#{{{  adjust program locations for --in-tree
 	programs["tvm_installed"] = programs["tvm"]
 	if in_tree is not None:
-		programs["kroc"] = [in_tree + "/bin/kroc", "--in-tree", in_tree] + programs["kroc"][1:]
+		programs["razor"] = [in_tree + "/bin/razor", "--in-tree", in_tree] + programs["razor"][1:]
 		programs["ilibr"] = [in_tree + "/bin/ilibr/ilibr"] + programs["ilibr"][1:]
 		programs["occ21"] = [in_tree + "/compiler/occ21/occ21"] + programs["occ21"][1:]
 		programs["plinker.pl"] = [in_tree + "/build-tools/plinker/plinker.pl"] + programs["plinker.pl"][1:]
@@ -1131,7 +1145,7 @@ def main(args):
 		# (e.g. ../../libsrc/foo.occ), then we need to add search paths
 		# relative to that directory too. This handles the case when
 		# we're building with a separate object directory (even for
-		# modules in the whole KRoC tree).
+			# modules in the whole Razor tree).
 		here = os.getcwd()
 		for source in [target] + args:
 			if source is None or source == "":
@@ -1167,7 +1181,7 @@ def main(args):
 	set_isearch()
 	for dir in search_path:
 		programs["cc"] += ["-L" + dir]
-		programs["kroc"] += ["-I" + dir, "-L" + dir]
+		programs["razor"] += ["-I" + dir, "-L" + dir]
 	#}}}
 
 	#{{{  construct filename patterns

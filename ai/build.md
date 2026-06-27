@@ -1,5 +1,5 @@
 # Summary 
- kroc is an occam compiler and runtime system.  We are in the process of updating it from a legacy 32-bit codebase to a 64-bit codebase.  The 32-bit compiler produced various output for various architectures including SPARC, PPC, MIPS, x86, with x86 being the most important.There is a simulator-based runtime to emulate the transputer on microcontrollers like the Atmel AVR. 
+ Razor is an occam compiler and runtime system.  We are in the process of updating it from a legacy 32-bit codebase to a 64-bit codebase.  The 32-bit compiler produced various output for various architectures including SPARC, PPC, MIPS, x86, with x86 being the most important.There is a simulator-based runtime to emulate the transputer on microcontrollers like the Atmel AVR. 
 
 # AArch64 KRoC Runtime Porting Status
 ## Build environments
@@ -9,9 +9,9 @@ run in the kroc folder directly on each host system.
 Prompts applicable to both the 32-bit and 64-bit code are stored in ~/razor/ai. 
 - ai - prompts covering general background applicable to kroc32 and kroc64 snapshots.
 - kroc32/kroc for a patched version of the original 32-bit kroc distribution.The distribution originally ran only on debian8 (GCC 4.x), but is now fixed to run on debian9 and later 32-bit x86 targets.These changes were forward ported to the kroc64 version of teh code, but only for x86.
-  - kroc - the source code 
+  - source checkout under the legacy `kroc` directory name
 - kroc64/ai - prompts and docs for the 64-bit port.
-- kroc64/kroc - which is intended to become an updated version of the source code that will run on both 32-bit targets and new 64-bit targets x64 and aarch64. 
+- kroc64/kroc is a legacy checkout path for what is now Razor, intended to become an updated version of the source code that will run on both 32-bit targets and new 64-bit targets x64 and aarch64. 
 
 ## Previous issues fixed
 - **Stack Alignment:** Fixed `SIGBUS` crashes by increasing `CIF_STACK_LINKAGE` to 2 words (16 bytes) in `ccsp_consts.h`. This ensures 16-byte 
@@ -53,7 +53,7 @@ make
 # Structure of the source
 The source code uses GNU autotools for configuration.  The system is made up of a legacy Transputer compiler, occ21, that compiles occam source into (among other things) a pseudo-Transputer target called ETC (extended transputer code).These files have a .tce postfix.  There is then a build-time translator module called tranx86 that converts psuedo-transputer instructions into various target architectures, including x86.This output is then linked against the CCSP runtime system using a custom calling convention where 'kernel' arguments are written into variables prior to a call into the runtime system.There is a C interface to CCSP called cif, and this is important in testing the runtime system outside of the compiler. 
 
-The layout of the kroc package is that the compiler and translator, amongst other tools, are under the tools/ sub-directory. The CCSP runtime is under runtime/ and various libraries and modules (including the driver script 'kroc' and the cif c interface library, with examples) is under modules/. 
+The layout of the Razor package is that the compiler and translator, amongst other tools, are under the compiler/ and translator/ sub-directories. The CCSP runtime is under runtime/ and various libraries and modules include the driver script `razor` and the cif C interface library, with examples. 
 
 The patched 32-bit kroc system can be found in ~/razor/kroc32/kroc, and the new 64-bit kroc system can be found in ~/razor/kroc64/kroc under each you can find the tools/, runtime/ and modules/ directories described previously.
 

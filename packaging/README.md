@@ -66,7 +66,7 @@ surface is stable:
 | Package | Contents |
 | --- | --- |
 | `razor` | user-facing tools: `razor`, `occbuild`, `occ21`, `tranx86`, `ilibr`, `mkoccdeps`, `occamdoc`, setup helpers |
-| `razor-libs` or `razor-runtime` | CCSP runtime, librazorif, installed occam libraries |
+| `razor-libs` or `razor-runtime` | CCSP runtime, libkrocif, installed occam libraries |
 | `razor-devel` / `libccsp-dev` | headers, static libraries, `pkg-config` metadata, m4 macros |
 | `razor-doc` | manuals and generated documentation |
 | `razor-examples` | installed examples and teaching material |
@@ -139,10 +139,10 @@ Useful environment overrides:
 
 | Variable | Purpose |
 | --- | --- |
-| `razor_PREFIX` | Prefix to search for installed razor examples, default `/usr`. |
-| `razor_CIF_EXAMPLES_DIR` | Exact directory containing `cift1`, `cift15`, and `cif-commstime`. |
-| `razor_RUN_CIF=0` | Skip CIF runtime examples. This is for bring-up only, not release gating. |
-| `razor_TIMEOUT` | Timeout command to use for `cif-commstime`, for example `gtimeout` on macOS. |
+| `RAZOR_PREFIX` | Prefix to search for installed Razor examples, default `/usr`. |
+| `RAZOR_CIF_EXAMPLES_DIR` | Exact directory containing `cift1`, `cift15`, and `cif-commstime`. |
+| `RAZOR_RUN_CIF=0` | Skip CIF runtime examples. This is for bring-up only, not release gating. |
+| `RAZOR_TIMEOUT` | Timeout command to use for `cif-commstime`, for example `gtimeout` on macOS. |
 
 ## First repository changes
 

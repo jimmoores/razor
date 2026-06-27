@@ -12,8 +12,8 @@ usage()
 	echo
 }
 
-# Source in everything we need--both the KRoC env and 
-source avr-kroc-setup.sh
+# Source in everything we need--both the Razor env and
+source avr-razor-setup.sh
 
 if [ "$1" == "" ]; then
 	usage

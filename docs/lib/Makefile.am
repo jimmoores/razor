@@ -4,7 +4,7 @@
 
 AUTOMAKE_OPTIONS = foreign no-dependencies
 
-libdocdir = $(datadir)/kroc/doc/lib
+libdocdir = $(datadir)/razor/doc/lib
 dist_libdoc_DATA = \
 	blackboard.inc \
 	college.lbb \

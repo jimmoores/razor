@@ -1,6 +1,6 @@
 
            ================================================
-           |   How to Use Toolset Libraries with KRoC     |
+           |   How to Use Toolset Libraries with Razor     |
            |                                              |
            | Michael Poole (mdp@michaelpoole.demon.co.uk) |
            ================================================
@@ -8,17 +8,17 @@
 
 Changelog:
 
-  20/03/2002 frmb, bringing more in-line with KRoC/Linux
+  20/03/2002 frmb, bringing more in-line with Razor/Linux
 
 Description:
 
   This describes the implementation of the occam toolset libraries and shows
-  how to use them when occam programs are moved to a KRoC system.
+  how to use them when occam programs are moved to a Razor system.
 
 This note assumes familiarity with the INMOS occam toolset libraries.
 
 The following libraries are included in the Sparc and Alpha and Pentium
-versions of the KRoC system:
+versions of the Razor system:
 
 occam8 and occamutl
   needed to support the language fully
@@ -36,19 +36,19 @@ Each library (e.g hostio) is compiled into two library files - the
 TCOFF hostio.lib file and the Unix libhostio.a file.  The hostio.lib
 file is referenced by #USE "hostio.lib" in each calling occam module
 and only contains interface information.  The Unix libhostio.a file
-must be provided to the linker (e.g. via the `kroc' command line).  At
+must be provided to the linker (e.g. via the `razor' command line).  At
 present there is no automatic way to ensure that those ".a" files that
 are needed are requested but the `kmakef' makefile builder can do some
 of the work.
 
 As library file searching must be done in the order modules are needed,
-the `kroc' command should list those that it needs in the following order:
+the `razor' command should list those that it needs in the following order:
 
               libhostio.a
 libstreamio.a      OR     libstring.a libconvert.a libsnglmath.a libdblmath.a
               libhostsp.a
 
-NOTE: liboccam8.a and liboccamutl.a are automatically called by `kroc'.
+NOTE: liboccam8.a and liboccamutl.a are automatically called by `razor'.
 
 
 Using hostio.lib
@@ -65,7 +65,7 @@ many occam programs but not necessarily for those that multiplex host
 accesses from several processes running in parallel.  For these, the
 hostsp.lib would be the correct choice (see below).
 
-The KROC distribution includes a single example programs using some
+The Razor distribution includes a single example programs using some
 of these library PROCs. This will be extended in future releases.
 
 Consider for example the test program dtoday.occ:
@@ -85,7 +85,7 @@ Consider for example the test program dtoday.occ:
 
 compile and run it thus:
 
-  unix% kroc dtoday.occ -lhostio -lconvert
+  unix% razor dtoday.occ -lhostio -lconvert
   unix% dtoday
 
 The "convert" library is needed for various conversion routines used
@@ -127,14 +127,13 @@ Consider for example the test program dtodaysp.occ
 
 compile and run it thus:
 
-  unix% kroc dtodaysp.occ -lhostsp -lconvert
+  unix% razor dtodaysp.occ -lhostsp -lconvert
   unix% dtodaysp
 
 The "convert" library is needed for various conversion routines used
 by hostsp.
 
 Note that PROC main() has the standard INMOS toolset signature.  It only
-needed a few lines of wrappers around to form this into a top-level KRoC
+needed a few lines of wrappers around to form this into a top-level Razor
 program that uses hostsp.lib
-
 

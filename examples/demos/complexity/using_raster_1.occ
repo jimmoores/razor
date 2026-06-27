@@ -14,7 +14,7 @@
 --  body itself does not every directly handle a raster. It simply creates and passes the channels such that the various members of the ring
 --  can pass rasters directly between themselves.   
 --
---  This program should be compiled with "kroc -d -di using_raster_1.occ"
+--  This program should be compiled with "razor -d -di using_raster_1.occ"
 --  and then run with ./using_raster_1
 -- ==================================================================================
 
@@ -104,6 +104,5 @@ PROC main (CHAN BYTE in?, SHARED CHAN BYTE out!, CHAN BYTE err!)
       display(raster.to.display?, raster.to.display.simple!, termination.barrier)    
   --}}}
 :
-
 
 

@@ -1,6 +1,6 @@
 
 ============================================================
-EXAMPLES: notes on kroc compilation and occam main processes
+EXAMPLES: notes on Razor compilation and occam main processes
 ============================================================
 
 
@@ -17,7 +17,7 @@ to their name.
 Compilation units (e.g. "stuff.occ") may be sparately compiled with the
 command:
 
-  % kroc -c stuff.occ
+  % razor -c stuff.occ
 
 Let's leave this for now - separate compilation and libraries are addressed
 elsewhere.
@@ -26,7 +26,7 @@ elsewhere.
 are compilation units whose last item is a *main* process (see below).  Main
 compilation units (e.g. "bar.occ") are compiled and linked with the command:
 
-  % kroc bar.occ
+  % razor bar.occ
 
 If there are no errors, this produces an executable file ("bar") which can
 be run with the command:
@@ -54,19 +54,19 @@ allowed.
 *do* have to be present - just ignore the compiler warnings if you don't
 use them!]
 
-[Note: for consistency (currently) between the Tranterpreter and kroc
+[Note: for consistency (currently) between the Tranterpreter and Razor
 run-times, the examples here always have all three parameters present.
-Those using kroc may remove the ones not used.]
+Those using Razor may remove the ones not used.]
 
-kroc runs its keyboard channel in `raw' mode without echoing - i.e.
+Razor runs its keyboard channel in `raw' mode without echoing - i.e.
 individual keystrokes are supplied to the occam process immediately
 (not buffered up until a carriage-return is typed).
 
-kroc runs its screen channel in `line-buffered' mode - i.e. characters
+Razor runs its screen channel in `line-buffered' mode - i.e. characters
 are not normally delivered to the screen until a new-line is output.
 To force immediate delivery, output the FLUSH byte (255) to the screen.
 
-kroc runs its error channel in `raw' mode - i.e. characters are delivered
+Razor runs its error channel in `raw' mode - i.e. characters are delivered
 straight away, without any buffering.
 
 If we need echoing of keyboard input, the process must be programmed to do
@@ -84,9 +84,9 @@ Choose names that are meaningful for you.
 See the README.txt file for the contents of this directory.
 
 Take your own copies of all these files.  Once in your directory space,
-you may compile any of these by applying `kroc' - e.g.
+you may compile any of these by applying `razor' - e.g.
 
-  % kroc bar.occ
+  % razor bar.occ
 
 which produces an executable called sort_inside.  Run this - i.e.
 

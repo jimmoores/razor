@@ -2,15 +2,15 @@
 This directory contains:
 
 
-  about-kroc.txt
+  about-razor.txt
 
-    This contains basic information about KRoC.  (a bit out
-    of date currently) -- see the essentially-kroc.txt file.
+    This contains basic information about Razor.  (a bit out
+    of date currently) -- see the essentially-razor.txt file.
 
-  essentially-kroc.txt
+  essentially-razor.txt
 
-    This document describes how to use the basic KRoC utilities
-    (kroc, ilibr, kmakef).  ** Essential reading **
+    This document describes how to use the basic Razor utilities
+    (razor, ilibr, kmakef).  ** Essential reading **
 
   occ21-extensions.html
 
@@ -53,7 +53,7 @@ This directory contains:
 
   udo.ps, udo.html
 
-    This describes the extension to KRoC occam2.1 which enables
+    This describes the extension to Razor occam2.1 which enables
     user defined operators.
 
   hostio.txt
@@ -70,7 +70,7 @@ This directory contains:
   lib/
 
     These directories contain examples referred to in the
-    'essentially-kroc.txt' document.
+    'essentially-razor.txt' document.
 
   udc.ps
 
@@ -84,4 +84,3 @@ This directory contains:
     occam-pi code.  Copy it into your Wiki's parser directory,
     renaming as occampi.py, and use with "#!occampi" on pre-
     formatted text (immediately after the opening braces).
-

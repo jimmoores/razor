@@ -18,7 +18,7 @@ output.stamp:
 	touch output.stamp
 
 if OCCAMDOC_ENABLED
-apidir = $(prefix)/share/kroc/doc/api
+apidir = $(prefix)/share/razor/doc/api
 install-data-local:
 	@$(mkdir_p) $(DESTDIR)$(apidir)
 	@cd output && for f in *; do \

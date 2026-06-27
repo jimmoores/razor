@@ -98,7 +98,7 @@ PROC main(CHAN BYTE kyb?, scr!, err!)
 Build and run:
 ```bash
 cd ~/razor/kroc64/kroc
-./tools/kroc/kroc --in-tree . -I modules/inmoslibs/libsrc/forall \
+./bin/razor --in-tree . -I stdlib/inmoslibs/libsrc/forall \
     -L modules/inmoslibs/libsrc/forall -L runtime/ccsp \
     /tmp/test_nc2.occ -o /tmp/test_nc2
 /tmp/test_nc2

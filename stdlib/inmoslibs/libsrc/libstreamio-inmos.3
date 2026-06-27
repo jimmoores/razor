@@ -13,7 +13,7 @@
 .\"
 .\" Modified 2005 by Fred Barnes  <frmb@kent.ac.uk>
 .\"
-.TH LIBSTREAMIO-INMOS "3" "February 1993" "kroc 1.4.0" KRoC
+.TH LIBSTREAMIO-INMOS "3" "February 1993" "razor 1.6.1" Razor
 .SH NAME
 ks.keystream.sink, ks.keystream.to.scrstream, ks.read.char, ks.read.int,
 ks.read.int64, ks.read.line, ks.read.real32, ks.read.real64,
@@ -26,11 +26,11 @@ ss.scrstream.to.array, ss.up,
 ww.write.char, ss.write.endstream, ss.write.hex.int, ss.write.hex.int64,
 ss.write.int, ss.write.int64, ss.write.nl, ss.write.real32, ss.write.real64,
 ss.write.string, ss.write.text.line
-\- KRoC INMOS occam toolset stream file library
+\- Razor INMOS occam toolset stream file library
 .SH SYNOPSIS
 .B #INCLUDE \fB"streamio.inc\fB"\fR
 .B #USE \fB"streamio.lib\fB"\fR
-.B kroc -lstreamio
+.B razor -lstreamio
 .PP
 .BI "PROC ks.keystream.sink (CHAN OF KS " keys ")"
 .br
@@ -227,7 +227,7 @@ numbers are written prefixed by a '#'. PROCedures ending in
 .PP
 
 .SH "SEE ALSO"
-kroc(1)
+razor(1)
 .br
 INMOS  occam 2 toolset user manual - part 2 (occam libraries and
 appendices) INMOS document number 72 TDS 276 02.
@@ -238,5 +238,4 @@ at Canterbury.  This manual page is maintained by Fred Barnes  <frmb@kent.ac.uk>
 The library contents are Copyright (C) 1991 INMOS Limited.
 .SH NOTES
 The streamio library is deprecated in favour of the POSIX flavoured libraries
-provided with KRoC.
-
+provided with Razor.

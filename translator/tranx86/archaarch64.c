@@ -2263,8 +2263,8 @@ static void compose_aarch64_inline_tin (tstate *ts)
  *      so the run queue head pointer is left dangling at the just-
  *      dispatched process.
  *
- * This code path is gated by INLINE_SCHEDULER (kroc -is), which is
- * opt-in and not enabled by either the kroc default driver options or
+ * This code path is gated by INLINE_SCHEDULER (razor -is), which is
+ * opt-in and not enabled by either the Razor default driver options or
  * by anything in the cgtests / cif test suite.  So the bug is dormant
  * and won't bite anything we currently test.  Phase 3D-1 added
  * sched->current_desc updates only in ccsp_restore_context, which is

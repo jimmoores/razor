@@ -1,5 +1,5 @@
-.\" KRoC course library manual page.  Last updated 30/12/2005 Fred Barnes  <frmb@kent.ac.uk>
-.TH LIBCOURSE-UTILS "3" "December 2005" "kroc 1.4.0" KRoC
+.\" Razor course library manual page.  Last updated 30/12/2005 Fred Barnes  <frmb@kent.ac.uk>
+.TH LIBCOURSE-UTILS "3" "December 2005" "razor 1.6.1" Razor
 .SH NAME
 out.repeat, out.ch, out.string, out.byte, out.int, out.hex, out.bool, out.yes.no,
 in.skip, in.digit, in.string, in.bool, in.byte, in.int,
@@ -7,11 +7,11 @@ ask.string, ask.bool, ask.byte, ask.int,
 cursor.x.y, cursor.up, cursor.down, cursor.right, cursor.left, cursor.visible, cursor.invisible,
 erase.eol, erase.bol, erase.line, erase.eos, erase.screen,
 black.hole, flush, pos.int, pos.yes.no
-\- KRoC course library functions
+\- Razor course library functions
 .SH SYNOPSIS
 .B #USE \fB"course.lib\fB"\fR
 .br
-.B kroc -lcourse
+.B razor -lcourse
 .PP
 .BI "PROC out.repeat (VAL BYTE " ch ", VAL INT " n ", CHAN BYTE " out "!)"
 .br
@@ -193,9 +193,9 @@ in a fieldwidth of \fIfield\fR.
 This manual page is maintained by Fred Barnes <frmb@kent.ac.uk>.  The documentation
 itself was largely extracted from the library sources.
 .SH "SEE ALSO"
-kroc(1)
+razor(1)
 .br
-course/examples/test_utils.occ in the KRoC distribution
+course/examples/test_utils.occ in the Razor distribution
 
 .SH "REPORTING BUGS"
 Please report bugs to <ofa-bugs@kent.ac.uk>
@@ -217,4 +217,3 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
 .PP
-

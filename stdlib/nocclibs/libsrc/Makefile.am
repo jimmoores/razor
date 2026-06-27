@@ -5,8 +5,8 @@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 ACLOCAL_AMFLAGS = -I ../../../m4
 
-KROC = @KROC@
-KROCOPTS = --nocc
+RAZOR = @RAZOR@
+RAZOROPTS = --nocc
 CFLAGS = @CFLAGS@ @DEFS@
 
 OBJECTS = placed-par.o
@@ -17,7 +17,7 @@ EXTRA_DIST = \
 	placed-par.occ
 
 .occ.o:
-	$(KROC) $(KROCOPTS) -c -v $<
+	$(RAZOR) $(RAZOROPTS) -c -v $<
 
 libs = compiler.xlb compiler.so
 
@@ -31,5 +31,4 @@ compiler.xlb:  placed-par.o
 
 compiler.so:	$(OBJECTS)
 		@LD@ -r -o libcompiler.so $(OBJECTS)
-
 

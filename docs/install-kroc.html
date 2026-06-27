@@ -373,7 +373,7 @@ I'll assume that you used the prefix in the example above for the rest of the in
 It's often convenient to use an installation directory somewhere inside your home directory -- e.g. <code>$HOME/kroc</code> -- because then you can build and install KRoC as your regular user without needing to fiddle with permissions. If you do use <code>/usr/local/kroc</code>, then you will need to create that directory as <code>root</code> and <code>chown</code> it to your regular user (or just run the <code>./build</code> script as <code>root</code>, which we don't recommend).
 </p>
 <p>
-Alternatively, you can install KRoC directly into a system prefix such as <code>/usr/local</code> (which is the default if you don't specify <code>--prefix</code>), which will generally mean you won't need to source <code>kroc-setup.sh</code> to set up your environment when using KRoC (assuming that you have <code>/usr/local/lib</code> listed in <code>/etc/ld.so.conf</code>, so your machine knows to look there for shared libraries). You should probably try installing KRoC into a separate directory first so you know where it's going to put things.
+Alternatively, you can install Razor directly into a system prefix such as <code>/usr/local</code> (which is the default if you don't specify <code>--prefix</code>), which will generally mean you won't need to source <code>razor-setup.sh</code> to set up your environment when using Razor (assuming that you have <code>/usr/local/lib</code> listed in <code>/etc/ld.so.conf</code>, so your machine knows to look there for shared libraries). You should probably try installing Razor into a separate directory first so you know where it's going to put things.
 </p>
 <p>
 After the <code>build</code> script has completed successfully, we recommend that you run the KRoC test suite to check that the basics of KRoC work on your system:
@@ -412,11 +412,11 @@ KRoC's installation process supports <code>DESTDIR</code>, so it should be strai
 </p>
 <h2 class="section" id="UsingKRoC">Using KRoC</h2>
 <p>
-KRoC installs the scripts <code>kroc-setup.sh</code> and <code>kroc-setup.csh</code> that you can <code>source</code> in order to set up your <code>$PATH</code> and other environment variables -- for example, if you're using the bash shell, then you might say:
+Razor installs the scripts <code>razor-setup.sh</code> and <code>razor-setup.csh</code> that you can <code>source</code> in order to set up your <code>$PATH</code> and other environment variables -- for example, if you're using the bash shell, then you might say:
 </p>
-<pre class="wiki">. /usr/local/kroc/bin/kroc-setup.sh
+<pre class="wiki">. /usr/local/razor/bin/razor-setup.sh
 </pre><p>
-... which'll then make all the KRoC commands immediately available to you. As with <code>build</code>, you don't <em>have</em> to use <code>kroc-setup.sh</code>, but it's usually convenient. You might want to include that command or an equivalent in your shell profile if you often use KRoC.
+... which'll then make all the Razor commands immediately available to you. As with <code>build</code>, you don't <em>have</em> to use <code>razor-setup.sh</code>, but it's usually convenient. You might want to include that command or an equivalent in your shell profile if you often use Razor.
 </p>
 <p>
 To check that your new KRoC installation works, put this into a file called <code>hello.occ</code>:

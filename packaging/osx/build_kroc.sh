@@ -87,7 +87,7 @@ cd $BUILD
 mkdir kroc-ccsp
 cd kroc-ccsp
 
-../../../../configure --with-toolchain=kroc --prefix=$INSTALL \
+../../../../configure --with-toolchain=razor --prefix=$INSTALL \
    CFLAGS="-arch i386 -mmacosx-version-min=10.4" \
    CXXFLAGS="-arch i386 -mmacosx-version-min=10.4" \
    LDFLAGS="-arch i386 -mmacosx-version-min=10.4" \

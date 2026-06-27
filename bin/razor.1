@@ -1,9 +1,9 @@
-.\" kroc command man page, last updated 14/03/2005 by Fred Barnes
-.TH KROC "1" "December 2005" "kroc 1.4.1" KRoC
+.\" razor command man page, last updated 14/03/2005 by Fred Barnes
+.TH RAZOR "1" "December 2005" "razor 1.6.1" Razor
 .SH NAME
-kroc \- KRoC occam system main driver program
+razor \- Razor occam system main driver program
 .SH SYNOPSIS
-.B kroc
+.B razor
 [\-C \fICONFIG-FILE\fR] [\fIOPTION\fR]... [\fIFILE\fR]...
 .SH DESCRIPTION
 .PP
@@ -11,20 +11,20 @@ Compiles occam source FILEs and optionally links with other object FILEs
 to produce an executable.  For example, to compile the source file \fIfoo.occ\fR
 into an executable, you would issue the command:
 .PP
-	kroc foo.occ
+	razor foo.occ
 .PP
 If successful, this will leave behind an executable called \fIfoo\fR.
 .PP
 To seperately compile \fIbits1.occ\fR and \fIbits2.occ\fR, then compile \fImain.occ\fR
 linking in the bits and the course library, something like the following would be used:
 .PP
-	kroc -c bits1.occ
+	razor -c bits1.occ
 .br
-	kroc -c bits2.occ
+	razor -c bits2.occ
 .br
-	kroc main.occ bits1.o bits2.o -lcourse
+	razor main.occ bits1.o bits2.o -lcourse
 .PP
-A path to a specific KRoC configuration file can be specified using the \fB-C\fR option.
+A path to a specific Razor configuration file can be specified using the \fB-C\fR option.
 
 .SH DEBUGGING
 .PP
@@ -32,7 +32,7 @@ When an occam program crashes out with either "deadlock" or "range error",
 debugging can be used to find out what went wrong.  To enable, simply compile
 with the "-d" flag:
 .PP
-	kroc -d foo.occ
+	razor -d foo.occ
 .PP
 when the program crashes now, it will report the filename and line-number where
 the error occured.  For deadlock, the state of processes blocked on communication
@@ -234,12 +234,12 @@ use the given program for final linking (gcc).
 
 .PP
 .SH AUTHOR
-See the file AUTHORS in the distribution for the list of contributors to KRoC.  This
+See the file AUTHORS in the distribution for the list of contributors to Razor.  This
 manual page is maintained by Fred Barnes <F.R.M.Barnes@kent.ac.uk>
 .SH "SEE ALSO"
 .BR kmakef (1)
 .SH "REPORTING BUGS"
-Please report bugs to <kroc-bugs@kent.ac.uk>
+Please report bugs in the project issue tracker.
 .SH COPYRIGHT
 Copyright \(co 1996-2005 KRoC AUTHORS
 .PP
@@ -260,4 +260,3 @@ License along with this program; if not, write to the Free
 Software Foundation, Inc., 675 Mass Ave, Cambridge, MA
 02139, USA.
 .PP
-

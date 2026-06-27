@@ -10,7 +10,7 @@
 --  In this architecture (and those that follow in other programms) the writers act as clients to output.collector, which is a server prividing
 --  a print-to-the-terminal service.
 --
---  This program should be compiled with "kroc -d -di concurrent_hello_2.occ"
+--  This program should be compiled with "razor -d -di concurrent_hello_2.occ"
 --  and then run with ./concurrent_hello_2
 -- ==================================================================================
 
@@ -102,6 +102,5 @@ PROC outer(CHAN BYTE in?, out!, err!)
   --}}}
 :
 --}}}
-
 
 
