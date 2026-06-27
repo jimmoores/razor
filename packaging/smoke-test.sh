@@ -43,6 +43,25 @@ check_tool_output()
 	printf '%s\n' "$output" | grep "$pattern" >/dev/null 2>&1 || die "$name check failed: $*"
 }
 
+setup_library_path()
+{
+	prefix=${RAZOR_PREFIX:-/usr}
+	libdir=$prefix/lib
+
+	test -d "$libdir" || return 0
+
+	case $(uname -s 2>/dev/null || printf unknown) in
+		Darwin)
+			DYLD_LIBRARY_PATH=$libdir${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}
+			export DYLD_LIBRARY_PATH
+			;;
+		*)
+			LD_LIBRARY_PATH=$libdir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+			export LD_LIBRARY_PATH
+			;;
+	esac
+}
+
 find_cif_examples()
 {
 	if test "${RAZOR_CIF_EXAMPLES_DIR:-}" != ""; then
@@ -104,6 +123,8 @@ run_commstime()
 	kill -KILL "$pid" 2>/dev/null || true
 	wait "$pid" 2>/dev/null || true
 }
+
+setup_library_path
 
 check_cmd razor
 check_cmd occbuild
