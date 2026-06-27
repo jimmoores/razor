@@ -1,0 +1,44 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Razor
+Source: https://github.com/jimmoores/razor
+Disclaimer: This is an initial package copyright summary for upstream package
+ builds. A full file-by-file audit is still required before submitting Razor to
+ distribution archives.
+
+Files: *
+Copyright:
+ 1984-1997 Inmos Limited
+ 1995 SGS-Thomson Microelectronics Limited
+ 1995-1999 Michael Poole and the Occam for All Project
+ 1996-1999 Jim Moores, David Wood, and Peter Welch
+ 1999-2009 Fred Barnes and the University of Kent
+ 2004-2010 Matthew C. Jadud, Carl G. Ritson, Christian L. Jacobsen,
+           Adam Sampson, and other contributors
+License: GPL-2+
+
+Files:
+ stdlib/*/libsrc/*
+ contrib/*/libsrc/*
+ examples/course/libsrc/*
+Copyright:
+ 1999-2009 Fred Barnes and the University of Kent
+ 2004-2010 Razor contributors
+License: LGPL-2+
+
+License: GPL-2+
+ This program is free software; you can redistribute it and/or modify it under
+ the terms of the GNU General Public License as published by the Free Software
+ Foundation; either version 2 of the License, or (at your option) any later
+ version.
+ .
+ On Debian systems, the complete text of the GNU General Public License version
+ 2 can be found in /usr/share/common-licenses/GPL-2.
+
+License: LGPL-2+
+ This library is free software; you can redistribute it and/or modify it under
+ the terms of the GNU Lesser General Public License as published by the Free
+ Software Foundation; either version 2 of the License, or (at your option) any
+ later version.
+ .
+ On Debian systems, the complete text of the GNU Library General Public License
+ version 2 can be found in /usr/share/common-licenses/LGPL-2.

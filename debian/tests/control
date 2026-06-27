@@ -1,0 +1,2 @@
+Tests: smoke
+Depends: @, build-essential, coreutils, gawk, perl, python3

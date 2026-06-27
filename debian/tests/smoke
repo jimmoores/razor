@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+if test -x "$PWD/packaging/smoke-test.sh"; then
+	script=$PWD/packaging/smoke-test.sh
+else
+	script=$(dirname "$0")/../../packaging/smoke-test.sh
+fi
+
+cd "${AUTOPKGTEST_TMP:-/tmp}"
+RAZOR_PREFIX=/usr "$script"

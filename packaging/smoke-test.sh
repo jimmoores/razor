@@ -33,6 +33,16 @@ check_tool()
 	"$@" >/dev/null 2>&1 || die "$name check failed: $*"
 }
 
+check_tool_output()
+{
+	name=$1
+	pattern=$2
+	shift 2
+	note "checking $name"
+	output=$("$@" 2>&1 || true)
+	printf '%s\n' "$output" | grep "$pattern" >/dev/null 2>&1 || die "$name check failed: $*"
+}
+
 find_cif_examples()
 {
 	if test "${RAZOR_CIF_EXAMPLES_DIR:-}" != ""; then
@@ -102,7 +112,7 @@ check_cmd tranx86
 
 check_tool "razor" razor --version
 check_tool "occbuild" occbuild --help
-check_tool "occ21" occ21 -i
+check_tool_output "occ21" "occam 2.1 compiler" occ21
 check_tool "tranx86" tranx86 --version
 
 tmpbase=${TMPDIR:-/tmp}

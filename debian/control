@@ -1,0 +1,38 @@
+Source: razor
+Section: devel
+Priority: optional
+Maintainer: Razor Maintainers <jimmoores@users.noreply.github.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ autoconf,
+ automake,
+ gawk,
+ gcc,
+ libelf-dev,
+ libtool,
+ make,
+ perl,
+ pkgconf,
+ python3,
+ xsltproc
+Standards-Version: 4.7.2
+Rules-Requires-Root: no
+Homepage: https://github.com/jimmoores/razor
+
+Package: razor
+Architecture: amd64 arm64
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ bash,
+ binutils,
+ gawk,
+ gcc,
+ make,
+ perl,
+ python3
+Description: occam compiler and runtime system
+ Razor is a compiler, runtime, and toolset for the occam programming
+ language. It includes the occ21 compiler, the tranx86 native-code
+ translator, the CCSP runtime, occam libraries, documentation tools, and the
+ razor and occbuild command-line drivers.

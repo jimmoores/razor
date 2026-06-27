@@ -155,10 +155,11 @@ The existing packaging files are historical and should not be shipped as-is:
 - `packaging/osx` and `packaging/windows` predate the current 64-bit port and
   should be treated as references for intent, not as release automation.
 
-The first implementation pass should add or modernize:
+The first implementation pass adds or modernizes:
 
-1. `debian/` packaging for the native razor toolchain, probably derived from
-   `packaging/debian/` but updated for Debian 13/12 and Ubuntu 26.04/24.04.
+1. `debian/` packaging for the native razor toolchain, derived from the
+   historical `packaging/debian/` files but updated for Debian 13/12 and Ubuntu
+   26.04/24.04.
 2. `packaging/rpm/razor.spec` for Fedora and EL builds.
 3. `packaging/homebrew/razor.rb` for the upstream tap.
 4. `packaging/windows/winget/` manifests plus a documented Windows installer
