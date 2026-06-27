@@ -1,8 +1,8 @@
 Razor
 =====
-Razor is a fork of the the Kent Retargetable occam Compiler (KRoC), an occam/occam-pi language platform, comprised of an occam compiler, native-code translator and supporting run-time system.
+Razor is an occam/occam-pi language platform, comprised of an occam compiler, native-code translator and supporting run-time system. It began as a fork of the Kent Retargetable occam Compiler and is being modernised for contemporary 64-bit systems.
 
-Improvements over KRoC include:
+Razor adds:
 * Real 64-bit compiler supporting aarch64 and x64 architectures on both macOS and Linux
 * Modernised legacy code in the occ21 compiler (no more K&R!)
 * A new directory layout that is easier to navigate and more consistent with other projects
@@ -11,7 +11,7 @@ Improvements over KRoC include:
 * Docs to prompt AI coding tools for additional feature development
 
 ## Prerequisites
-To compile and use KRoC, you will need to have the following already installed on your machine:
+To compile and use Razor, you will need to have the following already installed on your machine:
 
 * the bash shell
 * the GNU toolchain -- i.e. GCC 2.95.2 or later, binutils 2.0 or later, GNU awk, GNU make
@@ -28,7 +28,7 @@ Some occam-pi modules can optionally make use of other native libraries if avail
 * MySQL
 * Player
 
-To check out and update KRoC from the Git repository, you will also need:
+To check out and update Razor from the Git repository, you will also need:
 
 * Git
 * automake 1.8 or later, autoconf 2.52 or later (but not autoconf 2.64, which is buggy)
@@ -43,33 +43,27 @@ libplayercore2-dev libplayerc2-dev libltdl3-dev \
 perl python xsltproc git
 ```
 
-## Getting the KRoC source
-There are two supported ways of obtaining a KRoC source tree:
+## Getting the Razor source
+There are two supported ways of obtaining a Razor source tree:
 
 ### From Git
-The *stable* version is likely to be your best bet as a user, since it contains the latest bug fixes for KRoC.
-To check out the stable KRoC source tree:
+Clone the Razor repository:
 
 ```bash
-git clone --depth 1 -b kroc-1.6 git://github.com/concurrency/kroc.git kroc-git
+git clone https://github.com/jimmoores/razor.git razor
 ```
 
-The *development* version will probably only be of use if you want to work on KRoC yourself or try out the very latest changes. To check out the development tree:
-
-```bash
-git clone git://github.com/concurrency/kroc.git kroc-git
-```
-
-Once you've got a KRoC distribution this way, you can use `git pull` (in the `kroc-git` directory) at any time to update the source tree to the latest version.
+Once you've got a Razor distribution this way, you can use `git pull` in the
+`razor` directory at any time to update the source tree.
 
 ### From a tarball
 
-Tarball releases of KRoC can be found on Fred's [KRoC pre-releases](http://frmb.org/kroc.html) page. Simply extracting the tarball will give you a `kroc-VERSION` directory.
+Release tarballs, when published, extract to a `razor-VERSION` directory.
 
 
 ## Installation (for end users)
 
-For most users who've downloaded a KRoC source tree, the easiest way to compile and install KRoC is to use the `build` script that's provided.
+For most users who've downloaded a Razor source tree, the easiest way to compile and install Razor is to use the `build` script that's provided.
 
 `build` supports several options; to list all of them, run:
 
@@ -80,19 +74,19 @@ For most users who've downloaded a KRoC source tree, the easiest way to compile 
 A typical invocation will look like:
 
 ```bash
-./build --prefix=/usr/local/kroc
+./build --prefix=/usr/local/razor
 ```
 
-It's often convenient to use an installation directory somewhere inside your home directory (e.g. `$HOME/kroc`) because then you can build and install KRoC as your regular user without needing to fiddle with permissions.
+It's often convenient to use an installation directory somewhere inside your home directory (e.g. `$HOME/razor`) because then you can build and install Razor as your regular user without needing to fiddle with permissions.
 
-Alternatively, you can install KRoC directly into a system prefix such as `/usr/local` (the default if you don't specify `--prefix`), which generally means you won't need to source `kroc-setup.sh` to set up your environment (assuming you have `/usr/local/lib` listed in `/etc/ld.so.conf`).
+Alternatively, you can install Razor directly into a system prefix such as `/usr/local` (the default if you don't specify `--prefix`), which generally means you won't need to source `kroc-setup.sh` to set up your environment (assuming you have `/usr/local/lib` listed in `/etc/ld.so.conf`).
 
 ### Build script options
 
 | Option | Description |
 |--------|-------------|
 | `--prefix=DIRECTORY` | Select directory to install into (e.g. `/usr/local`) |
-| `--with-toolchain=tvm` | Build the Transterpreter toolchain instead of the native KRoC toolchain |
+| `--with-toolchain=tvm` | Build the Transterpreter toolchain instead of the native Razor toolchain |
 | `--enable-pony` | Enable pony networking support for cluster/networked channels |
 
 ### The Transterpreter
@@ -100,13 +94,13 @@ Alternatively, you can install KRoC directly into a system prefix such as `/usr/
 If the machine you want to run occam-pi programs on doesn't have an IA32 (x86) or AMD64 (x86-64) processor, you'll need to use the Transterpreter, an interpretive implementation of the occam-pi virtual machine:
 
 ```bash
-./build --with-toolchain=tvm --prefix=/usr/local/kroc
+./build --with-toolchain=tvm --prefix=/usr/local/razor
 ```
 
 
 ## Installation (for developers and packagers)
 
-KRoC uses GNU automake. If you've downloaded a tarball release (version 1.5.0-pre5 or later), you can install it in the same way as any other automake package:
+Razor uses GNU automake. If you've downloaded a tarball release, you can install it in the same way as any other automake package:
 
 ```bash
 ./configure --prefix=...
@@ -114,26 +108,26 @@ make
 make install
 ```
 
-If you've downloaded KRoC from Git, there won't be a `configure` script in the tree yet; you need to generate it first:
+If you've downloaded Razor from Git, there won't be a `configure` script in the tree yet; you need to generate it first:
 
 ```bash
 autoreconf -vfi
 ```
 
-After you have configured KRoC once, typing `make` will usually regenerate the automake files if necessary -- unless a new directory has been added to the KRoC source tree, in which case another `autoreconf -vfi` will be necessary.
+After you have configured Razor once, typing `make` will usually regenerate the automake files if necessary -- unless a new directory has been added to the Razor source tree, in which case another `autoreconf -vfi` will be necessary.
 
 ### Configure options
 
-The `configure` script accepts the standard GNU autotools options plus these KRoC-specific ones:
+The `configure` script accepts the standard GNU autotools options plus these Razor-specific ones:
 
 | Option | Description |
 |--------|-------------|
 | `--prefix=DIR` | Installation prefix (default: `/usr/local`) |
-| `--with-toolchain=ENV` | Select occam toolchain: `kroc` (default), `tvm`, or `tock` |
+| `--with-toolchain=ENV` | Select occam toolchain: native (`kroc`, default), `tvm`, or `tock` |
 | `--with-wrapper=WRAPPER` | Transterpreter wrapper to use: `posix` (default) or `none` (TVM toolchain only) |
 | `--enable-pony` | Enable pony networking support |
 
-KRoC's installation process supports `DESTDIR`, so it should be straightforward to create OS distribution packages.
+Razor's installation process supports `DESTDIR`, so it should be straightforward to create OS distribution packages.
 
 
 ## Make targets
@@ -144,7 +138,7 @@ The following `make` targets are available after running `configure`:
 
 | Target | Description |
 |--------|-------------|
-| `make` | Build the entire KRoC system (compiler, translator, runtime, and all enabled modules). Displays a summary of enabled/disabled modules on completion. |
+| `make` | Build the entire Razor system (compiler, translator, runtime, and all enabled modules). Displays a summary of enabled/disabled modules on completion. |
 | `make -C compiler/occ21` | Build only the occ21 occam compiler |
 | `make -C translator/tranx86` | Build only the tranx86 native-code translator |
 | `make -C runtime/ccsp` | Build only the CCSP runtime system |
@@ -153,14 +147,14 @@ The following `make` targets are available after running `configure`:
 
 | Target | Description |
 |--------|-------------|
-| `make check` | Run the KRoC test suite (code generation tests under `tests/cgtests/`) |
+| `make check` | Run the Razor test suite (code generation tests under `tests/cgtests/`) |
 | `make -C tests/cgtests check` | Run just the code generation tests |
 
 ### Installing
 
 | Target | Description |
 |--------|-------------|
-| `make install` | Install KRoC into the configured `--prefix` directory |
+| `make install` | Install Razor into the configured `--prefix` directory |
 
 ### Cleaning
 
@@ -173,7 +167,7 @@ The following `make` targets are available after running `configure`:
 
 ## Configuration
 
-Before using KRoC, remember to source the relevant setup file:
+Before using Razor, remember to source the relevant setup file:
 
 * `. PREFIX/bin/kroc-setup.sh` for Bourne-style shells such as bash
 
@@ -183,7 +177,7 @@ It may be convenient to include this command in your shell's startup file (e.g. 
 
 ### Verifying the installation
 
-To check that your new KRoC installation works, put this into a file called `hello.occ`:
+To check that your new Razor installation works, put this into a file called `hello.occ`:
 
 ```occam
 #INCLUDE "course.module"
@@ -199,7 +193,7 @@ and run `occbuild --program hello.occ` to compile it; this should give you a bin
 
   bin/
 
-    User-facing entry points (the `kroc` driver, `occbuild`, `ilibr`,
+    User-facing entry points (the native driver `kroc`, `occbuild`, `ilibr`,
     and related setup scripts).
 
   compiler/
@@ -222,7 +216,7 @@ and run `occbuild --program hello.occ` to compile it; this should give you a bin
 
   stdlib/
 
-    Core language libraries that ship with every KRoC installation -
+    Core language libraries that ship with every Razor installation -
     part of the language's ABI. Each module has `libsrc/` (source) and
     typically `examples/`.
 
@@ -234,9 +228,9 @@ and run `occbuild --program hello.occ` to compile it; this should give you a bin
 
   build-tools/
 
-    Internal tools used to build KRoC itself or to build occam programs
+    Internal tools used to build Razor itself or to build occam programs
     (`occamdoc`, `mkoccdeps`, `plinker`, `slinker`, `tinyswig`,
-    `tenctool`, `schemescanner`) - not needed to use KRoC once installed.
+    `tenctool`, `schemescanner`) - not needed to use Razor once installed.
 
   platform/
 
@@ -276,7 +270,7 @@ Note: most directories contain further README files.
 
 ## Licensing
 
-KRoC is free software. In general, tools are made available under the
+Razor is free software. In general, tools are made available under the
 GNU General Public License (v2 or later), and libraries are made
 available under the GNU Lesser General Public License (v2 or later).
 Information about the GNU licenses can be found at:
@@ -286,8 +280,7 @@ http://www.fsf.org/licensing/
 
 ## Reporting problems
 
-Known bugs are given in the top-level BUGS file. If KRoC fails to
-compile or work correctly on your system, please mail our bug tracking
-system at <kroc-bugs@kent.ac.uk>, including a brief description of the
-problem and a copy of the "typescript" file generated by "build".
-
+Known bugs are given in the top-level BUGS file. If Razor fails to
+compile or work correctly on your system, please open an issue with a
+brief description of the problem and a copy of the "typescript" file
+generated by "build".
