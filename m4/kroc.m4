@@ -278,7 +278,8 @@ AC_DEFUN([KROC_PROG_KROC],
 AC_REQUIRE([OCCAM_IN_TREE])
 AC_ARG_VAR(RAZOR, [Path to razor])
 if test "x$KROC_BUILD_ROOT" != "x"; then
-  KROC="$KROC_BUILD_ROOT/bin/razor --in-tree $KROC_BUILD_ROOT"
+  RAZOR="$KROC_BUILD_ROOT/bin/razor --in-tree $KROC_BUILD_ROOT"
+  KROC="$RAZOR"
 else
   if test "x$RAZOR" = "x"; then
     AC_CHECK_PROG(RAZOR, razor, razor, no)
@@ -288,6 +289,8 @@ else
   fi
   KROC="$RAZOR"
 fi
+AC_SUBST(RAZOR)
+AC_SUBST(KROC)
 ])dnl
 dnl
 dnl Settings for the RMoX specific build of KRoC

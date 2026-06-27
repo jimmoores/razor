@@ -5,7 +5,7 @@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 ACLOCAL_AMFLAGS = -I ../../../m4
 
-OCCBUILD = @OCCBUILD@ -DBASEPATH="$(datadir)/kroc/game"
+OCCBUILD = @OCCBUILD@ -DBASEPATH="$(datadir)/razor/game"
 
 SUBDIRS = data
 

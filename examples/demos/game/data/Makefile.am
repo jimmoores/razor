@@ -1,6 +1,6 @@
 @SET_MAKE@
 
-gamedir = $(datadir)/kroc/game
+gamedir = $(datadir)/razor/game
 
 dist_game_DATA = \
 	SCRIPT \

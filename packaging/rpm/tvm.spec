@@ -40,7 +40,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc README BUGS CHANGELOG
 %{_bindir}/*
 %{_datadir}/tvm
-%{_datadir}/kroc
+%{_datadir}/razor
 %{_mandir}/*/*
 
 %exclude %{_datadir}/aclocal/*

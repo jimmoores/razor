@@ -39,7 +39,7 @@ examples = \
 	threads-flow
 endif
 
-shootoutdir = $(prefix)/share/kroc/shootout
+shootoutdir = $(datadir)/razor/shootout
 dist_shootout_DATA = \
 	revcomp-input.txt \
 	revcomp-output.txt

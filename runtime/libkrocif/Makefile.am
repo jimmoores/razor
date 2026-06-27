@@ -5,7 +5,7 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects no-dependencies
 ACLOCAL_AMFLAGS = -I ../../m4
 
-KROC=@KROC@
+RAZOR=@RAZOR@
 ILIBR=@ILIBR@
 
 DEFS = -I$(srcdir)/include @DEFS@ @KROC_CCSP_CFLAGS@ @KROC_CCSP_CINCPATH@ -fPIC
@@ -52,4 +52,4 @@ CLEANFILES = libkrocif.a $(shared_libs) *~ io/*.o rts/*.o support/*.o
 SUFFIXES=.occ
 
 .occ.o:
-	$(KROC) $(KROCOPTS) -c -v -o $@ $<
+	$(RAZOR) $(RAZOROPTS) -c -v -o $@ $<

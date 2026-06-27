@@ -21,7 +21,7 @@ examples = \
 	robot3
 endif
 
-robotsdir = $(prefix)/share/kroc/robots
+robotsdir = $(datadir)/razor/robots
 dist_robots_DATA = \
 	robot-track-1.png \
 	robot-track-2.png

@@ -3,10 +3,10 @@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 ACLOCAL_AMFLAGS = -I ../../../m4
 
-OCCBUILD = @OCCBUILD@ --kroc-opts -d
+OCCBUILD = @OCCBUILD@ --razor-opts -d
 
 if USE_GNUCHESS
-OCCBUILD += --kroc-opts '--oc-opts="-def GNUCHESS=@GNUCHESS@"'
+OCCBUILD += --razor-opts '--oc-opts="-def GNUCHESS=@GNUCHESS@"'
 endif
 
 EXTRA_DIST = \
@@ -77,4 +77,3 @@ SUFFIXES = .occ .tce .lib
 
 .occ.tce:
 	$(OCCBUILD) --object $<
-

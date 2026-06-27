@@ -10,7 +10,7 @@ NVCC = @CUDA_CC@
 NVCC_FLAGS = @CUDA_CFLAGS@
 NVCC_LIBS = @CUDA_LIBS@
 
-ocudadir = $(includedir)/kroc
+ocudadir = $(includedir)/razor
 
 if BUILD_OCUDA
 EXTRA_DIST = \
@@ -59,4 +59,3 @@ SUFFIXES = .occ .tce .lib .cu
 ## additional dependencies
 ocuda_wrap.tce: ocuda.inc
 ocuda_extcode.o: ocuda_ctypes.h
-

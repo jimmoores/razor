@@ -441,7 +441,7 @@ def remove_unwanted_build_products():
 	remove_dir(concat([config.get('DEST'), '/usr/share/aclocal']))
 
 	if config.get('WRAPPER') == 'arduino':
-		remove_dir(concat([config.get('DEST'), '/usr/share/kroc']))
+		remove_dir(concat([config.get('DEST'), '/usr/share/razor']))
 		remove_dir(concat([config.get('DEST'), '/usr/include/tvm']))
 		remove_files(concat([config.get('DEST'), '/usr/lib/libtvm.a']))
 		remove_files(concat([config.get('DEST'), '/usr/bin/reset-arduino']))
@@ -458,7 +458,7 @@ def remove_unwanted_build_products():
 	
 		# How about... no man files in the Transterpreter.
 		remove_dir(concat([config.get('DEST'), '/usr/share/man']))
-		remove_dir(concat([config.get('DEST'), '/usr/share/kroc']))
+		remove_dir(concat([config.get('DEST'), '/usr/share/razor']))
 		remove_files(concat([config.get('DEST'), '/usr/bin/cdxview']))
 		remove_files(concat([config.get('DEST'), '/usr/bin/netbard']))
 		

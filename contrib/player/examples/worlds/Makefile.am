@@ -1,6 +1,6 @@
 @SET_MAKE@
 
-worldsdir = $(datadir)/kroc/player/worlds
+worldsdir = $(datadir)/razor/player/worlds
 
 EXTRA_DIST = \
 	README \

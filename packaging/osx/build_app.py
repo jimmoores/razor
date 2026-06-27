@@ -124,7 +124,7 @@ copy_file('install-tvm-ppc/share/tvm/firmware/tvm-posix.tbc', POSIX_TVMPPC_FW_DI
 
 # kroc posix includes, libs and firmware
 # FIXME: I don't currently see these haning around... so lets leave them out
-#copydir "install/share/kroc" "$outputDir/$rezDir/share/kroc"
+#copydir "install/share/razor" "$outputDir/$rezDir/share/razor"
 
 # Arduino firmware
 copy_files('build/arduino_firmware/output/*.hex', ARDUINO_TVM_FW_DIR)

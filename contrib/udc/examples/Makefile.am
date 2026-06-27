@@ -5,7 +5,7 @@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 ACLOCAL_AMFLAGS = -I ../../../m4
 
-OCCBUILD = @OCCBUILD@ --kroc-opts "-e"
+OCCBUILD = @OCCBUILD@ --razor-opts "-e"
 
 EXTRA_DIST = \
 	buffered.occ \

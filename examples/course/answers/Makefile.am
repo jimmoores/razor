@@ -6,8 +6,8 @@ AUTOMAKE_OPTIONS = foreign no-dependencies
 ACLOCAL_AMFLAGS = -I ../../../m4
 
 OCCBUILD = @OCCBUILD@
-KROC = @KROC@
-TRANPC = `@KROC@ -c --tran` `@KROC@ -c --tranflags`
+RAZOR = @RAZOR@
+TRANPC = `@RAZOR@ -c --tran` `@RAZOR@ -c --tranflags`
 
 EXTRA_DIST = \
 	README \

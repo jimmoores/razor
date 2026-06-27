@@ -5,7 +5,7 @@
 AUTOMAKE_OPTIONS = foreign no-dependencies
 ACLOCAL_AMFLAGS = -I ../../../m4
 
-OCCBUILD = @OCCBUILD@ --kroc-opts -d
+OCCBUILD = @OCCBUILD@ --razor-opts -d
 
 EXTRA_DIST = \
 	ttyutil.occ \

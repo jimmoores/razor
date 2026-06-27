@@ -44,7 +44,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/tvm
 %{_mandir}/*/*
 
-%exclude %{_datadir}/kroc
+%exclude %{_datadir}/razor
 %exclude %{_datadir}/aclocal/*
 %exclude %{_includedir}/*
 %exclude %{_libdir}/*

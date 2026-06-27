@@ -2,7 +2,7 @@
 
 @SET_MAKE@
 
-moadocdir = $(prefix)/share/kroc/doc/moa
+moadocdir = $(datadir)/razor/doc/moa
 dist_moadoc_DATA = \
 	moa_documentation.pdf \
 	html/img1.png html/img2.png html/img3.png html/img4.png html/img5.png \
