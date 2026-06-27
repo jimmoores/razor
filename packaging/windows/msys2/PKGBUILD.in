@@ -1,0 +1,58 @@
+# Maintainer: Razor Maintainers <jimmoores@users.noreply.github.com>
+
+_realname=razor
+pkgbase=mingw-w64-${_realname}
+pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgver=@RAZOR_PKGVER@
+pkgrel=1
+pkgdesc="Occam compiler and runtime system"
+arch=('any')
+mingw_arch=('ucrt64' 'clang64' 'clangarm64')
+url="https://github.com/jimmoores/razor"
+license=('spdx:GPL-2.0-or-later' 'spdx:LGPL-2.0-or-later')
+depends=(
+  "${MINGW_PACKAGE_PREFIX}-gcc-libs"
+  "${MINGW_PACKAGE_PREFIX}-python"
+)
+makedepends=(
+  "${MINGW_PACKAGE_PREFIX}-cc"
+  "${MINGW_PACKAGE_PREFIX}-pkgconf"
+  'autoconf'
+  'automake-wrapper'
+  'gawk'
+  'libtool'
+  'make'
+  'perl'
+)
+source=("${_realname}-${pkgver}.tar.gz::@RAZOR_TARBALL_URL@")
+sha256sums=('@RAZOR_TARBALL_SHA256@')
+
+prepare() {
+  cd "${srcdir}/${_realname}-${pkgver}"
+  autoreconf -vfi
+}
+
+build() {
+  mkdir -p "${srcdir}/build-${MSYSTEM}"
+  cd "${srcdir}/build-${MSYSTEM}"
+
+  "${srcdir}/${_realname}-${pkgver}/configure" \
+    --prefix="${MINGW_PREFIX}" \
+    --with-toolchain=razor
+
+  make
+}
+
+check() {
+  cd "${srcdir}/build-${MSYSTEM}"
+  python -m py_compile "${srcdir}/${_realname}-${pkgver}/bin/occbuild.in"
+}
+
+package() {
+  cd "${srcdir}/build-${MSYSTEM}"
+  make DESTDIR="${pkgdir}" install
+
+  install -Dm755 \
+    "${srcdir}/${_realname}-${pkgver}/packaging/smoke-test.sh" \
+    "${pkgdir}${MINGW_PREFIX}/share/razor/packaging/smoke-test.sh"
+}

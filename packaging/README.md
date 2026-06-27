@@ -144,6 +144,11 @@ Useful environment overrides:
 | `RAZOR_RUN_CIF=0` | Skip CIF runtime examples. This is for bring-up only, not release gating. |
 | `RAZOR_TIMEOUT` | Timeout command to use for `cif-commstime`, for example `gtimeout` on macOS. |
 
+When `RAZOR_PREFIX` points at a non-system install prefix, the script prepends
+`$RAZOR_PREFIX/lib` to the platform library path before compiling and running
+the smoke program. This keeps package and staged-install tests from accidentally
+loading an older system copy of the runtime.
+
 ## First repository changes
 
 The existing packaging files are historical and should not be shipped as-is:
@@ -170,3 +175,21 @@ The first implementation pass adds or modernizes:
 Do the Debian and RPM package metadata first. They exercise the autotools
 install surface most directly and will reveal path, dependency, and test issues
 that macOS and Windows packaging would otherwise rediscover later.
+
+## Current implementation state
+
+The repository now has the first-pass native package metadata and release
+templates:
+
+| Area | Files | Status |
+| --- | --- | --- |
+| Debian/Ubuntu | `debian/` | Native package metadata for `amd64` and `arm64`; needs `sbuild`/`pbuilder` or hosts with full build dependencies installed to produce artifacts. |
+| Fedora/Rocky/RHEL | `packaging/rpm/razor.spec` | Native source RPM spec for `x86_64` and `aarch64`; next validation should use `mock` targets for Fedora and EL. |
+| macOS/Homebrew | `packaging/homebrew/razor.rb.in` | Formula template for an upstream tap; render only after a release tarball and SHA-256 exist. |
+| Windows/MSYS2 | `packaging/windows/msys2/PKGBUILD.in` | Native MSYS2 package template for `ucrt64`, `clang64`, and `clangarm64`. |
+| Windows/winget | `packaging/windows/winget/JimMoores.Razor.yaml.in` | Manifest template for signed MSI/WiX installers; render after x64 and arm64 installers are published. |
+
+Native staged installs from clean worktrees passed `packaging/smoke-test.sh` on
+Debian 13 `amd64` and Debian 13 `arm64` on 2026-06-28. The smoke covered tool
+availability, a compiled occam hello program, `cift1`, `cift15`, and a timed
+`cif-commstime` run.

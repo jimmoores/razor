@@ -1,0 +1,42 @@
+class Razor < Formula
+  desc "Occam compiler and runtime system"
+  homepage "https://github.com/jimmoores/razor"
+  url "@RAZOR_TARBALL_URL@"
+  version "@RAZOR_VERSION@"
+  sha256 "@RAZOR_TARBALL_SHA256@"
+  license all_of: ["GPL-2.0-or-later", "LGPL-2.0-or-later"]
+  head "https://github.com/jimmoores/razor.git", branch: "master"
+
+  depends_on "autoconf" => :build
+  depends_on "automake" => :build
+  depends_on "libtool" => :build
+  depends_on "pkgconf" => :build
+  depends_on "gawk"
+  depends_on "python@3.13"
+
+  def install
+    system "autoreconf", "-vfi"
+    system "./configure", "--prefix=#{prefix}", "--with-toolchain=razor"
+    system "make"
+    system "make", "install"
+  end
+
+  test do
+    ENV.prepend_path "DYLD_LIBRARY_PATH", lib
+
+    system bin/"razor", "--version"
+    system bin/"occbuild", "--help"
+    assert_match "occam 2.1 compiler", shell_output("#{bin}/occ21 2>&1 || true")
+    system bin/"tranx86", "--version"
+
+    (testpath/"hello.occ").write <<~OCCAM
+      #INCLUDE "course.module"
+      PROC hello (CHAN BYTE out!)
+        out.string ("Razor smoke test*n", 0, out!)
+      :
+    OCCAM
+
+    system bin/"occbuild", "--program", "hello.occ"
+    assert_match "Razor smoke test", shell_output("./hello")
+  end
+end

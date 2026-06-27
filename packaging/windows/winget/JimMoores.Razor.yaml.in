@@ -1,0 +1,37 @@
+# Render this template only after publishing signed x64 and arm64 installers.
+# The rendered file should validate with `winget validate`.
+
+PackageIdentifier: JimMoores.Razor
+PackageVersion: "@RAZOR_VERSION@"
+PackageLocale: en-US
+Publisher: Razor Maintainers
+PublisherUrl: https://github.com/jimmoores
+PublisherSupportUrl: https://github.com/jimmoores/razor/issues
+PackageName: Razor
+PackageUrl: https://github.com/jimmoores/razor
+License: GPL-2.0-or-later AND LGPL-2.0-or-later
+LicenseUrl: https://github.com/jimmoores/razor/blob/master/COPYING
+ShortDescription: Occam compiler and runtime system
+Description: Razor is a compiler, runtime, and toolset for the occam programming language.
+Moniker: razor
+Tags:
+- compiler
+- occam
+- occam-pi
+- programming-language
+- toolchain
+Installers:
+- Architecture: x64
+  InstallerType: wix
+  Scope: machine
+  InstallerUrl: "@RAZOR_WINDOWS_X64_MSI_URL@"
+  InstallerSha256: "@RAZOR_WINDOWS_X64_MSI_SHA256@"
+  ProductCode: "@RAZOR_WINDOWS_X64_PRODUCT_CODE@"
+- Architecture: arm64
+  InstallerType: wix
+  Scope: machine
+  InstallerUrl: "@RAZOR_WINDOWS_ARM64_MSI_URL@"
+  InstallerSha256: "@RAZOR_WINDOWS_ARM64_MSI_SHA256@"
+  ProductCode: "@RAZOR_WINDOWS_ARM64_PRODUCT_CODE@"
+ManifestType: singleton
+ManifestVersion: 1.6.0
