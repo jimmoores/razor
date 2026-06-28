@@ -1,0 +1,3 @@
+# Occam-generated module shared objects may contain only Razor runtime symbols
+# and no direct libc calls.
+razor: library-not-linked-against-libc [usr/lib/*/liboccam_*.so]
