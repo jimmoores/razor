@@ -749,7 +749,7 @@ static void dump_ins_info(char *str, ins_chain *ins)
 	 */
 	if(options.verbose)
 	{
-		fprintf(stderr, str);
+		fputs(str, stderr);
 		fprintf(stderr, " ");
 		if(ins->type)
 		{
@@ -2238,4 +2238,3 @@ arch_t *init_arch_mips (int mclass)
 	return arch;
 }
 /*}}}*/
-
