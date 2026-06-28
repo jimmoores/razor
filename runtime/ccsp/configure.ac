@@ -563,11 +563,13 @@ cygwin*)
  build_shared="yes"
  SLINKFLAGS="-shared"
  LIBCCSP="libccsp.so"
+ SONAMEFLAGS="-Wl,-soname,$LIBCCSP"
  ;;
 esac
 
 AC_SUBST(SLINKFLAGS)
 AC_SUBST(LIBCCSP)
+AC_SUBST(SONAMEFLAGS)
 AM_CONDITIONAL(BUILD_SHARED, [test "$build_shared" = "yes"])
 
 #}}}
@@ -685,4 +687,3 @@ AM_CONDITIONAL([CCSP_I386], [test x$ccsp_i386 = xyes])
 AC_CONFIG_HEADERS([include/ccsp_config.h])
 AC_CONFIG_FILES([Makefile ccsp-1.6.pc common/Makefile include/Makefile include/arch/Makefile include/i386/Makefile include/aarch64/Makefile include/x64/Makefile kernel/Makefile utils/Makefile])
 AC_OUTPUT
-

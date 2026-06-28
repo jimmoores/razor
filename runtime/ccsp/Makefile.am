@@ -58,7 +58,7 @@ all-local: libccsp.a $(shared_libs)
 
 if BUILD_SHARED
 @LIBCCSP@: libccsp.a
-	$(CC) @SLINKFLAGS@ $(CFLAGS) $(EXTRALDFLAGS) -Wl,-Bsymbolic -o @LIBCCSP@ $(libccsp_a_LIBADD) @LIBS@
+	$(CC) @SLINKFLAGS@ $(CFLAGS) $(EXTRALDFLAGS) -Wl,-Bsymbolic @SONAMEFLAGS@ -o @LIBCCSP@ $(libccsp_a_LIBADD) @LIBS@
 endif
 
 install-exec-local: libccsp.a $(shared_libs)
@@ -72,4 +72,3 @@ endif
 
 EXTRA_DIST = README INSTALL COPYRIGHT
 DISTCLEANFILES = libccsp.a $(shared_libs)
-

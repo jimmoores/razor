@@ -39,15 +39,16 @@ cygwin*)
  build_shared="yes"
  SLINKFLAGS="-shared"
  LIBKROCIF="libkrocif.so"
+ SONAMEFLAGS="-Wl,-soname,$LIBKROCIF"
  ;;
 esac
 
 AC_SUBST(SLINKFLAGS)
 AC_SUBST(LIBKROCIF)
+AC_SUBST(SONAMEFLAGS)
 AM_CONDITIONAL(BUILD_SHARED, [test "$build_shared" = "yes"])
 
 dnl Checks for libraries.
 
 AC_CONFIG_FILES([Makefile include/Makefile io/Makefile rts/Makefile support/Makefile])
 AC_OUTPUT
-

@@ -274,7 +274,7 @@ def make_shared(library, objs, extra_opts = []):
 	elif target_os.startswith("solaris"):
 		opts = ["-G"]
 	else:
-		opts = ["-shared"]
+		opts = ["-shared", "-Wl,-soname,%s" % os.path.basename(library)]
 
 	run(programs["cc"] + opts + ["-o", library] + objs + linker_opts + extra_opts)
 

@@ -34,7 +34,7 @@ all-local: libkrocif.a $(shared_libs) rts/rtsmain.o
 
 if BUILD_SHARED
 @LIBKROCIF@: $(libkrocif_a_OBJECTS)
-	$(CC) @SLINKFLAGS@ $(CFLAGS) $(EXTRALDFLAGS) -Wl,-Bsymbolic -lccsp -o @LIBKROCIF@ $(libkrocif_a_OBJECTS)
+	$(CC) @SLINKFLAGS@ $(CFLAGS) $(EXTRALDFLAGS) -Wl,-Bsymbolic @SONAMEFLAGS@ -lccsp -o @LIBKROCIF@ $(libkrocif_a_OBJECTS)
 endif
 
 install-exec-local: libkrocif.a $(shared_libs) rts/rtsmain.o

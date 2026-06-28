@@ -24,7 +24,6 @@ Architecture: amd64 arm64
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
- bash,
  binutils,
  gawk,
  gcc,
