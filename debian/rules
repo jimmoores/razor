@@ -6,7 +6,7 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 	dh $@
 
 override_dh_auto_configure:
-	dh_auto_configure -- --with-toolchain=razor
+	dh_auto_configure -- --with-toolchain=razor --disable-build-rpath
 
 override_dh_auto_test:
 	:
