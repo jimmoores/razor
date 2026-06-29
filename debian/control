@@ -8,6 +8,7 @@ Build-Depends:
  automake,
  gawk,
  gcc,
+ gcc-multilib [amd64],
  libelf-dev,
  libtool,
  make,
