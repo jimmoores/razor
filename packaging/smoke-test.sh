@@ -46,20 +46,37 @@ check_tool_output()
 setup_library_path()
 {
 	prefix=${RAZOR_PREFIX:-/usr}
-	libdir=$prefix/lib
+	library_dirs=
 
-	test -d "$libdir" || return 0
+	for dir in "$prefix/lib" "$prefix/lib/"*; do
+		test -d "$dir" || continue
+		test -e "$dir/libccsp.so" || test -e "$dir/libkrocif.so" || continue
+		library_dirs=${library_dirs:+$library_dirs:}$dir
+	done
+
+	test "$library_dirs" != "" || return 0
 
 	case $(uname -s 2>/dev/null || printf unknown) in
 		Darwin)
-			DYLD_LIBRARY_PATH=$libdir${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}
+			DYLD_LIBRARY_PATH=$library_dirs${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}
 			export DYLD_LIBRARY_PATH
 			;;
 		*)
-			LD_LIBRARY_PATH=$libdir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+			LD_LIBRARY_PATH=$library_dirs${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 			export LD_LIBRARY_PATH
 			;;
 	esac
+}
+
+setup_tool_path()
+{
+	prefix=${RAZOR_PREFIX:-/usr}
+	bindir=$prefix/bin
+
+	test -d "$bindir" || return 0
+
+	PATH=$bindir${PATH:+:$PATH}
+	export PATH
 }
 
 find_cif_examples()
@@ -73,6 +90,7 @@ find_cif_examples()
 	for dir in \
 		"$prefix/lib/razor/examples/cif" \
 		"$prefix/lib/razor/"*examples/cif \
+		"$prefix/lib/"*/razor/examples/cif \
 		"/usr/local/lib/razor/examples/cif" \
 		"/usr/local/lib/razor/"*examples/cif
 	do
@@ -124,6 +142,7 @@ run_commstime()
 	wait "$pid" 2>/dev/null || true
 }
 
+setup_tool_path
 setup_library_path
 
 check_cmd razor
