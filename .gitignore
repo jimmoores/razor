@@ -14,6 +14,10 @@ GEMINI.md
 CLAUDE.md
 .DS_Store
 .claude
+
+# Release/package staging output
+/artifacts/
+
 # Dangerous, but we'll do it.
 config.h
 config.log

@@ -184,6 +184,7 @@ templates:
 | Area | Files | Status |
 | --- | --- | --- |
 | Debian/Ubuntu | `debian/` | Native package metadata for `amd64` and `arm64`; needs `sbuild`/`pbuilder` or hosts with full build dependencies installed to produce artifacts. |
+| APT repository | `packaging/apt/` | Helper for turning verified `.deb` artifacts into `dists/` and `pool/` metadata for an upstream APT repository. |
 | Fedora/Rocky/RHEL | `packaging/rpm/razor.spec` | Native source RPM spec for `x86_64` and `aarch64`; next validation should use `mock` targets for Fedora and EL. |
 | macOS/Homebrew | `packaging/homebrew/razor.rb.in` | Formula template for an upstream tap; render only after a release tarball and SHA-256 exist. |
 | Windows/MSYS2 | `packaging/windows/msys2/PKGBUILD.in` | Native MSYS2 package template for `ucrt64`, `clang64`, and `clangarm64`. |
@@ -193,3 +194,9 @@ Native staged installs from clean worktrees passed `packaging/smoke-test.sh` on
 Debian 13 `amd64` and Debian 13 `arm64` on 2026-06-28. The smoke covered tool
 availability, a compiled occam hello program, `cift1`, `cift15`, and a timed
 `cif-commstime` run.
+
+Debian packages from commit `bd8cd1fe` were built and installed successfully on
+Debian 12 `amd64`, Debian 13 `amd64`, and Debian 13 `arm64` on 2026-06-30.
+`lintian` exited with status 0 on all three builds, installed smoke tests passed,
+and a staged unsigned APT repository under `artifacts/apt/repository` was
+validated with `apt-get update` on those targets.
